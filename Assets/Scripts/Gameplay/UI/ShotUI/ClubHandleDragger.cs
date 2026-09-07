@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using Golfin.Gameplay.Config;
 using Golfin.Gameplay.Input;
 
 namespace Golfin.Gameplay.UI.ShotUI
@@ -15,8 +16,20 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private RectTransform        _coneRect;
         [SerializeField] private ConeMeshGraphic      _coneGraphic;
         [SerializeField] private TeeIdleGlowController _glowController;
+        [Tooltip("The view that RESOLVES the club's rest height from controls.csv. Power is " +
+                 "measured from that rest, so the dragger and the drawn club read one number. " +
+                 "Wired by FlickConeTicksBuilder — never Find()-ed at runtime.")]
+        [SerializeField] private ShotConeView         _coneView;
 
         private float ConeHeightPx => _coneGraphic != null ? _coneGraphic.HeightPx : 1009f;
+
+        /// <summary>Cone-local y the club rests at, i.e. the ZERO of the pull. Off the view when
+        /// it is wired (its Awake has already folded the config in); otherwise re-derived from the
+        /// same two keys, so an unwired test rig reads the same rest rather than falling back to
+        /// the base and silently restoring the old base-relative mapping.</summary>
+        private float HandleRestYPx => _coneView != null
+            ? _coneView.HandleRestYPx
+            : FlickPullMath.RestYPx(ConeHeightPx, ControlsConfig.Default);
 
         [Header("Flick Settings")]
         [Tooltip("LEGACY single-frame check. Only used when ShotController's windowed flick gate " +
@@ -96,7 +109,9 @@ namespace Golfin.Gameplay.UI.ShotUI
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 _coneRect, e.position, uiCam, out var local);
 
-            // Y=0 = cone base (max power), Y=coneHeightPx = apex (zero power).
+            // Y=0 = cone base (120%), Y=HandleRestYPx = the club's rest (0%), Y=coneHeightPx = apex.
+            // Still clamped to the whole cone: a finger ABOVE the rest is a zero pull, not a
+            // negative one, and D5 keeps the lateral reach reading off this same y.
             float handleY = Mathf.Clamp(local.y, 0f, ConeHeightPx);
 
             float halfAngleRad  = _shotController.ConeHalfAngleDeg * Mathf.Deg2Rad;
@@ -105,7 +120,12 @@ namespace Golfin.Gameplay.UI.ShotUI
             float maxX          = halfBase * widthFraction;
             float handleX       = Mathf.Clamp(local.x, -maxX, maxX);
 
-            float power    = 1f - handleY / ConeHeightPx;
+            // POWER IS THE TRAVEL FROM THE CLUB'S REST, not the height above the base
+            // (flick_pull_mapping D1). It used to be 1 - handleY/ConeHeightPx, which read 31.8%
+            // the moment the club was touched and had no 120% at all — the finger ran out of cone
+            // at 1.0. The base is now 120%, and a putt caps at 1.0 the way every scheme does.
+            float pullPx   = Mathf.Max(0f, HandleRestYPx - handleY);
+            float power    = FlickPullMath.Power(pullPx, ControlsConfig.Default, _shotController.IsPutt);
             float finetune = maxX > 0.1f ? handleX / maxX : 0f;
 
             if (power > _peakPower)

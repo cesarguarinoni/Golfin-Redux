@@ -316,6 +316,25 @@ namespace Golfin.Gameplay.Config
         public float FlickPutterTrackTopBelowBallPx;
         public float FlickConeApexGapPx;
 
+        // ── Flick pull thresholds (flick_pull_mapping D1/D2) ───────────────────
+        // FINGER TRAVEL FROM THE CLUB'S REST, exactly as the other three schemes measure it, and
+        // the reason FlickHandleStartY01 above is what it is. Flick used to read power off the
+        // cone BASE (power = 1 - handleY/height), so the club read 31.8% the instant it was
+        // touched and there was no 120% at all -- the handle ran out of cone at 1.0. Cesar,
+        // 2026-09-07: "way too high".
+        //
+        // These two ARE Pendulum's and Free Swing's numbers (540 / 648), so a thumb travels the
+        // same distance in all four schemes, and their own keys so a Flick retune cannot move an
+        // A/B partner. MinUsefulPullPx (40) is REUSED as the dead zone rather than copied a fifth
+        // time -- the same thumb slop in either path.
+        //
+        // THE INVARIANT THAT TIES THEM TO THE CONE: FlickHandleStartY01 x FlickConeHeightPx ==
+        // FlickPull120Px (0.8182 x 792 = 648.0). That is what makes the BASE 120% and the club
+        // rest 648px above it. Change one of the three and the other two must move with it;
+        // ControlsConfigTests asserts the identity so they cannot drift apart silently.
+        public float FlickPull100Px;
+        public float FlickPull120Px;
+
         // ONE bottom baseline shared by the action buttons' bottom edge, both selector overlays
         // and the pull lane's end, so they cannot drift apart the way 96 (buttons) and the lane's
         // derived end already had. Raised at runtime to safeAreaBottom + 60 on a device whose
@@ -447,10 +466,14 @@ namespace Golfin.Gameplay.Config
 
             // flick_shot_view §3.1 seed values -- mirror controls.csv (F13 two-mirror rule).
             FlickConeHeightPx               = 792f,   // 1096 - 304 - 0, base on the baseline
-            FlickHandleStartY01             = 0.6818f,// 0.6818 x 792 = 540px = Pendulum's pull
+            FlickHandleStartY01             = 0.8182f,// flick_pull_mapping D2: 0.6818 -> 0.8182
+                                                      // = 648/792, so the BASE is 120% and the
+                                                      // club rests 648px above it (0% at touch)
             FlickPutterTrackHeightPx        = 792f,   // top ON the ball, bottom on 1096
             FlickPutterTrackTopBelowBallPx  = 0f,     // as the live runtime already placed it
             FlickConeApexGapPx              = 0f,     // the apex sits ON the ball, as it shipped
+            FlickPull100Px                  = 540f,   // = PendulumPull100Px / FreeSwingPull100Px
+            FlickPull120Px                  = 648f,   // = 1.2 x FlickPull100Px = the cone's base
             BottomBaselinePx                = 170f,   // was 96 on the buttons alone
             PowerGaugeViewportY             = 0.70f,  // 30% from the top, clear of the aim bar
         };

@@ -55,7 +55,7 @@ namespace Golfin.Gameplay.Tests
             _view.ApplyConfiguredGeometry();
 
             Assert.AreEqual(792f, _view.ConeHeightPx, 1e-3f, "FlickConeHeightPx");
-            Assert.AreEqual(540f, _view.HandleRestYPx, 1f,   "0.6818 x 792 = Pendulum's pull");
+            Assert.AreEqual(648f, _view.HandleRestYPx, 1f,   "flick_pull_mapping D2: 0.8182 x 792 = FlickPull120Px, so the BASE is 120%");
             Assert.AreEqual(792f, _view.PutterTrackHeightPx, 1e-3f, "FlickPutterTrackHeightPx");
         }
 
@@ -107,12 +107,13 @@ namespace Golfin.Gameplay.Tests
             _view.ApplyConfiguredGeometry();
 
             Assert.AreEqual(800f, _view.ConeHeightPx, 1e-3f);
-            Assert.AreEqual(0.6818f * 800f, _view.HandleRestYPx, 1e-3f);
+            Assert.AreEqual(0.8182f * 800f, _view.HandleRestYPx, 1e-3f);
             Assert.AreEqual(_view.HandleRestYPx / _view.ConeHeightPx,
-                            540f / 792f, 1e-3f,
+                            648f / 792f, 1e-3f,
                             "the fraction is what survives a re-cut, not the pixel count — which " +
-                            "is also why a re-cut cone LOSES the 540px Pendulum parity and has to " +
-                            "have this key re-derived");
+                            "is also why a re-cut cone LOSES both the 540px Pendulum parity AND " +
+                            "the base-is-120% identity, and has to have this key re-derived as " +
+                            "FlickPull120Px / newHeight");
         }
 
         /// <summary>Applying twice must not drift — Awake, a scheme re-apply and the putter track's

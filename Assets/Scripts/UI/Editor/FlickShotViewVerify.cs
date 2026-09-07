@@ -433,12 +433,19 @@ namespace Golfin.UI.EditorTools
                    $"apex {apex:F2} vs ball {ballY:F2} — gap {ballY - apex:F2}px");
             Assert("cone_base_1096",     Mathf.Abs(coneBase- (-1096f)) <= 2f,  $"base {coneBase:F2}");
             Assert("base_on_baseline",   Mathf.Abs(coneBase- baselineY)<= 2f,  $"base {coneBase:F2} vs baseline {baselineY:F2}");
-            Assert("handle_rest_556",    Mathf.Abs(restY   - (-556f))  <= 2f,  $"handle rest {restY:F2}");
+            // flick_pull_mapping (2026-09-07) moved the club's rest from 540 to 648px above the
+            // base so the BASE is 120%, and with it these two numbers. Restated rather than
+            // deleted: this tool is still the instrument that says where the club rests, and a
+            // stale target here would have it reporting FAIL on shipped, accepted geometry.
+            Assert("handle_rest_448",    Mathf.Abs(restY   - (-448f))  <= 2f,  $"handle rest {restY:F2}");
+            Assert("rest_is_the_120_percent_pull",
+                   Mathf.Abs(_coneView.HandleRestYPx - Cfg("FlickPull120Px")) <= 1f,
+                   $"rest {_coneView.HandleRestYPx:F1}px above the base vs FlickPull120Px " +
+                   $"{Cfg("FlickPull120Px"):F0} — the base IS 120%");
             Assert("pull_travel_matches_pendulum",
-                   Mathf.Abs(_coneView.HandleRestYPx - Cfg("PendulumPull100Px")) <= 1f,
-                   $"rest-to-100% travel {_coneView.HandleRestYPx:F1}px vs PendulumPull100Px " +
-                   $"{Cfg("PendulumPull100Px"):F0} and FreeSwingPull100Px {Cfg("FreeSwingPull100Px"):F0} " +
-                   $"(was 960 on the old 1160 cone)");
+                   Mathf.Abs(Cfg("FlickPull100Px") - Cfg("PendulumPull100Px")) <= 1f,
+                   $"rest-to-100% travel {Cfg("FlickPull100Px"):F0}px vs PendulumPull100Px " +
+                   $"{Cfg("PendulumPull100Px"):F0} and FreeSwingPull100Px {Cfg("FreeSwingPull100Px"):F0}");
             Assert("cone_clears_buttons", halfBase20 < btnInner,               $"half-base@20 {halfBase20:F1} < button inner edge {btnInner:F1}");
             Assert("horizon_matches_accepted_framing",
                    Mathf.Abs(horizonAfter - HorizonReferencePct) <= 1.0f,

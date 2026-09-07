@@ -139,6 +139,9 @@ namespace Golfin.Gameplay.Config
                     case "FlickPutterTrackHeightPx":        cfg.FlickPutterTrackHeightPx        = val; break;
                     case "FlickPutterTrackTopBelowBallPx":  cfg.FlickPutterTrackTopBelowBallPx  = val; break;
                     case "FlickConeApexGapPx":              cfg.FlickConeApexGapPx              = val; break;
+                    // flick_pull_mapping §2
+                    case "FlickPull100Px":                  cfg.FlickPull100Px                  = val; break;
+                    case "FlickPull120Px":                  cfg.FlickPull120Px                  = val; break;
                     case "BottomBaselinePx":                cfg.BottomBaselinePx                = val; break;
                     case "PowerGaugeViewportY":             cfg.PowerGaugeViewportY             = val; break;
                     default: matched = false; break;

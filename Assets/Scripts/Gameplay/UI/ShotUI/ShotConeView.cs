@@ -37,6 +37,18 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private float           _minHandleScale = 1f;
         [SerializeField] private float           _maxHandleScale = 1.3f;
 
+        [Header("Power marks (flick_pull_mapping D3)")]
+        [Tooltip("The 100% and 120% labels beside the cone. LABELS ONLY — Cesar, 2026-09-07: " +
+                 "\"remove the 100% and 120% lines, leave only the labels\". Children of the cone " +
+                 "mesh so they ride and fade with it; PLACED from controls.csv in " +
+                 "ApplyConfiguredGeometry, never from an authored y.")]
+        [SerializeField] private TextMeshProUGUI _label100;
+        [SerializeField] private TextMeshProUGUI _label120;
+        [Tooltip("Gap between the cone's EDGE at the label's own height and the label. The " +
+                 "Pendulum lane's 76px side offset IS this: its lane is 120 wide, so 60 + 16. A " +
+                 "CONE is a different width at every height, so the gap is what ports across.")]
+        [SerializeField] private float           _labelGapPx = 16f;
+
         [Header("Timing slab")]
         [SerializeField] private TimingSlabGraphic _timingSlab;
 
@@ -142,6 +154,9 @@ namespace Golfin.Gameplay.UI.ShotUI
             // Ensure the correct slab is visible/hidden when mode changes.
             if (_timingSlab      != null) _timingSlab.gameObject.SetActive(false);
             if (_putterTimingSlabRT != null) _putterTimingSlabRT.gameObject.SetActive(false);
+            // The 120% label is hidden on a putt (the putt caps at 1.0), so the marks are
+            // re-placed on every mode flip and not only on Awake.
+            ApplyMarkGeometry(_cfgOverride ?? ControlsConfig.Default);
         }
 
         public void SetCamera(Camera cam)            => _worldCamera   = cam;
@@ -225,6 +240,99 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
 
             ApplyPutterTrackGeometry();
+            ApplyMarkGeometry(cfg);
+        }
+
+        /// <summary>
+        /// Place the 100% / 120% labels from <c>controls.csv</c> (flick_pull_mapping D3).
+        ///
+        /// <para>LABELS, NO LINES. The spec asked for tick lines with labels and they were built;
+        /// Cesar, on seeing them: <i>"remove the 100% and 120% lines, leave only the labels"</i>.
+        /// The cone already draws its own band lines, and a second family of horizontal rules
+        /// across it — one of which landed 10.8px under the DUFF band line — read as noise rather
+        /// than as two different meanings. The heights are unchanged; only the rules are gone.</para>
+        ///
+        /// <para>THE LABEL IS THE CONFIG, PLACED — the same rule <c>PendulumLaneView</c> follows.
+        /// The 120% label is at the cone's BASE (y = 0) because D2 rests the club
+        /// <c>FlickPull120Px</c> above it, and the 100% label is
+        /// <c>FlickPull120Px - FlickPull100Px</c> = 108px up. Neither offset is authored: retune
+        /// either threshold and the label moves with the power it names, which is the class of
+        /// drift the Pendulum ticks were pulled into the config to kill.</para>
+        ///
+        /// <para>A putt hides the 120% label and keeps the 100% one — a putt caps at 1.0
+        /// (<c>FlickPullMath.Power</c>), so a 120% mark on it would name a power the player can
+        /// never reach. Re-applied from <see cref="SetPuttMode"/> for that reason, not only on
+        /// Awake.</para>
+        ///
+        /// <para>An unconfigured cone (<c>FlickPull120Px</c> non-positive) leaves the scene's own
+        /// placement alone, the same "no config" rule the geometry above follows.</para>
+        /// </summary>
+        private void ApplyMarkGeometry(in ControlsConfig cfg)
+        {
+            if (cfg.FlickPull120Px <= 0f) return;
+            PlaceLabel(_label100, FlickPullMath.Mark100YPx(cfg), true);
+            PlaceLabel(_label120, FlickPullMath.Mark120YPx(cfg), !_puttMode);
+            RefreshLabelOffsets();
+        }
+
+        /// <summary>y is cone-local (0 = base). x is <see cref="RefreshLabelOffsets"/>'s job,
+        /// because it depends on how wide the cone is at this y and that moves with the club.</summary>
+        private void PlaceLabel(TextMeshProUGUI label, float y, bool shown)
+        {
+            if (label == null) return;
+            if (label.gameObject.activeSelf != shown) label.gameObject.SetActive(shown);
+            if (!shown) return;
+            var rt = label.rectTransform;
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, y);
+        }
+
+        /// <summary>
+        /// Park each label just outside the cone's EDGE at its own height.
+        ///
+        /// <para>THE PENDULUM'S 76 IS NOT A CONSTANT, it is 60 + 16 — half of a 120-wide lane,
+        /// plus a gap. Ported literally onto a cone it put both labels inside the cone body,
+        /// because the cone is ~186px wide at the 100% height and ~216 at the base. What ports
+        /// across is the GAP; the half-width has to come from the cone's live geometry, which
+        /// moves with Club Accuracy every time the club changes. In putt mode the putter track is
+        /// what the label sits beside instead.</para>
+        /// </summary>
+        private void RefreshLabelOffsets()
+        {
+            if (_label100 == null && _label120 == null) return;
+            ControlsConfig cfg = _cfgOverride ?? ControlsConfig.Default;
+            if (cfg.FlickPull120Px <= 0f) return;
+
+            if (_puttMode)
+            {
+                RectTransform track = ResolvePutterTrackRect();
+                float puttW = track != null ? track.rect.width : 0f;
+                if (puttW <= 0f) return;
+                OffsetLabel(_label100, puttW);
+                OffsetLabel(_label120, puttW);
+                return;
+            }
+
+            float halfAngleDeg = _shotController != null
+                ? _shotController.ConeHalfAngleDeg
+                : (_coneGraphic != null ? _coneGraphic.HalfAngleDeg : 0f);
+            float halfBase = _coneHeightPx * Mathf.Tan(halfAngleDeg * Mathf.Deg2Rad);
+
+            OffsetLabel(_label100, ConeWidthAt(FlickPullMath.Mark100YPx(cfg), halfBase));
+            OffsetLabel(_label120, ConeWidthAt(FlickPullMath.Mark120YPx(cfg), halfBase));
+        }
+
+        /// <summary>The cone's full width at cone-local height <paramref name="y"/>.</summary>
+        private float ConeWidthAt(float y, float halfBase)
+        {
+            if (_coneHeightPx <= 0f) return 0f;
+            return 2f * Mathf.Max(0f, halfBase * (1f - Mathf.Clamp01(y / _coneHeightPx)));
+        }
+
+        private void OffsetLabel(TextMeshProUGUI label, float widthAtThatHeight)
+        {
+            if (label == null) return;
+            var rt = label.rectTransform;
+            rt.anchoredPosition = new Vector2(widthAtThatHeight * 0.5f + _labelGapPx, rt.anchoredPosition.y);
         }
 
         /// <summary>
@@ -453,6 +561,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_puttMode) return;  // putter uses default cone geometry; skip dirty-marking the mesh
             _coneGraphic.HalfAngleDeg = _shotController.ConeHalfAngleDeg;
             _coneGraphic.HeightPx     = _coneHeightPx;
+            RefreshLabelOffsets();
         }
 
         // ── Club handle ───────────────────────────────────────────────────────
@@ -461,9 +570,18 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (_clubHandle == null) return;
 
-            float power         = Mathf.Clamp01(state.PowerNormalized);
-            // Handle rests below ball at _handleStartYPx; pulling drives it down toward base (y=0).
-            float handleY       = _handleStartYPx * (1f - power);
+            // NOT Clamp01: the base of the cone is 120% now, and clamping here would have drawn
+            // an overpowered club at the 100% line while the finger was 108px lower.
+            float power         = Mathf.Clamp(state.PowerNormalized, 0f,
+                                              ShotController.MaxOverpowerNormalized);
+            // THE EXACT INVERSE of the mapping ClubHandleDragger reads the finger through
+            // (flick_pull_mapping §3.2), so the drawn club and the finger coincide at 0%, 100% and
+            // 120% rather than merely agreeing in shape. Bots reach this same line: they publish a
+            // normalised power through SetExternalPower and never place the handle themselves.
+            float handleY       = FlickPullMath.ConeLocalYForPower(
+                                      power, _handleStartYPx, _coneHeightPx,
+                                      _cfgOverride ?? ControlsConfig.Default,
+                                      _shotController != null && _shotController.IsPutt);
             float halfAngleRad  = _shotController.ConeHalfAngleDeg * Mathf.Deg2Rad;
             float halfBase      = _coneHeightPx * Mathf.Tan(halfAngleRad);
             float widthFraction = 1f - Mathf.Clamp01(handleY / _coneHeightPx);
@@ -475,7 +593,9 @@ namespace Golfin.Gameplay.UI.ShotUI
             float xOffset = _puttMode ? 0f : _shotController.HandleFinetune * maxX;
             _clubHandle.anchoredPosition = new Vector2(xOffset, handleY);
 
-            float handleScale = Mathf.Lerp(_minHandleScale, _maxHandleScale, power);
+            // Scale still saturates at 100%: the overpower ramp is read off the gauge's red arc
+            // and the club's depth past the 100% line, not off a club that keeps growing.
+            float handleScale = Mathf.Lerp(_minHandleScale, _maxHandleScale, Mathf.Clamp01(power));
             _clubHandle.localScale = Vector3.one * handleScale;
         }
 

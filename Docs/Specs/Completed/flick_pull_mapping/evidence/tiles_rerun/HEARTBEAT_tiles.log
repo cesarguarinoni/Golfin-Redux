@@ -1,0 +1,38 @@
+hole: 2
+resolution: 1170x2532
+hid: DebugShotPanelController
+chrome: PlayerCard x[-537,-59] y[928,1108]
+chrome: HoleCard x[59,537] y[928,1108]
+chrome: WindIndicator x[-537,-437] y[804,904]
+chrome: HoleIndicator x[-48,52] y[704,904]
+chrome: PowerHUD x[337,537] y[406,606]
+chrome: SpinButton x[-527,-382] y[-832,-592]
+chrome: FadeDrawButton x[382,527] y[-832,-592]
+chrome: GolfinButton x[-527,-382] y[-1096,-856]
+chrome: DriverButton x[382,527] y[-1096,-856]
+chrome_hidden: PlayerCard, HoleCard, SettingsButton, WindIndicator, HoleIndicator, PowerHUD, SpinButton, FadeDrawButton, GolfinButton, DriverButton
+reset_to_tee: ok
+tile: Flick 1 -> Assets/Resources/UI/Controls/Tiles/T_Flick_1.png (628x680) crop 742x803 @ (214,1428)
+tile: Flick 2 -> Assets/Resources/UI/Controls/Tiles/T_Flick_2.png (628x680) crop 961x1040 @ (105,1408)
+tile: Flick 3 -> Assets/Resources/UI/Controls/Tiles/T_Flick_3.png (628x680) crop 520x563 @ (325,1323)
+flick_fired_via: ReleaseToFire fallback -> state Resolving
+scheme_entry: Pendulum via segment + pop-up CONFIRM
+reset_to_tee: ok
+tile: Pendulum 1 -> Assets/Resources/UI/Controls/Tiles/T_Pendulum_1.png (628x680) crop 961x1041 @ (104,1408)
+tile: Pendulum 2 -> Assets/Resources/UI/Controls/Tiles/T_Pendulum_2.png (628x680) crop 1044x1131 @ (63,1326)
+pop_at-wait: PendulumGradePop activeSelf=True inHierarchy=True offAncestor=none alpha=1.000 scale=0.874 rect x[-157,157] y[-77,47] text='PURE' labelAlpha=1.00 labelEnabled=True
+tile: Pendulum 3 -> Assets/Resources/UI/Controls/Tiles/T_Pendulum_3.png (628x680) crop 864x936 @ (153,1007)
+scheme_entry: Needle via segment + pop-up CONFIRM
+reset_to_tee: ok
+tile: Needle 1 -> Assets/Resources/UI/Controls/Tiles/T_Needle_1.png (628x680) crop 748x810 @ (211,1427)
+tile: Needle 2 -> Assets/Resources/UI/Controls/Tiles/T_Needle_2.png (628x680) crop 520x563 @ (325,1245)
+pop_at-wait: NeedleGradePop activeSelf=True inHierarchy=True offAncestor=none alpha=1.000 scale=1.000 rect x[-210,210] y[-4,116] text='PURE' labelAlpha=1.00 labelEnabled=True
+subject_missing: Needle 3: CentralBall
+tile: Needle 3 -> Assets/Resources/UI/Controls/Tiles/T_Needle_3.png (628x680) crop 520x563 @ (325,981)
+scheme_entry: FreeSwing via segment + pop-up CONFIRM
+reset_to_tee: ok
+tile: FreeSwing 1 -> Assets/Resources/UI/Controls/Tiles/T_FreeSwing_1.png (628x680) crop 1055x1143 @ (57,1315)
+tile: FreeSwing 2 -> Assets/Resources/UI/Controls/Tiles/T_FreeSwing_2.png (628x680) crop 1055x1143 @ (57,1315)
+subject_missing: FreeSwing 3: CentralBall
+tile: FreeSwing 3 -> Assets/Resources/UI/Controls/Tiles/T_FreeSwing_3.png (628x680) crop 1008x1091 @ (81,659)
+imported_as_sprite: 12 tiles

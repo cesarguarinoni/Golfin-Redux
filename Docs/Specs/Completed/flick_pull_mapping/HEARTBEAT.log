@@ -1,0 +1,32 @@
+=== iter-1 kickoff baseline 2026-09-07T09:40:20Z ===
+HEAD 2a2ad15ee235921c2f9b6f0c58d33df6bdbb2c04
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_01JapaneseBlackImposter.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackBark.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackBark_Var1.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackLeaf.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackLeaf_Var1.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaBark.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaImposter.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaLeaf.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineBark.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineImposter01.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineLeaf.mat
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/TellCode.md
+?? "Assets/Art/In-Game UI/Halo - Selector.png"
+?? "Assets/Art/In-Game UI/Halo - Selector.png.meta"
+?? "Claude outputs/ARCHITECT_DECISION_9_9.md"
+?? Docs/Specs/Active/flick_pull_mapping/HEARTBEAT.log
+?? Docs/Specs/Active/flick_pull_mapping/SPEC.md
+?? Docs/Specs/Active/flick_pull_mapping/STATUS.md
+?? Docs/Specs/Active/selector_carousel/SPEC.md
+?? Docs/Specs/Active/selector_carousel/STATUS.md
+?? Docs/Specs/Active/selector_carousel/reference/selector_before.png
+=== end baseline ===
+[09:57:44Z] iter-1: config keys + FlickPullMath + dragger + ShotConeView ticks + builder done; scene built & saved (434+/1-, 4 new GOs, zero deactivations); EditMode 2796/2793/0 fail/3 pre-existing skips.
+[10:04:35Z] iter-1: acceptance run #1 = 23/23 PASS; frame review found the tick LABELS drawn on top of their own line (Pendulum's 76 is lane-half-width+gap, wrong on a cone). Fixed: labels park past the line's live end. Re-running.
+[10:08:46Z] iter-1: acceptance run #2 = 23/23 PASS, labels now clear of their lines. miss_grade_duff PURE/GOOD/THIN/DUFF re-run green (power target 0.55 hit exactly through the new inverse).
+[10:23:31Z] iter-1 COMPLETE: 3 Flick tiles recaptured (nine byte-identical, metas untouched), tiles_manifest Flick rows only, EditMode 2796/2793/0/3, report + STATUS + AI_CONTEXT written. ShellScene open and clean, LabScaffold saved, not in play mode.
+[10:31:07Z] iter-2 (Cesar: "remove the 100% and 120% lines, leave only the labels"): tick GameObjects deleted by the builder (renamed FlickConeLabelsBuilder), ShotConeView labels-only, FlickPullMath Tick*YPx -> Mark*YPx, verify tool asserts the lines are GONE. Scene re-saved; two foreign SelectorOverlayWidget blocks (concurrent selector_carousel session renamed _cardsContainer -> _cardsViewport) restored to HEAD by hand-patch so the scene diff is mine only: 281+/1-.
+[10:41:25Z] iter-2 COMPLETE: acceptance 24/24 PASS (incl. the_tick_lines_are_gone), EditMode 2796/2793/0/3, 3 Flick tiles re-shot again (nine byte-identical to HEAD, metas untouched), manifest Flick rows only, report/STATUS/AI_CONTEXT updated. ShellScene open and clean, not in play mode.

@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Golfin.Gameplay.Config;
+using Golfin.Gameplay.Input;
 using Golfin.Gameplay.UI.ShotUI;
 
 namespace Golfin.Gameplay.Tests
@@ -220,24 +221,29 @@ namespace Golfin.Gameplay.Tests
         public void Flick_HandleRestIsAFractionOfTheCone_SoAReCutCannotChangeWhatTouchingItReads()
         {
             float rest = _cfg.FlickHandleStartY01 * _cfg.FlickConeHeightPx;
-            Assert.AreEqual(540f, rest, 1f, "0.6818 x 792 — the pull from rest to 100%");
-            Assert.AreEqual(-556f, FlickBallY(H_2532) - (_cfg.FlickConeApexGapPx +
+
+            // flick_pull_mapping D2: the rest is the 120% PULL, so the cone's BASE reads 120%.
+            // It was 540 (the 100% pull) while power was measured from the base, which is the same
+            // arithmetic saying the opposite thing — and is why touching the club read 31.8%.
+            Assert.AreEqual(_cfg.FlickPull120Px, rest, 1f, "0.8182 x 792 — the pull from rest to 120%");
+            Assert.AreEqual(-448f, FlickBallY(H_2532) - (_cfg.FlickConeApexGapPx +
                                                          _cfg.FlickConeHeightPx - rest), 1f,
                 "handle rest in canvas y");
 
-            // PULL PARITY IS THE POINT OF THE VALUE (Cesar, 2026-09-07). This is the assertion that
-            // would catch a Pendulum retune silently un-matching Flick, which is the whole reason
-            // the number was chosen rather than authored.
-            Assert.AreEqual(_cfg.PendulumPull100Px, rest, 1f,
+            // PULL PARITY IS STILL THE POINT (Cesar, 2026-09-07), it is just measured on the key
+            // that now carries it. This is the assertion that would catch a Pendulum retune
+            // silently un-matching Flick.
+            Assert.AreEqual(_cfg.PendulumPull100Px, _cfg.FlickPull100Px, 1f,
                 "a thumb travels the same distance to 100% in Flick as in Pendulum");
-            Assert.AreEqual(_cfg.FreeSwingPull100Px, rest, 1f, "and in Free Swing");
+            Assert.AreEqual(_cfg.FreeSwingPull100Px, _cfg.FlickPull100Px, 1f, "and in Free Swing");
 
-            // The other end of that trade, asserted so it cannot drift unnoticed: ClubHandleDragger
-            // reads power off the WHOLE cone height, so a shorter pull starts with more power
-            // already dialled in. 0.828 on the old 1160px cone read 17% at touch; this reads 32%.
-            Assert.AreEqual(0.6818f, _cfg.FlickHandleStartY01, 1e-4f);
-            Assert.AreEqual(0.3182f, 1f - _cfg.FlickHandleStartY01, 1e-4f,
+            // And the reading at touch — the whole point of the change — is now ZERO, because
+            // ClubHandleDragger measures from this rest rather than from the cone's base.
+            Assert.AreEqual(0.8182f, _cfg.FlickHandleStartY01, 1e-4f);
+            Assert.AreEqual(0f, FlickPullMath.Power(0f, _cfg, isPutt: false), 1e-6f,
                 "power the drag reads the instant the finger lands on the club at rest");
+            Assert.AreEqual(1.2f, FlickPullMath.Power(rest, _cfg, isPutt: false), 1e-3f,
+                "and at the base, which is as far as the finger can go");
         }
 
         // ── Free Swing shares the Pendulum's lane numbers ────────────────────────

@@ -13,6 +13,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Golfin.Gameplay.UI.ShotUI;
+using Golfin.UI.EditorTools;
 using Golfin.Gameplay.UI.HUD;
 using Golfin.Physics.Viewer;
 using Golfin.Physics.Viewer.Editor;
@@ -411,7 +412,10 @@ namespace Golfin.EditorTools
         Vector2 ConeLocalFor(float finetune, float power)
         {
             float h        = ConeHeightPx;
-            float localY   = Mathf.Clamp01(1f - power) * h;
+            // flick_pull_mapping §3.2: the SHIPPED mapping's own inverse, rest-relative. The old
+            // 1-power/height form measured from the BASE and would now miss every target power.
+            // isPutt: false — the parity demo swings from the tee.
+            float localY   = FlickPullReflect.ConeLocalYForPower(power, h, false);
             float halfBase = h * Mathf.Tan(HalfConeDeg * Mathf.Deg2Rad);
             float maxX     = halfBase * (1f - localY / h);
             // Overshoot deliberately: ProcessDrag clamps to ±maxX, which is exactly finetune ±1.

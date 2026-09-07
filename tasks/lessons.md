@@ -3758,3 +3758,33 @@ made **the opponent's difficulty a function of the player's equipment** (a Supre
 ~2.6× wider than a Common one at the same level). Fixed by solving sigma per swing against the live grader.
 The lesson on top of the lesson: *the number that will not converge is worth one more question.* Both times,
 stopping at "close enough, documented as a known deviation" would have shipped a real defect.
+
+---
+
+## Lesson — `flick_pull_mapping` (2026-09-07): a ported constant is usually a derived value, and a scene save is a shared surface
+
+Two things worth carrying forward from a small task.
+
+**1. When a spec says "the same offset as X", check what the offset was made of.** SPEC D3 said to
+place the cone's `100%` / `120%` labels "at the lane's +76 right of the axis". `PendulumLaneView`'s
+lane is 120 px wide, so its 76 is **60 + a 16 px gap** — half the lane, plus clearance. A cone is a
+different width at every height (186 px at the 100 % mark, 216 at the base), so porting the *76*
+put both labels inside the cone body, one of them with a red pill running straight through the
+text. Porting the *gap* is what the spec actually meant. The tell was never in the code — the
+arithmetic was right, the tests were green, and it took looking at the first acceptance frame at
+2× zoom. **Whenever a number is carried over from a sibling component, decompose it before
+carrying it.**
+
+**2. A scene save in a shared Editor serializes every in-flight `[SerializeField]` rename in the
+project, not just yours.** Saving `LabScaffold.unity` for two new label GameObjects also
+re-serialized two `SelectorOverlayWidget` components, because a concurrently-running task had
+renamed `_cardsContainer` → `_cardsViewport` in C# — dropping the old property and writing three
+new nulls into *my* diff, under a heading that had nothing to do with the change. This is a
+different mechanism from the known layout-group churn (`project_scene_save_bakes_layout_churn`):
+that one is Unity recomputing rects, this one is Unity honouring somebody else's uncommitted code.
+**Check the scene diff for component blocks you did not touch, by name, not just for
+`m_IsActive`.** The repair is a targeted restore of those blocks from `HEAD` (they will be dropped
+again by the next save, which is correct — it is that task's change to make, in that task's
+commit). Sister rule: never stage a shared doc like `Docs/AI_CONTEXT.md` whole when another
+session has an uncommitted entry in it — stage your own content via `hash-object` +
+`update-index --cacheinfo`, the same discipline as `project_k10_commit_swept_k11_edits`.

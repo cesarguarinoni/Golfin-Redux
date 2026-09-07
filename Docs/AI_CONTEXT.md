@@ -4,6 +4,76 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 — flick_pull_mapping: **Flick's power is measured from the club, not from the cone's floor**
+
+`flick_shot_view` gave Flick the 0.38 framing and a 792 px cone, and paid for it in the one place
+nobody was looking: `ClubHandleDragger` read `power = 1 − handleY / ConeHeightPx`, which measures
+from the cone's **BASE**. With the club resting 540 px above a 792 px base for pull parity, merely
+*touching* the club read **31.8 %**. Cesar: *"way too high."* And Flick had **no 120 % at all** —
+the finger ran out of cone at 1.0, while the Figma driver frame draws both lines and the other three
+schemes have had 120 % since `scheme_pendulum`.
+
+**Power is now the travel from the club's REST**, which is what the other three have always
+measured. `FlickPullMath` (new, beside `FlickMath` in `Golfin.Gameplay.Input`, for the same asmdef
+reason) carries the shape every scheme shares — dead zone, linear to 100 %, a 0.2-wide overpower
+ramp — against two new keys, `FlickPull100Px` **540** and `FlickPull120Px` **648**, which are
+Pendulum's and Free Swing's own numbers. `MinUsefulPullPx` (40) is REUSED as the dead zone rather
+than copied a fifth time.
+
+**And the cone's base became 120 %**, which is the whole reason `FlickHandleStartY01` moved
+**0.6818 → 0.8182**: `0.8182 × 792 = 648.01`, so the club rests exactly `FlickPull120Px` above the
+base. That identity — `FlickHandleStartY01 × FlickConeHeightPx == FlickPull120Px` — is the one that
+ties the three keys together, and it is asserted in `FlickPullMathTests`, in `ShotLayoutMathTests`
+and again live. Re-cut the cone and it has to be re-derived as `Pull120 / newHeight`, exactly as the
+old comment said about the 540 parity.
+
+`ShotConeView` now places the club through `FlickPullMath.ConeLocalYForPower` — **the exact
+inverse** — so the drawn club and the finger coincide rather than merely agreeing in shape, and the
+`Clamp01` that used to draw a 120 % pull at the 100 % line is gone. Bots reach the same line: they
+publish a normalised power through `SetExternalPower` and never place the handle themselves.
+
+**Two labels, derived not authored — and no lines.** "100 %" at `Pull120 − Pull100` = 108 px above
+the base, "120 %" ON the base, each parked 16 px outside the cone's own edge at that height, fading
+with the cone's `CanvasGroup`, 120 % hidden on a putt. Built and wired by a new
+`FlickConeLabelsBuilder` — Flick's first builder, and the thing that finally wires
+`ClubHandleDragger._coneView` instead of a `Find()`. **It first drew gold and red tick lines under
+them, per SPEC D3, and Cesar removed them on sight: _"Remove the 100 % and 120 % lines, leave only
+the labels."_** The cone already draws its own band lines; a second family of horizontal rules
+across it read as noise. The builder now DELETES `Tick100`/`Tick120` when it finds them, so a scene
+built at iter-1 is repaired by re-running it rather than left with orphans, and the acceptance run
+asserts no such GameObject survives — deactivating them would not have counted.
+
+**Measured live on Lomond hole 2 at 1170 × 2532 through the REAL dragger — 24 assertions, 0 fail.**
+The gauge's own text at 0 / 40 / 290 / 540 / 648 / 700 px of pull: `0%` `0%` `50%` `100%` `120%`
+`120%`. Club meets finger to **0.00 px** at every invertible depth. Rest **−447.83** (144 px under
+the ball), the `100%` label **−987.84**, the `120%` label **−1095.84** — the cone base, on the
+shared baseline. A putt reads `100%` at the base with the `120%` label hidden. Lateral aim still reaches ±1.000 (D5
+untouched). `miss_grade_duff`'s PURE / GOOD / THIN / DUFF re-verified through the real dragger.
+
+**The spec's `+76` label offset was wrong for a cone and it took a frame to see it.** The Pendulum's
+76 is *half a 120-wide lane plus a 16 px gap*; the cone is 186 px wide at the 100 % height and 216
+at the base, so both labels drew inside the cone body. What ports across is the GAP. Also worth
+knowing: **the dead zone is a flat segment, so no inverse of it can be continuous** — the club sits
+at rest through all 40 px and catches up in one frame. That is the dead zone made visible; the
+alternative hangs the club 40 px below a finger that has not moved.
+
+EditMode **2796 / 2793 / 0 fail / 3 pre-existing skips**. `bot_difficulty.csv` zero diff,
+`Assets/Scripts/Physics/` untouched, scene diff 435+/1− with zero `m_IsActive: 0`. Three Flick
+confirm tiles re-captured; the other nine byte-identical and all twelve `.meta` untouched.
+Four editor bots were repaired in passing — three inverted the OLD mapping to aim at a target power
+and would have silently aimed 108 px short of everything they asked for.
+
+And one more that only a scene save exposes: a **concurrent `selector_carousel` session** had
+renamed `SelectorOverlayWidget._cardsContainer`, so saving `LabScaffold` re-serialized two of ITS
+components into my diff. Both blocks were restored to HEAD by hand-patch — the scene diff is
+**281+/1−, zero `m_IsActive: 0`, and mine only**. Worth remembering: a scene save in a shared Editor
+picks up every in-flight `[SerializeField]` rename in the project, not just your own.
+
+Nothing open for the Architect — the two iter-1 questions (the 100 % tick landing 10.8 px under the
+cone's own DUFF band line, and straight chords against curved band lines) are both closed by
+removing the lines. Detail: `Docs/Specs/Completed/flick_pull_mapping/IMPLEMENTER_REPORT.md`.
+
+---
 ## 2026-09-07 — flick_shot_view: **Flick joins the framing; the cone is 792, not 1160**
 
 Flick was the one scheme `shot_view_layout` left behind, and only because of its own geometry:

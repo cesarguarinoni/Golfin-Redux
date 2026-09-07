@@ -13,6 +13,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Golfin.Gameplay.Session;
 using Golfin.Gameplay.UI.ShotUI;
+using Golfin.UI.EditorTools;
 using Golfin.Telemetry;
 
 namespace Golfin.EditorTools
@@ -242,8 +243,14 @@ namespace Golfin.EditorTools
         /// </summary>
         IEnumerator SwingInBand(float lo, float hi, float power, string tag)
         {
-            float localY = Mathf.Clamp01(1f - power) * ConeHeightPx;
-            Vector2 top  = ConeLocalToScreen(0f, ConeHeightPx * 0.92f);
+            // flick_pull_mapping §3.2: power is the travel from the club's REST, so the target y
+            // is the SHIPPED mapping's own inverse and the press starts ON the club rather than
+            // near the apex. Under the old base-relative form this tool would aim 108px short of
+            // every power it asked for. isPutt: false — this tool swings from the tee, and a putt
+            // caps at 1.0.
+            float restY  = FlickPullReflect.RestYPx(ConeHeightPx);
+            float localY = FlickPullReflect.ConeLocalYForPower(power, ConeHeightPx, false);
+            Vector2 top  = ConeLocalToScreen(0f, restY);
             Vector2 hold = ConeLocalToScreen(0f, localY);
 
             PointerDownAt(top);
