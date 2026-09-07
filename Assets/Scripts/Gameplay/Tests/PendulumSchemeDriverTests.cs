@@ -122,6 +122,18 @@ namespace Golfin.Gameplay.Tests
             _driver.OnDrag(At(OriginX + lateralPx, OriginY - pullPx));
         }
 
+        /// <summary>
+        /// Upward travel that clears BOTH reversal thresholds no matter what the Game View is
+        /// set to. The two are measured in different units and that is easy to trip over: the
+        /// AIM LATCH is a fraction of Screen.height (ShotController._reversalThreshold, 1%),
+        /// while the REVERSE-CANCEL arm is absolute pixels (HandleReverseCancelPx, 60). A rise
+        /// written only as `Screen.height * 0.05f` therefore arms the cancel on a tall Game
+        /// View (2532 -> 126px) and not on a short one (1000 -> 50px) — which is precisely how
+        /// MarkerFreezes_AtTheUpswingReversal_NotAtRelease came to pass or fail depending on
+        /// the editor's resolution rather than on the code.
+        /// </summary>
+        private float UpswingPx => Mathf.Max(Screen.height * 0.05f, _cfg.HandleReverseCancelPx * 2f);
+
         // ── 1. The gesture reaches Timing and publishes power ────────────────────
 
         [Test]
@@ -282,12 +294,21 @@ namespace Golfin.Gameplay.Tests
             float atReversal = _driver.MarkerOffset;
 
             // A real upswing: the sample rises far enough past the swing's lowest point to latch.
-            _driver.OnDrag(At(OriginX, OriginY - _cfg.PendulumPull100Px + Screen.height * 0.05f));
+            _driver.OnDrag(At(OriginX, OriginY - _cfg.PendulumPull100Px + UpswingPx));
             _driver.TickForTests(0.001f);
             Assert.IsTrue(_driver.MarkerLatched, "the upswing reversal must freeze the marker");
 
-            // Time passes while the thumb leaves — the marker must NOT move on.
-            for (int i = 0; i < 30; i++) _driver.TickForTests(0.016f);
+            // Time passes while the thumb leaves — the marker must NOT move on. Bounded by
+            // HandleReverseCancelHoldSec, because past that the finger is no longer LEAVING,
+            // it is HOLDING the club back up, and that is the reverse-cancel gesture: it kills
+            // the swing by design and resets the marker with it (pinned next door in
+            // PullingBackUpAndHolding_CancelsTheSwing). 50-150 ms is the window this
+            // test is about, so it asserts the freeze inside the hold, not past it.
+            int frames = Mathf.FloorToInt(_cfg.HandleReverseCancelHoldSec / 0.016f) - 1;
+            Assert.Greater(frames, 0, "harness: the hold must span at least one 60 fps frame");
+            for (int i = 0; i < frames; i++) _driver.TickForTests(0.016f);
+
+            Assert.IsTrue(_driver.MarkerLatched, "the latch must survive the thumb leaving");
             Assert.AreEqual(atReversal, _driver.MarkerOffset, 0.02f,
                 "a frozen marker is what the player saw when they committed");
         }
@@ -505,6 +526,11 @@ namespace Golfin.Gameplay.Tests
             Assert.AreEqual(ShotState.Idle, _sc.State, "a held reversal ends the swing");
             Assert.AreEqual(1, _cancelCount, "and cancels rather than firing");
             Assert.AreEqual(0, _shotCount);
+            // The marker latch dies with the swing. Asserted HERE because this cancel and the
+            // marker freeze share one arm-then-clock path in Advance, and leaving the boundary
+            // unpinned is how MarkerFreezes_AtTheUpswingReversal_NotAtRelease came to tick 480ms
+            // — four times this threshold — and assert a cancelled swing's reset marker.
+            Assert.IsFalse(_driver.MarkerLatched, "and the reset clears the marker latch with it");
         }
 
         [Test]
