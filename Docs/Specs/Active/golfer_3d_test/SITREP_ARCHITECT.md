@@ -25,11 +25,11 @@ grip solve.** Everything the contact solve does was being layered on a golfer st
 
 ### Evidence
 
-- `screenshots/address_BEFORE.png` — Hole 06, real play mode. Upright, back to camera, arms at his
+- `evidence/address_BEFORE.jpg` (committed; full-res PNG in the gitignored `screenshots/`) — Hole 06, real play mode. Upright, back to camera, arms at his
   sides, club dangling, head nowhere near the ball. The reported defect, reproduced first thing.
-- `screenshots/address_AFTER.png` — same frame, same harness. Bent at the hips, both hands on the
+- `evidence/address_AFTER.jpg` — same frame, same harness. Bent at the hips, both hands on the
   grip, shaft down to the ball.
-- `screenshots/atrest_AFTER.png` — Turn 2, ball at rest, re-armed. **This is the frame that needed
+- `evidence/atrest_AFTER.jpg` — Turn 2, ball at rest, re-armed. **This is the frame that needed
   the second fix**; after cause 1 alone it still showed the upright pose.
 
 ---
