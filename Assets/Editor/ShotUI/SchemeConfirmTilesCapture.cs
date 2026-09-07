@@ -83,9 +83,25 @@ namespace Golfin.EditorTools.ShotUI
         /// <summary>Tile size in the pop-up (Figma <c>14140:35478</c>), and the 2x source we bake.</summary>
         public const int TileW = 314, TileH = 340, Scale = 2;
 
-        /// <summary>Corner radius of the tile in the node, baked into the PNG's alpha so the prefab
-        /// can stay a plain Image (no mask component, no extra draw call).</summary>
-        public const int TileRadius = 32;
+        /// <summary>
+        /// Corner radius and border of the tile in the node (<c>Tile</c> 14145:37494:
+        /// <c>rounded-[20px]</c>, <c>border-2 border-[rgba(255,255,255,0.35)]</c>), baked into the
+        /// PNG so the prefab can stay a plain Image — no mask component, no Outline, no extra draw
+        /// call. Authored at TILE px and multiplied by <see cref="Scale"/> at bake time.
+        ///
+        /// <para>The radius was 32 here against the node's 20, and there was no border at all,
+        /// which is what Cesar spotted on 2026-09-07. Re-pulled from the node rather than
+        /// eyeballed.</para>
+        /// </summary>
+        public const int TileRadius = 20, TileBorderPx = 2;
+
+        /// <summary>Node: <c>rgba(255,255,255,0.35)</c>.</summary>
+        public static readonly Color32 TileBorderColor = new Color32(255, 255, 255, 89);
+
+        /// <summary>The node's <c>Crop</c> frame is <c>bg-white</c>, so anything inside the tile
+        /// the game image does not cover is white — not transparent, which would let the panel's
+        /// navy gradient through and break the card.</summary>
+        public static readonly Color32 TileMatColor = new Color32(255, 255, 255, 255);
 
         /// <summary>Margin added around the measured subject box before the aspect fit.</summary>
         public const float Margin = 0.10f;
@@ -98,6 +114,23 @@ namespace Golfin.EditorTools.ShotUI
         /// wind and power widgets all sit outside x = +/-337.
         /// </summary>
         public const float MinCropW = 520f, MaxCropW = 900f;
+
+        /// <summary>
+        /// Crop HEIGHT bound, clamped independently of the width
+        /// (shot_view_layout_followup §2).
+        ///
+        /// <para>Height used to be re-derived from the clamped width, which quietly made
+        /// <see cref="MaxCropW"/> a height cap of ~975 px as well. That was invisible until
+        /// <c>shot_view_layout</c> dropped the ball to viewport 0.38: the Pendulum subject — aim
+        /// bar at ball +128 down to the lane end — became ~1100 px tall, and the tiles started
+        /// cutting off the marker bar and the 100 %/120 % labels, i.e. exactly the parts that
+        /// explain the control.</para>
+        ///
+        /// <para>The width cap has to stay where it is (it is what keeps the HUD columns out), so
+        /// a tall subject now produces a crop TALLER than the tile's aspect, and
+        /// <c>WriteTile</c> fits it inside the tile rather than stretching it.</para>
+        /// </summary>
+        public const float MaxCropH = 1300f;
 
         [InitializeOnLoadMethod]
         static void Hook() => EditorApplication.playModeStateChanged += OnPlayModeChanged;
@@ -148,6 +181,44 @@ namespace Golfin.EditorTools.ShotUI
 
         /// <summary>Round the corners in the alpha channel, at the same 32 px radius the node draws
         /// (scaled to the 2x source).</summary>
+        /// <summary>
+        /// Stroke the tile's rounded boundary INWARD, over the pixels
+        /// <see cref="RoundCorners"/> has just kept.
+        ///
+        /// <para>Signed distance to the rounded rect rather than four arcs and four edges: the
+        /// corners are where a hand-rolled border goes wrong, and the SDF gives the straight runs
+        /// and the arcs from one expression with the same 1px feather the corner mask uses.</para>
+        /// </summary>
+        public static void StrokeRoundedRect(Color32[] px, int w, int h, int radius, int stroke, Color32 colour)
+        {
+            float hw = w * 0.5f, hh = h * 0.5f;
+            for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                // Distance from the rounded boundary: negative inside, 0 on the edge.
+                float qx = Mathf.Abs(x + 0.5f - hw) - (hw - radius);
+                float qy = Mathf.Abs(y + 0.5f - hh) - (hh - radius);
+                float d  = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) +
+                                      Mathf.Max(qy, 0f) * Mathf.Max(qy, 0f))
+                           + Mathf.Min(Mathf.Max(qx, qy), 0f) - radius;
+
+                if (d > 0.5f || d < -stroke - 0.5f) continue;
+
+                // Feather both ends of the band so the stroke antialiases against the art inside
+                // and against the transparent corner outside.
+                float cover = Mathf.Clamp01(0.5f - d) * Mathf.Clamp01(d + stroke + 0.5f);
+                if (cover <= 0f) continue;
+
+                int i = y * w + x;
+                float a = colour.a / 255f * cover;
+                px[i] = new Color32(
+                    (byte)Mathf.RoundToInt(px[i].r * (1f - a) + colour.r * a),
+                    (byte)Mathf.RoundToInt(px[i].g * (1f - a) + colour.g * a),
+                    (byte)Mathf.RoundToInt(px[i].b * (1f - a) + colour.b * a),
+                    (byte)Mathf.Max(px[i].a, Mathf.RoundToInt(255f * cover)));
+            }
+        }
+
         public static void RoundCorners(Color32[] px, int w, int h, int radius)
         {
             for (int y = 0; y < h; y++)
@@ -730,10 +801,27 @@ namespace Golfin.EditorTools.ShotUI
             for (float t = 0f; t < timeout; t += Time.unscaledDeltaTime)
             {
                 var go = FindAny(name);
-                if (go != null && go.activeInHierarchy) yield break;
+                if (go != null && go.activeInHierarchy && IsOpaque(go)) yield break;
                 yield return null;
             }
             Note("never_appeared", name);
+        }
+
+        /// <summary>
+        /// Is this object actually on screen, as opposed to merely enabled?
+        ///
+        /// <para>A <c>SchemeGradePop</c> stays ACTIVE through its hold, through its fade-out and
+        /// afterwards at alpha 0 — <c>Show</c> sets the alpha, <c>Hide</c> clears it, and neither
+        /// touches the GameObject. So <c>activeInHierarchy</c> answers true for a pop that has
+        /// already faded, the wait returns on the first frame, and the tile photographs empty
+        /// fairway where the grade should be. That is exactly what T_Pendulum_3 came back as on
+        /// the 2026-09-07 run, and it is luck-of-the-frame-count whether it happens — the previous
+        /// run got away with it. Wait for the pixels.</para>
+        /// </summary>
+        static bool IsOpaque(GameObject go)
+        {
+            var group = go.GetComponent<CanvasGroup>();
+            return group == null || group.alpha > 0.9f;
         }
 
         IEnumerator WaitUntilFlying(float timeout = 4f)
@@ -870,8 +958,23 @@ namespace Golfin.EditorTools.ShotUI
             float h = subject.height * (1f + 2f * m);
             if (w / h < aspect) w = h * aspect; else h = w / aspect;
 
+            // INDEPENDENT clamps. `h = w / aspect` used to follow this line, which threw the
+            // height away and re-derived it from the clamped width — so the 900 px width cap
+            // silently capped height at ~975 too, and a 1100 px-tall subject lost its top and
+            // bottom. Width still stops at MaxCropW because that is the HUD guard; height gets
+            // its own bound, and the two are allowed to disagree.
             w = Mathf.Clamp(w, SchemeConfirmTilesCapture.MinCropW, SchemeConfirmTilesCapture.MaxCropW);
-            h = w / aspect;
+            h = Mathf.Min(h, SchemeConfirmTilesCapture.MaxCropH);
+
+            // FILL THE TILE where the canvas allows, on WHICHEVER axis is short. The node's tile
+            // (14145:37494) is a full-bleed window — it has no letterboxing — so any crop left off
+            // the tile aspect bakes white bars the design does not have. Both clamps above can
+            // cause it: MaxCropH leaves a crop too NARROW, and the MinCropW floor leaves a small
+            // subject's crop too SHORT. Growing either only ever adds more fairway, and it is
+            // allowed past MaxCropW because that bound is a HEURISTIC for keeping the HUD out
+            // while the chrome assertion below is the actual guarantee.
+            if (w < h * aspect)      w = Mathf.Min(h * aspect, _canvasRt.rect.width);
+            else if (h < w / aspect) h = Mathf.Min(w / aspect, _canvasRt.rect.height);
 
             Rect crop = Centre(subject.center, w, h);
 
@@ -900,9 +1003,11 @@ namespace Golfin.EditorTools.ShotUI
                     crop = Centre(c2, crop.width, crop.height);
                 }
 
+                // Shrink BOTH axes by the same factor: the crop no longer has the tile's aspect,
+                // so re-deriving h from w here would undo the clamp above on the first nudge.
                 w *= 0.90f;
+                h *= 0.90f;
                 if (w < SchemeConfirmTilesCapture.MinCropW * 0.6f) break;
-                h = w / aspect;
                 crop = Centre(subject.center, w, h);
             }
 
@@ -957,11 +1062,19 @@ namespace Golfin.EditorTools.ShotUI
 
             int outW = SchemeConfirmTilesCapture.TileW * SchemeConfirmTilesCapture.Scale;
             int outH = SchemeConfirmTilesCapture.TileH * SchemeConfirmTilesCapture.Scale;
-            var scaled = Scale(cropped, outW, outH);
+
+            // FIT INSIDE, do not stretch. The crop is no longer guaranteed to carry the tile's
+            // aspect (see MaxCropH), and stretching a 900x1104 crop into a 628x680 tile would
+            // squash the ball into an egg and the lane into a fat stripe — the club head is a
+            // recognisable object, so a wrong aspect reads as a broken render, not as framing.
+            var scaled = FitInside(cropped, outW, outH);
 
             var px32 = scaled.GetPixels32();
-            SchemeConfirmTilesCapture.RoundCorners(px32, outW, outH,
-                SchemeConfirmTilesCapture.TileRadius * SchemeConfirmTilesCapture.Scale);
+            int radius = SchemeConfirmTilesCapture.TileRadius * SchemeConfirmTilesCapture.Scale;
+            SchemeConfirmTilesCapture.RoundCorners(px32, outW, outH, radius);
+            SchemeConfirmTilesCapture.StrokeRoundedRect(px32, outW, outH, radius,
+                SchemeConfirmTilesCapture.TileBorderPx * SchemeConfirmTilesCapture.Scale,
+                SchemeConfirmTilesCapture.TileBorderColor);
             scaled.SetPixels32(px32);
             scaled.Apply();
 
@@ -996,6 +1109,35 @@ namespace Golfin.EditorTools.ShotUI
             UnityEngine.Object.DestroyImmediate(scaled);
 
             Note("tile", $"{scheme} {step} -> {dst} ({outW}x{outH}) crop {pw}x{ph} @ ({px},{py})");
+        }
+
+        /// <summary>
+        /// Scale <paramref name="src"/> to fit inside <paramref name="w"/> x <paramref name="h"/>
+        /// preserving its aspect, centred, with TRANSPARENT padding.
+        ///
+        /// <para>Padded with the node's own mat (<see cref="SchemeConfirmTilesCapture.TileMatColor"/>
+        /// — the <c>Crop</c> frame is <c>bg-white</c>), NOT transparent. Alpha would let the modal
+        /// panel's navy gradient through, and with the rounded corners and the border baked into
+        /// this PNG the result stops reading as a card at all. In practice this rarely shows:
+        /// <c>FitCrop</c> widens a too-tall crop back to the tile aspect wherever the canvas
+        /// allows.</para>
+        /// </summary>
+        static Texture2D FitInside(Texture2D src, int w, int h)
+        {
+            float scale = Mathf.Min((float)w / src.width, (float)h / src.height);
+            int fitW = Mathf.Max(1, Mathf.RoundToInt(src.width  * scale));
+            int fitH = Mathf.Max(1, Mathf.RoundToInt(src.height * scale));
+
+            var fitted = Scale(src, fitW, fitH);
+            if (fitW == w && fitH == h) return fitted;
+
+            var outTex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            var mat = new Color32[w * h];
+            for (int i = 0; i < mat.Length; i++) mat[i] = SchemeConfirmTilesCapture.TileMatColor;
+            outTex.SetPixels32(mat);
+            outTex.SetPixels32((w - fitW) / 2, (h - fitH) / 2, fitW, fitH, fitted.GetPixels32());
+            outTex.Apply();
+            return outTex;
         }
 
         static Texture2D Scale(Texture2D src, int w, int h)

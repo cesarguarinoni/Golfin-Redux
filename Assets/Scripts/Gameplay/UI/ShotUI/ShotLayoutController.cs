@@ -82,6 +82,9 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// it because it is the thing that visibly hangs lower.</summary>
         public float LastBallY            { get; private set; }
         public float LastBaseline         { get; private set; }
+        /// <summary>The baseline in canvas y — <c>-H/2 + LastBaseline</c>, and the value both
+        /// lane views are capped to.</summary>
+        public float LastBaselineY        { get; private set; }
         public float LastLaneEndY         { get; private set; }
         public float LastHandleYAtFullPull { get; private set; }
 
@@ -131,8 +134,17 @@ namespace Golfin.Gameplay.UI.ShotUI
             _lastScheme = scheme;
             ControlsConfig cfg = ControlsConfig.Default;
 
-            float baseline = ShotLayoutMath.Baseline(cfg.BottomBaselinePx, SafeBottomCanvasPx(height));
-            float ballY    = ResolveBallY(scheme, cfg, height, baseline);
+            float baseline  = ShotLayoutMath.Baseline(cfg.BottomBaselinePx, SafeBottomCanvasPx(height));
+            float baselineY = -height * 0.5f + baseline;
+            float ballY     = ResolveBallY(scheme, cfg, height, baseline);
+
+            // The pill may not hang past the row the buttons and the overlays sit on
+            // (shot_view_layout_followup §1). Set on BOTH lanes every apply, not just the live
+            // one, and set BEFORE the driver's Activate reaches ApplyGeometry — which is where
+            // the height is actually derived. This caps the DRAWN pill only; the pull clamp is
+            // the driver's, off cfg.*Pull120Px, and neither reads LaneHeight.
+            if (_pendulumLane  != null) _pendulumLane.SetLaneEndCapY(baselineY);
+            if (_freeSwingLane != null) _freeSwingLane.SetLaneEndCapY(baselineY);
 
             bool ballMoved = _centralBall != null &&
                              !Mathf.Approximately(_centralBall.anchoredPosition.y, ballY);
@@ -152,6 +164,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             LastBallY            = ballY;
             LastBaseline         = baseline;
+            LastBaselineY        = baselineY;
             LastLaneEndY         = LaneEndFor(scheme, cfg, ballY);
             LastHandleYAtFullPull = HandleYFor(scheme, cfg, ballY);
             _hasApplied  = true;

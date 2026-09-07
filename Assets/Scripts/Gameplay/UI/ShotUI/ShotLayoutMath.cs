@@ -92,6 +92,48 @@ namespace Golfin.Gameplay.UI.ShotUI
             return Mathf.Max(anchor, BallYForLane(canvasHeight, baseline, pull120Px, handleRestBelowBall));
         }
 
+        /// <summary>Minimum drawn pill left BELOW the deepest tick, in canvas px. Small, but not
+        /// zero: a tick sitting exactly on the rounded end reads as the end of the lane rather
+        /// than as a line across it.</summary>
+        public const float MinTailBelowDeepestTickPx = 8f;
+
+        /// <summary>
+        /// The pill's drawn height after the bottom cap (shot_view_layout_followup §1).
+        ///
+        /// <para>WHY THE PILL IS CAPPED AND THE PULL IS NOT. The baseline clamp guards the FINGER
+        /// (D3), so a club head that scales up hangs below the pill instead of pushing the ball
+        /// back up the screen — deliberate. What that leaves is a rounded tail poking past the
+        /// row the buttons and the selector overlays sit on. This trims the DRAWN pill to the
+        /// baseline; the drivers still clamp the pull on <c>cfg.*Pull120Px</c>, so 120% is exactly
+        /// as reachable as it was and the club head simply overhangs the end at full pull.</para>
+        ///
+        /// <para>The floor wins over the cap, not the other way round: on a screen short enough
+        /// that the 120% tick is itself at the baseline, 8px of pill below it beats a tick drawn
+        /// on the rounded end.</para>
+        /// </summary>
+        /// <param name="derivedHeight">What the view would draw uncapped — deepest tick plus the
+        /// club's lower half plus the tail.</param>
+        /// <param name="deepestTickBelowTop">The 120% tick (or the 100% tick on a putt) measured
+        /// down from the lane's TOP edge, which is what the height is relative to.</param>
+        /// <param name="laneTopCanvasY">The lane's top edge in canvas-centre space.</param>
+        /// <param name="laneEndCapY">Canvas y the pill may not extend past;
+        /// <see cref="float.NegativeInfinity"/> for "uncapped".</param>
+        public static float CappedLaneHeight(float derivedHeight, float deepestTickBelowTop,
+                                             float laneTopCanvasY, float laneEndCapY)
+        {
+            // BOTH ends have to be real numbers. A view with no canvas answers NaN for its own top
+            // edge, and NaN silently loses every Min/Max it touches — which would have collapsed an
+            // uncapped lane onto the 8px floor rather than leaving it alone.
+            if (float.IsNegativeInfinity(laneEndCapY) || !IsFinite(laneEndCapY) ||
+                !IsFinite(laneTopCanvasY))
+                return derivedHeight;
+
+            float capped = Mathf.Min(derivedHeight, laneTopCanvasY - laneEndCapY);
+            return Mathf.Max(capped, deepestTickBelowTop + MinTailBelowDeepestTickPx);
+        }
+
+        private static bool IsFinite(float v) => !float.IsNaN(v) && !float.IsInfinity(v);
+
         /// <summary>Canvas y of the club head's centre at a 120% pull — the point the baseline
         /// guard is about, and the one the acceptance run measures.</summary>
         public static float HandleYAtFullPull(float ballY, float pull120Px, float handleRestBelowBall)

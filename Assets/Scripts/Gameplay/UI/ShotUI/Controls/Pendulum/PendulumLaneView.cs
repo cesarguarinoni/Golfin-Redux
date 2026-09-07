@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using Golfin.Gameplay.Config;
+using Golfin.Gameplay.UI.ShotUI;
 
 namespace Golfin.Gameplay.UI.Controls.Pendulum
 {
@@ -52,6 +53,16 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         public float ClubHalfHeight => _clubHalfHeight;
         public float LaneTailPx     => _laneTailPx;
 
+        /// <summary>Canvas y the drawn pill may not extend past — the shared bottom baseline,
+        /// pushed in by <c>ShotLayoutController</c>. Uncapped until someone sets it, so an Editor
+        /// scene without the controller draws exactly what it drew before
+        /// (shot_view_layout_followup §1).</summary>
+        private float _laneEndCapY = float.NegativeInfinity;
+
+        /// <summary>See <see cref="ShotLayoutMath.CappedLaneHeight"/>. Cap the PILL, never the
+        /// pull: the driver clamps on <c>PendulumPull120Px</c> and is not consulted here.</summary>
+        public void SetLaneEndCapY(float canvasY) => _laneEndCapY = canvasY;
+
         /// <summary>
         /// Lay the lane out for this swing. Called at Activate and whenever putt mode flips, not
         /// per frame — none of it changes while a finger is down.
@@ -68,13 +79,35 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             // full pull and the ticks always sit at the same proportion down the pill. Authoring
             // the height by hand is what let the pill and its lines drift apart in the first place.
             float deepest = isPutt ? tick100 : tick120;      // a putt has no 120% tick to reach
-            LaneHeight = deepest + _clubHalfHeight + _laneTailPx;
+            float derived = deepest + _clubHalfHeight + _laneTailPx;
+
+            // ...and then TRIMMED to the shared bottom baseline. The derivation above is still
+            // what the pill wants to be; the cap is what the screen allows. A putt's lane is
+            // short enough that the cap never bites.
+            LaneHeight = ShotLayoutMath.CappedLaneHeight(derived, deepest, LaneTopCanvasY(), _laneEndCapY);
 
             if (_lane != null)
                 _lane.sizeDelta = new Vector2(_lane.sizeDelta.x, LaneHeight);
 
             PlaceTick(_tick100, _label100, tick100, true);
             PlaceTick(_tick120, _label120, tick120, !isPutt);
+        }
+
+        /// <summary>The lane's top edge in canvas-centre space, read off the live rect rather than
+        /// derived from the ball — the view does not know where the ball is, and its top edge is
+        /// pivot-anchored so it does not move when the height below changes. NaN when there is no
+        /// canvas to measure against, which <see cref="ShotLayoutMath.CappedLaneHeight"/> reads as
+        /// "uncapped".</summary>
+        private float LaneTopCanvasY()
+        {
+            if (_lane == null) return float.NaN;
+            Canvas canvas = _lane.GetComponentInParent<Canvas>();
+            RectTransform canvasRect = canvas != null ? canvas.rootCanvas.transform as RectTransform : null;
+            if (canvasRect == null) return float.NaN;
+
+            var corners = new Vector3[4];
+            _lane.GetWorldCorners(corners);
+            return canvasRect.InverseTransformPoint(corners[1]).y;   // [1] = top-left
         }
 
         private void PlaceTick(RectTransform tick, TextMeshProUGUI label, float pullPx, bool shown)

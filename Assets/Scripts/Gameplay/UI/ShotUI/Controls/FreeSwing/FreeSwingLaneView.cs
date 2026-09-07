@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Golfin.Gameplay.Config;
+using Golfin.Gameplay.UI.ShotUI;
 using Golfin.Gameplay.UI.Controls.Pendulum;
 
 namespace Golfin.Gameplay.UI.Controls.FreeSwing
@@ -79,6 +80,16 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         public float ClubHalfHeight => _clubHalfHeight;
         public float LaneTailPx     => _laneTailPx;
 
+        /// <summary>Canvas y the drawn pill may not extend past — the shared bottom baseline,
+        /// pushed in by <c>ShotLayoutController</c>. Uncapped until someone sets it, so an Editor
+        /// scene without the controller draws exactly what it drew before
+        /// (shot_view_layout_followup §1).</summary>
+        private float _laneEndCapY = float.NegativeInfinity;
+
+        /// <summary>See <see cref="ShotLayoutMath.CappedLaneHeight"/>. Cap the PILL, never the
+        /// pull: the driver clamps on <c>FreeSwingPull120Px</c> and is not consulted here.</summary>
+        public void SetLaneEndCapY(float canvasY) => _laneEndCapY = canvasY;
+
         /// <summary>
         /// How far ABOVE its touch origin the finger must travel for the club head to reach the
         /// impact line — which is exactly how far the club head sits below the ball at rest.
@@ -119,17 +130,30 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             float deepest = isPutt ? Tick100BelowBall : Tick120BelowBall;   // a putt has no 120% tick
             float above   = isPutt ? _puttFollowThroughPx : cfg.FreeSwingFollowThroughPx;
 
-            LaneHeight = above + deepest + _clubHalfHeight + _laneTailPx;
+            float derived = above + deepest + _clubHalfHeight + _laneTailPx;
 
             if (_lane != null)
             {
                 // Pivoted at its top edge, which is parked FollowThroughPx above the ball, so
                 // every child below can be placed as a distance from the lane's top and the two
                 // ends of the pill move independently as the derivation changes.
+                //
+                // POSITION BEFORE HEIGHT. The bottom cap is measured from this rect's live top
+                // edge, so the top has to be where it belongs before the height is asked for —
+                // and because the pivot is at the top, setting the height afterwards cannot move
+                // it again.
                 _lane.pivot = new Vector2(0.5f, 1f);
                 _lane.anchoredPosition = new Vector2(0f, above);
-                _lane.sizeDelta = new Vector2(_lane.sizeDelta.x, LaneHeight);
             }
+
+            // ...and then TRIMMED to the shared bottom baseline. `deepest` is measured from the
+            // BALL, so the tick's distance from the lane's own top — which is what the floor is
+            // about — is `above + deepest`.
+            LaneHeight = ShotLayoutMath.CappedLaneHeight(derived, above + deepest,
+                                                          LaneTopCanvasY(), _laneEndCapY);
+
+            if (_lane != null)
+                _lane.sizeDelta = new Vector2(_lane.sizeDelta.x, LaneHeight);
 
             // The impact line is the tick at "club head back on the ball" — offset 0 from the
             // ball, i.e. `above` from the lane's top edge.
@@ -174,6 +198,23 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         /// <summary>What the IMPACT label currently reads. Read back by the tests and the
         /// acceptance run, so "no hardcoded text" is an assertion against a KEY's resolved value.</summary>
         public string ImpactLabelText => _impactLabel != null ? _impactLabel.text : null;
+
+        /// <summary>The lane's top edge in canvas-centre space, read off the live rect rather than
+        /// derived from the ball — the view does not know where the ball is, and its top edge is
+        /// pivot-anchored so it does not move when the height below changes. NaN when there is no
+        /// canvas to measure against, which <see cref="ShotLayoutMath.CappedLaneHeight"/> reads as
+        /// "uncapped".</summary>
+        private float LaneTopCanvasY()
+        {
+            if (_lane == null) return float.NaN;
+            Canvas canvas = _lane.GetComponentInParent<Canvas>();
+            RectTransform canvasRect = canvas != null ? canvas.rootCanvas.transform as RectTransform : null;
+            if (canvasRect == null) return float.NaN;
+
+            var corners = new Vector3[4];
+            _lane.GetWorldCorners(corners);
+            return canvasRect.InverseTransformPoint(corners[1]).y;   // [1] = top-left
+        }
 
         private void PlaceTick(RectTransform tick, TextMeshProUGUI label,
                                float fromLaneTop, float belowBall, bool shown)

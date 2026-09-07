@@ -4,6 +4,42 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 — **shot view followup: cap the pill, and let the tile crop grow**
+
+**The pill stops at the baseline; the pull does not.** With `ClubHalfHeight` at 150 the drawn lane
+ended 96 px below the row the buttons sit on. Both lane views now take
+`SetLaneEndCapY(canvasY)` from `ShotLayoutController` and run their derived height through
+`ShotLayoutMath.CappedLaneHeight` — `min(derived, laneTop − cap)`, floored at `deepestTick + 8` so a
+tick is never drawn on the rounded end. On 1170×2532 that is 888 → **792.16**, lane end **−1096.00**
+for both Pendulum and Free Swing. The drivers still clamp on `cfg.*Pull120Px` and never read
+`LaneHeight`, so 120 % is exactly as reachable as before and the 3× club head simply overhangs the
+pill at full pull — a live fixture asserts the capped height and `PowerNormalized == 1.2` in the same
+test. On 16:9 and 4:3 the 8 px floor beats the cap (the ball clamp has already put the 120 % tick ON
+the baseline there) and the pill ends 8 px below the line, deliberately.
+
+**The confirm tiles were being cropped by a hidden height cap.** `FitCrop` re-derived
+`h = w / aspect` from the width it had just clamped, so `MaxCropW = 900` was silently a ~975 px
+height cap too — invisible until the ball dropped to 0.38 and the Pendulum subject grew to ~1100 px.
+Height now clamps independently (`MaxCropH = 1300`) and `WriteTile` FITS the crop inside the tile
+instead of stretching it, padding with alpha so the panel's own gradient shows through. Needle ×3 and
+Free Swing ×3 recaptured and shipped; Flick ×3 byte-identical. Zero HUD-chrome nudges, and the
+pop-up verify is 167/167 at 1170×2532.
+
+**The tile's frame came off the node, and the radius was already wrong.** Cesar, mid-task: *"the
+images should have rounded corners and a white outline like in figma."* Re-pulled `Tile`
+14145:37494 — `rounded-[20px]` against the 32 the code had, and `border-2 border-[rgba(255,255,255,0.35)]`
+against no border at all. Both are baked into the PNG (signed-distance stroke, so the arcs and the
+straight runs come from one expression) and the tile stays a plain `Image`. The node's tile is
+full-bleed, so `FitCrop` also grows a crop back to the tile aspect on whichever axis is short — all
+twelve now fill their tile, and the node's white `Crop` background is the mat for the one that
+cannot (Flick 2 needs 1201 px of a 1170-wide canvas).
+
+**Still open, neither fixable in a crop:** at a 100 % pull the 3× club head covers the Pendulum
+lane's own 100 %/120 % labels (that is the live game — a tile is a photograph), and `T_Pendulum_3`
+captures an invisible grade pop across all three runs. See
+`Docs/Specs/Active/shot_view_layout_followup/IMPLEMENTER_REPORT.md`.
+
+---
 ## 2026-09-07 — **shot view layout: the ball drops, one bottom baseline, the gauge moves up**
 
 The shot view is framed by WHERE THE 2D BALL WIDGET IS. The aim camera pins the 3D ball to
