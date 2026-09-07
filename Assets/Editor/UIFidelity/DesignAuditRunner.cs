@@ -61,6 +61,12 @@ namespace Golfin.EditorTools.UIFidelity
         [MenuItem("GOLFIN/Design Audit/Capture live screens for the crop sheets", priority = 407)]
         public static void LaunchCapture() => Launch("capture");
 
+        [MenuItem("GOLFIN/Design Audit/Q2 · capture the four font surfaces (BEFORE)", priority = 412)]
+        public static void LaunchQ2Before() => Launch("q2:before");
+
+        [MenuItem("GOLFIN/Design Audit/Q2 · capture the four font surfaces (AFTER)", priority = 413)]
+        public static void LaunchQ2After() => Launch("q2:after");
+
         public static void Launch(string mode)
         {
             if (EditorApplication.isPlaying)
@@ -112,6 +118,7 @@ namespace Golfin.EditorTools.UIFidelity
                 else if (Mode.StartsWith("deep:")) yield return DeepPass(Mode.Substring(5));
                 else if (Mode.StartsWith("modals:")) yield return ModalPass(Mode.Substring(7));
                 else if (Mode == "capture") yield return CapturePass();
+                else if (Mode.StartsWith("q2:")) yield return Q2Pass(Mode.Substring(3));
 
                 Line("done");
                 EditorApplication.isPlaying = false;
@@ -346,6 +353,64 @@ namespace Golfin.EditorTools.UIFidelity
                     System.IO.File.Copy(path, dest, true);
                     Line($"captured {dest} md5={md5.Substring(0,8)}");
                 }
+            }
+
+            // ── Q2 · da_q2_default_font_readouts ────────────────────────────
+            //
+            // The four surfaces the Q2 font swap touches, each reached the way a player reaches it.
+            // Two of them (the Roster Compare panel, the Settings UserProfile submenu) are INACTIVE
+            // at author time and appear in no earlier capture pass, so the BEFORE run has to exist
+            // for the A/B to mean anything — a font swap judged only against the two frames the
+            // audit already had would be judged on two of its four surfaces.
+
+            string _lastQ2Md5 = "";
+
+            IEnumerator Q2Pass(string tag)
+            {
+                const string outDir = "Docs/Specs/Quick/_attachments";
+                System.IO.Directory.CreateDirectory(outDir);
+
+                yield return Tap("NavInventoryButton", 20f);
+                yield return new WaitForSecondsRealtime(3.5f);
+                yield return Tap("CLUBSTab", 10f);
+                yield return new WaitForSecondsRealtime(2.5f);
+                yield return Q2Snap(outDir, tag, "inventory_clubs");
+
+                yield return Tap("NavCharactersButton", 20f);
+                yield return new WaitForSecondsRealtime(3.5f);
+                yield return Q2Snap(outDir, tag, "roster_detail");
+
+                yield return Tap("CompareButton", 10f);
+                yield return new WaitForSecondsRealtime(2.5f);
+                yield return Q2Snap(outDir, tag, "roster_compare");
+
+                yield return Tap("CloseCompareButton", 10f);
+                yield return new WaitForSecondsRealtime(1.5f);
+
+                yield return Tap("SettingsButton", 20f);
+                yield return new WaitForSecondsRealtime(2.5f);
+                yield return Tap("UserProfileRow", 10f);
+                yield return new WaitForSecondsRealtime(2.5f);
+                yield return Q2Snap(outDir, tag, "settings_userprofile");
+            }
+
+            /// <summary>One frame, checked for existence AND for an md5 differing from the previous
+            /// one — SnapPlayModeSafe returns a path for a file it never wrote, and returns real
+            /// byte-identical STALE frames when the capture lands before the screen repaints.</summary>
+            IEnumerator Q2Snap(string outDir, string tag, string surface)
+            {
+                yield return new WaitForEndOfFrame();
+                string path = Golfin.Diagnostics.Runtime.CaptureCore.SnapPlayModeSafe($"q2_{tag}_{surface}");
+                if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+                { Line($"FAIL {surface}: phantom capture path ({path})"); yield break; }
+
+                string md5 = Md5(path);
+                if (md5 == _lastQ2Md5) Line($"FAIL {surface}: STALE frame (md5 == previous)");
+                _lastQ2Md5 = md5;
+
+                string dest = System.IO.Path.Combine(outDir, $"da_q2_{tag}_{surface}.png");
+                System.IO.File.Copy(path, dest, true);
+                Line($"captured {dest} md5={md5.Substring(0, 8)}");
             }
 
             static string Md5(string path)

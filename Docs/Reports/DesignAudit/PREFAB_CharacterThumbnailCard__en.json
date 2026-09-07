@@ -1,0 +1,30 @@
+{
+  "screen":"PREFAB_CharacterThumbnailCard",
+  "locale":"en",
+  "reachedVia":"prefab contents: Assets/Prefabs/UI/Roster/CharacterThumbnailCard.prefab",
+  "rootPath":"CharacterThumbnailCard",
+  "canvasScaleFactor":1,
+  "renderedPxFormula":"fontSize * rectTransform.lossyScale.y / canvas.scaleFactor",
+  "counts":{"tmp":4,"image":10,"button":1,"liberationSans":0,"outlineComponents":0,"shadowComponents":0},
+  "texts":[
+    {"path":"NameLabel","active":true,"font":"Rubik-VariableFont_wght SDF","fontStyle":"Bold","fontWeight":"Regular","fontSize":16,"autoSize":false,"autoSizeMin":18,"autoSizeMax":72,"lossyScaleY":1,"renderedPx":16,"color":"#FFFFFFFF","matOutlineWidth":0,"matOutlineColor":"#000000FF","outlineComponent":false,"shadowComponent":false,"locKey":"","jpFontScale":null,"text":"Elizabeth"},
+    {"path":"RarityBadge/Text","active":true,"font":"Rubik-VariableFont_wght SDF","fontStyle":"Bold","fontWeight":"Regular","fontSize":18,"autoSize":false,"autoSizeMin":18,"autoSizeMax":72,"lossyScaleY":1,"renderedPx":18,"color":"#FFFFFFFF","matOutlineWidth":0,"matOutlineColor":"#000000FF","outlineComponent":false,"shadowComponent":false,"locKey":"","jpFontScale":null,"text":"R"},
+    {"path":"LevelBadge/Text","active":true,"font":"Rubik-VariableFont_wght SDF","fontStyle":"Normal","fontWeight":"Regular","fontSize":14,"autoSize":false,"autoSizeMin":18,"autoSizeMax":72,"lossyScaleY":1,"renderedPx":14,"color":"#FFFFFFFF","matOutlineWidth":0,"matOutlineColor":"#000000FF","outlineComponent":false,"shadowComponent":false,"locKey":"","jpFontScale":null,"text":"Lv 1"},
+    {"path":"LockedOverlay/LockedLabel","active":false,"font":"Rubik-VariableFont_wght SDF","fontStyle":"Normal","fontWeight":"Medium","fontSize":25,"autoSize":false,"autoSizeMin":0,"autoSizeMax":0,"lossyScaleY":1,"renderedPx":25,"color":"#FFFFFFFF","matOutlineWidth":0,"matOutlineColor":"","outlineComponent":false,"shadowComponent":false,"locKey":"","jpFontScale":null,"text":"LOCKED"}
+  ],
+  "images":[
+    {"path":"","active":true,"sprite":"<NONE>","spriteGuid":"","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":150,"height":200,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"Background","active":true,"sprite":"<NONE>","spriteGuid":"","type":"Simple","ppuMultiplier":1,"color":"#808080FF","width":150,"height":200,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"Portrait","active":true,"sprite":"<NONE>","spriteGuid":"","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":120,"height":120,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"RarityBadge","active":true,"sprite":"<NONE>","spriteGuid":"","type":"Simple","ppuMultiplier":1,"color":"#000000B2","width":30,"height":30,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"LevelBadge","active":true,"sprite":"<NONE>","spriteGuid":"","type":"Simple","ppuMultiplier":1,"color":"#000000B2","width":50,"height":30,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"SelectionHighlight","active":false,"sprite":"<NONE>","spriteGuid":"","type":"Simple","ppuMultiplier":1,"color":"#00FFFFFF","width":160,"height":210,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":false,"outlineComponent":false,"shadowComponent":false},
+    {"path":"StatusIconsRow/IconSelectedSmall","active":false,"sprite":"IconSelectedSmall","spriteGuid":"6749b53239ee82248ac13846739acccb","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":20,"height":20,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":false,"outlineComponent":false,"shadowComponent":false},
+    {"path":"StatusIconsRow/IconLevelUpSmall","active":false,"sprite":"IconLevelUpSmall","spriteGuid":"c1b843fd6016a5745a5f730b2b8cf42e","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":20,"height":20,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":false,"outlineComponent":false,"shadowComponent":false},
+    {"path":"StatusIconsRow/IconStaminaSmall","active":false,"sprite":"IconStaminaSmall","spriteGuid":"e9df8622e360a894abb5d5b361930161","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":20,"height":20,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":false,"outlineComponent":false,"shadowComponent":false},
+    {"path":"LockedOverlay","active":false,"sprite":"Locked Portraits","spriteGuid":"984d9b2472f114ca6acd8e3d83fe804c","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":150,"height":200,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false}
+  ],
+  "buttons":[
+    {"path":"","active":true,"width":150,"height":200,"buttonPressFeedback":false}
+  ]
+}

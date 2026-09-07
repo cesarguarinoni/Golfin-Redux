@@ -1,0 +1,21 @@
+{
+  "screen":"PREFAB_StatBar",
+  "locale":"en",
+  "reachedVia":"prefab contents: Assets/Prefabs/UI/Roster/StatBar.prefab",
+  "rootPath":"StatBar",
+  "canvasScaleFactor":1,
+  "renderedPxFormula":"fontSize * rectTransform.lossyScale.y / canvas.scaleFactor",
+  "counts":{"tmp":2,"image":3,"button":0,"liberationSans":0,"outlineComponents":0,"shadowComponents":0},
+  "texts":[
+    {"path":"Label","active":true,"font":"Rubik-VariableFont_wght SDF","fontStyle":"Bold","fontWeight":"Regular","fontSize":16,"autoSize":false,"autoSizeMin":18,"autoSizeMax":72,"lossyScaleY":1,"renderedPx":16,"color":"#FFFFFFFF","matOutlineWidth":0,"matOutlineColor":"#000000FF","outlineComponent":false,"shadowComponent":false,"locKey":"","jpFontScale":null,"text":"STRENGTH"},
+    {"path":"ValueText","active":true,"font":"Rubik-VariableFont_wght SDF","fontStyle":"Normal","fontWeight":"Regular","fontSize":16,"autoSize":false,"autoSizeMin":18,"autoSizeMax":72,"lossyScaleY":1,"renderedPx":16,"color":"#FFFFFFFF","matOutlineWidth":0,"matOutlineColor":"#000000FF","outlineComponent":false,"shadowComponent":false,"locKey":"","jpFontScale":null,"text":"12/30"}
+  ],
+  "images":[
+    {"path":"Icon","active":true,"sprite":"<NONE>","spriteGuid":"","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":32,"height":32,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"BarContainer/Background","active":true,"sprite":"<NONE>","spriteGuid":"","type":"Simple","ppuMultiplier":1,"color":"#333333FF","width":120,"height":20,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"BarContainer/Fill","active":true,"sprite":"<NONE>","spriteGuid":"","type":"Filled","ppuMultiplier":1,"color":"#3399FFFF","width":100,"height":20,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false}
+  ],
+  "buttons":[
+    
+  ]
+}

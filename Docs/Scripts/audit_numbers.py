@@ -16,8 +16,10 @@ CORPUS RULE (the one the report states, applied here and nowhere else):
   * EN dumps for structural counts, JA dumps for the CJK-binding count
   * one file per DISTINCT screen — Inventory's four tab states collapse to InventoryScreen,
     because counting them separately multiplies every Inventory site by four
-  * modals (MODAL_*) and prefab-only dumps (PREFAB_*) EXCLUDED — they are reported separately
-    and are not part of any shape count
+  * modals (MODAL_*) and prefab-only dumps (PREFAB_*) EXCLUDED from the SCREEN corpus — they are
+    reported separately and are not part of any shape count. The two Roster prefabs' own default-font
+    count is read from their `PREFAB_*__en.json` dumps and printed as the `+N` beside the in-screen
+    figure, so that number is generated like every other one rather than typed into the format string.
 """
 from __future__ import annotations
 import collections, glob, json, os, re, sys
@@ -45,6 +47,17 @@ def corpus(locale: str) -> dict:
         # every other non-corpus dump, rather than by a hand-kept name list that a new Tier-2 screen
         # would silently defeat.
         out[n] = json.load(open(f))
+    return out
+
+
+def prefab_dumps() -> dict:
+    """The PREFAB_* dumps, keyed by prefab name. Excluded from the screen corpus above (a prefab is
+    not a surface a player navigates to), but they carry the two Roster prefabs' own Liberation
+    count, which the headline used to state as a hardcoded `+5`. Written by
+    `GOLFIN ▸ Design Audit ▸ Dump the two Roster prefabs (EN)`."""
+    out = {}
+    for f in glob.glob(f'{D}/PREFAB_*__en.json'):
+        out[os.path.basename(f).replace('PREFAB_', '').replace('__en.json', '')] = json.load(open(f))
     return out
 
 
@@ -92,6 +105,11 @@ def compute():
                 if 'NotoSans' in t['font']: cjk_noto += 1
                 else:                        cjk_latin += 1
 
+    PRE = prefab_dumps()
+    n.update(prefab_lib=sum(1 for d in PRE.values()
+                            for t in d['texts'] if t['font'] == 'LiberationSans SDF'),
+             prefab_names=sorted(PRE))
+
     n.update(lib=lib, outline=outline, shadow=shadow, filled=filled,
              filled_by=dict(filled_by.most_common()), visfill=vis, panel=panel,
              cjk_latin=cjk_latin, cjk_noto=cjk_noto,
@@ -103,7 +121,9 @@ def main():
     n = compute()
     print(f"CORPUS: {n['screens_en']} EN screens / {n['screens_ja']} JA screens "
           f"(Inventory tabs collapsed; modals + prefab dumps excluded)\n")
-    print(f"  LiberationSans (in-screen)   {n['lib']}   (+5 in CharacterThumbnailCard/StatBar = 41)")
+    where = "/".join(n['prefab_names']) or "no PREFAB_* dump present"
+    print(f"  LiberationSans (in-screen)   {n['lib']}   "
+          f"(+{n['prefab_lib']} in {where} = {n['lib'] + n['prefab_lib']})")
     print(f"  Outline components           {n['outline']}")
     print(f"  Shadow components            {n['shadow']}")
     print(f"  Image.Type.Filled            {n['filled']}   {n['filled_by']}")
