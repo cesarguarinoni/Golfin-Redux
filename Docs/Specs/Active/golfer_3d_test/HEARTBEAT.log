@@ -265,3 +265,33 @@ Scope: SPEC §9.2 + §9.6 (amended, Editor-only). §9.1/§9.3/§9.4/§9.5 landed
 Result: 37 pass / 0 fail. shot.launchDeferredToImpact PASS — ball moved 0.0000 m at t=0.6s,
   animator Swing_Drive. EditMode sweep 2713/2718 with the define ON; the 2 failures proven
   pre-existing by stashing the §9.2 edits and re-running.
+
+2026-09-07T12:00:00Z  Video take (Cesar: "give me a video").
+  Recorded through BotVideoRecorder (com.unity.recorder) — the sanctioned recorder the smoke bot
+  and HoleFlyoverRecorder already use — reached by reflection from the golfer harness, since
+  Golfin.Physics.Viewer.Editor is across an assembly boundary this file may not reference.
+  GameView input, not TaggedCamera: Rule 4 mandates TaggedCamera for world→screen proof because
+  GameViewInputSettings can bake a systematic Y-flip out of the METAL backbuffer; this is
+  Windows/DX, and TaggedCamera drops URP Overlay cameras, which here would throw away the HUD.
+  The §9.2 gate is the shot.launchDeferredToImpact NUMBER either way; the clip is the artifact.
+
+  TWO FAILED TAKES FIRST, both worth recording:
+   1. Begin() at EnteredPlayMode gave 6.8 s of the GOLFIN splash and NOW LOADING. The harness
+      spends its first ~40 s on the start gate, scene loads and settle holds, and the recorder's
+      30 s runaway watchdog force-stopped the clip long before the swing. This is CAPTURE RULE 0's
+      "captures kept returning the splash/title frame", in video form.
+      Fix: ArmDeferred() at play-mode entry, BeginDeferred() from inside Sequence immediately
+      before the shot, End() 4 s after the swing snap — which also keeps the clip inside the 30 s
+      watchdog, since a long drive plus WaitForBallAtRest can outlast it.
+   2. The retake was BLOCKED by BotVideoRecorder's one-full-res-video-per-session guard. That guard
+      exists against an Apple GPU / WindowServer watchdog reboot (2026-06-09); this is Windows, and
+      the recorder ships a sanctioned override, so it was cleared via
+      GOLFIN > Capture > Reset Video Session Guard rather than by touching the recorder.
+      A third attempt was then rejected with "already in play mode" — the previous run had not
+      exited; play mode was stopped over MCP before relaunching.
+
+  Result: videos/golfer_swing_h06_2026-09-07_11-57-10.mp4 (4.79 s, 1170x2532, 9.4 MB raw) and
+  evidence/golfer_swing_h06.mp4 (10.4 s, 1.3 MB) = real-time take followed by the swing again at
+  0.35x for animation review. No drawtext captions were hand-rolled (Rule 17).
+  NOTE: Docs/Specs/**/videos/ is gitignored (.gitignore:186), exactly as screenshots/ is — so the
+  committed copy lives in evidence/, or it would not reach the Mac or the Architect.

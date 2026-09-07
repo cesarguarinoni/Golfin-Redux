@@ -66,11 +66,88 @@ namespace Golfin.EditorTools
             EditorApplication.EnterPlaymode();
         }
 
+        // ── Video take ───────────────────────────────────────────────────────────────
+        //
+        // Same run, same assertions, with the Unity Recorder rolling over it. Uses
+        // BotVideoRecorder — the sanctioned recorder (com.unity.recorder), the one
+        // HoleFlyoverRecorder and the smoke bot already use — rather than a per-task capture
+        // path, per CAPTURE RULE 0 and the "CaptureCore/BotVideoRecorder is the only sanctioned
+        // path" lesson. Reached by REFLECTION: BotVideoRecorder lives in
+        // Golfin.Physics.Viewer.Editor and this file may not add an assembly reference to reach
+        // across, exactly as it already reflects to reach ShotController.
+        //
+        // GameView input, NOT UseCameraInput/TaggedCamera. Rule 4 mandates TaggedCamera for
+        // world→screen proof because GameViewInputSettings can bake a systematic Y-flip out of
+        // the METAL backbuffer; this is Windows/DX, and TaggedCamera drops URP Overlay cameras,
+        // which here would silently throw away the whole HUD. A swing clip is a character
+        // animation artefact for Cesar, not a projected-geometry gate, and the gate for §9.2 is
+        // the shot.launchDeferredToImpact number either way.
+        const string VideoKey = "GolferTestVerification.Video";
+
+        [MenuItem("GOLFIN/Golfer Test/Record video on Hole 06")]
+        public static void RecordHole06()
+        {
+            SessionState.SetBool(VideoKey, true);
+            Launch(6);
+        }
+
+        static Type BotVideoRecorderType => AppDomain.CurrentDomain.GetAssemblies()
+            .Select(a => { try { return a.GetTypes().FirstOrDefault(t => t.Name == "BotVideoRecorder"); } catch { return null; } })
+            .FirstOrDefault(t => t != null);
+
+        /// <summary>
+        /// ARMS a DEFERRED recording; the runner starts it right before the swing.
+        ///
+        /// <para>NOT <c>Begin()</c> at play-mode entry — that was tried and produced 6.8 s of the
+        /// GOLFIN splash and the NOW LOADING screen. The recorder's 30 s runaway watchdog
+        /// force-stops the clip, and this harness spends its first ~40 s passing the start gate,
+        /// loading ShellScene, seeding the round and holding for the hole geometry. The interesting
+        /// two seconds are three quarters of a minute in, so the recording has to be started from
+        /// inside the sequence. <c>ArmDeferred</c>/<c>BeginDeferred</c> exists for exactly this.</para>
+        /// </summary>
+        static void VideoArm()
+        {
+            var t = BotVideoRecorderType;
+            if (t == null) { Debug.LogWarning("[GolferVerify] BotVideoRecorder not found — no video."); return; }
+
+            string outDir = "Docs/Specs/Active/golfer_3d_test/videos";
+            Directory.CreateDirectory(outDir);
+            // Path WITHOUT extension — the recorder appends .mp4.
+            t.GetProperty("CustomOutputPath")?.SetValue(null,
+                outDir + "/golfer_swing_h06_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+            t.GetMethod("ArmDeferred")?.Invoke(null, null);
+            Debug.Log("[GolferVerify] deferred video armed -> " + outDir);
+        }
+
+        internal static void VideoBeginDeferred()
+        {
+            BotVideoRecorderType?.GetMethod("BeginDeferred")?.Invoke(null, null);
+            Debug.Log("[GolferVerify] deferred video START");
+        }
+
+        internal static void VideoEnd()
+        {
+            BotVideoRecorderType?.GetMethod("End")?.Invoke(null, null);
+        }
+
+        internal static bool VideoArmed => SessionState.GetBool(VideoKey, false);
+
         static void OnPlayModeChanged(PlayModeStateChange state)
         {
+            if (state == PlayModeStateChange.ExitingPlayMode)
+            {
+                // Belt and braces: the runner ends the clip itself, but if it threw or the
+                // watchdog beat it, this is the last chance to mux the MP4.
+                if (SessionState.GetBool(VideoKey, false)) { SessionState.SetBool(VideoKey, false); VideoEnd(); }
+                return;
+            }
+
             if (state != PlayModeStateChange.EnteredPlayMode) return;
             if (!SessionState.GetBool(ArmedKey, false)) return;
             SessionState.SetBool(ArmedKey, false);
+
+            if (SessionState.GetBool(VideoKey, false)) VideoArm();
+
             var host = new GameObject("[GolferTestVerificationBot]");
             UnityEngine.Object.DontDestroyOnLoad(host);
             host.AddComponent<GolferTestVerificationRunner>().Begin(SessionState.GetInt(HoleKey, 6));
@@ -360,6 +437,16 @@ namespace Golfin.EditorTools
 
             // Sample the animator WHILE the shot is being set up: the golfer must be in an
             // Address state, not standing in Idle with a club stretched out to the ball.
+            // Roll the camera HERE, not at play-mode entry: the first ~40 s of this sequence is
+            // the start gate, the scene loads and the settle holds, and the recorder's 30 s
+            // runaway watchdog would spend the whole clip on the NOW LOADING screen (it did).
+            // A few seconds of address, then the swing, then the ball leaving at impact.
+            if (GolferTestVerificationRecorder.VideoArmed)
+            {
+                GolferTestVerificationRecorder.VideoBeginDeferred();
+                yield return Hold(2.0f);        // a beat at address before he moves
+            }
+
             var addrSeen = new List<string>();
             var addrProbe = StartCoroutine(SampleStates(anim, addrSeen, 20, 0.1f));
             // §9.2 evidence + gate, running alongside the swing: the gameplay camera at
@@ -381,6 +468,16 @@ namespace Golfin.EditorTools
             Assert("shot.swingPlays", stateAtSwing.StartsWith("Swing"),
                    "animator state right after OnShotResolved = '" + stateAtSwing + "' (was '" + stateBefore + "')");
             yield return Snap("golfer_h" + _hole.ToString("00") + "_swing");
+
+            // Close the clip once the ball is clearly away. Ending here rather than at
+            // ball-at-rest keeps it inside the recorder's 30 s watchdog — a 247 m drive can
+            // outlast it — and the follow-through plus the launch is the whole point.
+            if (GolferTestVerificationRecorder.VideoArmed)
+            {
+                yield return Hold(4.0f);
+                GolferTestVerificationRecorder.VideoEnd();
+                Mark("video: clip closed after the swing + 4 s of ball flight");
+            }
 
             // Wait for the BALL to settle, not for a stopwatch: a 247 m drive on Hole 08 takes
             // longer than any fixed hold, and measuring early reads the golfer at the tee and
