@@ -2,7 +2,7 @@
 
 > Everything consciously left OUT of the 2026-09 GPS build, in one place, with where it was
 > deferred and what it needs. Maintained by the Architect — every future GPS spec that defers
-> something adds a row here in the same session. Last updated: 2026-09-07 (flick_shot_view taken up; its rows moved into the spec).
+> something adds a row here in the same session. Last updated: 2026-09-07 — GAME-side deferrals moved to Notion GOLFIN_Roadmap (Status = Deferred, Orders 2150–2184); this file is GPS/PLAYLIFE only again (Cesar).
 
 ## Player-visible promises (highest priority — the UI already implies them)
 
@@ -72,55 +72,6 @@
 | `testflight_build_standalone` uploads but the build is not offered to In-House Testers automatically on the GOLFIN GPS record (Cesar adds it by hand each time); the Fastfile comment assumes internal groups auto-distribute | Cesar 2026-09-04 | Fix = the group's "Enable automatic distribution" toggle in ASC (per record), or `groups:` + a processing wait in the lane |
 | `Golfin.ipa` FILE under 350 MB: only reachable by not packing `Symbols/` into the .ipa (they zip to 127 MB; the dSYM zip already sits beside the .ipa in `Builds/ipa/`) — a fastlane/Xcode export option, not an asset change. Also parked: switching the iOS lane to `CompressWithLz4HC` if `build_size_diet` Phase 0b's numbers justify it (Cesar's call from the measurement). | `build_size_diet` (Architect 2026-09-04) | Export-option change in `Tools/testflight.sh` / fastlane; verify crash symbolication still works via the separate dSYM upload |
 
-## Map view (game side) — deferred in `map_view_v2` (2026-09-04)
-
-| Item | Deferred in | Notes |
-|---|---|---|
-| Wind ruler on the landing target (concentric rings = 1–2 mph each, Golf Clash / Golf Rival pattern) | `map_view_v2` | Wind is not shown on the map at all today; needs the wind vector exposed to `MapViewController` and a ring-spacing rule. Cesar left it out of B1 on purpose — ask before adding |
-| Final SHOT VIEW icon art | `map_view_v2` | Placeholder camera glyph ships (`Assets/Resources/UI/Icon - ShotView.png`); Robin's icon drops into the same slot, zero code |
-| Distance rings 80/120 + labels | `map_view_v2` (kept commented out since iter-28) | Delete or revive; B1 only uses the r100 landing ring |
-| Hazard / OB markers on the map | competitor sweep 2026-09-04 (Golf Clash red signs) | Nothing designed; would need OB-mask → marker placement |
-
-## In-game selector (game side) — deferred in `selector_carousel` (2026-09-06)
-
-| Item | Deferred in | Notes |
-|---|---|---|
-| Hold-mode drag scrolls the club/ball stack (rubber-band past the visible 4, replacing arrow auto-scroll) | `selector_carousel` (Cesar chose "hold-mode unchanged", 2026-09-06) | Would live in `SelectorDragRouter.OnDrag` → `SelectorOverlayWidget.SetScroll`; the arrows already cover the need |
-| Selector overlay open/close entrance animation | `selector_carousel` | Overlay still appears instantly; a slide-in from the trigger button is the obvious shape |
-| Distance-based scale/alpha falloff on non-focus selector cards (Gacha-carousel style) | `selector_carousel` | Cards stay 1.0 / full alpha; K11 greying is the only alpha rule today |
-| Reduced-motion switch for in-game UI motion | `selector_carousel` (and `gps_polish` §D1 note) | `UiMotion.Enabled` is in `Assembly-CSharp`, unreachable from `Golfin.Gameplay.UI` — needs a shared motion asmdef or a duplicated flag |
-| Chevron direction on the selector (top chevron currently pulls the stack DOWN, = `Scroll(+1)`) | `selector_carousel` NOTE | Kept as-is; one-line flip in `WireArrows` if it reads wrong on device |
-| Final halo art for the selector focus slot | `selector_carousel` | Placeholder white glow + ring ships (`Assets/Art/In-Game UI/Halo - Selector.png`, tinted `#FCF195` by the builder); Robin's asset drops into the same path, zero code |
-
 ## How this file is used
-When a spec defers something: add the row in the same session (Architect). When an item is taken up: move its row into the new spec's Goal and delete it here. Cesar prunes anything he decides is never-do.
+GPS / PLAYLIFE deferrals ONLY. Game-side deferrals go to the Notion GOLFIN_Roadmap as `Deferred` rows (Cesar, 2026-09-07). When a GPS spec defers something: add the row in the same session (Architect). When an item is taken up: move its row into the new spec's Goal and delete it here. Cesar prunes anything he decides is never-do.
 
-## Control schemes (deferred in `control_scheme_seam` / `CONTROL_SCHEMES_PLAN.md`, 2026-09-04)
-
-| Item | Deferred in | Notes |
-|---|---|---|
-| Haptics per timing grade (JUST / PERFECT / MISS) | `control_scheme_seam` §8 | Rides on `haptics_option` (Notion 2130) — one HapticService seam, Settings on/off first |
-| TW 3-click meter as a fifth scheme | `control_scheme_seam` §8 | Accessibility option; cheap once the seam exists (tap-tap-tap on a vertical meter, no gesture) |
-| Per-scheme first-shot hint / tutorial | `control_scheme_seam` §8 | One overlay per scheme on the first swing after a switch |
-| Converging-circle timing (Confluence 2024/9/17) | `CONTROL_SCHEMES_PLAN.md` §9 | Unconfirmed in 白猫GOLF; only if the pendulum does not feel right |
-| Grade SFX (JUST / GOOD / MISS chimes) | `scheme_pendulum` §7 | CC0 placeholders sourced by the Architect when taken up; one `SfxId` per grade through `SfxBus` |
-| `pendulum_grade` telemetry key | `scheme_pendulum` §7 | `timing01` = 1 − |marker| already ships; add the string key only if the dashboard needs the grade, not the distribution |
-| Bot personality per scheme (sweeps waited, pull tempo by level) | `bot_scheme_parity` §8 | Cosmetic pacing on top of `BotSwing`; no fairness impact |
-| `BotDriver` (loop-v2 smoke harness) migrated to `BotSwing.Play` | `bot_scheme_parity` review | GRANDFATHERED on the Rule 23 allow-list; its determinism backs other acceptance runs, so migrate deliberately with a golden-file diff. Also widen the Rule 23 candidate glob to `*CaptureDriver.cs` / `*Capture.cs` / `*Recorder.cs` (`MapViewCaptureDriver` swings raw today) |
-| Scheme comparison CSV export | `scheme_evaluation` §8 | One button on the new dashboard section; same shape as any existing export |
-| Per-scheme retention curve (switched and stayed) | `scheme_evaluation` §8 | Needs per-player ordering of `shot_taken.scheme` over time; only if the switched-to counts are ambiguous |
-| `needle_grade` telemetry key + Tap Timing grade SFX | `scheme_needle` §7 | Same shape as the Pendulum rows above |
-| Free Swing grade SFX + `freeswing_path`/`tempo` telemetry keys | `scheme_freeswing` §7 | Same shape as the Pendulum / Needle rows |
-| Ball launch delayed to the swing impact frame | `golfer_3d_test` §8 | Needs the Drive/Putt impact-frame seconds from the test report; then `ShotController` commit → delayed physics launch (or clip time-scaled to the launch) |
-| `Characters.csv` `modelPrefab` column + per-character `PfGolfer_<Name>` | `golfer_3d_test` §8 | The real-roster spec; loader falls back to the starter model when a prefab is missing (same shape as `renderable`) |
-| Golfer camera framing, club trail on `ClubStart/ClubEnd`, reactions/celebrations, cloth/hair, bot golfers | `golfer_3d_test` §8 | Polish once the stand-in proves the pipeline on device |
-| Debug sliders for ball anchor / bottom baseline / gauge Y | `shot_view_layout` §5 (D8) | Cesar tunes via `controls.csv` + relaunch for now; a `DebugShotPanel` row with three sliders if the csv loop gets slow |
-| Tablet / 16:9 shot-view framing (D6 clamp raises the ball above centre on 4:3) | `shot_view_layout` §5 | A per-aspect anchor table, or a shorter lane on short canvases |
-| Figma "Shot Controls — Schemes" frames redrawn at the new lane geometry (540/648, ball at 62 %) | `shot_view_layout` §5 | Architect; `CONTROL_SCHEMES_PLAN` §8 carries a stale-geometry note until then |
-| 120 % overpower on the Flick cone (Flick has no 120 % today; `ClubHandleDragger` clamps at the base) + half-angle retune for the shorter base | `flick_shot_view` §5 (2026-09-07) | After the 641 cone is judged on device |
-| Whiff (air shot, ball untouched) as the far-outside miss outcome | `miss_grade_duff` §5 (D1) | Wants a golfer swing animation first so a motionless ball reads as a miss, not a bug; then a second threshold past the DUFF band |
-| Duff SFX (thud / topped-ball click) | `miss_grade_duff` §5 | Rides with the parked grade-SFX rows; Architect sources a CC0 placeholder when taken up |
-| Duff camera: short "watch it dribble" cut instead of the flight cameras | `miss_grade_duff` §5 | `LoopCameraDirector` picks by predicted carry today; a duff falls into the short-distance camera — check that first |
-| Figma scheme + confirm pop-up frames still say JUST / PERFECT / SHANK | `miss_grade_duff` §5 | Architect; fold into the geometry redraw row above |
-| `ShotCommand` must carry `launchPitchScale` (and timingMul, spin, fadeDraw, seed — it carries none of the 14 `Build` inputs today) when server re-simulation is built | `miss_grade_duff` review (2026-09-07) | The struct is a five-field stub nothing writes; add the fields together with the first consumer, not speculatively |
-| Real club grip for the golfer — club-in-hand mocap (CMU subject 64, free, ships-in-product licence; or Motion Cast #05, $35) + one authored hand pose | `golfer_3d_test` §9.3 | Mixamo golf clips are empty-hand mocap; seven tuning rounds hit the wrist-roll limit. Decide with the roster models, not on the stand-in |

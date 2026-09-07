@@ -19,6 +19,11 @@ Media attachments (added 2026-05-28, Mac setup):
        everything else (docx, pdf, csv, zip, …) is sent via Telegram's
        sendDocument. Drop-folder files are DELETED after a successful send, and
        a subfolder left empty by that is removed (README.md/.gitkeep are kept).
+       EXCEPTION: known build sidecars (*.captions.json — the drawtext input
+       build_bot_video.py consumes) are tool scratch, never deliverables, so
+       they are not attached; one is deleted only once the clip it captioned has
+       been sent. Don't author working files in the drop folder in the first
+       place — the folder is an outbox.
   Telegram's Bot API caps uploads at 50 MB. Oversize VIDEOS are auto-compressed
   (two-pass, same resolution) to fit and then sent; oversize non-video files are
   skipped (and reported), never deleted. IMAGES have a second, much tighter set
@@ -204,6 +209,16 @@ ANIM_EXTS = {".gif"}
 MEDIA_EXTS = VIDEO_EXTS | IMAGE_EXTS | ANIM_EXTS
 # Files in the drop folder that are part of the repo scaffold, never sent/deleted.
 DROP_FOLDER_KEEP = {"README.md", ".gitkeep", ".DS_Store"}
+# Build INPUTS that happen to get authored next to their output in the drop
+# folder. These are not deliverables and must never reach the chat. Added
+# 2026-09-07, after `2026-09-07_control_scheme_polish_fixes.captions.json` — the
+# drawtext sidecar that build_bot_video.py consumes to caption a clip — was
+# written into Docs/Reports/Media/ beside its .mp4 and dutifully shipped to
+# Cesar as a document file card. The drop folder's contract is still "attach
+# whatever I put here"; this is a narrow carve-out for known tool scratch, NOT a
+# return to extension filtering (see collect_drop_media's docstring for why that
+# lost files before).
+DROP_FOLDER_SIDECAR_SUFFIXES = (".captions.json",)
 # sendPhoto is FAR stricter than the 50 MB generic upload cap: a photo must be
 # <= 10 MB AND width+height <= 10000 px, and a breach is a non-retryable HTTP
 # 400. An oversize image is re-encoded down to fit (see _compress_image) and
@@ -342,8 +357,9 @@ def collect_drop_media(media_dir: str) -> list:
     not just videos/images, and not just the top level. Videos and images are
     sent as such; anything else (docx, pdf, csv, zip, …) is sent via Telegram's
     sendDocument (see send_media_file). Only the repo scaffold (README.md,
-    .gitkeep, .DS_Store) and hidden dot-entries are skipped — the whole point of
-    the drop folder is "attach whatever I put here," so we don't filter by
+    .gitkeep, .DS_Store), hidden dot-entries, and known build sidecars
+    (DROP_FOLDER_SIDECAR_SUFFIXES) are skipped — the whole point of the drop
+    folder is "attach whatever I put here," so we don't otherwise filter by
     extension.
 
     Recursion added 2026-09-01. The previous flat os.listdir version skipped any
@@ -362,6 +378,10 @@ def collect_drop_media(media_dir: str) -> list:
         dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
         for name in sorted(filenames):
             if name in DROP_FOLDER_KEEP or name.startswith("."):
+                continue
+            if name.endswith(DROP_FOLDER_SIDECAR_SUFFIXES):
+                print(f"[INFO] Not attaching build sidecar (tool input, not a "
+                      f"deliverable): {os.path.relpath(os.path.join(dirpath, name), media_dir)}")
                 continue
             path = os.path.join(dirpath, name)
             if not os.path.isfile(path):
@@ -392,6 +412,44 @@ def _prune_empty_drop_dirs(start_dir: str) -> None:
         except OSError:
             return
         cur = os.path.dirname(cur)
+
+
+def _prune_spent_sidecars() -> None:
+    """
+    Remove drop-folder build sidecars whose output file is gone — i.e. the clip
+    they captioned was sent and deleted, so the sidecar is a spent input. A
+    sidecar whose companion is still present is LEFT ALONE: either its send
+    failed (the original is kept by contract, and re-running must still be able
+    to rebuild the captions) or it simply hasn't been sent yet.
+
+    Called after the send pass so "companion still on disk" is an accurate test.
+    Without this the sidecar, no longer attached, would sit in the drop folder
+    forever and be re-announced on every run.
+    """
+    root = REPORT_MEDIA_DIR
+    if not os.path.isdir(root):
+        return
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+        for name in sorted(filenames):
+            if not name.endswith(DROP_FOLDER_SIDECAR_SUFFIXES):
+                continue
+            for suffix in DROP_FOLDER_SIDECAR_SUFFIXES:
+                if name.endswith(suffix):
+                    stem = name[: -len(suffix)]
+                    break
+            companions = [n for n in os.listdir(dirpath)
+                          if n != name and os.path.splitext(n)[0] == stem]
+            if companions:
+                print(f"[INFO] Keeping sidecar {name} — its output "
+                      f"({', '.join(companions)}) is still in the drop folder.")
+                continue
+            try:
+                os.remove(os.path.join(dirpath, name))
+                print(f"[OK] Removed spent build sidecar: {name}")
+                _prune_empty_drop_dirs(dirpath)
+            except OSError as e:
+                print(f"[WARN] Could not remove sidecar {name}: {e}")
 
 
 def read_ai_context() -> str:
@@ -958,6 +1016,7 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
     """
     if not git_videos and not drop_media:
         print("[INFO] No media to attach today.")
+        _prune_spent_sidecars()
         return
 
     sent_real_paths = set()
@@ -1060,6 +1119,9 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
 
     # Tell the chat about anything that didn't make it.
     _post_unattached_notice(failed)
+
+    # Sidecars are only spent once their output has actually left the folder.
+    _prune_spent_sidecars()
 
 
 # =============================================================================

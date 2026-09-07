@@ -4,8 +4,16 @@ Drop **any file** in this folder that you want attached to the next GOLFIN daily
 Telegram report. **Subfolders work** — grouping a batch as `GPS/*.png` is fine;
 the scan recurses and an emptied subfolder is removed after the send. **Videos** (`.mp4 .mov .webm .m4v .avi .mkv`) and **images**
 (`.png .jpg .jpeg .webp .gif`) are sent as media; **anything else** (`.docx`,
-`.pdf`, `.csv`, `.zip`, …) is sent as a document. No extension filtering — if you
-put it here, it goes out.
+`.pdf`, `.csv`, `.zip`, …) is sent as a document. Near-zero extension filtering —
+if you put it here, it goes out.
+
+> **This folder is an OUTBOX, not a scratch dir.** Build a clip's caption sidecar
+> (or any other tool input) somewhere else and copy only the finished artefact
+> here. On 2026-09-07 a `*.captions.json` — the drawtext input
+> `build_bot_video.py` consumes — was authored next to its `.mp4` here and went
+> out to the chat as a document card. `*.captions.json` is now skipped (and
+> deleted once the clip it captioned has been sent), but that carve-out only
+> covers that one known sidecar: anything else you leave here still ships.
 
 How it works (`Docs/Scripts/daily_report.py`):
 

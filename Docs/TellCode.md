@@ -7,6 +7,8 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **Shot view (2026-09-07, Architect):** `shot_view_layout` + `shot_view_layout_followup` DONE (`b7727ac01`, Cesar approved) — ball anchor per scheme (Pendulum/Needle/FreeSwing 0.38, Flick 0.5), shared bottom baseline 170, pull 540/648, gauge top-right, pill capped at the baseline, confirm tiles recaptured. Open follow-ups in `GPS_BACKLOG.md`: Flick at the shared anchor with a shorter cone (Cesar asked "shouldn't we adjust Flick's camera too?" — yes, as a scheme change after `miss_grade_duff`), Pendulum tile labels hidden behind the club head. `miss_grade_duff` is with Code now.
+
 - **GPS→Unity build, status 2026-09-03 (Architect, Cowork session).** DONE and on main:
   `gps_trust_core`, `gps_hub_entry`, `score_upload_flow`, `gps_profile_pack`,
   `punch_it_gps_variants`, `auth_golf_profile` (API v65, texts v29), `gps_gifts_votes` (API v66,
@@ -169,24 +171,30 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
-- **`shot_view_layout_followup` — SPEC_READY (2026-09-07, Quick), pasteable NOW; may run alongside `miss_grade_duff`.** `Docs/Specs/Active/shot_view_layout_followup/SPEC.md`. Two Cesar decisions from the `shot_view_layout` review: (1) cap the drawn Pendulum/Free Swing pill at the bottom baseline (`SetLaneEndCapY` on both lane views, called from `ShotLayoutController`; pull clamp untouched, 3× head overhangs the rounded end); (2) `SchemeConfirmTilesCapture.FitCrop` becomes height-driven with letterboxing into the 314×340 tile, then recapture the nine Pendulum/Needle/Free Swing tiles (Flick tiles byte-identical). `shot_view_layout` itself is ARCHITECT_REVIEW_PASS awaiting Cesar's device check → DONE.
+- **`flick_pull_mapping` — SPEC_READY (2026-09-07, Quick), run AFTER `flick_shot_view` closes (same files).** `Docs/Specs/Active/flick_pull_mapping/SPEC.md`. Flick power becomes rest-relative like the other three schemes: 0 % at touch (was 31.8 %), 40 px dead zone, `FlickPull100Px` 540 / `FlickPull120Px` 648, the cone BASE is 120 % (Flick had no 120 %), never on putts; `FlickHandleStartY01` 0.6818 → 0.8182; 100 %/120 % tick lines on the cone; `FlickPullMath` + inverse for the drawn club; three Flick tiles recaptured. Idle-cone alpha stays parked (Cesar).
 
 ```
-Read Docs/Specs/Active/shot_view_layout_followup/SPEC.md and implement it.
+Read Docs/Specs/Active/flick_pull_mapping/SPEC.md and implement it.
 
 Context:
-- Follow-up to shot_view_layout (28904bac8). Item 1: PendulumLaneView + FreeSwingLaneView get SetLaneEndCapY(canvasY); LaneHeight = min(derived, laneTop − cap) with a floor of deepestTick + 8; ShotLayoutController.Apply passes −H/2 + baseline. The pull clamp (cfg.*Pull120Px in the drivers) is NOT touched — add a test proving 120 % is still reachable with the capped pill. Expected: 1170×2532 lane end = −1096, LaneHeight 792.
-- Item 2: Assets/Editor/ShotUI/SchemeConfirmTilesCapture.FitCrop → height-driven (new MaxCropH = 1300, width still clamped to MaxCropW 900), WriteTile letterboxes the crop inside TileW×TileH·Scale using the pop-up's existing tile background colour. Chrome-exclusion loop unchanged. Then run GOLFIN ▸ Capture ▸ Scheme Confirm Tiles AFTER item 1 and commit the nine Pendulum/Needle/Free Swing tiles; Flick tiles must be byte-identical (git diff --stat).
-- Minimal diff. No csv changes, no strings, no scene edits (capture is read-only — if LabScaffold.unity gets dirtied by the capture, do not commit it).
-- Out of scope: Pull*Px / ball anchor changes, Figma frames, anything in miss_grade_duff.
+- Flick power measured from the club's REST, not the cone base: ClubHandleDragger.ProcessDrag → pullPx = HandleRestYPx − handleY → new static FlickPullMath.Power(pullPx, cfg, isPutt) (Assets/Scripts/Gameplay/Input/, beside FlickMath): 0 below MinUsefulPullPx 40, 1.0 at FlickPull100Px 540, 1.2 at FlickPull120Px 648 = the cone base, putts cap at 1.0. SetExternalPower already accepts 1.2. Do not touch ShotController.
+- controls.csv: add FlickPull100Px 540 / FlickPull120Px 648; FlickHandleStartY01 0.6818 → 0.8182 (= 648/792). Assert FlickHandleStartY01 × FlickConeHeightPx == FlickPull120Px ± 1.
+- ShotConeView handle placement (≈ line 466) becomes the exact inverse: handleY = rest − FlickPullMath.PullPxForPower(power) so the drawn club and the finger coincide at 0/100/120 %; bots render through the same line.
+- Two tick lines + labels on the cone (100 % at 108 px above the base, 120 % at the base) reusing PendulumLaneView's tick/label atoms and colours, positioned from cfg, fading with ConeAlphaController; 120 % tick hidden on putts. Wire ClubHandleDragger → ShotConeView via the builder, no Find.
+- Tests: new FlickPullMathTests (table + round-trip + the 1.2× and rest-fraction invariants); ShotAimParityTests / ShotTimingPowerTests / ShotControllerFlickGateTests unchanged; bot_difficulty.csv zero diff. Re-run the PURE/GOOD/THIN/DUFF live band check.
+- Recapture the THREE Flick confirm tiles; nine byte-identical.
+- Minimal diff. No strings, no lane-scheme changes, idle-cone alpha out of scope.
 
 When done: list changed files with a 1-line summary each, run the acceptance
-items in the spec (lane-end y per aspect, per-tile crop rects, old-vs-new tile
-PNGs, pop-up screenshots for all four schemes), update STATUS.md +
-IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+checklist in SPEC §4 (write the gauge reading at touch / 40 / 540 / 648 px and
+the rest/tick canvas y values in the report), flag which items need manual
+on-device verification, update STATUS.md + IMPLEMENTER_REPORT.md in the spec
+folder, and update Docs/AI_CONTEXT.md.
 ```
 
-- **`miss_grade_duff` — SPEC_READY (2026-09-07), run AFTER `shot_view_layout` (adds `FlickGradePop` to `SchemeRoot_Flick` in `LabScaffold.unity`).** `Docs/Specs/Active/miss_grade_duff/SPEC.md`. Every miss becomes a DUFF: Pendulum MISS / Needle SHANK / Free Swing DUFF / Flick below a new `TimingBandRedY01` (0.15) → `MissPowerMul` 0.20 (`PuttMissPowerMul` 0.30, never whiff) + `MissLaunchPitchScale` 0.35 through a new optional `ShotInputBuilder.Build` param; yaw unchanged so bot sigma calibration is untouched. Red flash on the power gauge. Grade vocabulary unified in real golf terms across all four schemes — PURE / GOOD / HOOK / SLICE / THIN / DUFF (JP ピュア / グッド / フック / スライス / トップ / ダフリ), JUST / PERFECT / SHANK / MISS retired via the importer; Flick gets its own grade pop (PURE/GOOD/THIN/DUFF by slab band); one colour set from `ConeBandPalette`, Needle blue zone → PURE green (Cesar may veto).
+- **`flick_shot_view` — ARCHITECT_REVIEW_PASS + red-team PASS (2026-09-07), awaiting Cesar's device approval → DONE.** Cesar's mid-run overrides stand: apex on the ball (gap 0), cone 792 on the baseline, `FlickHandleStartY01` 0.6818 = 540 px pull parity with Pendulum/Free Swing (costs a 31.8 % reading at first touch — device feel item). Open: `ConeIdleAlpha` 0.25 but the cone is not drawn at address (report Q2).
+
+- **`miss_grade_duff` — DONE (d9c585f4d, MissPowerMul 0.40). `shot_view_layout` + `shot_view_layout_followup` are DONE (b7727ac01, Cesar approved) so the ordering constraint is met (adds `FlickGradePop` to `SchemeRoot_Flick` in `LabScaffold.unity`).** `Docs/Specs/Active/miss_grade_duff/SPEC.md`. Every miss becomes a DUFF: Pendulum MISS / Needle SHANK / Free Swing DUFF / Flick below a new `TimingBandRedY01` (0.15) → `MissPowerMul` 0.20 (`PuttMissPowerMul` 0.30, never whiff) + `MissLaunchPitchScale` 0.35 through a new optional `ShotInputBuilder.Build` param; yaw unchanged so bot sigma calibration is untouched. Red flash on the power gauge. Grade vocabulary unified in real golf terms across all four schemes — PURE / GOOD / HOOK / SLICE / THIN / DUFF (JP ピュア / グッド / フック / スライス / トップ / ダフリ), JUST / PERFECT / SHANK / MISS retired via the importer; Flick gets its own grade pop (PURE/GOOD/THIN/DUFF by slab band); one colour set from `ConeBandPalette`, Needle blue zone → PURE green (Cesar may veto).
 
 ```
 Read Docs/Specs/Active/miss_grade_duff/SPEC.md and implement it.
@@ -206,28 +214,6 @@ When done: list changed files with a 1-line summary each, run the acceptance
 checklist in SPEC §4 (write intended vs landed yards per scheme and the Flick
 band results in the report), flag which items need manual on-device
 verification (feel of the 20 %/0.35 duff), update STATUS.md +
-IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
-```
-
-- **`shot_view_layout` — SPEC_READY (2026-09-07), pasteable NOW — but NOT concurrently with `selector_carousel` (both edit `ActionButtonsBuilder.cs` + `LabScaffold.unity`; run after it closes or before it starts).** `Docs/Specs/Active/shot_view_layout/SPEC.md`. Shot-view framing back to Figma 14153:4602: `CentralBall` anchor per scheme (`BallAnchorViewportY_*` in controls.csv — Pendulum/Needle/FreeSwing 0.38 = 62 % from the top, Flick stays 0.5 → camera pitches up on its own via `GetAimBallViewportY`), one `BottomBaselinePx = 170` shared by the four action buttons, both selector overlays and the lane end, Pendulum/FreeSwing `Pull100/120Px` 380/456 → 540/648, `PowerHUD` to top-right at viewport 0.70, `BallSpace` RectTransform per scheme root, new `ShotLayoutController` + `ShotLayoutMath` (+ EditMode tests, incl. the 16:9 clamp), confirm tiles re-captured for the three moved schemes. Flick byte-identical (parity tests untouched).
-
-```
-Read Docs/Specs/Active/shot_view_layout/SPEC.md and implement it.
-
-Context:
-- Shot-view layout, not gameplay: CentralBall (Assets/Scenes/Physics/LabScaffold.unity) gets a per-scheme anchor from new controls.csv keys BallAnchorViewportY_<Flick|Pendulum|Needle|FreeSwing> (0.5 / 0.38 / 0.38 / 0.38). The camera already pins to that widget (PhysicsLabController.GetAimBallViewportY → SolveAimCameraPose) — do NOT touch camera code.
-- New ShotLayoutController + static ShotLayoutMath (Assets/Scripts/Gameplay/UI/ShotUI/): applies ball anchor, the shared BottomBaselinePx=170 (action buttons cluster offset, SelectorOverlayWidget open y, safe-area max), PowerHUD at PowerGaugeViewportY=0.70 top-right, and the D6 clamp that raises the ball on short aspects so the lane never runs under the buttons. Called from ShotSchemeHost.Apply before driver.Activate() — reuse its Idle deferral, no second gate.
-- One BallSpace RectTransform per SchemeRoot_*; re-parent the ball-relative children listed in SPEC §3.2 preserving anchoredPosition. Flick must be byte-identical: dump ConeMesh/ClubHandle/TimingSlab/PutterTrack world corners before/after and quote them.
-- controls.csv: PendulumPull100/120Px and FreeSwingPull100/120Px 380/456 → 540/648 (exact 1.2×). Needle pull constants UNCHANGED (D5). Lane views already draw from cfg — verify the 120 % tick lands at canvas y −1022 ± 2 and the lane end at −1092 ± 2 and write the numbers.
-- Update 380f/456f FIXTURE literals in PendulumMathTests / FreeSwingMathTests / *SchemeDriverTests only; ShotAimParityTests, ShotTimingPowerTests, ShotControllerFlickGateTests, MapViewAimingTests, AimCameraFramingTests stay green UNMODIFIED. New ShotLayoutMathTests per SPEC §3.6.
-- Re-capture the scheme confirm tiles for Pendulum / Needle / Free Swing (controls.csv header rule). Re-run GOLFIN/Build/Build Action Buttons (8.5) once; commit LabScaffold.unity with this task and say so.
-- Minimal diff. No new strings, no localisation, no settings UI, no debug sliders.
-- Out of scope: Flick at the 0.38 anchor / shorter cone / cone 120 %, tablet anchor table, Figma scheme-frame redraw, putt camera.
-
-When done: list changed files with a 1-line summary each, run the acceptance
-checklist in SPEC §4 (write the ball y, tick y, lane-end y, button y and the
-before/after camera pitch in the report), flag which items need manual on-device
-verification (home-gesture clearance, framing by eye), update STATUS.md +
 IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
 ```
 
