@@ -1,4 +1,11 @@
-READY_FOR_ARCHITECT_REVIEW
+DONE
+
+Cesar approved 2026-09-07. Both spec items shipped, plus three things the work turned up on the
+way: the club head was covering the lane's own tick labels (a draw-order bug, fixed and then fixed
+properly so they still fade with the lane), the tiles were photographing four different lies, and
+T_Pendulum_3's missing grade pop turned out to be a real gameplay defect — HandleReverseCancel
+measured its hold in wall clock with no stutter guard and would have killed a real player's shot on
+a device that hitched mid-flick.
 
 Implemented 2026-09-07 by Claude Code (direct, no subagent chain — Cesar dispatched it in-thread).
 
