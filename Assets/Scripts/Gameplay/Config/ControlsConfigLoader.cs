@@ -133,6 +133,12 @@ namespace Golfin.Gameplay.Config
                     case "BallAnchorViewportY_Pendulum":    cfg.BallAnchorViewportY_Pendulum    = val; break;
                     case "BallAnchorViewportY_Needle":      cfg.BallAnchorViewportY_Needle      = val; break;
                     case "BallAnchorViewportY_FreeSwing":   cfg.BallAnchorViewportY_FreeSwing   = val; break;
+                    // flick_shot_view §3.1
+                    case "FlickConeHeightPx":               cfg.FlickConeHeightPx               = val; break;
+                    case "FlickHandleStartY01":             cfg.FlickHandleStartY01             = val; break;
+                    case "FlickPutterTrackHeightPx":        cfg.FlickPutterTrackHeightPx        = val; break;
+                    case "FlickPutterTrackTopBelowBallPx":  cfg.FlickPutterTrackTopBelowBallPx  = val; break;
+                    case "FlickConeApexGapPx":              cfg.FlickConeApexGapPx              = val; break;
                     case "BottomBaselinePx":                cfg.BottomBaselinePx                = val; break;
                     case "PowerGaugeViewportY":             cfg.PowerGaugeViewportY             = val; break;
                     default: matched = false; break;

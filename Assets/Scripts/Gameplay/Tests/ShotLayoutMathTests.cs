@@ -64,7 +64,8 @@ namespace Golfin.Gameplay.Tests
             Assert.AreEqual(-304f, ShotLayoutMath.AnchorY(0.38f, H_2532), 0.5f,
                 "0.38 from the bottom is 62% from the top — the Figma 14153:4602 ball height.");
             Assert.AreEqual(0f, ShotLayoutMath.AnchorY(0.5f, H_2532), 1e-4f,
-                "0.5 must be exactly the canvas centre, which is where Flick stays (D1).");
+                "0.5 must be exactly the canvas centre — where all four schemes sat before " +
+                "shot_view_layout, and Flick until flick_shot_view D1.");
         }
 
         // ── Baseline ─────────────────────────────────────────────────────────────
@@ -153,31 +154,90 @@ namespace Golfin.Gameplay.Tests
             Assert.Greater(PendulumBallY(H_4x3), 0f);
         }
 
-        // ── The two schemes with no lane ─────────────────────────────────────────
+        // ── The one scheme with no lane ──────────────────────────────────────────
 
         [Test]
-        public void FlickAndNeedle_TakeTheirAnchorOnEveryAspect_BecauseNeitherDrawsALane()
+        public void Needle_TakesItsAnchorOnEveryAspect_BecauseItsRingIsDrawnAroundTheBall()
         {
             foreach (float h in new[] { H_2532, H_16x9, H_4x3 })
-            {
-                Assert.AreEqual(ShotLayoutMath.AnchorY(_cfg.BallAnchorViewportY_Flick, h),
-                    ShotLayoutMath.ResolveBallY(_cfg.BallAnchorViewportY_Flick, h, BaselinePx,
-                                                false, 0f, HandleRest),
-                    1e-4f, $"Flick must be untouched at canvas height {h} (control_scheme_seam parity)");
-
                 Assert.AreEqual(ShotLayoutMath.AnchorY(_cfg.BallAnchorViewportY_Needle, h),
                     ShotLayoutMath.ResolveBallY(_cfg.BallAnchorViewportY_Needle, h, BaselinePx,
                                                 false, _cfg.NeedlePull120Px, HandleRest),
                     1e-4f, $"Needle's ring is drawn around the ball, so no clamp at height {h}");
+        }
+
+        // ── Flick: the cone IS the lane (flick_shot_view D1/D2/D6) ───────────────
+
+        /// <summary>Flick's clamp depth — the cone BASE below the ball, not a club head at the end
+        /// of a pull. <c>ShotConeView</c> hangs the mesh at exactly this, so the guard and the
+        /// drawn cone are the same arithmetic.</summary>
+        private float FlickDepth => ShotLayoutMath.FlickLaneDepthBelowBall(
+            _cfg.FlickConeApexGapPx, _cfg.FlickConeHeightPx);
+
+        private float FlickBallY(float h) => ShotLayoutMath.ResolveBallY(
+            _cfg.BallAnchorViewportY_Flick, h, BaselinePx, true, FlickDepth);
+
+        [Test]
+        public void Flick_JoinsTheOtherThreeAtThirtyEightPercent_WithItsConeBaseOnTheBaseline()
+        {
+            Assert.AreEqual(0.38f, _cfg.BallAnchorViewportY_Flick, 1e-6f,
+                "flick_shot_view D1 retires the 0.5 anchor the control_scheme_seam parity kept.");
+            Assert.AreEqual(792f, _cfg.FlickConeHeightPx, 1e-4f);
+            Assert.AreEqual(0f, _cfg.FlickConeApexGapPx, 1e-4f,
+                "the apex sits ON the ball — how the scene has always shipped, and what Cesar " +
+                "asked for on 2026-09-07. The SPEC's 151 was derived from a 1009px cone that only " +
+                "ever existed as a C# default.");
+            Assert.AreEqual(792f, FlickDepth, 1e-4f, "0 apex gap + 792 cone");
+
+            float ball = FlickBallY(H_2532);
+            Assert.AreEqual(-304f, ball, 0.5f, "2532 is tall enough, so the authored anchor wins.");
+            Assert.AreEqual(PendulumBallY(H_2532), ball, 0.5f,
+                "All four schemes frame the ball identically now — that is the whole task.");
+
+            // The base is the number the acceptance run measures on ConeMesh.anchoredPosition.
+            Assert.AreEqual(-1096f, ball - FlickDepth, 0.5f, "cone base");
+            Assert.AreEqual(BaselineY(H_2532), ball - FlickDepth, 0.5f,
+                "and the base IS the shared bottom baseline, not merely near it.");
+            Assert.AreEqual(ball, ball - _cfg.FlickConeApexGapPx, 1e-4f,
+                "cone apex — ON the ball, no gap");
+        }
+
+        [Test]
+        public void Flick_OnAShortScreen_RaisesTheBallSoTheConeBaseStaysOnTheBaseline()
+        {
+            foreach (float h in new[] { H_16x9, H_4x3 })
+            {
+                float ball = FlickBallY(h);
+                Assert.Greater(ball, ShotLayoutMath.AnchorY(_cfg.BallAnchorViewportY_Flick, h),
+                    $"at {h} there is not 792px below 0.38, so the D6 clamp must raise the ball");
+                Assert.AreEqual(BaselineY(h), ball - FlickDepth, 0.5f,
+                    $"the cone base lands exactly on the baseline at {h}");
+                Assert.Less(ball, h * 0.5f, $"and the ball stays on screen at {h}");
             }
         }
 
         [Test]
-        public void Flick_StaysOnTheCanvasCentre_SoItsSceneAuthoredConeCannotLeaveTheScreen()
+        public void Flick_HandleRestIsAFractionOfTheCone_SoAReCutCannotChangeWhatTouchingItReads()
         {
-            Assert.AreEqual(0.5f, _cfg.BallAnchorViewportY_Flick, 1e-6f);
-            Assert.AreEqual(0f, ShotLayoutMath.ResolveBallY(_cfg.BallAnchorViewportY_Flick, H_2532,
-                                                            BaselinePx, false, 0f, HandleRest), 1e-4f);
+            float rest = _cfg.FlickHandleStartY01 * _cfg.FlickConeHeightPx;
+            Assert.AreEqual(540f, rest, 1f, "0.6818 x 792 — the pull from rest to 100%");
+            Assert.AreEqual(-556f, FlickBallY(H_2532) - (_cfg.FlickConeApexGapPx +
+                                                         _cfg.FlickConeHeightPx - rest), 1f,
+                "handle rest in canvas y");
+
+            // PULL PARITY IS THE POINT OF THE VALUE (Cesar, 2026-09-07). This is the assertion that
+            // would catch a Pendulum retune silently un-matching Flick, which is the whole reason
+            // the number was chosen rather than authored.
+            Assert.AreEqual(_cfg.PendulumPull100Px, rest, 1f,
+                "a thumb travels the same distance to 100% in Flick as in Pendulum");
+            Assert.AreEqual(_cfg.FreeSwingPull100Px, rest, 1f, "and in Free Swing");
+
+            // The other end of that trade, asserted so it cannot drift unnoticed: ClubHandleDragger
+            // reads power off the WHOLE cone height, so a shorter pull starts with more power
+            // already dialled in. 0.828 on the old 1160px cone read 17% at touch; this reads 32%.
+            Assert.AreEqual(0.6818f, _cfg.FlickHandleStartY01, 1e-4f);
+            Assert.AreEqual(0.3182f, 1f - _cfg.FlickHandleStartY01, 1e-4f,
+                "power the drag reads the instant the finger lands on the club at rest");
         }
 
         // ── Free Swing shares the Pendulum's lane numbers ────────────────────────

@@ -24,6 +24,29 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] Color _gradientEdge    = new Color(0f, 0f, 0f, 0.15f);
         [SerializeField] Color _gradientCenter  = new Color(0f, 0f, 0f, 0.5f);
 
+        /// <summary>
+        /// Track length in canvas px, set from <c>ControlsConfig.FlickPutterTrackHeightPx</c> by
+        /// <see cref="ShotConeView"/> (flick_shot_view D5).
+        ///
+        /// <para>THE TWO BAND LINES MOVE WITH IT, as fractions. They are stored as absolute
+        /// distances from the top (200 / 500 on the authored 1000), which on a shorter track would
+        /// otherwise creep down toward the bottom edge and change what the player reads the lane
+        /// by — the red line IS the bottom, so only these two need the scale.</para>
+        /// </summary>
+        public float HeightPx
+        {
+            get => _height;
+            set
+            {
+                if (Mathf.Approximately(_height, value) || value <= 0f) return;
+                float k = _height > 0f ? value / _height : 1f;
+                _greenBandHeight *= k;
+                _amberBandHeight *= k;
+                _height = value;
+                SetVerticesDirty();
+            }
+        }
+
         // Y-axis: pivot is top-center, so top = y=0, bottom = y=-_height.
 
         protected override void OnPopulateMesh(VertexHelper vh)

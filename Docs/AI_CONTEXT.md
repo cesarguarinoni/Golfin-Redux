@@ -4,6 +4,60 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 — flick_shot_view: **Flick joins the framing; the cone is 792, not 1160**
+
+Flick was the one scheme `shot_view_layout` left behind, and only because of its own geometry:
+`BallAnchorViewportY_Flick` stayed at 0.5 while the other three took 0.38, since a cone whose base
+sat 1160 px below the ball would have run off the bottom of the screen. Cesar: *"Flick stayed the
+same as before. Shouldn't we adjust the camera as well?"* This re-cuts the cone so it fits.
+**The `control_scheme_seam` "Flick is byte-identical" invariant is retired here** — deliberately, at
+spec level: this is a change to the shipping scheme, not a layout tweak.
+
+**`BallAnchorViewportY_Flick` 0.5 → 0.38, and the cone shortened 1160 → 792 px** so its base lands
+on the shared `BottomBaselinePx` line: `792 = 1096 − 304 − 0`. Measured live on Lomond hole 2 at
+1170 × 2532 — ball −303.84 (viewport 0.3800), apex on the ball, base −1095.84 against a baseline of
+−1096.00, handle rest −479.66. The aim camera pitches **12.500° → 4.612°** from the same position,
+and the horizon gains **12.8 points** (21.6 % → 34.4 % on this ruler; the same ruler reads 34.28 %
+on `shot_view_layout`'s own accepted `pendulum_038_hole2.png`, which that task quotes as 37.8 % —
+so Flick's framing is now the Pendulum framing, to the third decimal of camera pitch).
+
+**Nothing floats under the ball any more, and the spec was wrong about that.** SPEC D2 put the cone
+apex 151 px below the ball and D5 put the putter track's top 187 px below it. Both were derived from
+a 1009 px cone — a number that only ever existed as a C# default. The SCENE shipped 1160 px with its
+base at ball −1160, i.e. the apex touching the ball; and the putt track's top has ALWAYS been snapped
+onto the ball at runtime by `PhysicsLabController.AlignPutterTrackToBall`. Cesar, on seeing the first
+build: *"The cone's top point should reach the ball, not leave empty space"*, then *"Make the putter
+track top touch the ball too."* So `FlickConeApexGapPx` and `FlickPutterTrackTopBelowBallPx` are both
+**0**, and both heights carry the whole 792 down to the baseline.
+
+**Five numbers left the scene and became `controls.csv` keys**: `FlickConeHeightPx` 792,
+`FlickHandleStartY01` 0.6818, `FlickPutterTrackHeightPx` 792, `FlickPutterTrackTopBelowBallPx` 0,
+`FlickConeApexGapPx` 0. That is the
+point of the task as much as the framing is — the cone's height used to live on FOUR objects at once
+(`ShotConeView`, `ConeMeshGraphic`, `TimingSlabGraphic` and the mesh's scene-authored −1160), which
+is precisely why nobody could move the ball. `ShotConeView.ApplyConfiguredGeometry` folds them in on
+Awake and derives `ConeMesh.anchoredPosition.y = −(apexGap + height)`; the serialized fields survive
+only as Inspector fallbacks.
+
+**The handle rest is a FRACTION, not pixels.** `ClubHandleDragger` reads power off the whole cone
+height, so an absolute rest would silently change what merely touching the club registers as the day
+the cone is re-cut. Cesar chose **pull parity** — `FlickHandleStartY01 = 0.6818` = **540 px** from
+rest to 100 %, exactly `PendulumPull100Px` / `FreeSwingPull100Px`, so a thumb travels the same
+distance in all four schemes (it was 960 px on the old 1160 cone). The cost, asserted rather than
+noted: `power = 1 − fraction`, so touching the club at rest now reads **31.8 %** against 17.2 %
+before. `ShotLayoutMathTests` asserts the travel against the Pendulum/Free Swing keys themselves, so
+a retune of either cannot silently un-match Flick.
+
+**Flick takes the D6 clamp now**, through `ShotLayoutMath.FlickLaneDepthBelowBall(apexGap, height)`
+and a depth overload of `ResolveBallY`; the three lane schemes keep their six-argument signature. On
+a 16:9 or 4:3 canvas the ball rises so the cone base stays on the baseline, same as a lane.
+
+**The scene shipped 1160/960, not the 1009/785 the spec assumed** — see
+`Docs/Specs/Completed/flick_shot_view/IMPLEMENTER_REPORT.md` § Spec premise correction. Two latent
+faults fell out of that: the apex gap the spec called 151 was really 0, and `TimingSlab`'s rect was
+sized **1009 inside a 1160 cone** — a slab shorter than the cone it travels. One key now feeds all
+four objects, so neither can recur.
+
 ## 2026-09-07 (§9.8 closed) — **retargeting was the cause; the roster pipeline is "rig it in Mixamo"**
 
 **The experiment answered.** Same hole, same harness, same controller states, same bootstrap, no
@@ -322,9 +376,10 @@ widget IS the camera change and no camera code was touched. New `ShotLayoutContr
 Idle gate.
 
 **Ball anchor is per scheme** (`BallAnchorViewportY_<scheme>`): Pendulum / Needle / Free Swing drop to
-viewport 0.38, **Flick stays at 0.5** — its cone is scene-authored 1009 px tall with its base at
-ball −1160 and a lower ball would push that base off the screen. On Lomond hole 2 the aim camera
-pitches 12.50° → 7.08° across that switch: more sky, more fairway in front of the ball.
+viewport 0.38, **Flick stayed at 0.5** — its cone was scene-authored 1160 px tall with its base at
+ball −1160 and a lower ball would have pushed that base off the screen. On Lomond hole 2 the aim
+camera pitches 12.50° → 7.08° across that switch: more sky, more fairway in front of the ball.
+*(Flick joined them at 0.38 later the same day — see `flick_shot_view` below.)*
 
 **One bottom baseline** (`BottomBaselinePx = 170`, raised to `safeAreaBottom + 60` on a deeper
 device inset) now carries the four action buttons' bottom edge, both selector overlays and the pull

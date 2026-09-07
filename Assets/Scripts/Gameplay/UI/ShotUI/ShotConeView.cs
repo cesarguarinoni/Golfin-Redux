@@ -19,11 +19,19 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         [Header("Cone")]
         [SerializeField] private ConeMeshGraphic _coneGraphic;
-        [SerializeField] private float           _coneHeightPx = 1009f;
+        // INSPECTOR FALLBACKS, not the source of truth (flick_shot_view §3.2). Awake overwrites
+        // every one of these from ControlsConfig; they are what an Editor scene opened without a
+        // config falls back to, and they are kept in step with the csv so the edit-mode view is
+        // honest. Cone height is the number the ball anchor depends on — see
+        // ShotLayoutMath.FlickLaneDepthBelowBall.
+        [SerializeField] private float           _coneHeightPx   = 792f;
+        [Tooltip("Ball centre to cone apex. The cone hangs this + its height below the ball. " +
+                 "0 = the apex sits ON the ball, which is how Flick ships.")]
+        [SerializeField] private float           _coneApexGapPx  = 0f;
 
         [Header("Club handle")]
         [SerializeField] private RectTransform   _clubHandle;
-        [SerializeField] private float           _handleStartYPx = 785f;
+        [SerializeField] private float           _handleStartYPx = 540f;
         [SerializeField] private float           _handleWidth    = 178f;
         [SerializeField] private float           _handleHeight   = 100f;
         [SerializeField] private float           _minHandleScale = 1f;
@@ -52,7 +60,10 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         [Header("Putter timing slab")]
         [SerializeField] private RectTransform   _putterTimingSlabRT;
-        [SerializeField] private float           _putterTrackHeightPx = 1000f;
+        [SerializeField] private float           _putterTrackHeightPx = 792f;
+        [Tooltip("Ball centre to the putter track's TOP edge. 0 = the track touches the ball, " +
+                 "which is both what the live runtime already did and what Cesar asked for.")]
+        [SerializeField] private float           _putterTrackTopBelowBallPx = 0f;
 
         [Header("Putter track (per-shot lifecycle)")]
         [SerializeField] private GameObject      _putterTrack;
@@ -64,10 +75,27 @@ namespace Golfin.Gameplay.UI.ShotUI
         private bool      _lastArrowTrailState;
         private bool      _puttMode;
         private UnityEngine.UI.Image _putterTimingSlabImage;
+        private ControlsConfig? _cfgOverride;
 
         // ── Public API ────────────────────────────────────────────────────────
 
         public void SetMaxCarryYards(float yards) => _maxCarryYards = yards;
+
+        /// <summary>The resolved cone height, handle rest and putter track length, AFTER the
+        /// config has been folded in. Read by the acceptance run and the layout tests rather than
+        /// re-derived from rects that four components each write a piece of.</summary>
+        public float ConeHeightPx        => _coneHeightPx;
+        public float HandleRestYPx       => _handleStartYPx;
+        public float PutterTrackHeightPx => _putterTrackHeightPx;
+
+        /// <summary>
+        /// Test seam: the <see cref="ControlsConfig"/> <see cref="Awake"/> reads instead of
+        /// <see cref="ControlsConfig.Default"/>. Call BEFORE Awake.
+        ///
+        /// <para>A zeroed config means "no config" and every serialized fallback stands, which is
+        /// the case an Editor scene opened on its own is in.</para>
+        /// </summary>
+        public void InjectControlsConfig(ControlsConfig cfg) => _cfgOverride = cfg;
 
         /// <summary>Read-only access to the current carry yards (used by MapViewController).</summary>
         public float MaxCarryYardsForMap => _maxCarryYards;
@@ -125,7 +153,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// in Awake so the per-shot lifecycle subscription in HandleStateChanged can drive it.
         /// Single source of truth — do NOT also wire _putterTrack in the Inspector.
         /// </summary>
-        public void SetPutterTrack(GameObject putterTrack) => _putterTrack = putterTrack;
+        public void SetPutterTrack(GameObject putterTrack)
+        {
+            _putterTrack = putterTrack;
+            ApplyPutterTrackGeometry();
+        }
 
         public void SetOutlineVisible(bool visible)
         {
@@ -140,11 +172,97 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void Awake()
         {
+            ApplyConfiguredGeometry();
             if (_coneGraphic != null) _coneGraphic.HeightPx = _coneHeightPx;
             if (_clubHandle != null)
                 _clubHandle.sizeDelta = new Vector2(_handleWidth, _handleHeight);
             SetupSlab();
             SetupBendRenderer();
+        }
+
+        /// <summary>
+        /// Fold <c>controls.csv</c> into the cone's geometry (flick_shot_view §3.2).
+        ///
+        /// <para>ONE PLACE, BEFORE ANYTHING READS THE FIELDS. The cone's height used to live on
+        /// four objects at once — this view, <see cref="ConeMeshGraphic"/>,
+        /// <see cref="TimingSlabGraphic"/> and the mesh's own scene-authored <c>-1160</c> — and
+        /// that is why the ball could not be moved: nothing could re-cut the cone without all four
+        /// agreeing. They are all derived from <see cref="ControlsConfig.FlickConeHeightPx"/> here,
+        /// so <c>ShotLayoutMath.FlickLaneDepthBelowBall</c> (which the D6 clamp uses) and the mesh
+        /// that is actually drawn are the same arithmetic.</para>
+        ///
+        /// <para>A non-positive key means "not configured" and leaves the serialized fallback
+        /// alone. The handle rest is a FRACTION of the height on purpose (D3): the drag reads power
+        /// off the whole cone, so an absolute rest would silently change what touching the club
+        /// registers as the day the cone is re-cut.</para>
+        ///
+        /// <para>Public and idempotent — every field is recomputed from the config rather than
+        /// scaled from its own current value — because Awake does not run for a component added in
+        /// EditMode, and the tests that pin these numbers have to reach the production path.</para>
+        /// </summary>
+        public void ApplyConfiguredGeometry()
+        {
+            ControlsConfig cfg = _cfgOverride ?? ControlsConfig.Default;
+
+            if (cfg.FlickConeHeightPx        > 0f) _coneHeightPx        = cfg.FlickConeHeightPx;
+            // >= 0, not > 0: ZERO IS THE SHIPPING VALUE — the apex sits on the ball — so the
+            // usual "non-positive means unconfigured" test would silently reinstate a gap.
+            // Gated on the cone height instead, which is never legitimately zero.
+            if (cfg.FlickConeHeightPx        > 0f) _coneApexGapPx       = cfg.FlickConeApexGapPx;
+            if (cfg.FlickPutterTrackHeightPx > 0f) _putterTrackHeightPx = cfg.FlickPutterTrackHeightPx;
+            // Gated on the HEIGHT for the same reason the apex gap is: zero is the shipping value.
+            if (cfg.FlickPutterTrackHeightPx > 0f) _putterTrackTopBelowBallPx = cfg.FlickPutterTrackTopBelowBallPx;
+            if (cfg.FlickHandleStartY01      > 0f) _handleStartYPx      = cfg.FlickHandleStartY01 * _coneHeightPx;
+
+            // The mesh is pivoted at its BASE and drawn upward, so hanging it apexGap + height
+            // below the ball is what puts the apex on the gap and the base on the baseline. Inside
+            // BallSpace, so this y is ball-relative and the anchor move carries it.
+            if (_coneGraphic != null)
+            {
+                RectTransform coneRT = _coneGraphic.rectTransform;
+                coneRT.anchoredPosition =
+                    new Vector2(coneRT.anchoredPosition.x, -(_coneApexGapPx + _coneHeightPx));
+            }
+
+            ApplyPutterTrackGeometry();
+        }
+
+        /// <summary>
+        /// Size and place the putter track: top <c>_putterTrackTopBelowBallPx</c> under the ball,
+        /// bottom on the shared baseline (flick_shot_view D5).
+        ///
+        /// <para>RE-ASSERTED WHENEVER THE TRACK COMES UP, not only on Awake, because
+        /// <c>PhysicsLabController.EnterPutterMode</c> writes the same rect through its own
+        /// <c>AlignPutterTrackToBall</c> — and that file is under <c>Assets/Scripts/Physics/</c>,
+        /// which is not editable. The two now AGREE (both put the top on the ball), so this is no
+        /// longer a correction; it is what keeps the HEIGHT right, which that call never sets, and
+        /// what keeps the pair from silently diverging if either number is ever tuned.</para>
+        ///
+        /// <para>The rect stays TOP-anchored to <c>BallSpace</c>, exactly as authored, and the y is
+        /// derived from the parent's half-height rather than the scene's <c>-1453</c> — same number
+        /// on a 2532 canvas, and right on every other one.</para>
+        /// </summary>
+        private void ApplyPutterTrackGeometry()
+        {
+            RectTransform track = ResolvePutterTrackRect();
+            if (track == null) return;
+
+            if (track.TryGetComponent(out PutterTrackGraphic graphic))
+                graphic.HeightPx = _putterTrackHeightPx;
+            track.sizeDelta = new Vector2(track.sizeDelta.x, _putterTrackHeightPx);
+
+            if (track.parent is RectTransform parent)
+                track.anchoredPosition = new Vector2(
+                    track.anchoredPosition.x,
+                    -(parent.rect.height * 0.5f + _putterTrackTopBelowBallPx));
+        }
+
+        /// <summary>The track's rect, whether or not <c>PhysicsLabController</c> has handed it over
+        /// yet — on Awake it usually has not, and the slab's parent IS the track.</summary>
+        private RectTransform ResolvePutterTrackRect()
+        {
+            if (_putterTrack != null) return _putterTrack.transform as RectTransform;
+            return _putterTimingSlabRT != null ? _putterTimingSlabRT.parent as RectTransform : null;
         }
 
         private void SetupBendRenderer()
@@ -211,7 +329,14 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
 
             if (_timingSlab != null)
+            {
+                // ALSO on the wired path, not just the _arrows[0] fallback above: the slab is a
+                // child of the cone mesh and its rect is what culls/raycasts it, so a rect left at
+                // the old 1009 would outlive the cone it belongs to.
+                RectTransform slabRT = _timingSlab.rectTransform;
+                slabRT.sizeDelta = new Vector2(slabRT.sizeDelta.x, _coneHeightPx);
                 _timingSlab.gameObject.SetActive(false);
+            }
         }
 
         private void OnEnable()
@@ -307,6 +432,7 @@ namespace Golfin.Gameplay.UI.ShotUI
                                       or ShotState.Pulling
                                       or ShotState.Timing
                                       or ShotState.Flicking;
+            if (aiming) ApplyPutterTrackGeometry();
             _putterTrack.SetActive(aiming);
         }
 

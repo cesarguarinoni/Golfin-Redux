@@ -35,6 +35,12 @@ Current stat → input coupling (SHOT_CONTROLS_DESIGN §6, verified in code):
 
 One small refactor buys all three schemes and keeps Flick byte-identical.
 
+> **RETIRED 2026-09-07 (`flick_shot_view`).** "Flick is byte-identical" held through
+> `control_scheme_seam` and `shot_view_layout` and is no longer an invariant: Flick's ball
+> anchor moved 0.5 → 0.38 and its cone was cut 1160 → 792 px so the base lands on the shared
+> bottom baseline. Deliberate, at spec level — Cesar asked for the camera to follow. The
+> §1 refactor claim above is still true of the SEAM; it is the framing that changed.
+
 ### 1.1 `ShotIntent` + `ShotController.CommitExternal(ShotIntent)`
 - Extract the tail of `CommitFlick()` (SFX publish → `LastShotWasClean` → `ShotInputBuilder.Build` → `State = Resolving` → `OnShotResolved`) into `private void ResolveAndPublish(float power, float aimYawRad, float timingMul, float timing01, Vector2 spin, float fadeDraw01)`. `CommitFlick()` becomes a 10-line caller. Parity test: `ShotAimParityTests`, `ShotTimingPowerTests`, `ShotControllerFlickGateTests` unchanged and green.
 - New `public readonly struct ShotIntent { float PowerNormalized /*0..1.2*/; float AimOffset01 /*-1..1 of half-cone*/; float ErrorYawRad /*scheme miss, added like degradYaw*/; float TimingMul; float Timing01; float FadeDraw01; }` in `Golfin.Gameplay.Input`.

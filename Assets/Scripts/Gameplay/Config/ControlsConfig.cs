@@ -274,14 +274,47 @@ namespace Golfin.Gameplay.Config
         // so the ball anchor below IS the camera pitch: drop the widget and the camera tilts up,
         // which is the whole of "more sky, more fairway" (Figma In-Game - Shot Tests 14153:4602).
         //
-        // PER SCHEME, because the schemes do not draw the same thing below the ball. Pendulum,
-        // Needle and Free Swing share 0.38; FLICK STAYS AT 0.5 because its cone is scene-authored
-        // 1009px tall with its base at ball-1160, and lowering the ball would push that base off
-        // the screen. One key moves it the day the cone is re-cut.
+        // PER SCHEME, because the schemes do not draw the same thing below the ball -- but all
+        // four now share 0.38. Flick sat at 0.5 while its cone was a scene-authored 1009px, which
+        // would have put the base off the bottom; flick_shot_view D1/D2 cuts the cone to
+        // FlickConeHeightPx so the base lands on BottomBaselinePx and Flick joins the framing.
         public float BallAnchorViewportY_Flick;
         public float BallAnchorViewportY_Pendulum;
         public float BallAnchorViewportY_Needle;
         public float BallAnchorViewportY_FreeSwing;
+
+        // ── Flick cone geometry (flick_shot_view D2/D3/D5) ─────────────────────
+        // THE CONE IS FLICK'S LANE. Every one of these used to be a serialized number on
+        // ShotConeView/ConeMeshGraphic/TimingSlabGraphic/PutterTrackGraphic, which is why the ball
+        // could not move: four objects had to agree and only the scene knew the numbers. They live
+        // here now, so 641 = BottomBaselinePx line - ball(0.38) - the apex gap is ONE edit and the
+        // D6 clamp can read the same depth the cone is drawn at.
+        //
+        // The handle rest is a FRACTION, not px: the drag maps the whole cone height to power
+        // (ClubHandleDragger.ProcessDrag), so an absolute rest would change what "touching the
+        // club" reads as the moment the cone is re-cut.
+        //
+        // Its VALUE is pull parity, chosen by Cesar on 2026-09-07: 0.6818 x 792 = 540px from rest
+        // to 100%, which is exactly PendulumPull100Px / FreeSwingPull100Px, so a thumb travels the
+        // same distance in every scheme. Both ends of that trade are real — the same formula means
+        // a shorter pull starts with more power already dialled in (32% the instant the club is
+        // touched, against 22% at 0.778 and 17% on the old 1160px cone). If the cone is re-cut,
+        // re-derive this as 540/newHeight or the parity silently lapses.
+        //
+        // FlickConeApexGapPx and FlickPutterTrackTopBelowBallPx are both 0, and that is not an
+        // oversight. The cone's apex sits ON the ball —
+        // how the scene has always shipped (height 1160, base at ball-1160) and what Cesar asked
+        // for explicitly on 2026-09-07: "the cone's top point should reach the ball, not leave
+        // empty space". The putt track follows the same rule by the same instruction, and there the
+        // live runtime had ALREADY been snapping the top onto the ball
+        // (PhysicsLabController.AlignPutterTrackToBall) — so 0 is what the game does, now said out
+        // loud. Both keys exist so the gap is a number somebody can see and change rather than an
+        // accident of one anchoredPosition.
+        public float FlickConeHeightPx;
+        public float FlickHandleStartY01;
+        public float FlickPutterTrackHeightPx;
+        public float FlickPutterTrackTopBelowBallPx;
+        public float FlickConeApexGapPx;
 
         // ONE bottom baseline shared by the action buttons' bottom edge, both selector overlays
         // and the pull lane's end, so they cannot drift apart the way 96 (buttons) and the lane's
@@ -406,10 +439,18 @@ namespace Golfin.Gameplay.Config
             FreeSwingSampleWindow           = 90f,
 
             // shot_view_layout §3.1 seed values — mirror controls.csv (F13 two-mirror rule).
-            BallAnchorViewportY_Flick       = 0.5f,   // D1: the cone's base pins it here
+            BallAnchorViewportY_Flick       = 0.38f,  // flick_shot_view D1: 0.5 -> 0.38, the cone
+                                                      // was cut to 641 so the base still fits
             BallAnchorViewportY_Pendulum    = 0.38f,  // 62% from the top, the Figma ball position
             BallAnchorViewportY_Needle      = 0.38f,
             BallAnchorViewportY_FreeSwing   = 0.38f,
+
+            // flick_shot_view §3.1 seed values -- mirror controls.csv (F13 two-mirror rule).
+            FlickConeHeightPx               = 792f,   // 1096 - 304 - 0, base on the baseline
+            FlickHandleStartY01             = 0.6818f,// 0.6818 x 792 = 540px = Pendulum's pull
+            FlickPutterTrackHeightPx        = 792f,   // top ON the ball, bottom on 1096
+            FlickPutterTrackTopBelowBallPx  = 0f,     // as the live runtime already placed it
+            FlickConeApexGapPx              = 0f,     // the apex sits ON the ball, as it shipped
             BottomBaselinePx                = 170f,   // was 96 on the buttons alone
             PowerGaugeViewportY             = 0.70f,  // 30% from the top, clear of the aim bar
         };

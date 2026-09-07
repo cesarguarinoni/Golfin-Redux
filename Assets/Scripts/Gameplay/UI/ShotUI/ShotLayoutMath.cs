@@ -68,8 +68,32 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// </summary>
         public static float BallYForLane(float canvasHeight, float baseline, float pull120Px,
                                          float handleRestBelowBall)
-            => -canvasHeight * 0.5f + baseline
-               + HandleDepthAtFullPull(pull120Px, handleRestBelowBall);
+            => BallYForDepth(canvasHeight, baseline,
+                             HandleDepthAtFullPull(pull120Px, handleRestBelowBall));
+
+        /// <summary>The same clamp expressed on the DEPTH alone, for a scheme whose deepest drawn
+        /// thing is not a club head at the end of a pull. Flick's is the cone BASE
+        /// (flick_shot_view D6) — see <see cref="FlickLaneDepthBelowBall"/>.</summary>
+        public static float BallYForDepth(float canvasHeight, float baseline, float depthBelowBall)
+            => -canvasHeight * 0.5f + baseline + depthBelowBall;
+
+        /// <summary>
+        /// How far below the ball centre the Flick cone's BASE sits — apex gap plus cone height,
+        /// which is exactly what <c>ShotConeView</c> writes to <c>ConeMesh.anchoredPosition.y</c>.
+        ///
+        /// <para>The gap is 0 today — the apex sits ON the ball, as the scheme has always shipped —
+        /// so this is the cone height. It stays a separate term because the gap is a design choice
+        /// somebody may want back, and a term you can see is one you can change.</para>
+        ///
+        /// <para>THE BASE, NOT THE HANDLE, and that is the difference from the three lane schemes.
+        /// The lanes clamp on the 120% club head (D3) because the club overhangs a pill that is
+        /// itself trimmed to the baseline. The cone has no separate drawn end to trim: the mesh IS
+        /// the geometry, its base is where 100% lives, and a base past the baseline would put the
+        /// full-power flick under the action-button row. The 3x club head still overhangs it at
+        /// full pull, exactly as the capped pill lets it.</para>
+        /// </summary>
+        public static float FlickLaneDepthBelowBall(float coneApexGapPx, float coneHeightPx)
+            => coneApexGapPx + coneHeightPx;
 
         /// <summary>
         /// The ball anchor actually applied, in canvas y.
@@ -80,16 +104,29 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// authored anchor is therefore a floor on tall screens and ignored on short ones — never
         /// the other way round.</para>
         ///
-        /// <para>Flick and Needle have no lane (a cone and a ring, both drawn around the ball)
-        /// and take the anchor unconditionally.</para>
+        /// <para>Needle has no lane (a ring drawn around the ball, which cannot run off the bottom
+        /// of the screen) and takes the anchor unconditionally. Flick DOES take the clamp since
+        /// flick_shot_view D6 — its cone reaches the baseline like a lane — but on the depth
+        /// overload below, because the thing being guarded is the cone base, not a club head.</para>
         /// </summary>
         public static float ResolveBallY(float anchorViewportY, float canvasHeight, float baseline,
                                          bool schemeHasLane, float pull120Px, float handleRestBelowBall)
+            => ResolveBallY(anchorViewportY, canvasHeight, baseline, schemeHasLane,
+                            HandleDepthAtFullPull(pull120Px, handleRestBelowBall));
+
+        /// <summary>
+        /// <see cref="ResolveBallY(float,float,float,bool,float,float)"/> for a scheme that
+        /// already knows its own depth below the ball. The three lane schemes keep the six-argument
+        /// signature so a pull retune stays one edit; Flick comes through here with
+        /// <see cref="FlickLaneDepthBelowBall"/>.
+        /// </summary>
+        public static float ResolveBallY(float anchorViewportY, float canvasHeight, float baseline,
+                                         bool schemeHasLane, float laneDepthBelowBall)
         {
             float anchor = AnchorY(anchorViewportY, canvasHeight);
             if (!schemeHasLane) return anchor;
 
-            return Mathf.Max(anchor, BallYForLane(canvasHeight, baseline, pull120Px, handleRestBelowBall));
+            return Mathf.Max(anchor, BallYForDepth(canvasHeight, baseline, laneDepthBelowBall));
         }
 
         /// <summary>Minimum drawn pill left BELOW the deepest tick, in canvas px. Small, but not

@@ -175,9 +175,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         // ── Per-scheme numbers ───────────────────────────────────────────────────
 
-        /// <summary>The authored anchor for a scheme. Four keys rather than one because Flick
-        /// keeps the centre (its cone's base is 1160px below the ball and would leave the
-        /// screen) while the other three take the Figma 0.38.</summary>
+        /// <summary>The authored anchor for a scheme. Four keys rather than one so a retune of
+        /// one scheme's framing cannot move an A/B partner — all four read 0.38 today, Flick
+        /// since flick_shot_view D1 cut its cone to fit.</summary>
         private static float AnchorViewportY(ControlScheme scheme, in ControlsConfig cfg)
         {
             switch (scheme)
@@ -191,11 +191,31 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private float ResolveBallY(ControlScheme scheme, in ControlsConfig cfg, float height, float baseline)
         {
-            if (!TryLaneGeometry(scheme, cfg, out float pull120, out float rest, out float _, out float _))
-                return ShotLayoutMath.AnchorY(AnchorViewportY(scheme, cfg), height);
-
+            float depth = ClampDepthBelowBall(scheme, cfg);
             return ShotLayoutMath.ResolveBallY(AnchorViewportY(scheme, cfg), height, baseline,
-                                               true, pull120, rest);
+                                               !float.IsNaN(depth), depth);
+        }
+
+        /// <summary>
+        /// How far below the ball the scheme's deepest drawn thing sits — the number the D6 clamp
+        /// guards. NaN for a scheme with nothing to guard.
+        ///
+        /// <para>Flick's is the cone BASE, straight off the two config keys rather than off a view:
+        /// <see cref="ShotConeView"/> derives the mesh position from the SAME pair, so the clamp
+        /// and the drawn cone cannot disagree. The two lane schemes still read their live view, for
+        /// the same reason — a mirrored copy of a lane's own arithmetic would be guarding a
+        /// fiction.</para>
+        /// </summary>
+        private float ClampDepthBelowBall(ControlScheme scheme, in ControlsConfig cfg)
+        {
+            if (scheme == ControlScheme.Flick)
+                return ShotLayoutMath.FlickLaneDepthBelowBall(cfg.FlickConeApexGapPx,
+                                                              cfg.FlickConeHeightPx);
+
+            if (TryLaneGeometry(scheme, cfg, out float pull120, out float rest, out float _, out float _))
+                return ShotLayoutMath.HandleDepthAtFullPull(pull120, rest);
+
+            return float.NaN;
         }
 
         private float LaneEndFor(ControlScheme scheme, in ControlsConfig cfg, float ballY)
@@ -213,10 +233,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         }
 
         /// <summary>The four numbers the lane derives its own height from — false for the two
-        /// schemes that draw no lane (Flick's cone and Needle's ring are both drawn AROUND the
-        /// ball, so neither can run off the bottom of the screen and neither takes the D6 clamp).
-        /// Read OFF THE LANE VIEW rather than mirrored here: the clamp that keeps the lane on the baseline and the pill
-        /// that is drawn have to be the same arithmetic or the guard is guarding a fiction.</summary>
+        /// schemes that draw no PILL (Needle's ring is drawn around the ball; Flick's cone reaches
+        /// the baseline but has no club-head-at-the-end geometry, so it takes the clamp through
+        /// <see cref="ClampDepthBelowBall"/> instead). Read OFF THE LANE VIEW rather than mirrored
+        /// here: the clamp that keeps the lane on the baseline and the pill that is drawn have to
+        /// be the same arithmetic or the guard is guarding a fiction.</summary>
         private bool TryLaneGeometry(ControlScheme scheme, in ControlsConfig cfg,
                                      out float pull120, out float rest, out float half, out float tail)
         {

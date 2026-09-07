@@ -1,0 +1,170 @@
+=== iter-1 kickoff baseline 2026-09-07 ===
+HEAD at session start: b7727ac015ae990b7dada0c9993021a7044a802a  (shot_view_layout + shot_view_layout_followup: DONE)
+HEAD MOVED MID-RUN to: c6e7fcbb1bb81c06c846966d4967ee5fbec76b1c  (golfer_3d_test 9.9)
+  Commits that landed while this task was in flight, none of them mine:
+    c6e7fcbb1 golfer_3d_test §9.9: Architect decision on the 9.8 handoff
+    d9c585f4d miss_grade_duff: DONE
+    270eec9a4 miss_grade_duff: a graded miss tops the ball instead of flying 70 %
+    4e48c8632 golfer_3d_test §9.8: Mixamo-native prefab built; club mount unresolved
+  Everything this task's report calls "pre-existing" is quoted against the DIRTY list below,
+  which was taken AFTER the move (i.e. against c6e7fcbb1).
+
+DIRTY at kickoff (git status --porcelain --untracked-files=all, vs c6e7fcbb1):
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_01JapaneseBlackImposter.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackBark.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackBark_Var1.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackLeaf.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackLeaf_Var1.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaBark.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaImposter.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaLeaf.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineBark.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineImposter01.mat
+   M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineLeaf.mat
+   M Assets/Resources/Gameplay/controls.csv
+   M Assets/Scenes/Physics/LabScaffold.unity
+   M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+   M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+   M Assets/Scripts/Gameplay/Tests/ShotLayoutMathTests.cs
+   M Assets/Scripts/Gameplay/UI/ShotUI/PutterTrackGraphic.cs
+   M Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
+   M Assets/Scripts/Gameplay/UI/ShotUI/ShotLayoutController.cs
+   M Assets/Scripts/Gameplay/UI/ShotUI/ShotLayoutMath.cs
+   M Docs/TellCode.md
+  ?? Assets/Animations.meta
+  ?? Assets/Art/3D/Characters/_Test/MixamoNative.meta
+  ?? "Assets/Art/In-Game UI/Halo - Selector.png"
+  ?? "Assets/Art/In-Game UI/Halo - Selector.png.meta"
+  ?? Assets/Scripts/Gameplay/Tests/ShotConeViewConfigTests.cs
+  ?? Assets/Scripts/Gameplay/Tests/ShotConeViewConfigTests.cs.meta
+  ?? Assets/Scripts/UI/Editor/FlickShotViewVerify.cs
+  ?? Assets/Scripts/UI/Editor/FlickShotViewVerify.cs.meta
+  ?? "Claude outputs/ARCHITECT_DECISION_9_9.md"
+  ?? Docs/Specs/Active/flick_shot_view/HEARTBEAT.log
+  ?? Docs/Specs/Active/flick_shot_view/SPEC.md
+  ?? Docs/Specs/Active/flick_shot_view/STATUS.md
+  ?? Docs/Specs/Active/golfer_3d_test/HANDOFF_9_8_ARCHITECT.md
+  ?? Docs/Specs/Active/selector_carousel/SPEC.md
+  ?? Docs/Specs/Active/selector_carousel/STATUS.md
+  ?? Docs/Specs/Active/selector_carousel/reference/selector_before.png
+
+Files this task owns (everything else in that list predates it):
+  M Assets/Resources/Gameplay/controls.csv
+  M Assets/Scenes/Physics/LabScaffold.unity
+  M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+  M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+  M Assets/Scripts/Gameplay/Tests/ShotLayoutMathTests.cs
+  M Assets/Scripts/Gameplay/UI/ShotUI/PutterTrackGraphic.cs
+  M Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
+  M Assets/Scripts/Gameplay/UI/ShotUI/ShotLayoutController.cs
+  M Assets/Scripts/Gameplay/UI/ShotUI/ShotLayoutMath.cs
+  ?? Assets/Scripts/Gameplay/Tests/ShotConeViewConfigTests.cs(.meta)
+  ?? Assets/Scripts/UI/Editor/FlickShotViewVerify.cs(.meta)
+
+--- work log ---
+config keys + loader + csv mirror written; ControlsConfig.Default and ControlsConfigLoader.Load()
+  read back identical (F13 two-mirror rule verified live over MCP).
+ShotLayoutMath: FlickLaneDepthBelowBall + the depth overload of ResolveBallY; the three lane
+  schemes keep their six-argument signature.
+ShotLayoutController: Flick joins the D6 clamp through ClampDepthBelowBall.
+ShotConeView: ApplyConfiguredGeometry folds the four keys in on Awake; ConeMesh position derived.
+PutterTrackGraphic: HeightPx, band lines kept as fractions.
+Scene: 15 fields in LabScaffold. FOUND: the scene shipped a 1160px cone with a 960px handle rest,
+  NOT the 1009/785 the SPEC's "Today" column assumes -- see the report's § Spec premise correction.
+Scene save baked 21 layout-group-driven rects (224 lines of churn); isolated back out with a
+  hunk-filtered git apply so the committed diff is 13+/11- and nothing else.
+EditMode: 2773 tests, 2770 passed, 0 failed, 3 pre-existing skips.
+
+--- correction, same session ---
+Cesar, mid-run: "The cone's top point should reach the ball, not leave empty space."
+  He is right, and it is the same premise error the scene probe already surfaced: the SPEC's
+  "apex 151 below the ball" was derived from a 1009px cone that only ever existed as a C# default.
+  The SCENE shipped 1160 with its base at ball-1160 -> apex ON the ball, gap 0.
+  FlickConeApexGapPx 151 -> 0, FlickConeHeightPx 641 -> 792 (the base still lands on -1096).
+  Handle rest 0.778 x 792 = 616 (canvas -479.66). Half-base at 20 deg 233 -> 288, still inside the
+  382 button inner edge.
+  Aborted the confirm-tile capture mid-run (it was shooting the 641 cone) and restored all 12 tiles
+  to HEAD; re-captured after the correction.
+  ShotConeView's fold-in gate changed from `gap > 0` to `coneHeight > 0`, because ZERO IS NOW THE
+  SHIPPING VALUE and the old "non-positive means unconfigured" test would have silently put the
+  gap back.
+EditMode after the correction: 2773 tests, 2769 passed, 3 pre-existing skips, 1 ORDER-DEPENDENT
+  FLAKE per full sweep - a DIFFERENT test each run (PendulumSchemeDriverTests.MarkerFreezes...,
+  then UiMotionAllocationTests.CountUp_...), both passing in isolation, neither in this task's
+  code path. Called out in the report rather than papered over.
+
+--- close-out ---
+Acceptance re-run on the corrected geometry: 17 assertions, fail_count 0.
+  ball -303.84 (vy 0.3800) | apex -303.84 = ON the ball, gap 0.00px | base -1095.84 vs baseline
+  -1096.00 | handle rest -479.66 | travel 616px | half-base@20 288.3 vs buttons 382.0
+  pitch 12.5004 -> 4.6115 deg from an unchanged camera position (122.05, 15.40, -134.25)
+  horizon 21.48% -> 34.12%; the same ruler reads 34.28% on shot_view_layout's accepted
+  pendulum_038_hole2.png (that task quotes 37.8% with its own ruler)
+  putt track top -490.84 bottom -1095.84 | scheme switch Flick/Pendulum/Flick all -303.84, 4.6115
+Band re-check on the 792 cone: DUFF 0.029 / THIN 0.392 / GOOD 0.519 / PURE 0.880, all correct
+  grade + key + colour, gauge red flash on DUFF only.
+UIFidelityLinter.LintRoot(SchemeRoot_Flick): 0 FAIL, 2 pre-existing WARN.
+Confirm tiles: three Flick tiles re-captured; the nine others md5-verified IDENTICAL to HEAD; all
+  twelve .meta unchanged so the Sprite import survives; Resources.Load<Sprite> ok for all twelve.
+Sky colour differs between runs because SkyRandomizer self-seeds once per app launch - three runs
+  were spent on that before reading the code. Noted in FlickShotViewVerify so nobody repeats it.
+Editor left clean: not playing, ShellScene open, no dirty scene.
+Third full EditMode sweep, same code: 2770 passed / 0 failed / 3 skipped. Clean. That is what
+  settles the two earlier one-off failures as order-dependent flakes rather than a regression.
+
+--- correction 2, same session ---
+Cesar: "Make the putter track top touch the ball too."
+  FlickPutterTrackTopBelowBallPx 187 -> 0 (new csv key), FlickPutterTrackHeightPx 605 -> 792.
+  Scene: track sizeDelta 605 -> 792, anchoredPosition -1453 -> -1266, PutterTrackGraphic _height
+  605 -> 792 with its two band lines rescaled to the same 0.20/0.30 fractions (158.4 / 237.6).
+  This REMOVES a conflict rather than creating one: PhysicsLabController.AlignPutterTrackToBall
+  (banned file) has always snapped the top onto the ball, so the view and that call now agree.
+Acceptance re-run: 18 assertions, fail_count 0. Track top -303.84 = the ball, bottom -1095.84 =
+  the baseline, height 792 - the same drop the cone makes.
+EditMode run D: 2770 passed / 0 failed / 3 skipped. Clean.
+NOT photographed: putt mode itself. The geometry is asserted three ways off the live rect, but
+  reaching putt mode through the player's own path means playing onto the green, and every
+  shortcut to it is the synthetic entry the real-entry rule forbids. Said plainly in the report
+  rather than shot through a door the player does not have.
+
+--- correction 3, same session ---
+Cesar, asked what FlickHandleStartY01 was and then: "Go for identical."
+  FlickHandleStartY01 0.778 -> 0.6818. 0.6818 x 792 = 539.99px from rest to 100%, which is exactly
+  PendulumPull100Px and FreeSwingPull100Px (both 540, read live off the config, not assumed).
+  Handle rest canvas y -479.66 -> -555.85. Scene _handleStartYPx 616 -> 540.
+  The trade, now ASSERTED and not merely noted: ClubHandleDragger reads power = 1 - fraction, so
+  touching the club at rest reads 31.82% (was 22.2% at 0.778 and 17.2% on the old 1160px cone).
+  ShotLayoutMathTests asserts the travel against cfg.PendulumPull100Px / cfg.FreeSwingPull100Px
+  rather than the literal 540, so a Pendulum retune cannot silently un-match Flick.
+  If the cone is ever re-cut the key must be re-derived as 540/newHeight - the FRACTION survives a
+  re-cut, the PARITY does not. Said in the csv note, the config comment and the test message.
+Acceptance re-run: 18 assertions, fail_count 0. travel 540.0px, rest -555.85.
+Flick confirm tiles re-shot again: the handle rest moved, so the tiles' drawn club moved with it.
+EditMode run E (after pull parity): 2770 passed / 0 failed / 3 skipped. Clean.
+Flick tiles verified: exactly 3 modified, nine md5-IDENTICAL to HEAD, twelve .meta untouched.
+Editor left clean: not playing, ShellScene open, no dirty scene.
+
+--- gates ---
+golfin-self-reviewer      PASS  -> SELF_REVIEW_PASS. Caught two stale numbers in my report (handle
+  rest "960 -> 616" should be 540 after Cesar's pull-parity call; scene diff "13/11" should be
+  14/12 after the putt-track change). Both fixed and re-verified against the live diff before the
+  next gate ran. Neither was a build defect - both were my own text lagging three rounds of
+  corrections, which is exactly the drift a second reader is for.
+golfin-reviewer           PASS  -> READY_FOR_REDTEAM. Re-derived every acceptance row from primary
+  sources. Ruled on both judgment calls: horizon substitution sound (identical camera pose =>
+  identical horizon; the % is a detector property, pitch identity to 4 decimals is the stronger
+  proof), putt-measured-not-photographed accepted.
+golfin-redteam-reviewer   PASS  -> ARCHITECT_REVIEW_PASS. Attacked six vectors. The two that
+  mattered:
+    - PREMISE: confirmed from git that the scene at HEAD shipped 1160/960 with the apex on the
+      ball, and that 1009/785/151 were C# defaults never in the scene. The three overrides stand.
+    - HORIZON: wrote its OWN cloud-immune detector after finding that a naive sky test breaks on
+      pendulum_038_hole2.png's clouds. Flick 37.12% vs accepted Pendulum 36.22% - Flick is 0.91
+      points BETTER, and clears the SPEC's literal 35% on that ruler. The "moved target" worry is
+      dead: the framing was never worse, my detector was just sky-sensitive.
+    - RULE 15 SHAPE AUDIT: the three wrong-about-the-scene spec assertions are one shape with one
+      root cause (cone height living in four places), now consolidated to one key. It checked the
+      other four "Today" numbers the SPEC asserts and found NO unchecked fourth instance.
+    - 31.8% touch power: no silent downstream break. Bots use normalized plan.Power01 and ramp from
+      0; the flick gate's >0.02f was already crossed at the old 17.2% rest.
+Editor left clean by every gate. Awaiting Cesar's approval -> DONE.

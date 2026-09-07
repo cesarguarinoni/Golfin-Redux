@@ -22793,7 +22793,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -1160}
+  m_AnchoredPosition: {x: 0, y: -792}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!222 &1379986109
@@ -22825,7 +22825,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _halfAngleDeg: 12.5
-  _heightPx: 1160
+  _heightPx: 792
   _strips: 512
   _curvaturePx: 15
   _centerColor: {r: 0, g: 0, b: 0, a: 0.5}
@@ -29269,7 +29269,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 400, y: 1009}
+  m_SizeDelta: {x: 400, y: 792}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1768520668
 MonoBehaviour:
@@ -29291,7 +29291,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  _coneHeightPx: 1009
+  _coneHeightPx: 792
   _coneHalfAngleDeg: 12.5
   _curvaturePx: 15
   _slabHalfHeightPx: 30
@@ -30349,9 +30349,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ShotConeView
   _shotController: {fileID: 1483952040}
   _coneGraphic: {fileID: 1379986110}
-  _coneHeightPx: 1160
+  _coneHeightPx: 792
+  _coneApexGapPx: 0
   _clubHandle: {fileID: 1443870532}
-  _handleStartYPx: 960
+  _handleStartYPx: 540
   _handleWidth: 178
   _handleHeight: 100
   _minHandleScale: 2
@@ -30365,7 +30366,8 @@ MonoBehaviour:
   _powerHUD: {fileID: 0}
   _targetingLine: {fileID: 1417103398}
   _putterTimingSlabRT: {fileID: 2022230116}
-  _putterTrackHeightPx: 1000
+  _putterTrackHeightPx: 792
+  _putterTrackTopBelowBallPx: 0
   _putterTrack: {fileID: 2300000001}
 --- !u!224 &1838493590
 RectTransform:
@@ -34332,8 +34334,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -1453}
-  m_SizeDelta: {x: 140, y: 1000}
+  m_AnchoredPosition: {x: 0, y: -1266}
+  m_SizeDelta: {x: 140, y: 792}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &2300000003
 CanvasRenderer:
@@ -34364,9 +34366,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _width: 140
-  _height: 1000
-  _greenBandHeight: 200
-  _amberBandHeight: 300
+  _height: 792
+  _greenBandHeight: 158.4
+  _amberBandHeight: 237.6
   _bandLineThickness: 4
   _greenBandColor: {r: 0.38431373, g: 0.4509804, b: 0.32156864, a: 1}
   _amberBandColor: {r: 0.56078434, g: 0.44705883, b: 0.2509804, a: 1}
