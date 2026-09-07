@@ -806,3 +806,116 @@ message text. §8 continues to list §9.2's work as out of scope.
 
 `golfer_invariants.json` — **37 pass / 0 fail** (from iteration 17; the golfer harness cannot run
 under `iOS-Full-GPS` because the feature is compiled out, which is itself the point of §9.6).
+
+---
+
+## 13. Iteration 19 (PC session, 2026-09-07) — §9.8 complete, per ARCHITECT_DECISION_9_9
+
+**Iteration shape:** `golfer:9_8-mixamo-native`
+
+Canonical screenshot: `evidence/9_8/sbs_t0_6_after_commit.jpg`
+
+Decisions applied verbatim from `ARCHITECT_DECISION_9_9.md` (committed to the task folder this
+iteration — it existed only as a `.docx` on Cesar's Desktop): club mount **(b)**, socket kept as is
+with **no `FromToRotation`**; controller duplication accepted; `forceGripPose=false` accepted.
+
+### 13.1 Harness fixes (§9.9 item 4) — all three
+
+| fix | what it does |
+|---|---|
+| `grip.*` → SKIP | when `middle_02_r` is absent the eight grip assertions record `verdict: "SKIP"`, `"N/A — rig has no Quaternius finger bones"`. A new `Skip()` counts as **neither pass nor fail** — a skip must not read as a green tick, or the count hides that the grip was never measured. |
+| Error Pause off | `DisableConsoleErrorPause()` at `Launch`. This is what paused every previous Mixamo take: the grip block threw on a Mixamo rig, and Console Error Pause halts play mode on the first exception. |
+| "already in play mode" → throw | `Launch` now throws `InvalidOperationException` instead of `LogWarning`-and-return. The silent return is why two earlier runs were waited on for minutes having never started. |
+
+The run also writes **`golfer_invariants_mixamo.json`** (separate file, so the Quaternius baseline is
+not overwritten by the run it is compared against) and records `prefab`, `skip`, `footSlideLeftM`
+and `footSlideRightM` in the JSON header.
+
+### 13.2 The run — ONE, as instructed
+
+`GOLFIN > Golfer Test > Verify Mixamo-native on Hole 06 (§9.8)`, via the HANDOFF §10 poll sequence.
+It completed first time and unattended — the first Mixamo take to do so.
+
+`prefab: GolferTest/PfGolfer_MixamoNative`, `controller=AnimatorController_Golfer_MixamoNative`,
+`avatar=MixamoChar_TPoseAvatar`, `isHuman=True`. **23 pass / 1 fail / 8 skip.**
+
+The single FAIL is `budget.tris` — 36,510 against the 15,000 limit
+(`Body=13538 Bottoms=4510 Hair=4666 Shoes=6494 Tops=4362 Eyes=1520 Eyelashes=106` + club 1,314).
+That is Remy's own fully-clothed mesh, not a regression: §9.1's budget work applies to the shipped
+stand-in `PfGolfer_Test`, which remains at 14,648. Not in §9.8's scope, reported for completeness.
+
+### 13.3 The numbers
+
+| measure | Quaternius (Y-Bot clips, Unity retarget) | Mixamo-native (clips on Remy, no retarget) |
+|---|---|---|
+| foot slide, left | **0.4770 m** | **0.0528 m** |
+| foot slide, right | **0.4552 m** | **0.0915 m** |
+| worst foot slide | **0.4770 m** | **0.0915 m** — **5.2× less** |
+| `stance.address.onGround` | 0.0000 m | 0.0000 m |
+| `stance.address.clubReachesBall` | 0.0000 m | 0.0000 m |
+| `shot.addressAtRest` | PASS `Address_Drive` | PASS `Address_Drive` |
+| `shot.addressAfterShot` | PASS `Address_Drive` | PASS `Address_Drive` |
+| `shot.launchDeferredToImpact` | PASS, ball moved 0.0000 m | PASS, ball moved 0.0000 m |
+
+Side-by-side frames: `evidence/9_8/sbs_address.jpg`, `sbs_atrest.jpg`,
+`sbs_t0_6_after_commit.jpg` (Quaternius left, Mixamo-native right), from the individual
+`quaternius_*.png` / `mixamo_*.png` in the same folder.
+
+---
+
+## Findings
+
+### F1 — Retargeting is the cause, not the clips. The roster pipeline is "rig it in Mixamo, download the clips on it".
+
+A planted foot travels **0.4770 m** on the Quaternius golfer and **0.0915 m** on the Mixamo-native
+one through the same swing, on the same hole, through the same harness, with **no tuning on either**
+— a **5.2× reduction**. The mid-swing frame says the same thing without arithmetic: at t = 0.6 s the
+Quaternius golfer has his legs splayed and his feet dragged out from under him with the club barely
+off the ball, while Remy is in a recognisable backswing — club up over the shoulder, weight shifted,
+feet planted.
+
+The variable between them is *only* whether Unity retargeted. Same clips by origin, same controller
+states, same `cycleOffset`s, same bootstrap, same `PlaceAtBall`, same camera, same assertions. The
+Mixamo-native prefab additionally carries **no grip solver, no finger bake and no forearm aim**
+(`forceGripPose=false`), so it is the *less* corrected of the two and still holds its stance far
+better.
+
+This is the answer §9 predicted but had not measured: the bend-at-the-waist and sliding legs are
+Unity Humanoid retargeting mocap onto a body of different proportions with no foot pinning — a data
+mismatch. **Per §9.9(5), the roster pipeline is therefore: rig the model in Mixamo and download the
+clips on that model.** Club-in-hand mocap (CMU 64 / Motion Cast #05) is *not* the next stop, because
+the clips were never the problem.
+
+Two honest qualifications, neither of which changes the direction of the result:
+- The two characters are different bodies, so some difference is expected — but a 5.2× gap in foot
+  slide is far outside what different proportions alone would explain, and it runs the *opposite*
+  way to the correction effort (the corrected prefab is the worse one).
+- Remy is 36,510 tris against the stand-in's 14,648. The pipeline conclusion is about *how the
+  animation is authored*, not about shipping this character.
+
+### F2 — Mixamo import scale: `useFileScale` stays ON; the correction goes in `globalScale`.
+
+Remy arrived **2.33× oversized** — foot→head 3.089 m against Quaternius' 1.328 m. The instinct is to
+turn off *Use File Scale*; that is wrong and fails loudly in the other direction. The FBX carries a
+0.01 file scale, so disabling it does not shrink the model, it **multiplies by 100**: measured
+3.089 m → **132.811 m**.
+
+Final scale is `fileScale × globalScale`, so the correction belongs in **`globalScale`**:
+
+```
+useFileScale = true
+globalScale  = 1.328 / 3.089 = 0.42992
+```
+
+Applied to the character and all four clips, this gives foot→head **1.328 m — identical to
+Quaternius**, which is what makes the side-by-side a fair comparison rather than an illustration.
+This will bite on every Mixamo import; it belongs in the roster-model spec.
+
+### F3 — The club mount, per decision (b)
+
+The socket is left as authored. Shaft direction expressed in the hand frame is
+**(-0.076, -0.645, 0.760) on both rigs** — the invariant that makes the two prefabs comparable. No
+`FromToRotation` was baked in. What remains in world space is Remy's clip rolling the wrist
+differently from the Y-Bot clip, which is a finding rather than a defect to hide. If Cesar wants the
+club to read better in a future render that is a by-eye Inspector edit on
+`PfGolfer_MixamoNative ▸ ClubSlot`, noted as such; the numbers above do not depend on it.

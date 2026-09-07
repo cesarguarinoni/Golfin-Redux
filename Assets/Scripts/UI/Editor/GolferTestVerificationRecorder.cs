@@ -46,7 +46,19 @@ namespace Golfin.EditorTools
 
         public static void Launch(int hole)
         {
-            if (EditorApplication.isPlaying) { Debug.LogWarning("[GolferVerify] already in play mode."); return; }
+            // §9.9(4): THROW, do not warn. This used to be a LogWarning + silent return, so a
+            // launch fired while a previous run was still playing looked like it had succeeded —
+            // and the caller then waited minutes for frames from a run that never started. Twice.
+            if (EditorApplication.isPlaying)
+                throw new InvalidOperationException(
+                    "[GolferVerify] refused to launch: the Editor is already in play mode. Stop it " +
+                    "first (set isPlaying:false ALONE, then poll until IsPlaying==false && " +
+                    "!IsPlayingOrWillChangePlaymode) — see HANDOFF_9_8_ARCHITECT.md §10.");
+
+            // §9.9(4): Console "Error Pause" pauses play mode on the first logged exception, which
+            // silently strands an unattended harness run partway through. It is what paused every
+            // Mixamo take before the grip block learned to skip.
+            DisableConsoleErrorPause();
             // NOT SaveCurrentModifiedScenesIfUserWantsTo(): it opens a modal, and a run driven
             // over MCP or from batchmode has nobody to click it — the Editor sits wedged until a
             // human does. Dirty scenes are DISCARDED here instead, which is the right default for
@@ -105,6 +117,24 @@ namespace Golfin.EditorTools
         {
             SessionState.SetBool(VideoKey, true);
             Launch(6);
+        }
+
+        /// <summary>
+        /// §9.9(4). Clears Console "Error Pause" for the run. Internal API reached by reflection —
+        /// there is no public setter — and deliberately silent if it moves in a future Unity: the
+        /// harness must still run, it just loses this protection.
+        /// </summary>
+        static void DisableConsoleErrorPause()
+        {
+            try
+            {
+                var t = typeof(EditorApplication).Assembly.GetTypes().FirstOrDefault(x => x.Name == "ConsoleWindow");
+                var m = t?.GetMethod("SetConsoleErrorPause",
+                                     BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+                if (m != null) { m.Invoke(null, new object[] { false }); Debug.Log("[GolferVerify] Console Error Pause cleared for this run."); }
+                else Debug.LogWarning("[GolferVerify] could not find SetConsoleErrorPause — if the run pauses partway, that is why.");
+            }
+            catch (Exception e) { Debug.LogWarning("[GolferVerify] Error Pause not cleared: " + e.Message); }
         }
 
         static Type BotVideoRecorderType => AppDomain.CurrentDomain.GetAssemblies()
@@ -179,7 +209,9 @@ namespace Golfin.EditorTools
 
             var host = new GameObject("[GolferTestVerificationBot]");
             UnityEngine.Object.DontDestroyOnLoad(host);
-            host.AddComponent<GolferTestVerificationRunner>().Begin(SessionState.GetInt(HoleKey, 6));
+            var runner = host.AddComponent<GolferTestVerificationRunner>();
+            runner._variant = variant;   // §9.9(5): drives the golfer_invariants_mixamo.json filename
+            runner.Begin(SessionState.GetInt(HoleKey, 6));
         }
     }
 
@@ -189,6 +221,9 @@ namespace Golfin.EditorTools
         readonly StringBuilder _log = new StringBuilder();
         readonly List<string>  _json = new List<string>();
         int _pass, _fail;
+
+        internal string _variant = "";
+        float _slideL, _slideR;
 
         public void Begin(int hole) { _hole = hole; StartCoroutine(Sequence()); }
 
@@ -200,6 +235,20 @@ namespace Golfin.EditorTools
             _json.Add("    {\"id\": \"" + id + "\", \"verdict\": \"" + (ok ? "PASS" : "FAIL") +
                       "\", \"detail\": \"" + detail.Replace("\\", "/").Replace("\"", "'") + "\"}");
             Mark((ok ? "PASS " : "FAIL ") + id + " — " + detail);
+        }
+
+        /// <summary>
+        /// §9.9(4). An assertion that does not apply to THIS rig. Counted as neither pass nor fail
+        /// — a SKIP must never read as a green tick (it would inflate the count and hide that the
+        /// grip was never measured) and never as a failure (nothing is broken).
+        /// </summary>
+        int _skip;
+        void Skip(string id, string why)
+        {
+            _skip++;
+            _json.Add("    {\"id\": \"" + id + "\", \"verdict\": \"SKIP\", \"detail\": \"" +
+                      why.Replace("\\", "/").Replace("\"", "'") + "\"}");
+            Mark("SKIP  " + id + " — " + why);
         }
 
         static string F(float v) => v.ToString("F4", CultureInfo.InvariantCulture);
@@ -295,7 +344,24 @@ namespace Golfin.EditorTools
                 }
                 var slot = Fb("ClubSlot");
 
-                if (slot != null)
+                // §9.9(4): the whole grip block is Quaternius-rig-specific — it addresses bones by
+                // their Quaternius names (middle_02_r, index_04_leaf_l …). On a Mixamo rig those
+                // resolve to null, Fist() returns Vector3.zero, and every measurement below became
+                // the distance from the shaft to the WORLD ORIGIN — 70–78 m — while the null
+                // dereferences threw. Those exceptions are what tripped Console Error Pause and
+                // silently paused every Mixamo run partway. Skip honestly instead: the grip is not
+                // under test on a rig this block cannot address, and §9.8 forbids grip work anyway.
+                bool hasQuaterniusFingers = Fb("middle_02_r") != null;
+                if (!hasQuaterniusFingers)
+                {
+                    foreach (var id in new[] { "grip.rightFistOnShaft", "grip.fingersClosed",
+                                               "grip.leadHandOnGrip", "grip.handsJoined",
+                                               "grip.wrapped_r", "grip.wrapped_l",
+                                               "grip.thumbDownShaft_r", "grip.thumbDownShaft_l" })
+                        Skip(id, "N/A — rig has no Quaternius finger bones");
+                }
+
+                if (slot != null && hasQuaterniusFingers)
                 {
                     float gapR = Vector3.Cross(slot.up, Fist("r") - slot.position).magnitude;
                     float gapL = Vector3.Cross(slot.up, Fist("l") - slot.position).magnitude;
@@ -724,7 +790,9 @@ namespace Golfin.EditorTools
             { Acc(fl, ref lo, ref hi); Acc(fr, ref lo2, ref hi2); yield return null; }
 
             float slideL = (hi - lo).magnitude;
+            _slideL = slideL;
             float slideR = (hi2 - lo2).magnitude;
+            _slideR = slideR;
             float worst  = Mathf.Max(slideL, slideR);
             Mark("§9.8 foot-slide during the swing: left=" + F(slideL) + " m  right=" + F(slideR) +
                  " m  WORST=" + F(worst) + " m (planted feet should not travel; golfer-local, " +
@@ -900,13 +968,24 @@ namespace Golfin.EditorTools
 
         IEnumerator Finish()
         {
+            // §9.9(5) asks for the variant's numbers as golfer_invariants_mixamo.json — a separate
+            // file, so the Quaternius baseline is not overwritten by the run it is compared against.
+            string file = string.IsNullOrEmpty(_variant)
+                ? "golfer_invariants.json"
+                : "golfer_invariants_mixamo.json";
+
             string json = "{\n  \"task\": \"golfer_3d_test\",\n  \"hole\": " + _hole +
+                          ",\n  \"prefab\": \"" + (string.IsNullOrEmpty(_variant) ? "PfGolfer_Test" : _variant) + "\"" +
                           ",\n  \"pass\": " + _pass + ",\n  \"fail\": " + _fail +
+                          ",\n  \"skip\": " + _skip +
+                          ",\n  \"footSlideLeftM\": " + F(_slideL) +
+                          ",\n  \"footSlideRightM\": " + F(_slideR) +
                           ",\n  \"assertions\": [\n" + string.Join(",\n", _json) + "\n  ]\n}\n";
             Directory.CreateDirectory("Docs/Diagnostics/_capture");
-            File.WriteAllText("Docs/Diagnostics/_capture/golfer_invariants.json", json);
-            Debug.Log("[GolferVerify] ===== SUMMARY  pass=" + _pass + " fail=" + _fail + " =====\n" + _log +
-                      "\nwrote Docs/Diagnostics/_capture/golfer_invariants.json");
+            File.WriteAllText("Docs/Diagnostics/_capture/" + file, json);
+            Debug.Log("[GolferVerify] ===== SUMMARY  pass=" + _pass + " fail=" + _fail + " skip=" + _skip +
+                      "  footSlide L=" + F(_slideL) + " R=" + F(_slideR) + " =====\n" + _log +
+                      "\nwrote Docs/Diagnostics/_capture/" + file);
             yield return Hold(0.5f);
             EditorApplication.isPlaying = false;
         }

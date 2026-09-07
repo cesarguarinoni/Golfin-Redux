@@ -4,6 +4,53 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 (§9.8 closed) — **retargeting was the cause; the roster pipeline is "rig it in Mixamo"**
+
+**The experiment answered.** Same hole, same harness, same controller states, same bootstrap, no
+tuning on either side — the only variable is whether Unity retargeted:
+
+| foot slide through the swing | Quaternius (Y-Bot clips, Unity retarget) | Mixamo-native (clips on Remy) |
+|---|---|---|
+| left / right | 0.4770 / 0.4552 m | **0.0528 / 0.0915 m** |
+| worst | 0.4770 m | **0.0915 m — 5.2x less** |
+
+The t = 0.6 s frame says it without arithmetic: the Quaternius golfer has his legs splayed and feet
+dragged out from under him with the club barely off the ball; Remy is in a recognisable backswing,
+club over the shoulder, feet planted. And the Mixamo prefab carries NO grip solver, NO finger bake
+and NO forearm aim (`forceGripPose=false`) — it is the *less* corrected of the two and still holds
+its stance far better.
+
+So the bend-at-the-waist and sliding legs are **Unity Humanoid retargeting mocap onto a body of
+different proportions with no foot pinning** — a data mismatch, exactly as §9 suspected but had not
+measured. **Roster pipeline: rig the model in Mixamo, download the clips ON that model.**
+Club-in-hand mocap (CMU 64 / Motion Cast #05) is NOT the next stop — the clips were never at fault.
+
+**Mixamo import scale, worth carrying to every future import.** Remy arrived 2.33x oversized
+(foot->head 3.089 m vs 1.328 m). The instinct — turn off *Use File Scale* — is wrong and fails the
+other way: the FBX carries a 0.01 file scale, so disabling it MULTIPLIES BY 100 (measured 3.089 ->
+132.811 m). Final scale is `fileScale x globalScale`, so the fix is `useFileScale = true` +
+`globalScale = 1.328/3.089 = 0.42992`, giving foot->head 1.328 m — identical, which is what makes
+the side-by-side a comparison rather than an illustration.
+
+**Why every earlier Mixamo take died.** Console **Error Pause** was ON, and the harness's grip block
+addresses Quaternius bone names (`middle_02_r`) that do not exist on a `mixamorig:*` rig — so it
+threw, and play mode halted partway, every time, silently. Now: the grip block SKIPs with
+"N/A — rig has no Quaternius finger bones" (a skip counts as neither pass nor fail, so it cannot
+read as a green tick), `Launch` clears Error Pause, and "already in play mode" THROWS instead of
+warning-and-returning — that silent return had me waiting minutes on runs that never started.
+
+**Result:** 23 pass / 1 fail / 8 skip. The one fail is `budget.tris` 36,510 — Remy's own clothed
+mesh (hair, shoes, tops), not a regression; the shipped stand-in stays at 14,648.
+
+**Club mount, decision (b):** socket left as authored, no FromToRotation. Shaft direction in the
+hand frame is (-0.076, -0.645, 0.760) on BOTH rigs — that is the invariant that makes them
+comparable. What remains in world space is Remy's clip rolling the wrist differently, which is a
+finding, not a defect to hide behind a correction.
+
+Profile restored to **iOS-Full-GPS**. `ARCHITECT_DECISION_9_9.md` is now committed to the task
+folder — it existed only as a .docx on Cesar's Desktop.
+
+---
 ## 2026-09-07 — miss_grade_duff: **a missed swing now tops the ball**
 
 **Every graded miss in every scheme is a DUFF.** Pendulum MISS, Needle SHANK, Free Swing DUFF
