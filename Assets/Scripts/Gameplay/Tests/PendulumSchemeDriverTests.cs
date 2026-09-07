@@ -506,6 +506,36 @@ namespace Golfin.Gameplay.Tests
         }
 
         [Test]
+        public void AHitchFrame_DoesNotCountAsAHeldReversal()
+        {
+            // A device that stutters mid-flick must not lose the shot. One long frame can exceed
+            // HandleReverseCancelHoldSec on its own, and during it the finger may well have
+            // flicked and released — there is no sample to say otherwise. The flick gate beside
+            // this refuses any pair longer than StutterFrameSeconds for exactly that reason.
+            // Found for real: the scheme-confirm tile capture runs ~111ms frames and was
+            // cancelling a full 100% pull at held=0.333s.
+            DisableFlickGate();
+            _driver.OnPointerDown(At(OriginX, OriginY));
+            _driver.OnDrag(At(OriginX, OriginY - _cfg.PendulumPull100Px));
+            Assert.AreEqual(ShotState.Timing, _sc.State, "harness: the pull registered");
+
+            float up = _cfg.PendulumPull100Px - _cfg.HandleReverseCancelPx - 10f;
+            _driver.OnDrag(At(OriginX, OriginY - up));      // arms
+
+            // Frames LONGER than the stutter threshold, for many times the hold window.
+            float hitch = _sc.StutterFrameSeconds + 0.02f;
+            for (int i = 0; i < 20; i++) _driver.TickForTests(hitch);
+
+            Assert.AreEqual(ShotState.Timing, _sc.State, "a stuttering frame must not cancel the swing");
+            Assert.AreEqual(0, _cancelCount, "and must not report a cancel");
+
+            // ...and a normal-length hold still cancels, so the guard did not disable the feature.
+            TickPast(_cfg.HandleReverseCancelHoldSec);
+            Assert.AreEqual(ShotState.Idle, _sc.State, "real frames still end a held reversal");
+            Assert.AreEqual(1, _cancelCount);
+        }
+
+        [Test]
         public void SmallJitterUpward_DoesNotCancel()
         {
             DisableFlickGate();

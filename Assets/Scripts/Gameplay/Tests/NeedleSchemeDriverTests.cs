@@ -142,6 +142,31 @@ namespace Golfin.Gameplay.Tests
         // ── 1. Touch one: the pull ───────────────────────────────────────────────
 
         [Test]
+        public void AHitchFrame_DoesNotCountAsAHeldReversal()
+        {
+            // Needle carries its own copy of the reverse-cancel, and this is that copy's first
+            // coverage. A device that stutters mid-pull must not lose the shot: one long frame can
+            // exceed HandleReverseCancelHoldSec on its own, and during it the finger may well have
+            // moved and released with nothing sampled to say otherwise. EvaluateFlickGate refuses
+            // any pair longer than StutterFrameSeconds for exactly that reason; so does this.
+            PullDown(_cfg.NeedlePull100Px);
+            Assert.AreEqual(ShotState.Timing, _sc.State, "harness: the pull registered");
+
+            // Back up past the arming distance, then stutter for many times the hold window.
+            float up = _cfg.NeedlePull100Px - _cfg.HandleReverseCancelPx - 10f;
+            _driver.OnDrag(At(OriginX, OriginY - up));
+            float hitch = _sc.StutterFrameSeconds + 0.02f;
+            for (int i = 0; i < 20; i++) _driver.TickForTests(hitch);
+
+            Assert.AreEqual(0, _cancelCount, "a stuttering frame must not cancel the swing");
+
+            // ...and real frames still cancel, so the guard did not disable the feature.
+            int frames = Mathf.CeilToInt(_cfg.HandleReverseCancelHoldSec / 0.016f) + 2;
+            for (int i = 0; i < frames; i++) _driver.TickForTests(0.016f);
+            Assert.AreEqual(1, _cancelCount, "real frames still end a held reversal");
+        }
+
+        [Test]
         public void PullDown_EntersTimingAndPublishesPower()
         {
             PullDown((_cfg.NeedleMinUsefulPullPx + _cfg.NeedlePull100Px) * 0.5f);

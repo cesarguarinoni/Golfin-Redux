@@ -27,20 +27,21 @@ Two things remain open, neither introduced by this task and neither fixable in a
   the loop was photographing each scheme from wherever the PREVIOUS scheme's ball landed — which
   walked the set into tree shadow. ResetLie() puts the ball back on the tee between SelectScheme and
   Capture (reset_to_tee: ok x4 in the heartbeat), so all four are now shot from the same lit lie.
-  2. T_Pendulum_3: FULLY TRACED (IMPLEMENTER_REPORT §5). Advance's HandleReverseCancel fires at
-     held=0.333s — the capture's frames are ~111ms and step 3 drags up over three of them — so
-     _dragging is already false when OnPointerUp arrives and ReleaseSwing never runs. Shortening
-     the gesture only moves the failure to the flick gate, which refuses any sample pair longer
-     than _stutterFrameThreshold (0.1s) and so can never pass at this frame rate either. The rig
-     cannot produce a committing Pendulum flick through synthetic pointer events. FIX (scoped, not
-     done): route step 3's swing through the bot path, which is requireFlickGate:false and is what
-     CLAUDE.md rule 17 already mandates. Exit probes kept behind the driver's _logSwings flag.
+  2. T_Pendulum_3: FIXED (IMPLEMENTER_REPORT §5 traced it, §6 fixes it). Two causes, both closed:
 
-     Worth a look beyond the capture: HandleReverseCancel measures its 0.12s hold in wall clock
-     with no stutter guard, unlike the flick gate beside it. A device that hitches mid-flick would
-     kill a real player's shot the same way.
+     6a. HandleReverseCancel measured its 0.12s hold in wall clock with no guard, so one long frame
+         could exceed the window on its own — it fired at held=0.333s on a genuine 100% pull. Both
+         drivers that carry it (Pendulum and Needle) now skip frames longer than the flick gate's
+         own ShotController.StutterFrameSeconds. A stuttering device now loses the CANCEL, not the
+         SHOT. Tested both ways in both driver test files; Needle's copy had no test at all before.
 
-Also worth a look: this run's Pendulum / Needle / Free Swing frames are darker than Flick's because
-the bot's ball ended in shade. One-click re-run if you want a brighter set.
+     6b. Even so a hand-rolled flick could not commit here — it only moved the failure to
+         EvaluateFlickGate, which refuses any sample pair longer than 0.1s, and at the capture's
+         ~111ms frames that is every pair. Step 3 now swings through BotSwing.PlayPerfect, the seam
+         the codebase already names for capture bots; it resolves ActiveExecutor per CLAUDE.md
+         rule 17 and releases with requireFlickGate:false.
+
+     Verified: pop alpha 1.000 (was 0.000), scale 0.979 mid-animation, manifest marker 0.000 (was
+     the NaN sentinel), and the tile reads "JUST!".
 
 Full detail, per-tile crop rects and screenshots in IMPLEMENTER_REPORT.md.

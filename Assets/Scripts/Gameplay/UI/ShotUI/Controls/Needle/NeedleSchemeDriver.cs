@@ -471,7 +471,16 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             // the marker, and a swing the player has walked back up must die regardless of them.
             if (_dragging && _reverseArmed)
             {
-                _reverseHeldSec += dt;
+                // A HITCH FRAME IS NOT EVIDENCE OF A HOLD. dt here is wall clock, and one long
+                // frame can exceed HandleReverseCancelHoldSec on its own — during it the finger
+                // may well have flicked and released, and we have no samples to say otherwise.
+                // "Cancel the shot" is the destructive reading of that ignorance, so refuse it:
+                // EvaluateFlickGate next door already declines any sample pair longer than
+                // StutterFrameSeconds, and this is the same refusal for the same reason. Cost of
+                // being wrong: on a stuttering device the player loses the CANCEL, not the SHOT.
+                // Found by the scheme-confirm tile capture, whose ~111ms frames cancelled a full
+                // 100% pull at held=0.333s and left T_Pendulum_3 with no grade pop.
+                if (dt <= _controller.StutterFrameSeconds) _reverseHeldSec += dt;
                 if (_reverseHeldSec >= _cfg.HandleReverseCancelHoldSec)
                 {
                     _dragging = false;

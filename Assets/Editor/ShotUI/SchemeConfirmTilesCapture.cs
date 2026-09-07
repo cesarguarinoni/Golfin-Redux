@@ -15,6 +15,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Golfin.Diagnostics.Runtime;
 using Golfin.Gameplay.UI.Controls;
+using Golfin.Gameplay.UI.Controls.Bot;
 using Golfin.Gameplay.UI.Controls.FreeSwing;
 using Golfin.Gameplay.UI.Controls.Needle;
 using Golfin.Gameplay.UI.Controls.Pendulum;
@@ -742,23 +743,30 @@ namespace Golfin.EditorTools.ShotUI
             yield return Tile(ControlScheme.Pendulum, 2, $"TIME IT — marker at {driver.MarkerOffset:F3}",
                               "CentralBall", "PowerLane", "PendulumTrack", "PendulumHandle");
 
-            // Flick up from the pip: the latch takes the marker at the start of the upswing.
-            driver.SetPhaseForTests(0f);
-            float step = Screen.height * 0.10f;
+            // THE SHOT IS DRIVEN THROUGH THE BOT PATH, not by synthetic pointer events.
+            //
+            // A hand-rolled flick cannot commit from this rig, and the reason is structural
+            // rather than tuning (traced 2026-09-07). The capture runs ~111 ms frames — it
+            // screenshots and writes files between them — and BOTH gates standing between a
+            // release and a commit are written to distrust a frame that long:
+            //
+            //   * HandleReverseCancel used to fire at held=0.333s on a full 100% pull, ending the
+            //     swing before OnPointerUp even ran. It now skips hitch frames, so it no longer
+            //     does — but that only moves the failure one gate along.
+            //   * EvaluateFlickGate refuses any sample pair longer than StutterFrameSeconds
+            //     (0.1s), which at 111 ms frames is every pair there is. No gesture passes it.
+            //
+            // BotSwing.PlayPerfect is the seam the codebase already points at for this — its own
+            // summary reads "zero-error convenience for smoke / perf / CAPTURE bots". It resolves
+            // ShotSchemeHost.ActiveExecutor, so it swings whatever scheme the loop has selected
+            // rather than hard-coding one (CLAUDE.md rule 17), and it releases with
+            // requireFlickGate:false because a programmatic driver pushes no touch samples for a
+            // gate to measure. A Perfect band gives the JUST this tile is captioned for.
+            Up();                        // let go of the step-2 pose; it is not going to commit
+            yield return WaitForIdle();
+            yield return BotSwing.PlayPerfect(power01: 1f, aimYawRad: CameraHeadingRadians(),
+                                              isPutt: false, ctx: null);
 
-            // NOTE (2026-09-07): this gesture does NOT commit — the swing dies before the
-            // commit block, which is why T_Pendulum_3 photographs bare fairway where "JUST!"
-            // belongs. Two rewrites of it (one frame + a late Up, two frames releasing on the
-            // second) changed nothing, so the gesture shape is NOT the cause and they were
-            // reverted rather than left in on a theory. What IS established: alpha is 0 from the
-            // first frame after Up() so SchemeGradePop.Show is never called, and the driver's
-            // LastCommittedMarker is still float.NaN (its initialiser) with LastCommittedGrade at
-            // default(PendulumGrade) — so ReleaseSwing returns before its commit block. The three
-            // ways out of that block are the flick gate, _peakPower <= 0.02f, and Advance's
-            // HandleReverseCancel ending the swing before OnPointerUp runs. WHICH one is the open
-            // question; NotePopState below is the instrument to answer it driver-side.
-            for (int i = 1; i <= 3; i++) { Drag(hold + new Vector2(0f, step * i)); yield return null; }
-            Up();
             // The FIRST frame the pop is on screen — the bar is still up and the chase camera has
             // not started following the ball yet.
             yield return WaitUntilActive("PendulumGradePop");
@@ -904,6 +912,15 @@ namespace Golfin.EditorTools.ShotUI
                  $"text='{(lbl != null ? lbl.text : "<none>")}' " +
                  $"labelAlpha={(lbl != null ? lbl.color.a.ToString("F2") : "-")} " +
                  $"labelEnabled={(lbl != null ? lbl.enabled.ToString() : "-")}");
+        }
+
+        /// <summary>The shot's current aim, so a bot swing does not yank the camera off the pose
+        /// the first two tiles were framed on. Reflection for the same reason the rest of this
+        /// runner uses it — ShotController is not in an assembly this editor tool references.</summary>
+        float CameraHeadingRadians()
+        {
+            var p = _sc?.GetType().GetProperty("CameraHeadingRadians");
+            return p != null ? (float)p.GetValue(_sc) : 0f;
         }
 
         static bool IsOpaque(GameObject go)

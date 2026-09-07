@@ -116,6 +116,16 @@ namespace Golfin.Gameplay.Input
         /// <summary>Last speed measured by EvaluateFlickGate, in screen-heights/sec. Tuning aid.</summary>
         public float LastFlickSpeedScreenHeights { get; private set; }
 
+        /// <summary>
+        /// The frame length beyond which a measurement is a HITCH and cannot be trusted.
+        ///
+        /// <para>Exposed so the schemes' reverse-cancel can refuse the same frames
+        /// <see cref="EvaluateFlickGate"/> refuses. Two independent "how long is too long" numbers
+        /// that had to be kept equal by hand is the class of drift this project keeps paying for;
+        /// this is one number, read where it is needed.</para>
+        /// </summary>
+        public float StutterFrameSeconds => _stutterFrameThreshold;
+
         /// <summary>True once the upswing reversal has latched the aim for this swing.</summary>
         public bool IsAimLocked => _aimLocked;
 

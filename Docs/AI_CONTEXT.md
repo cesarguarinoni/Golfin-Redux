@@ -177,9 +177,20 @@ scheme was shot from wherever the previous one's ball landed, walking the set do
 shadow. `SchemeConfirmTilesCapture.ResetLie()` calls `PhysicsLabController.ResetToTee()` between
 `SelectScheme` and `Capture`, so all four now come off the same lit tee.
 
-**Still open:** `T_Pendulum_3` captures an invisible grade pop across every run. Not wiring —
-`_gradePop` is wired on all three drivers and Needle/Free Swing photograph theirs fine from the same
-code path. See `Docs/Specs/Active/shot_view_layout_followup/IMPLEMENTER_REPORT.md`.
+**`T_Pendulum_3`'s missing grade pop was never a pop bug — the flick was not committing**, and
+tracing it found a real gameplay defect. `HandleReverseCancel` (added the same morning) measured its
+0.12 s hold in WALL CLOCK with no stutter guard, so a single long frame could exceed the whole
+window on its own: it was cancelling a genuine 100 % pull at held = 0.333 s. The flick gate beside it
+already refuses any sample pair longer than `_stutterFrameThreshold`; that is now public as
+`ShotController.StutterFrameSeconds` and BOTH drivers carrying the reverse-cancel (Pendulum and
+Needle) skip frames longer than it — a stuttering device loses the CANCEL, not the SHOT. Tested both
+ways in both driver test files; Needle's copy had no coverage at all before.
+
+The capture needed a second fix: even guarded, a hand-rolled flick cannot pass `EvaluateFlickGate`
+at ~111 ms frames, because it refuses any sample pair longer than 0.1 s. Step 3 now swings through
+`BotSwing.PlayPerfect` — the seam whose own summary names capture bots, resolving `ActiveExecutor`
+per CLAUDE.md rule 17 with `requireFlickGate: false`. The tile reads "JUST!" and the manifest a real
+`marker 0.000` where the `NaN` sentinel used to sit.
 
 ---
 ## 2026-09-07 — **shot view layout: the ball drops, one bottom baseline, the gauge moves up**

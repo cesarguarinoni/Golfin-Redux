@@ -331,6 +331,8 @@ dt is always ~0.111 s, so the gate returns false every time, whatever the gestur
 what my two earlier rewrites ran into. **The rig cannot produce a committing Pendulum flick through
 synthetic pointer events at its own frame rate** — not a tuning problem, a structural one.
 
+**FIXED — both halves, 2026-09-07.** See §6.
+
 **The fix is the one the codebase already prescribes.** `EvaluateFlickGate` line 261 is
 `if (_sampleCount == 0) return true; // programmatic driver — not a touch swing`, and
 `ReleaseSwing(requireFlickGate: false)` has exactly one caller: `DriveBot`. The tile capture is a
@@ -349,6 +351,56 @@ which explicitly refuses to trust a frame longer than 0.1 s.
 **The probes are kept, behind `_logSwings`** — the driver's existing flag, which is 0 in the shipped
 scene, so they are silent. They took this from "the pop is broken" to "the swing never fired" in one
 run, and they are the instrument for the next person.
+
+## §6 — the two fixes
+
+### 6a. The reverse-cancel now refuses hitch frames
+
+`HandleReverseCancel` measured its 0.12 s hold in wall clock with no guard, so a single long frame
+could exceed the whole window on its own — which is how a genuine 100 % pull died at held = 0.333 s.
+The flick gate immediately beside it already refuses any sample pair longer than
+`_stutterFrameThreshold`; that number is now public as `ShotController.StutterFrameSeconds` (one
+number, read where it is needed, rather than two that must be kept equal by hand), and **both**
+drivers that carry the reverse-cancel — Pendulum and Needle — skip a frame longer than it:
+
+```csharp
+if (dt <= _controller.StutterFrameSeconds) _reverseHeldSec += dt;
+```
+
+During a frame that long the finger may well have flicked and released and there is nothing sampled
+to say otherwise; "cancel the shot" is the destructive reading of that ignorance. The cost of the
+guard being wrong is that a stuttering device loses the CANCEL, not the SHOT.
+
+Covered by `AHitchFrame_DoesNotCountAsAHeldReversal` in both driver test files — each asserts that
+20 over-threshold frames do not cancel AND that normal frames still do, so the guard cannot silently
+disable the feature. Needle's copy of the reverse-cancel had no test at all before this.
+
+### 6b. The capture's step 3 swings through the bot path
+
+Even with 6a in place a hand-rolled flick still could not commit here: it just moved one gate along,
+to `EvaluateFlickGate`, which refuses any sample pair longer than 0.1 s — and at ~111 ms frames that
+is every pair there is. No gesture passes.
+
+Step 3 now releases the step-2 pose, waits for Idle and calls
+`BotSwing.PlayPerfect(power01: 1f, aimYawRad: <live heading>, isPutt: false)`. That is the seam the
+codebase already points at — its own summary reads "zero-error convenience for smoke / perf /
+CAPTURE bots" — it resolves `ShotSchemeHost.ActiveExecutor` so it swings whichever scheme the loop
+has selected (CLAUDE.md rule 17) rather than hard-coding one, and it releases with
+`requireFlickGate: false` because a programmatic driver pushes no touch samples for a gate to
+measure. The aim is read off the live shot so the bot does not yank the camera off the pose the
+first two tiles were framed on.
+
+**Result**, after five runs of bare fairway:
+
+```
+pop_at-wait: PendulumGradePop  alpha=1.000  scale=0.979  text='JUST!'
+manifest:    FLICK UP — grade Just, marker 0.000
+```
+
+`alpha 1.000` (was 0.000), `scale 0.979` — mid scale-in, so `PlayRoutine` is genuinely running —
+and `marker 0.000` is a REAL value where `NaN` was the never-set sentinel. `T_Pendulum_3` now shows
+"JUST!". All twelve tiles still land on the tile aspect with `fails: []` and zero chrome nudges, and
+`LabScaffold.unity` is untouched.
 
 ## Known FAIL items
 
