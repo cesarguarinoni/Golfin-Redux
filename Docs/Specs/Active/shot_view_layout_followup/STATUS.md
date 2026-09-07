@@ -44,4 +44,16 @@ Two things remain open, neither introduced by this task and neither fixable in a
      Verified: pop alpha 1.000 (was 0.000), scale 0.979 mid-animation, manifest marker 0.000 (was
      the NaN sentinel), and the tile reads "JUST!".
 
+  3. REGRESSION FIXED (mine, reported by Cesar): lifting the tick labels above the club head in
+     98fe518a9 also lifted them out of the lane's fade group, so they showed at rest and through
+     the whole ball flight. They now live in a per-scheme LabelSpace container, drawn after the
+     handle, whose alpha PendulumFadingView hands down via a new optional _mirrorGroup. Verified
+     live: alpha 0.000 at rest, 1.000 during a pull, still above the handle in sibling order.
+
+  4. Not a defect: the action buttons are absent from the TILES by design (scheme_confirm_popup
+     §3.2, "No HUD chrome may appear in a tile" — HideChrome hides them per tile and restores
+     after). The saved scene has all of them m_IsActive: 1. If they are missing in the Editor now,
+     it is a leaked HideChrome from a capture run that died on an MCP timeout; re-entering play
+     clears it.
+
 Full detail, per-tile crop rects and screenshots in IMPLEMENTER_REPORT.md.

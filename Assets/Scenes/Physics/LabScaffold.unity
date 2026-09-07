@@ -2568,6 +2568,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e741b637ecc8e41409f6df5202471736, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.FreeSwing.FreeSwingLaneView
+  _mirrorGroup: {fileID: 225648325}
   _lane: {fileID: 685515212}
   _tick100: {fileID: 572426315}
   _tick120: {fileID: 494923141}
@@ -3735,6 +3736,57 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 220017039}
   m_CullTransparentMesh: 1
+--- !u!1 &225648323
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 225648324}
+  - component: {fileID: 225648325}
+  m_Layer: 0
+  m_Name: FreeSwingLabelSpace
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &225648324
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 225648323}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2086170842}
+  - {fileID: 956801903}
+  - {fileID: 226889506}
+  m_Father: {fileID: 988772760}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &225648325
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 225648323}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 1
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1 &226889505
 GameObject:
   m_ObjectHideFlags: 0
@@ -3765,7 +3817,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 988772760}
+  m_Father: {fileID: 225648324}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -4167,6 +4219,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c15999102fe542d6bf3ce73b2337db3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.Needle.NeedleArcView
+  _mirrorGroup: {fileID: 0}
   _arc: {fileID: 1669038564}
   _arcStrokeOuter: {fileID: 248408103}
   _arcStrokeInner: {fileID: 645908211}
@@ -5360,7 +5413,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 890520008}
+  m_Father: {fileID: 468093154}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -7240,6 +7293,56 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
   _pressedScale: 0.95
   _duration: 0.12
+--- !u!1 &468093153
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 468093154}
+  - component: {fileID: 468093155}
+  m_Layer: 0
+  m_Name: PendulumLabelSpace
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &468093154
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 468093153}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 712291061}
+  - {fileID: 299285577}
+  m_Father: {fileID: 890520008}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &468093155
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 468093153}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 1
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1 &470052438
 GameObject:
   m_ObjectHideFlags: 0
@@ -11761,6 +11864,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e900c98362b97433c822f95aeb73a0e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.Pendulum.PendulumBarView
+  _mirrorGroup: {fileID: 0}
   _track: {fileID: 334830980}
   _bandGood: {fileID: 137416253}
   _bandJust: {fileID: 1162761824}
@@ -12202,7 +12306,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 890520008}
+  m_Father: {fileID: 468093154}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -13976,8 +14080,7 @@ RectTransform:
   - {fileID: 684889923}
   - {fileID: 1396204409}
   - {fileID: 1509306673}
-  - {fileID: 712291061}
-  - {fileID: 299285577}
+  - {fileID: 468093154}
   m_Father: {fileID: 1733178569}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -14981,7 +15084,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 988772760}
+  m_Father: {fileID: 225648324}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -15670,9 +15773,7 @@ RectTransform:
   - {fileID: 1547412677}
   - {fileID: 1883978373}
   - {fileID: 1123221999}
-  - {fileID: 2086170842}
-  - {fileID: 956801903}
-  - {fileID: 226889506}
+  - {fileID: 225648324}
   m_Father: {fileID: 1920197874}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -29631,6 +29732,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f53448c8e2ebd48e9943f655891e6ae5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.Pendulum.PendulumLaneView
+  _mirrorGroup: {fileID: 468093155}
   _lane: {fileID: 1669172948}
   _tick100: {fileID: 1198349963}
   _tick120: {fileID: 379607168}
@@ -32628,6 +32730,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63fac53ec288a4ff99289fed0d17d304, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.Needle.NeedlePowerCircleView
+  _mirrorGroup: {fileID: 0}
   _ring80: {fileID: 1327515288}
   _ring100: {fileID: 1349566443}
   _ring120: {fileID: 391147879}
@@ -33221,7 +33324,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 988772760}
+  m_Father: {fileID: 225648324}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}

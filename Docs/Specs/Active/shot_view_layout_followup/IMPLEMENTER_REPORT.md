@@ -402,7 +402,52 @@ and `marker 0.000` is a REAL value where `NaN` was the never-set sentinel. `T_Pe
 "JUST!". All twelve tiles still land on the tile aspect with `fails: []` and zero chrome nudges, and
 `LabScaffold.unity` is untouched.
 
+## §7 — the lifted labels had stopped fading (regression, mine)
+
+Cesar: *"The line numbers (100 and 120) show up all the time before the UI appears, and also when
+the ball is in flight."* Correct, and caused by §3: lifting the labels out of `PendulumLaneRoot` to
+get them above the club head also lifted them out of the lane's fade group. `PendulumLaneView` IS a
+`PendulumFadingView`, and everything under it fades with the shot state; `BallSpace` fades nothing.
+So they were on permanently.
+
+Draw order and fade group are the same thing in uGUI, and these labels need to be in two places at
+once — ABOVE the handle, which is a sibling of the lane rather than part of it, and INVISIBLE
+whenever the lane is. The fix is one container per scheme, drawn after the handle, whose alpha the
+lane view hands down every frame: `PendulumFadingView` gained an optional `_mirrorGroup`, set
+wherever it sets its own alpha (including `HideImmediate`, and outside `Update`'s early-out so a
+mirror that starts out of sync converges).
+
+Scene: `PendulumLabelSpace` and `FreeSwingLabelSpace`, each a `RectTransform` + `CanvasGroup` last
+in its `BallSpace`, holding the two (Pendulum) and three (Free Swing) labels. All five moved at
+`maxCornerDelta = 0.000000`; both builders author it the same way.
+
+Verified live rather than reasoned about:
+
+```
+AT REST:      labelAlpha=0.000  laneAlpha=0.000
+DURING PULL:  labelAlpha=1.000  laneAlpha=1.000
+              labelSiblingIndex=4  handleSiblingIndex=3   <- still above the club head
+```
+
+## §8 — the buttons missing from the tiles
+
+Cesar: *"The buttons of the UI are not showing in your captures."* That one is by design and
+predates this task: `scheme_confirm_popup` §3.2 is "No HUD chrome may appear in a tile", and the
+runner's `HideChrome()` switches off `PlayerCard`, `HoleCard`, `SettingsButton`, `WindIndicator`,
+`HoleIndicator`, `PowerHUD`, `SpinButton`, `FadeDrawButton`, `GolfinButton`, `DriverButton` and the
+turn banner before every tile, restoring them at the end. A tile is a crop of one control, not a
+screenshot of the game.
+
+The saved scene is intact — every one of those reads `m_IsActive: 1` in `LabScaffold.unity`. If they
+are missing in the Editor right now it is a leaked `HideChrome` from one of the capture runs I
+interrupted (three of them died on an MCP timeout mid-run, so `RestoreChrome` never ran). It is
+play-mode-only state: stopping and re-entering play clears it, and nothing is committed.
+
 ## Known FAIL items
+
+0. **`PendulumSchemeDriverTests.MarkerFreezes_AtTheUpswingReversal_NotAtRelease` is flaky.** It
+   failed once (`Expected 0.309 +/- 0.02, But was 0.0`) between two clean full runs of the same
+   tree, and passed on the immediate re-run. I have not chased it; flagging rather than burying it.
 
 
 1. ~~The 3× club head covers the Pendulum lane's 100%/120% labels at full pull.~~ **Fixed** — the

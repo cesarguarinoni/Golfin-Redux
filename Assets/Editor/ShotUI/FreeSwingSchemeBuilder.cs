@@ -353,9 +353,19 @@ namespace Golfin.EditorTools.ShotUI
             handle.anchoredPosition = new Vector2(0f, -HandleRestBelowBall);
             handle.localScale = Vector3.one;
             handle.SetAsLastSibling();     // the club head reads on top of its own lane
-            label100.SetAsLastSibling();   // ...but the tick labels read on top of the club head
-            label120.SetAsLastSibling();
-            labelImp.SetAsLastSibling();
+            // ...but the tick labels read on top of the club head, in a container that the lane
+            // view fades in step with itself. The container is the whole point: draw order and
+            // fade group are one thing in uGUI, and these labels have to be ABOVE the handle
+            // (a sibling of the lane, not part of it) while still being INVISIBLE whenever the
+            // lane is. Parented out of the lane alone, they showed at rest and all through the
+            // ball flight.
+            var labelSpace = MakeRoot(rootRt, "FreeSwingLabelSpace");
+            var labelGroup = labelSpace.gameObject.AddComponent<CanvasGroup>();
+            labelGroup.alpha = 0f;
+            labelGroup.blocksRaycasts = false;
+            foreach (var t in new[] { label100, label120, labelImp }) t.SetParent(labelSpace, worldPositionStays: false);
+            labelSpace.SetAsLastSibling();
+            WireObj(laneView, "_mirrorGroup", labelGroup);
 
             // ...but the chip and the pop read on top of the club, as the node's Result frame
             // draws them.
