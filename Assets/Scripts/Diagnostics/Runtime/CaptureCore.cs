@@ -268,9 +268,7 @@ namespace Golfin.Diagnostics.Runtime
             }
 
             path = ApplyProvenance(tex, path, out var prov);
-            path = ApplyProvenance(tex, path, out var prov0);
             File.WriteAllBytes(path, tex.EncodeToPNG());
-            WriteSidecar(path, prov0);
             WriteSidecar(path, prov);
             UnityEngine.Object.DestroyImmediate(tex);
 
