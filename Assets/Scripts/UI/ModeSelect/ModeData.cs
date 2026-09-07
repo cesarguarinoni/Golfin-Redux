@@ -38,8 +38,10 @@ namespace GolfinRedux.UI.ModeSelect
         // that only have the legacy int 'rewards' column. For versus_1v1: Points×200 on WIN.
         public List<HoleReward> rewardList = new List<HoleReward>();
         // rewardsTextKey — optional localization key; when set, the REWARDS row shows this
-        // localized TEXT (no coin icon, no amount) instead of "x{rewards}". Used by
-        // tournaments ("Varies by tournament"). Empty for all other modes.
+        // localized TEXT instead of "x{rewards}". The coin icon is independent of it and
+        // follows `rewards > 0`: tournaments pays no fixed amount (rewards 0) so it reads a
+        // bare "Varies by tournament", while missions keeps its coin beside "x35 (average)".
+        // Empty for all other modes.
         public string rewardsTextKey = "";
     }
 }

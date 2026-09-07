@@ -13,7 +13,8 @@ namespace GolfinRedux.UI.ModeSelect
     ///              reward3Type, reward3Amount, rewardsTextKey
     /// The (type,amount) reward pair columns are parsed into ModeData.rewardList (Stage 2).
     /// rewardsTextKey is optional — when present the card's REWARDS row shows that localized
-    /// text instead of "x{rewards}" (tournaments: "Varies by tournament").
+    /// text instead of "x{rewards}" (tournaments: "Varies by tournament"; missions:
+    /// "x35 (average)"). The coin icon is driven by `rewards > 0`, not by this key.
     ///
     /// <para>
     /// OVERLAID BY THE <c>modes</c> CONTENT CATALOG since game_modes_admin (§2) — the standard

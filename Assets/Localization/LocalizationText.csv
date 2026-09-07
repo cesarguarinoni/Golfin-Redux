@@ -352,6 +352,7 @@ MODE_TOURNAMENTS,TOURNAMENTS,トーナメント,true
 MODE_TOURNAMENTS_TAGLINE,Be the best and earn rewards,頂点に立って報酬を手に入れよう,true
 MODE_TOURNAMENTS_DESC,"Enter live tournaments, play the featured holes, and climb the leaderboard before time runs out. Finish high to claim your share of the prizes — every stroke counts.",開催中のトーナメントに参加して対象ホールをプレイし、期間内にリーダーボードを駆け上がろう。上位でフィニッシュして賞品を手に入れよう。一打一打が勝負を決める。,true
 MODE_REWARDS_VARY,Varies by tournament,トーナメントごとに異なります,true
+MODE_REWARDS_MISSIONS_AVG,x35 (average),x35（平均）,true
 MODE_NO_ENTRY_FEE,NO ENTRY FEE,参加費無料,true
 MODE_MULTIPLAYER,Multiplayer,マルチプレイ,true
 MODE_DRIVING_RANGE,DRIVING RANGE,ドライビングレンジ,true
@@ -362,7 +363,7 @@ MODE_VERSUS_1V1_TAGLINE,1v1,1v1,true
 MODE_VERSUS_1V1_DESC,"Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.",一打が勝負を分けるスピーディーな1v1マッチで対戦しよう。コースを攻略し、相手を出し抜き、勝負どころのパットを沈めて勝利をつかもう。,true
 MODE_DRIVING_RANGE_TAGLINE,Coming Soon — practice your drives.,近日公開 — ドライバーショットを練習しよう。,true
 MODE_DRIVING_RANGE_DESC,A dedicated driving range mode where you can practice long shots and experiment with different clubs.,ロングショットの練習や、さまざまなクラブを試せる専用のドライビングレンジモード。,true
-MODE_MISSIONS_TAGLINE,Take on 40 hole challenges.,40のホールチャレンジに挑戦しよう。,true
+MODE_MISSIONS_TAGLINE,Earn Reward Points by completing missions,ミッションを達成してリワードポイントを獲得しよう,true
 MODE_MISSIONS_DESC,Complete special challenges and objectives to earn bonus rewards and exclusive items.,特別なチャレンジや目標を達成して、ボーナス報酬や限定アイテムを手に入れよう。,true
 UI_LOCKED,LOCKED,ロック,true
 RESULT_REPLAY_HOLE,REPLAY HOLE,ホールをリプレイ,true

@@ -64,10 +64,10 @@ namespace GolfinRedux.UI.ModeSelect
         [SerializeField] private Color titleCollapsedColor = new Color32(0xD1, 0xD5, 0xDB, 255);
         [Tooltip("Entry-fee text colour when the player can't afford the fee (#C04000).")]
         [SerializeField] private Color insufficientRpColor = new Color32(0xC0, 0x40, 0x00, 255);
-        [Tooltip("Label→value gap on a REWARDS row that shows localized TEXT instead of a coin " +
-                 "amount. The §6.2 authored gap (32) is sized for [LABEL gap32 coin42 gap6 value]; " +
-                 "with no coin it strands 32px between two words and reads as a double space. " +
-                 "Coin rows keep the authored gap.")]
+        [Tooltip("Label→value gap on a REWARDS row that shows NO coin icon (a mode paying no " +
+                 "fixed amount). The §6.2 authored gap (32) is sized for [LABEL gap32 coin42 " +
+                 "gap6 value]; with no coin it strands 32px between two words and reads as a " +
+                 "double space. Rows that keep their coin keep the authored gap.")]
         [SerializeField] private float textRewardsGap = 12f;
 
         // ── Title TMP elements ────────────────────────────────────────────────
@@ -504,12 +504,16 @@ namespace GolfinRedux.UI.ModeSelect
                 return;
             }
 
-            // A mode may express its REWARDS as localized TEXT (rewardsTextKey) instead of a coin
-            // amount — tournaments pays out per-tournament prizes, so it shows "Varies by
-            // tournament" with no coin. Every other mode keeps the legacy "x{rewards}" path.
+            // A mode may express its REWARDS as localized TEXT (rewardsTextKey) instead of a bare
+            // coin amount. The coin icon follows the AMOUNT, not the label: tournaments pays
+            // per-tournament prizes (rewards 0) so it shows a bare "Varies by tournament", while
+            // missions pays an averaged amount and keeps its coin beside "x35 (average)" — node
+            // 13026:1924 shows both cards that way. Every other mode keeps the legacy
+            // "x{rewards}" path.
             bool hasFee     = mode.entryFee > 0;
             bool hasTextRwd = !string.IsNullOrEmpty(mode.rewardsTextKey);
             bool hasRewards = hasTextRwd || mode.rewards > 0;
+            bool showRwdCoin = mode.rewards > 0;
             string feeText  = hasFee ? $"x{mode.entryFee}" : Localize("MODE_NO_ENTRY_FEE", "NO ENTRY FEE");
             string rwdText  = hasTextRwd ? LocalizationManager.Get(mode.rewardsTextKey) : $"x{mode.rewards}";
 
@@ -522,8 +526,8 @@ namespace GolfinRedux.UI.ModeSelect
             if (rewardSlot2 != null) rewardSlot2.SetActive(hasRewards);
             if (rewardsLabel  != null) rewardsLabel.gameObject.SetActive(hasRewards);
             if (rewardsAmount != null) { rewardsAmount.text = rwdText; rewardsAmount.color = NormalWhite; }
-            // The text variant carries no amount, so it shows no coin icon.
-            if (rewardsCoin != null) rewardsCoin.gameObject.SetActive(hasRewards && !hasTextRwd);
+            // A mode that pays no fixed amount shows no coin icon.
+            if (rewardsCoin != null) rewardsCoin.gameObject.SetActive(showRwdCoin);
 
             // ── Expanded container ────────────────────────────────────────────
             if (rewardSlot1Exp     != null) rewardSlot1Exp.SetActive(true);
@@ -534,28 +538,29 @@ namespace GolfinRedux.UI.ModeSelect
             if (rewardSlot2Exp   != null) rewardSlot2Exp.SetActive(hasRewards);
             if (rewardsLabelExp  != null) rewardsLabelExp.gameObject.SetActive(hasRewards);
             if (rewardsAmountExp != null) { rewardsAmountExp.text = rwdText; rewardsAmountExp.color = NormalWhite; }
-            if (rewardsCoinExp != null) rewardsCoinExp.gameObject.SetActive(hasRewards && !hasTextRwd);
+            if (rewardsCoinExp != null) rewardsCoinExp.gameObject.SetActive(showRwdCoin);
 
-            // Tighten the label→value gap when the value is a word rather than a coin amount.
-            ApplyRewardsGap(rewardSlot2,    ref _authoredRewardsGap,    hasTextRwd);
-            ApplyRewardsGap(rewardSlot2Exp, ref _authoredRewardsGapExp, hasTextRwd);
+            // Tighten the label→value gap only when the coin is gone; a text value that keeps
+            // its coin keeps the authored spacing.
+            ApplyRewardsGap(rewardSlot2,    ref _authoredRewardsGap,    !showRwdCoin);
+            ApplyRewardsGap(rewardSlot2Exp, ref _authoredRewardsGapExp, !showRwdCoin);
 
             RefreshFeeColor();
         }
 
         /// <summary>
-        /// The REWARDS row is authored as [LABEL gap32 coin42 gap6 value]. When the value is
-        /// localized TEXT the coin is hidden, leaving the authored 32px stranded between two
-        /// words — it reads as a double space. Swap in the tighter textRewardsGap for that
-        /// case only, caching the authored value so coin rows are untouched.
+        /// The REWARDS row is authored as [LABEL gap32 coin42 gap6 value]. When the coin is
+        /// hidden the authored 32px is left stranded between two words — it reads as a double
+        /// space. Swap in the tighter textRewardsGap for that case only, caching the authored
+        /// value so rows that still show a coin are untouched.
         /// </summary>
-        private void ApplyRewardsGap(GameObject slot, ref float authored, bool textVariant)
+        private void ApplyRewardsGap(GameObject slot, ref float authored, bool coinHidden)
         {
             if (slot == null) return;
             var row = slot.GetComponent<HorizontalLayoutGroup>();
             if (row == null) return;
             if (authored < 0f) authored = row.spacing;
-            float target = textVariant ? textRewardsGap : authored;
+            float target = coinHidden ? textRewardsGap : authored;
             if (!Mathf.Approximately(row.spacing, target))
             {
                 row.spacing = target;

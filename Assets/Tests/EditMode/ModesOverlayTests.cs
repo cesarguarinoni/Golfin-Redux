@@ -129,6 +129,13 @@ namespace GolfinRedux.Tests.EditMode
             Assert.IsFalse(Field<bool>(missions, "locked"), "Missions ships unlocked");
             Assert.AreEqual("mission_select", Field<string>(missions, "target"),
                 "an unlocked Missions card must route at the screen that exists");
+            // da_q9: the row carried tournaments' copy key, so the card read "Varies by
+            // tournament". Its own key, plus a non-zero `rewards` — which is what keeps the
+            // coin icon on the row (ModeCardController: showRwdCoin = rewards > 0).
+            Assert.AreEqual("MODE_REWARDS_MISSIONS_AVG", Field<string>(missions, "rewardsTextKey"),
+                "Missions must not reuse the tournaments reward copy");
+            Assert.Greater(Field<int>(missions, "rewards"), 0,
+                "a non-zero rewards amount is what keeps the coin beside the Missions reward text");
 
             object versus = Find(modes, "versus_1v1")!;
             Assert.AreEqual(5, Field<int>(versus, "versusStrokeCapOverPar"));
