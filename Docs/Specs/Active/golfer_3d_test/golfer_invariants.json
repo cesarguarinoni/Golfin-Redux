@@ -26,7 +26,7 @@
     {"id": "grip.wrapped_l", "verdict": "PASS", "detail": "l-hand worst fingertip (pinky) is 0.0309 m from the shaft centre line; contact is 0.0210 m, so anything past 0.0420 m is not touching the club"},
     {"id": "grip.thumbDownShaft_r", "verdict": "PASS", "detail": "r-hand thumb is 0.0 deg off the shaft axis (down the shaft is 0, curled into the fist is ~90)"},
     {"id": "grip.thumbDownShaft_l", "verdict": "PASS", "detail": "l-hand thumb is 0.0 deg off the shaft axis (down the shaft is 0, curled into the fist is ~90)"},
-    {"id": "perf.frameDelta", "verdict": "PASS", "detail": "median frame ms with=16.6898 without=16.6797 delta=0.0101 (Editor, not device)"},
+    {"id": "perf.frameDelta", "verdict": "PASS", "detail": "median frame ms with=16.6660 without=16.6553 delta=0.0107 (Editor, not device)"},
     {"id": "budget.tris", "verdict": "FAIL", "detail": "rendered tris = 15632 (limit 15000) | Grip=192 ClubHead=1058 Shaft=64 Eyebrows=984 Eyes=768 SuperHero_Male=12566"},
     {"id": "tier.low", "verdict": "PASS", "detail": "Low: Eyebrows q=Bone2 shadow=Off, Eyes q=Bone2 shadow=Off, SuperHero_Male q=Bone2 shadow=Off animatorCulling=CullCompletely"},
     {"id": "tier.high", "verdict": "PASS", "detail": "High: Eyebrows q=Bone4 shadow=On, Eyes q=Bone4 shadow=On, SuperHero_Male q=Bone4 shadow=On"},
