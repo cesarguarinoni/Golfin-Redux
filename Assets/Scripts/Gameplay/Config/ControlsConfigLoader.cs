@@ -123,6 +123,13 @@ namespace Golfin.Gameplay.Config
                     case "FreeSwingWindowScaleAtMaxPower":  cfg.FreeSwingWindowScaleAtMaxPower  = val; break;
                     case "FreeSwingAnalyzerSeconds":        cfg.FreeSwingAnalyzerSeconds        = val; break;
                     case "FreeSwingSampleWindow":           cfg.FreeSwingSampleWindow           = val; break;
+                    // shot_view_layout §3.1
+                    case "BallAnchorViewportY_Flick":       cfg.BallAnchorViewportY_Flick       = val; break;
+                    case "BallAnchorViewportY_Pendulum":    cfg.BallAnchorViewportY_Pendulum    = val; break;
+                    case "BallAnchorViewportY_Needle":      cfg.BallAnchorViewportY_Needle      = val; break;
+                    case "BallAnchorViewportY_FreeSwing":   cfg.BallAnchorViewportY_FreeSwing   = val; break;
+                    case "BottomBaselinePx":                cfg.BottomBaselinePx                = val; break;
+                    case "PowerGaugeViewportY":             cfg.PowerGaugeViewportY             = val; break;
                     default: matched = false; break;
                 }
 

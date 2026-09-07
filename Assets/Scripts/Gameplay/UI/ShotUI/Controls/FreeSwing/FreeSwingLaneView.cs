@@ -72,6 +72,13 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         /// <summary>How far below the ball centre the club head rests, to its centre.</summary>
         public float HandleRestBelowBall => _handleRestBelowBall;
 
+        /// <summary>Half the club-head sprite's height, and the slack under it — the two terms
+        /// that turn the deepest tick into the pill's bottom edge. Exposed for
+        /// <c>ShotLayoutController</c>'s D6 clamp, which has to compute the lane's END from the
+        /// SAME numbers this view draws it with (shot_view_layout §3.3).</summary>
+        public float ClubHalfHeight => _clubHalfHeight;
+        public float LaneTailPx     => _laneTailPx;
+
         /// <summary>
         /// How far ABOVE its touch origin the finger must travel for the club head to reach the
         /// impact line — which is exactly how far the club head sits below the ball at rest.

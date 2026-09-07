@@ -27,6 +27,25 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private Vector2 _anchoredPositionForClub = new Vector2(-58f, 96f);
         [SerializeField] private Vector2 _anchoredPositionForBall = new Vector2( 58f, 96f);
 
+        /// <summary>
+        /// Move the y an overlay OPENS at onto the shared bottom baseline
+        /// (shot_view_layout D2 / §3.3 step 4).
+        ///
+        /// <para>The x stays whatever the builder authored — only the baseline is shared, and the
+        /// two overlays sit at different horizontal offsets. Applied to BOTH kinds because one
+        /// widget is used for clubs and its twin for balls, and which branch
+        /// <see cref="PositionRoot"/> takes is decided by the pivot at open time, not here.</para>
+        ///
+        /// <para>Set rather than authored so <c>BottomBaselinePx</c> is the single source of the
+        /// number: a device with a deeper safe-area inset raises the buttons AND the overlays that
+        /// open above them together, which authored constants could not do.</para>
+        /// </summary>
+        public void SetOpenBaselineY(float y)
+        {
+            _anchoredPositionForClub = new Vector2(_anchoredPositionForClub.x, y);
+            _anchoredPositionForBall = new Vector2(_anchoredPositionForBall.x, y);
+        }
+
         // ── Runtime state ──────────────────────────────────────────────────────
         Kind   _kind;
         bool   _isModalMode;

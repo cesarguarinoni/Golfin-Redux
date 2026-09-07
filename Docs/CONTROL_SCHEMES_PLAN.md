@@ -210,6 +210,8 @@ Order 1 → 2 → 3 is by reuse and risk; 3 can be pulled forward if Cesar wants
 
 17 frames, every one a detached clone of `In-Game - Shot Tests 9` (`4065:15675`) / `Language` (`4065:16942`) / `In-game Settings` (`4095:29120`) with a scheme layer added inside `Shoot Controls`. Geometry is 1:1 with the game: pull lane 300 px = 100 %, 360 px = 120 % (`Max100PercentPullPx` / `MaxOverpowerPullPx`), ball rest at Shoot-Controls-local (537, 961).
 
+> **Stale for Pendulum and Free Swing since `shot_view_layout` (2026-09-07).** Those two schemes now pull `540 px = 100 %` / `648 px = 120 %` and their ball sits at viewport y 0.38 rather than the centre, so the frames above no longer match the game for them. Needle and Flick are unchanged. Redrawing the frames at the new geometry is tracked as out-of-scope in `Docs/Specs/Active/shot_view_layout/SPEC.md` §5 — this note exists so nobody measures against these numbers in the meantime.
+
 | Section | Frames (node ids) |
 |---|---|
 | 1 — Pendulum | Idle `14086:32483`, Pull `14086:32586`, Timing `14084:33319`, Result JUST `14086:32689`, Putt `14086:32793` |

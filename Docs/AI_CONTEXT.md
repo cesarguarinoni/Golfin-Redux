@@ -4,6 +4,41 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 — **shot view layout: the ball drops, one bottom baseline, the gauge moves up**
+
+The shot view is framed by WHERE THE 2D BALL WIDGET IS. The aim camera pins the 3D ball to
+`CentralBall` (`PhysicsLabController.GetAimBallViewportY` → `SolveAimCameraPose`), so moving the
+widget IS the camera change and no camera code was touched. New `ShotLayoutController` +
+`ShotLayoutMath` (`Assets/Scripts/Gameplay/UI/ShotUI/`) run from `ShotSchemeHost.Apply`, just before
+`driver.Activate()`, reusing the host's existing never-mid-swing deferral rather than adding a second
+Idle gate.
+
+**Ball anchor is per scheme** (`BallAnchorViewportY_<scheme>`): Pendulum / Needle / Free Swing drop to
+viewport 0.38, **Flick stays at 0.5** — its cone is scene-authored 1009 px tall with its base at
+ball −1160 and a lower ball would push that base off the screen. On Lomond hole 2 the aim camera
+pitches 12.50° → 7.08° across that switch: more sky, more fairway in front of the ball.
+
+**One bottom baseline** (`BottomBaselinePx = 170`, raised to `safeAreaBottom + 60` on a deeper
+device inset) now carries the four action buttons' bottom edge, both selector overlays and the pull
+lane's end. The cluster is full-stretch so the controller applies one delta; the builder keeps
+authoring 96/360 and `BottomBaselinePx` stays the single source of the number. Pendulum and Free
+Swing pulls grew 380/456 → **540/648** (exact 1.2× kept) so the lane reaches the baseline; **Needle
+deliberately kept 380/456** — its pull is a ring around the ball, and at 648 the 120 % ring would
+run off both edges of a 1170-wide canvas.
+
+**Every scheme root gained a `BallSpace`** — one full-stretch rect between `SchemeRoot_*` and its
+ball-relative children, so moving a scheme is one write instead of re-deriving every offset in four
+builders. Flick's world corners are byte-identical through the migration (`ConeMesh`, `ClubHandle`,
+`TimingSlab`, `PutterTrack`, `TargetingLine` all verified). The power gauge moved to a top-right
+anchor with its centre at viewport 0.70, off the aim-bar row it used to share.
+
+**Open, for Cesar:** the same day's polish pass took `ClubHalfHeight` 50 → **150** (the club head now
+scales to 3×), which makes the lane 100 px deeper than the spec's arithmetic assumed. D6 therefore
+raises the ball to viewport **0.418** instead of 0.38 to keep the lane end on the baseline — the
+guard working as designed, but not the Figma number. Either is a one-line change; see
+`Docs/Specs/Active/shot_view_layout/IMPLEMENTER_REPORT.md`.
+
+---
 ## 2026-09-07 — control schemes / **four polish fixes: ball, club head, cancel, map view**
 
 **The 2D centre ball was SOLID on the first shot of a hole.** `BallConeAlphaMirror` mirrored the
@@ -63,6 +98,41 @@ covering arm-and-hold cancel, jitter tolerance, a flick that rises past the armi
 and handle size resetting when the swing ends. `LabScaffold.unity` diff is **9 insertions, 3 deletions,
 zero objects added or removed** — three `_clubHalfHeight` and three handle-scale pairs, edited through
 `SerializedObject` rather than a rebuild (a full rebuild churned 30,000 lines and was reverted).
+
+---
+## 2026-09-06 — `golfer_3d_test` / **a rigged golfer stands at the ball, opt-in only**
+
+**What ships behind a define and nothing else.** A CC0 Quaternius base character with 11 Mixamo golf
+clips retargeted onto it stands beside the ball in a real hole, addresses on aim, swings on shot commit,
+putts in putter mode, and walks to the new lie when the ball stops. Everything is gated on
+`GOLFIN_GOLFER_TEST`: without it `GolferPresenter` and `GolferTestBootstrap` reflect as **0 fields,
+0 methods** (proven after a clean recompile), `GameplayScene` holds a component with no asset reference,
+and `GolferTestBuildGate` moves the assets out of the build. A fourth lane — **"punch it golfer"** —
+ships it on purpose (`iOS-Full-Golfer`, `GOLFIN_GPS;GOLFIN_GOLFER_TEST`, same ASC record as punch it).
+
+**The finding worth remembering: `bakeAxisConversion` corrupts a Humanoid avatar.** SPEC asked for it ON.
+With it on, `HumanPoseHandler.GetHumanPose` on the bind pose returns `bodyRotation = (73.8°, 0, 0)` and
+muscle values up to **6.67** against a valid range of ±1 — and every retargeted clip renders as a
+contorted figure that still *imports* with a green, `isValid`, `isHuman` avatar. "Avatar valid" is not
+"avatar correct", and a T-pose render proves nothing because the bind pose is fine either way. The number
+that told the truth was the muscle vector, and the cheapest way to read it is
+`new HumanPoseHandler(avatar, root).GetHumanPose(...)`.
+
+**Two more things a picture would have hidden.** `AnimationMode.SampleAnimationClip` and
+`Animator.Play + Update(0)` both return the *previous* pose when you reuse one Animator across samples —
+a fresh instance per frame is the fix, and without it a whole take reads as "the body never moves". And a
+14-second wait for a 247 m drive measured the golfer at the tee and called a working re-placement a
+failure; the wait is now on the ball being still, not on a stopwatch.
+
+**The EditMode sweep earned its keep.** Three `GameSessionTests` failed with *Destroy may not be called
+from edit mode* — `GameSession` is static, so the bootstrap's `OnRoundStarted` subscription outlived its
+play session and edit-mode tests raised straight into `Instantiate`/`Destroy`. Fixed with an
+`Application.isPlaying` guard plus a `Boot()` re-arm. Nothing in gameplay would ever have shown it.
+
+**Status:** `Docs/Specs/Active/golfer_3d_test/` — 27/28 in-game invariants PASS on Hole 08 through the
+real entry path. The one FAIL is the tri budget (15,632 vs 15,000; the CC0 body is 12.5k on its own).
+Impact frames for the future launch-delay work: **Drive 1.167 s, Putt 1.333 s**. Not yet run: the three
+real iOS builds, and cancel-to-idle.
 
 ---
 ## 2026-09-06 — `bot_scheme_parity` / **bots swing the scheme the player picked**

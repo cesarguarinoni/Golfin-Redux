@@ -241,6 +241,31 @@ namespace Golfin.Gameplay.Config
         public float FreeSwingAnalyzerSeconds;
         public float FreeSwingSampleWindow;      // treat as int at use site, as MaxTotalPasses is
 
+        // ── Shot-view layout (shot_view_layout §3.1) ────────────────────────────
+        // WHERE THE SHOT VIEW SITS, not how a shot is computed. The 3D camera pins the ball to
+        // the 2D CentralBall widget (PhysicsLabController.GetAimBallViewportY -> SolveAimCameraPose),
+        // so the ball anchor below IS the camera pitch: drop the widget and the camera tilts up,
+        // which is the whole of "more sky, more fairway" (Figma In-Game - Shot Tests 14153:4602).
+        //
+        // PER SCHEME, because the schemes do not draw the same thing below the ball. Pendulum,
+        // Needle and Free Swing share 0.38; FLICK STAYS AT 0.5 because its cone is scene-authored
+        // 1009px tall with its base at ball-1160, and lowering the ball would push that base off
+        // the screen. One key moves it the day the cone is re-cut.
+        public float BallAnchorViewportY_Flick;
+        public float BallAnchorViewportY_Pendulum;
+        public float BallAnchorViewportY_Needle;
+        public float BallAnchorViewportY_FreeSwing;
+
+        // ONE bottom baseline shared by the action buttons' bottom edge, both selector overlays
+        // and the pull lane's end, so they cannot drift apart the way 96 (buttons) and the lane's
+        // derived end already had. Raised at runtime to safeAreaBottom + 60 on a device whose
+        // inset is deeper, which is what keeps the 120% flick clear of the home gesture.
+        public float BottomBaselinePx;
+
+        // Centre of the round power gauge, 0 = bottom. It used to sit at 0.50 — dead on the aim
+        // bar's row — so a full-power pull was read through the widget covering it.
+        public float PowerGaugeViewportY;
+
         public static readonly ControlsConfig Default = new ControlsConfig
         {
             PullStartThresholdPx           = 30f,
@@ -280,10 +305,13 @@ namespace Golfin.Gameplay.Config
 
             // scheme_pendulum §3.6 seed values — mirror controls.csv (F13 two-mirror rule).
             PendulumMinUsefulPullPx        = 40f,
-            PendulumPull100Px              = 380f,   // 300 -> 380 (2026-09-05): the longer pill needs the
+            PendulumPull100Px              = 540f,   // 300 -> 380 (2026-09-05): the longer pill needs the
                                                      // ticks LOW in it, and a tick only moves down honestly
-                                                     // if the pull it represents gets longer
-            PendulumPull120Px              = 456f,   // 360 -> 456, keeping the node's 1.2x tick spacing
+                                                     // if the pull it represents gets longer.
+                                                     // 380 -> 540 (shot_view_layout): with the ball at 0.38
+                                                     // the lane has 160px more room, and the lane END is what
+                                                     // has to land on BottomBaselinePx
+            PendulumPull120Px              = 648f,   // 360 -> 456 -> 648, keeping the node's 1.2x tick spacing
             PendulumOverpowerGain          = 1.0f,
             PendulumJustWindowAtAcc0_01    = 0.08f,
             PendulumJustWindowAtAcc120_01  = 0.20f,
@@ -322,8 +350,11 @@ namespace Golfin.Gameplay.Config
 
             // scheme_freeswing §3.5 seed values — mirror controls.csv (F13 two-mirror rule).
             FreeSwingMinUsefulPullPx        = 40f,
-            FreeSwingPull100Px              = 380f,  // seeded equal to Pendulum/Needle: the pull
-            FreeSwingPull120Px              = 456f,  // must feel the same in all three on day one
+            FreeSwingPull100Px              = 540f,  // seeded equal to PENDULUM: the two lane schemes
+            FreeSwingPull120Px              = 648f,  // share a lane end on the baseline (shot_view_layout
+                                                     // D4). Needle keeps 380/456 -- its pull is a RING
+                                                     // around the ball, not a lane, and 648 would clip
+                                                     // off both sides of a 1170-wide canvas (D5)
             FreeSwingFollowThroughPx        = 160f,  // node: the lane's top edge, 160px above the ball
             FreeSwingReversalSlopPx         = 24f,
             FreeSwingImpactWindowAtAcc0Px   = 22f,
@@ -342,6 +373,14 @@ namespace Golfin.Gameplay.Config
             FreeSwingWindowScaleAtMaxPower  = 0.55f,
             FreeSwingAnalyzerSeconds        = 1.5f,
             FreeSwingSampleWindow           = 90f,
+
+            // shot_view_layout §3.1 seed values — mirror controls.csv (F13 two-mirror rule).
+            BallAnchorViewportY_Flick       = 0.5f,   // D1: the cone's base pins it here
+            BallAnchorViewportY_Pendulum    = 0.38f,  // 62% from the top, the Figma ball position
+            BallAnchorViewportY_Needle      = 0.38f,
+            BallAnchorViewportY_FreeSwing   = 0.38f,
+            BottomBaselinePx                = 170f,   // was 96 on the buttons alone
+            PowerGaugeViewportY             = 0.70f,  // 30% from the top, clear of the aim bar
         };
     }
 }

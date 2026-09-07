@@ -61,13 +61,25 @@ namespace Golfin.Gameplay.Tests
         }
 
         [Test]
-        public void Power_SeededEqualToPendulumAndNeedle_SoThePullFeelsTheSame()
+        public void Power_SeededEqualToThePendulum_ButNoLongerToTheNeedle()
         {
             // Not a coupling — three separate fields — but a claim the spec makes about day one,
             // and a claim worth failing loudly if somebody retunes one and not the others by
-            // accident. Deleting this test is the correct response to a DELIBERATE divergence.
+            // accident. Deleting an assertion here is the correct response to a DELIBERATE
+            // divergence, and shot_view_layout D5 is one.
+            //
+            // The two LANE schemes still move together: both lanes have to end on the shared
+            // bottom baseline, so 540/648 is one decision taken twice.
             Assert.AreEqual(_cfg.PendulumPull100Px, _cfg.FreeSwingPull100Px, 1e-4f);
-            Assert.AreEqual(_cfg.NeedlePull120Px,   _cfg.FreeSwingPull120Px, 1e-4f);
+            Assert.AreEqual(_cfg.PendulumPull120Px, _cfg.FreeSwingPull120Px, 1e-4f);
+
+            // The Needle deliberately stayed at 380/456 (D5): its pull is a RING around the ball
+            // rather than a lane below it, and its 120% ring is already r=526 on a canvas only
+            // 585 px to either side — at 648 it would be cut off by both screen edges. Asserted
+            // rather than merely commented so a future "make them all match again" tidy-up has to
+            // read this reason first.
+            Assert.AreNotEqual(_cfg.NeedlePull120Px, _cfg.FreeSwingPull120Px,
+                "Needle's ring cannot grow with the lanes — see shot_view_layout D5.");
         }
 
         // ── Window scale ─────────────────────────────────────────────────────────

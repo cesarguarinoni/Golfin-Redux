@@ -18,6 +18,14 @@ public static class ActionButtonsBuilder
     // IconArea width = 135, text width = 120, fontStyle = Bold, autoSize min=20 max=30
     // GolfinButton icon = S_Controls_Ball_GOLFIN, DriverButton icon = S_Menu_Driver_GOLFIN
     // Do NOT change these back to hardcoded fontSize=30 or width=0 or iconSprite=null.
+    //
+    // THE ROW Ys BELOW (96 / 360) ARE NOT THE SHIPPED POSITIONS ANY MORE. shot_view_layout D2
+    // put the bottom row, both selector overlays and the pull lane's end on ONE baseline —
+    // ControlsConfig.BottomBaselinePx (170, raised further on a device with a deeper safe-area
+    // inset) — and ShotLayoutController applies the difference to the whole full-stretch
+    // cluster at runtime. Keep authoring 96/360 here: the delta is measured FROM them, so
+    // changing them moves the buttons relative to the baseline rather than moving the baseline.
+    // To move the baseline itself, edit BottomBaselinePx (and its controls.csv mirror).
     [MenuItem("GOLFIN/Build/Build Action Buttons (8.5)")]
     public static void BuildActionButtons()
     {
@@ -621,6 +629,9 @@ public static class ActionButtonsBuilder
             Debug.LogWarning("[ActionButtonsBuilder] LabRoot not found — populators not added.");
         }
 
+        // ── Wire ShotLayoutController (shot_view_layout §3.4) ──────────────────
+        WireShotLayoutController(canvasGo, cluster, overlayWidget, overlayWidgetBall);
+
         // ── Mark scene dirty and save ──────────────────────────────────────────
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
@@ -632,6 +643,72 @@ public static class ActionButtonsBuilder
     public static void BuildActionButtonsNoDialog()
     {
         BuildActionButtons();
+    }
+
+    /// <summary>
+    /// Find-and-wire every reference <c>ShotLayoutController</c> needs (shot_view_layout §3.4).
+    ///
+    /// <para>Wired HERE rather than by hand because this builder is the thing that deletes and
+    /// re-creates the cluster and both selector overlays — three of the controller's own
+    /// references — so a re-run that did not re-wire would leave the shot view stuck at the old
+    /// framing with no error anywhere. Everything else is found by type or by name, and any
+    /// scheme root still missing its <c>BallSpace</c> gets one, so this is also the repair path
+    /// for a scene that predates the container.</para>
+    /// </summary>
+    static void WireShotLayoutController(GameObject canvasGo, RectTransform cluster,
+                                         SelectorOverlayWidget clubSelector,
+                                         SelectorOverlayWidget ballSelector)
+    {
+        var layout = canvasGo.GetComponent<ShotLayoutController>();
+        if (layout == null) layout = canvasGo.AddComponent<ShotLayoutController>();
+
+        var canvas     = canvasGo.GetComponent<Canvas>();
+        var canvasRect = canvas != null ? canvas.rootCanvas.transform as RectTransform
+                                        : canvasGo.GetComponent<RectTransform>();
+
+        var ballWidget = canvasGo.GetComponentInChildren<CentralBallWidget>(true);
+        var powerHudT  = FindDeep(canvasGo.transform, "PowerHUD");
+
+        var so = new SerializedObject(layout);
+        so.FindProperty("_canvasRect").objectReferenceValue           = canvasRect;
+        so.FindProperty("_centralBall").objectReferenceValue          = ballWidget != null ? ballWidget.GetComponent<RectTransform>() : null;
+        so.FindProperty("_actionButtonsCluster").objectReferenceValue = cluster;
+        so.FindProperty("_clubSelector").objectReferenceValue         = clubSelector;
+        so.FindProperty("_ballSelector").objectReferenceValue         = ballSelector;
+        so.FindProperty("_powerHud").objectReferenceValue             = powerHudT as RectTransform;
+        so.FindProperty("_pendulumLane").objectReferenceValue =
+            canvasGo.GetComponentInChildren<Golfin.Gameplay.UI.Controls.Pendulum.PendulumLaneView>(true);
+        so.FindProperty("_freeSwingLane").objectReferenceValue =
+            canvasGo.GetComponentInChildren<Golfin.Gameplay.UI.Controls.FreeSwing.FreeSwingLaneView>(true);
+
+        // One BallSpace per scheme root, in enum order. A root that has none yet gets one —
+        // it is created empty and at offset zero, which is exactly the pre-move layout, so
+        // repairing a stale scene can never move anything on its own.
+        string[] rootNames = { "SchemeRoot_Flick", "SchemeRoot_Pendulum", "SchemeRoot_Needle", "SchemeRoot_FreeSwing" };
+        var spaces = so.FindProperty("_ballSpaces");
+        spaces.arraySize = rootNames.Length;
+        for (int i = 0; i < rootNames.Length; i++)
+        {
+            var el   = spaces.GetArrayElementAtIndex(i);
+            var root = FindDeep(canvasGo.transform, rootNames[i]) as RectTransform;
+            el.FindPropertyRelative("scheme").enumValueIndex = i;      // ControlScheme is Flick,Pendulum,Needle,FreeSwing
+            el.FindPropertyRelative("rect").objectReferenceValue =
+                root != null ? Golfin.EditorTools.ShotUI.ShotBallSpace.Ensure(root) : null;
+            if (root == null)
+                Debug.LogWarning($"[ActionButtonsBuilder] {rootNames[i]} not found — its BallSpace is unwired.");
+        }
+        so.ApplyModifiedProperties();
+
+        Debug.Log("[ActionButtonsBuilder] ShotLayoutController wired (canvas, ball, 4 BallSpaces, cluster, 2 selectors, PowerHUD, 2 lanes).");
+    }
+
+    /// <summary>Depth-first find by name, inactive included — the scheme roots ship inactive and
+    /// <c>Transform.Find</c> only looks one level down.</summary>
+    static Transform FindDeep(Transform parent, string name)
+    {
+        foreach (var t in parent.GetComponentsInChildren<Transform>(true))
+            if (t.name == name) return t;
+        return null;
     }
 
     // ── Internal card prefab builder ───────────────────────────────────────────

@@ -158,12 +158,15 @@ namespace Golfin.EditorTools.ShotUI
                 return;
             }
 
-            var rootRt = root.GetComponent<RectTransform>();
+            var schemeRoot = root.GetComponent<RectTransform>();
 
-            // Idempotent: this builder owns every child of the root, so a rebuild starts clean
-            // rather than accumulating a second lane next to the first.
-            for (int i = rootRt.childCount - 1; i >= 0; i--)
-                Object.DestroyImmediate(rootRt.GetChild(i).gameObject);
+            // EVERYTHING BELOW IS BALL-RELATIVE, so it hangs off the root's BallSpace rather
+            // than the root itself (shot_view_layout §3.2): one rect carries the whole scheme
+            // when the ball anchor moves, and the offsets stay the numbers the Figma node
+            // states. Idempotent in the same way the rest of this builder is — it empties the
+            // space rather than replacing it, so ShotLayoutController's reference survives a
+            // rebuild.
+            var rootRt = ShotBallSpace.EnsureAndClear(schemeRoot);
 
             // The placeholder's job is over the moment a real driver exists.
             var placeholder = root.GetComponent<PlaceholderSchemeDriver>();
@@ -351,7 +354,7 @@ namespace Golfin.EditorTools.ShotUI
             chipRoot.SetAsLastSibling();
             popRoot.SetAsLastSibling();
 
-            Wire(driver, ("_schemeRoot", rootRt), ("_handle", handle));
+            Wire(driver, ("_schemeRoot", schemeRoot), ("_handle", handle));
             WireObj(driver, "_laneView",     laneView);
             WireObj(driver, "_traceView",    traceView);
             WireObj(driver, "_analyzerChip", chip);

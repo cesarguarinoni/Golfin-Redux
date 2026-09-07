@@ -1,6 +1,7 @@
 using UnityEngine;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.UI.Controls.Bot;
+using Golfin.Gameplay.UI.ShotUI;
 
 namespace Golfin.Gameplay.UI.Controls
 {
@@ -140,6 +141,15 @@ namespace Golfin.Gameplay.UI.Controls
             GameObject inputRoot = implemented ? wanted : RootFor(ControlScheme.Flick);
 
             if (_activeDriver != null) _activeDriver.Deactivate();
+
+            // LAYOUT BEFORE ACTIVATE (shot_view_layout §3.3). The scheme's ball anchor, its
+            // BallSpace and the shared bottom baseline are placed here rather than from the
+            // scheme-changed event directly, so this reuses the never-mid-swing deferral above
+            // instead of adding a second Idle gate that could disagree with it. It runs before
+            // the driver reads the finger, so a driver never sees a half-moved lane. Reached
+            // statically because there is exactly one shot canvas and a serialized reference
+            // here is one more thing a scene revision could leave null.
+            ShotLayoutController.Active?.Apply(scheme);
 
             for (int i = 0; i < _schemeRoots.Length; i++)
             {

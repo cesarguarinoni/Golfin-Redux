@@ -45,6 +45,13 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         /// reads it so the two cannot disagree about where a given pull puts the club.</summary>
         public float HandleRestBelowBall => _handleRestBelowBall;
 
+        /// <summary>Half the club-head sprite's height, and the slack under it — the two terms
+        /// that turn the deepest tick into the pill's bottom edge. Exposed for
+        /// <c>ShotLayoutController</c>'s D6 clamp, which has to compute the lane's END from the
+        /// SAME numbers this view draws it with (shot_view_layout §3.3).</summary>
+        public float ClubHalfHeight => _clubHalfHeight;
+        public float LaneTailPx     => _laneTailPx;
+
         /// <summary>
         /// Lay the lane out for this swing. Called at Activate and whenever putt mode flips, not
         /// per frame — none of it changes while a finger is down.
