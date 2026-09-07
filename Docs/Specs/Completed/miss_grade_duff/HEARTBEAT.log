@@ -1,0 +1,54 @@
+=== iter-1 kickoff baseline 2026-09-07T14:45:00+09:00 ===
+HEAD: b7727ac015ae990b7dada0c9993021a7044a802a
+DIRTY:
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_01JapaneseBlackImposter.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackBark.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackBark_Var1.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackLeaf.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/JapaneseBlackPine/MAT_JapaneseBlackLeaf_Var1.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaBark.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaImposter.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/Metasequoia/MAT_MetasequoiaLeaf.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineBark.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineImposter01.mat
+ M Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Materials/ScottishPine/MAT_ScottishPineLeaf.mat
+?? Assets/Animations.meta
+?? Assets/Art/3D/Characters/_Test/MixamoNative.meta
+?? Assets/Art/3D/Characters/_Test/MixamoNative/ANIM_Golf_Drive.fbx.meta
+?? Assets/Art/3D/Characters/_Test/MixamoNative/ANIM_Golf_DriveSetup.fbx.meta
+?? Assets/Art/3D/Characters/_Test/MixamoNative/ANIM_Golf_Putt.fbx.meta
+?? Assets/Art/3D/Characters/_Test/MixamoNative/ANIM_Idle.fbx.meta
+?? Assets/Art/3D/Characters/_Test/MixamoNative/LICENSE_Mixamo.txt.meta
+?? Assets/Art/3D/Characters/_Test/MixamoNative/MixamoChar_TPose.fbx.meta
+?? "Assets/Art/In-Game UI/Halo - Selector.png"
+?? "Assets/Art/In-Game UI/Halo - Selector.png.meta"
+?? Docs/Specs/Active/miss_grade_duff/SPEC.md
+?? Docs/Specs/Active/miss_grade_duff/STATUS.md
+?? Docs/Specs/Active/selector_carousel/SPEC.md
+?? Docs/Specs/Active/selector_carousel/STATUS.md
+?? Docs/Specs/Active/selector_carousel/reference/selector_before.png
+=== END baseline ===
+
+HEAD b7727ac01 is "shot_view_layout + shot_view_layout_followup: DONE".
+
+NOTE: `Docs/TellCode.md` is NOT in the DIRTY block above — it was clean at kickoff and became
+modified DURING this session by the Architect side (its new block announces "miss_grade_duff is
+with Code now"). It is left untouched and reported in the report's files table as not-mine.
+
+--- work log ---
+14:45  Read SPEC + every file it names; mapped the seam (ShotIntent -> CommitExternal/CommitFlick
+       -> ResolveAndPublish -> ShotInputBuilder.Build) and the four graders.
+15:00  Config (4 keys), ShotIntent.IsMiss, ShotController (TimingPowerMultiplier(out isMiss),
+       re-based ramp, LastShotWasMiss, LastFlickGrade), ShotInputBuilder.launchPitchScale.
+       Compile clean; FlickMath band table verified against the SPEC's own numbers.
+15:10  Graders + drivers, ConeBandPalette (BandRedY01 -> config, grade palette), SchemeGradePop
+       colour collapse + Flick entry, NeedleColors PURE green, PowerGaugeWidget DUFF flash,
+       PowerGaugeGraphic.ArcColorOverride, FlickGradePopBinder.
+15:15  FlickGradePop cloned into LabScaffold under SchemeRoot_Flick/BallSpace; the save baked
+       21 layout-group rects, so the scene was reverted and only the 11 intended hunks re-applied.
+15:20  Localization: +SHOT_GRADE_THIN, 5 line edits, importer PLAN -> --apply -> content_publish
+       (texts v43) -> export --check clean; bundled table re-imported (1100 rows).
+15:22  EditMode 2765 tests: 2760 pass / 2 pre-existing flaky UiMotion / 3 pre-existing skips.
+       Sigma harness re-run: bot_difficulty.csv md5 unchanged.
+15:28  Real-flick play-mode acceptance run (ShellScene -> PLAY -> hole 1 -> ClubHandleDragger):
+       all four Flick bands captured at 1170x2532, gauge DUFF flash proven.

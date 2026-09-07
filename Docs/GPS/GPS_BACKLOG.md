@@ -2,7 +2,7 @@
 
 > Everything consciously left OUT of the 2026-09 GPS build, in one place, with where it was
 > deferred and what it needs. Maintained by the Architect — every future GPS spec that defers
-> something adds a row here in the same session. Last updated: 2026-09-07 (shot_view_layout + miss_grade_duff deferrals added).
+> something adds a row here in the same session. Last updated: 2026-09-07 (flick_shot_view taken up; its rows moved into the spec).
 
 ## Player-visible promises (highest priority — the UI already implies them)
 
@@ -115,12 +115,12 @@ When a spec defers something: add the row in the same session (Architect). When 
 | `Characters.csv` `modelPrefab` column + per-character `PfGolfer_<Name>` | `golfer_3d_test` §8 | The real-roster spec; loader falls back to the starter model when a prefab is missing (same shape as `renderable`) |
 | Golfer camera framing, club trail on `ClubStart/ClubEnd`, reactions/celebrations, cloth/hair, bot golfers | `golfer_3d_test` §8 | Polish once the stand-in proves the pipeline on device |
 | Debug sliders for ball anchor / bottom baseline / gauge Y | `shot_view_layout` §5 (D8) | Cesar tunes via `controls.csv` + relaunch for now; a `DebugShotPanel` row with three sliders if the csv loop gets slow |
-| Flick at the shared 0.38 ball anchor: shorter cone + 120 % overpower on the cone | `shot_view_layout` §5 (D1) | Flick has no 120 % today (`ClubHandleDragger` clamps at the cone base); cone height 1009 → ~600 if the ball drops; only after the three lane schemes are judged |
-| Cone base vs the new bottom baseline (base −1160 sits 64 px below the button bottoms while Flick stays at 0.5) | `shot_view_layout` §5 | Accepted; realign only if Flick's anchor moves |
 | Tablet / 16:9 shot-view framing (D6 clamp raises the ball above centre on 4:3) | `shot_view_layout` §5 | A per-aspect anchor table, or a shorter lane on short canvases |
 | Figma "Shot Controls — Schemes" frames redrawn at the new lane geometry (540/648, ball at 62 %) | `shot_view_layout` §5 | Architect; `CONTROL_SCHEMES_PLAN` §8 carries a stale-geometry note until then |
+| 120 % overpower on the Flick cone (Flick has no 120 % today; `ClubHandleDragger` clamps at the base) + half-angle retune for the shorter base | `flick_shot_view` §5 (2026-09-07) | After the 641 cone is judged on device |
 | Whiff (air shot, ball untouched) as the far-outside miss outcome | `miss_grade_duff` §5 (D1) | Wants a golfer swing animation first so a motionless ball reads as a miss, not a bug; then a second threshold past the DUFF band |
 | Duff SFX (thud / topped-ball click) | `miss_grade_duff` §5 | Rides with the parked grade-SFX rows; Architect sources a CC0 placeholder when taken up |
 | Duff camera: short "watch it dribble" cut instead of the flight cameras | `miss_grade_duff` §5 | `LoopCameraDirector` picks by predicted carry today; a duff falls into the short-distance camera — check that first |
 | Figma scheme + confirm pop-up frames still say JUST / PERFECT / SHANK | `miss_grade_duff` §5 | Architect; fold into the geometry redraw row above |
+| `ShotCommand` must carry `launchPitchScale` (and timingMul, spin, fadeDraw, seed — it carries none of the 14 `Build` inputs today) when server re-simulation is built | `miss_grade_duff` review (2026-09-07) | The struct is a five-field stub nothing writes; add the fields together with the first consumer, not speculatively |
 | Real club grip for the golfer — club-in-hand mocap (CMU subject 64, free, ships-in-product licence; or Motion Cast #05, $35) + one authored hand pose | `golfer_3d_test` §9.3 | Mixamo golf clips are empty-hand mocap; seven tuning rounds hit the wrist-roll limit. Decide with the roster models, not on the stand-in |

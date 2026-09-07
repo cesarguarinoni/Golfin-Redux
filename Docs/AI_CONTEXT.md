@@ -4,6 +4,78 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 — miss_grade_duff: **a missed swing now tops the ball**
+
+**Every graded miss in every scheme is a DUFF.** Pendulum MISS, Needle SHANK, Free Swing DUFF
+and — new — a Flick latched below the red band line all pay a flat `MissPowerMul` 0.20
+(`PuttMissPowerMul` 0.30) instead of the Flick ramp's `TimingPowerMulRed` 0.70, and the ball is
+TOPPED: `ShotIntent.IsMiss` rides the scheme seam into `ShotController`, which hands
+`ShotInputBuilder.Build` one new optional `launchPitchScale` (loft x 0.35, clamped to
+[2 deg, loft], skipped for putts). Measured end to end through the real graders and
+`BallSimulation`: **intended 329.1 yd, landed 6.0 yd (1.8 %), launch 10.90 deg -> 3.82 deg.**
+The big HOOK/SLICE in Needle and Free Swing is deliberately untouched (D2) — 290.9 yd at the
+gold multiplier and 329.1 yd at a clean tempo respectively.
+
+**`TimingPowerMulRed` kept its job, re-based.** The Flick ramp now starts at the DRAWN red line
+(`TimingBandRedY01` 0.15, out of `ConeBandPalette`'s const and into config, the F15 D3 pattern)
+rather than at the cone base. Above that line nothing moved: 0.15 -> 0.700, 0.45 -> 0.900,
+0.85 -> 1.000. Below it is the duff.
+
+**Flick finally has grade pops, and the whole game speaks one grade vocabulary.**
+`FlickMath` + `FlickGradePop` + `FlickGradePopBinder`; PURE / GOOD / HOOK / SLICE / THIN / DUFF
+everywhere, one colour ladder from `ConeBandPalette`, published EN+JA through the two-way
+importer (**texts v43**, `export --check` clean, bundled table re-imported to 1100 rows).
+JUST / PERFECT / SHANK / MISS are gone from every code path, pop, scene placeholder and scheme
+builder. The power gauge holds open for the pop's duration on a duff and flashes red with the
+RESOLVED percentage.
+
+**Proven on a real hole, not a harness:** boot ShellScene -> StartButton -> PLAY -> hole 1, then
+swing by raising `ClubHandleDragger`'s own pointer handlers. Four bands, four 1170x2532 frames,
+four distinct md5s, keys and colours read off the live components
+(`Docs/Specs/Active/miss_grade_duff/evidence/flick_pops.md`). New tool:
+`Assets/Scripts/UI/Editor/MissDuffFlickVerify.cs`.
+
+**The retired keys are deactivated (texts v44).** Cesar handed over the logged-in admin; all
+four — `SHOT_GRADE_JUST / MISS / PERFECT / SHANK` — were unticked from Active and published as
+"0 added, 0 changed, 4 deactivated". That is the pipeline's own definition of the delete (I6
+means no tool will ever remove a row; `ContentCatalogMapper` handles `is_active:false` end to
+end). **Side effect:** first deactivation in this catalog, so the exporter widened
+`LocalizationText.csv` with an `is_active` column — 2201 changed lines, 1096 of them `,true`
+appended to untouched rows. `LocalizationTextImporter` reads `cols[0..2]` and ignores the
+fourth, so the bundled table is unaffected (1100 rows, no column leakage). **Trap:**
+`form_input` on that admin checkbox saves an UNCHANGED draft — React never sees the change and
+the UI still says "Draft saved". Click it, don't set it.
+
+**All three of Cesar's decisions are applied, same day.** (1) `MissPowerMul` **0.20 → 0.40**:
+the duff was 6.0 yd of 329 (1.8 %) and is now **30.9 yd (9.4 %)**, still half the ≤ 25 % bar.
+`PuttMissPowerMul` stayed at 0.30, so the putt duff is unchanged at 28.6 %. One test moved with
+it — the putt case asserted `PuttMissPowerMul > MissPowerMul`, true only by accident at 0.30 vs
+0.20, and now asserts D3's actual rule (an absolute floor, "never stationary"). EditMode after
+the retune: **2765 / 2762 pass / 0 fail / 3 skip**; `bot_difficulty.csv` re-run and still zero
+diff. (2) The retired keys are deactivated at texts v44 (below). (3) The Needle zone stays PURE
+green — veto not exercised.
+
+**Superseded, kept for the record.** the duff shipped at 1.8 % of carry, not the ~20 % the SPEC's prose expected,
+because 0.20 is a VELOCITY multiplier and carry is super-linear — 0.20 alone was 4.8 % and the
+flattened launch halved it again. That measurement is what the 0.40 decision was made on.
+
+**Three traps recorded.** A scene save baked 21 layout-group rects into `LabScaffold.unity`
+(352 insertions for a 236-line change) — reverted and only the 11 intended hunks re-applied.
+`SnapPlayModeSafe` returned paths for files it never wrote, because in play mode it composites
+via `ScreenCapture.CaptureScreenshotAsTexture`, which only works at end-of-frame and whose
+summary says the caller owns that yield. And **Rules 18/21 fire on a detector false positive**:
+`spec_references_figma_node` needs "figma" plus a `\d{2,}[:-]\d{2,}` token, and it matched the
+DATE `2026-09` — so every dated spec that mentions Figma is a "Figma-node task". Rule 21's P2
+re-run then blocks for good, because it can only call `LintPrefab` and all four grade pops are
+SCENE objects (the linter's own `LintRoot` ran fine: `fail 0`).
+
+**`ShotCommand` replay NOTE answered:** a duff cannot replay wrong, because nothing replays.
+`ShotCommand` is a five-field forward-compat stub carrying none of `Build`'s fourteen arguments,
+and `new ShotCommand(` appears nowhere outside tests — every production site passes an empty
+list. `launchPitchScale` joins the five fields already missing when server re-simulation is
+built; a backlog row, not a speculative field.
+
+---
 ## 2026-09-07 (close-out) — golfer_3d_test: define-OFF proof, profile restored, §9.8 blocked
 
 **The active build profile is back on `iOS-Full-GPS`**, and restoring it was also the way to get the
