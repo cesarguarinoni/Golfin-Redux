@@ -1,0 +1,3 @@
+Adobe Mixamo — character "Remy" (T-pose, FBX for Unity, textures embedded, 28 MB) and four clips downloaded ON REMY, Without Skin, FBX for Unity, 30 fps, no keyframe reduction (2026-09-07, Cesar Guarinoni's Adobe ID).
+Purpose: SPEC §9.8 — Mixamo-native retarget check. The clips carry Remy's own skeleton/proportions, so Unity imports them with Remy's avatar (Copy From Other Avatar) and performs NO retargeting.
+License: royalty-free for commercial games, no attribution required; raw files not redistributed outside the team (Adobe Mixamo FAQ 589400). Test-only asset behind GOLFIN_GOLFER_TEST; never ships.
