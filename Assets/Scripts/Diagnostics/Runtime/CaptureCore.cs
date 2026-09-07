@@ -144,11 +144,31 @@ namespace Golfin.Diagnostics.Runtime
             var reasons = new System.Collections.Generic.List<string>();
             if (!p.Playing)          reasons.Add("EDIT MODE - NOT REAL PLAY");
             if (p.FakeStateLocked)   reasons.Add("FAKE STATE INJECTED");
-            if (!p.ShotLayoutApplied) reasons.Add("SHOT LAYOUT NOT APPLIED - STALE AUTHORED FRAMING");
+            // Only a SHOT surface can have a stale shot framing. ShotLayoutController is a
+            // gameplay-scene component, so on Home / Mode Select / Roster / any menu screen
+            // LayoutApplied is false for the ordinary reason that there is no shot — and the
+            // unconditional check hatched every legitimate menu capture as NOT-REAL
+            // (da_q9_missions_card_reward_copy, 2026-09-07). Gate it on the controller actually
+            // being loaded: the selector_carousel scar it was written for is a LabScaffold frame,
+            // where one IS loaded, so that case still hatches exactly as before.
+            if (ShotSurfaceLoaded() && !p.ShotLayoutApplied)
+                reasons.Add("SHOT LAYOUT NOT APPLIED - STALE AUTHORED FRAMING");
 
             p.RealPlay = reasons.Count == 0;
             p.Reason   = reasons.Count == 0 ? "real play" : string.Join(" | ", reasons);
             return p;
+        }
+
+        /// <summary>True when a ShotLayoutController is present in the loaded scenes — i.e. the
+        /// frame about to be captured is a gameplay surface, the only kind whose framing the
+        /// shot layout owns. Reflection for the same reason InspectProvenance uses it: naming
+        /// the type here would be a circular assembly reference.</summary>
+        static bool ShotSurfaceLoaded()
+        {
+            var t = FindType("Golfin.Gameplay.UI.ShotUI.ShotLayoutController");
+            if (t == null) return false;
+            try { return UnityEngine.Object.FindAnyObjectByType(t, FindObjectsInactive.Include) != null; }
+            catch { return false; }
         }
 
         static System.Type FindType(string fullName)
