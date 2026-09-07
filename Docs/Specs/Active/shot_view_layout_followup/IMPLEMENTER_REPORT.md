@@ -131,7 +131,11 @@ Two things are still wrong, neither introduced here and neither fixable in a cro
    178×100 at ~2.8× ⇒ ~500px wide, spanning x ±250; the labels sit at x = +76, so they are behind
    it. That is the LIVE game — a tile is a photograph, and re-framing cannot uncover something the
    game draws over. It belongs with the club-head scale, which is another task's.
-2. **`T_Pendulum_3` photographs an invisible grade pop**, across all five of today's runs. The
+2. **`T_Pendulum_3`: the Pendulum flick never commits** — traced in §5. Not a pop bug and not a
+   crop bug: `ReleaseSwing` returns before its commit block, so `Show()` is never called. Which of
+   its three exits it takes is the open question.
+
+   (superseded detail) The
    uncropped source frame has bare fairway where "JUST!" should be, so it is not a crop artifact,
    and the manifest reports `marker NaN` for that step. `WaitUntilActive` returned on
    `activeInHierarchy`, which a `SchemeGradePop` answers true to through its hold, its fade AND
@@ -258,7 +262,64 @@ wherever the chase camera followed it — Needle 3 has trees behind "PERFECT", F
 path behind "PURE". Both grade chips are bright on a darker backdrop and read fine; making those
 identical too would mean not photographing a real result.
 
+## §5 — tracing `T_Pendulum_3`'s missing grade pop
+
+Cesar: *"trace the pendulum grade pop."* Instrumented rather than reasoned about — `NotePopState`
+dumps everything that decides whether a pop is in the frame, and a temporary per-frame tracer
+sampled its alpha across the whole ~1 s life of the animation.
+
+**What the instrument says.** At the moment the shutter opens, and every frame from the one after
+`Up()`:
+
+```
+PendulumGradePop  activeSelf=True inHierarchy=True offAncestor=none
+                  alpha=0.000  scale=0.600  text='JUST!'  labelAlpha=1.00 labelEnabled=True
+NeedleGradePop    activeSelf=True inHierarchy=True offAncestor=none     <- the control
+                  alpha=1.000  scale=1.000  text='PERFECT'
+```
+
+alpha is `0.00` from the FIRST frame after the release and never rises. `PlayRoutine` sets
+`alpha = 1f` on its first line, synchronously, so **it never ran — `Show()` was never called**.
+`scale = 0.600` is `_startScale`, exactly what `Awake`'s `HideImmediate()` leaves, so the pop has
+not been touched since the scene loaded.
+
+**Which relocates the bug entirely.** The pop is fine. Reading the driver back:
+
+- `LastCommittedMarker` is `float.NaN` — its *initialiser*, so it was never assigned.
+- `LastCommittedGrade` is `Just`, which is `default(PendulumGrade)` — also never assigned.
+- Both are set at `PendulumSchemeDriver:333-335`, six lines above the `_gradePop?.Show(...)` at 339.
+
+So `ReleaseSwing` returns before its commit block: **the flick never fires.** `T_Pendulum_3` is not
+a capture defect at all — it is an accurate photograph of a swing that did not commit, which is why
+it reads as "the club has swung past the ball".
+
+**Ruled out along the way**, each by evidence rather than argument: `ResetSwing` does not hide the
+pop (none of the three drivers' do); `SchemeGradePop` is not a `PendulumFadingView`, so Resolving
+does not fade it; `Awake` is once-per-lifetime so it cannot re-hide on enable; `_startScale` is 0.6,
+so it is not a scale-in caught early; the three source frames have distinct md5s, so it is not a
+stale grab; and `_label`/`_group`/`_gradePop` are identically wired on all three schemes
+(`1396204410` / `2043148095` / `1123222000`). Needle and Free Swing are unaffected because neither
+commits through a flick gate — Needle commits on a tap, Free Swing on crossing the impact line.
+
+**Still open: WHICH of the three exits it takes.** `ReleaseSwing` has two early returns before the
+commit — the flick gate (`RejectExternalDrag`) and `_peakPower <= 0.02f` (`CancelExternalDrag`) —
+and `Advance`'s `HandleReverseCancel` can end the swing before `OnPointerUp` runs at all. That last
+one is the suspicious newcomer: it landed this morning, step 3's gesture is three upward drag
+frames, the first alone clears the 60 px arming threshold, and this capture's frames are slow
+enough that the rest can exceed the 0.12 s hold.
+
+I tried two gesture rewrites on that theory — one frame plus a later `Up()`, then two frames
+releasing on the second — and **neither changed the outcome**, so the gesture shape is not the cause
+and both were reverted rather than left in the tree on an unproven theory. (The first was wrong for
+its own reason worth recording: `Up()` reuses `_ped.position`, so releasing a frame after the last
+`Drag` pushes two touch samples at the same point, and the gate then measures zero velocity.)
+
+The next step is driver-side, not gesture-side: log which of the three exits is taken and
+`_peakPower` at release. That needs a line inside `PendulumSchemeDriver`, which is a production
+file, so it is a decision rather than something to slip in.
+
 ## Known FAIL items
+
 
 1. ~~The 3× club head covers the Pendulum lane's 100%/120% labels at full pull.~~ **Fixed** — the
    labels now draw above the head (§3). Pending a visual confirmation and a tile re-capture, both

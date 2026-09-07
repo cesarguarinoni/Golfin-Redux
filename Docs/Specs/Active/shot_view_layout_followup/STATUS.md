@@ -27,9 +27,14 @@ Two things remain open, neither introduced by this task and neither fixable in a
   the loop was photographing each scheme from wherever the PREVIOUS scheme's ball landed — which
   walked the set into tree shadow. ResetLie() puts the ball back on the tee between SelectScheme and
   Capture (reset_to_tee: ok x4 in the heartbeat), so all four are now shot from the same lit lie.
-  2. T_Pendulum_3 photographs an invisible grade pop, across all three of today's runs. Diagnosed
-     (activeInHierarchy is true for a pop that has already faded); the opacity fix I added did NOT
-     resolve it, so the capture appears to grab a frame later than the wait returns.
+  2. T_Pendulum_3: TRACED (see IMPLEMENTER_REPORT §5). Not a pop bug and not a crop bug — the
+     Pendulum flick never commits. Instrumented: alpha is 0.00 from the first frame after Up() and
+     never rises, so SchemeGradePop.Show is never called; the driver's LastCommittedMarker is still
+     float.NaN and LastCommittedGrade is default(PendulumGrade), so ReleaseSwing returns before its
+     commit block. The tile is an accurate photograph of a swing that did not fire. WHICH of its
+     three exits it takes (flick gate / _peakPower<=0.02 / Advance's new HandleReverseCancel) is
+     open, and answering it needs a log line inside PendulumSchemeDriver — a production file, so
+     Cesar's call.
 
 Also worth a look: this run's Pendulum / Needle / Free Swing frames are darker than Flick's because
 the bot's ball ended in shade. One-click re-run if you want a brighter set.

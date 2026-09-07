@@ -745,11 +745,24 @@ namespace Golfin.EditorTools.ShotUI
             // Flick up from the pip: the latch takes the marker at the start of the upswing.
             driver.SetPhaseForTests(0f);
             float step = Screen.height * 0.10f;
+
+            // NOTE (2026-09-07): this gesture does NOT commit — the swing dies before the
+            // commit block, which is why T_Pendulum_3 photographs bare fairway where "JUST!"
+            // belongs. Two rewrites of it (one frame + a late Up, two frames releasing on the
+            // second) changed nothing, so the gesture shape is NOT the cause and they were
+            // reverted rather than left in on a theory. What IS established: alpha is 0 from the
+            // first frame after Up() so SchemeGradePop.Show is never called, and the driver's
+            // LastCommittedMarker is still float.NaN (its initialiser) with LastCommittedGrade at
+            // default(PendulumGrade) — so ReleaseSwing returns before its commit block. The three
+            // ways out of that block are the flick gate, _peakPower <= 0.02f, and Advance's
+            // HandleReverseCancel ending the swing before OnPointerUp runs. WHICH one is the open
+            // question; NotePopState below is the instrument to answer it driver-side.
             for (int i = 1; i <= 3; i++) { Drag(hold + new Vector2(0f, step * i)); yield return null; }
             Up();
             // The FIRST frame the pop is on screen — the bar is still up and the chase camera has
             // not started following the ball yet.
             yield return WaitUntilActive("PendulumGradePop");
+            NotePopState("PendulumGradePop", "at-wait");
             yield return Tile(ControlScheme.Pendulum, 3,
                               $"FLICK UP — grade {driver.LastCommittedGrade}, marker {driver.LastCommittedMarker:F3}",
                               "PendulumTrack", "PendulumGradePop", "PendulumHandle");
@@ -783,6 +796,7 @@ namespace Golfin.EditorTools.ShotUI
             driver.SetNeedleForTests(0f);
             driver.OnTap();
             yield return WaitUntilActive("NeedleGradePop");
+            NotePopState("NeedleGradePop", "at-wait");
             yield return Tile(ControlScheme.Needle, 3,
                               $"RESULT — grade {driver.LastCommittedGrade}, needle {driver.LastCommittedNeedle:F3}",
                               "CentralBall", "TapPip", "NeedleGradePop");
@@ -857,6 +871,41 @@ namespace Golfin.EditorTools.ShotUI
         /// the 2026-09-07 run, and it is luck-of-the-frame-count whether it happens — the previous
         /// run got away with it. Wait for the pixels.</para>
         /// </summary>
+        /// <summary>
+        /// Everything that decides whether a grade pop is actually IN the frame, at one instant.
+        ///
+        /// <para>Kept after the T_Pendulum_3 hunt (2026-09-07) rather than deleted: that tile came
+        /// back as bare fairway for a week's worth of runs and the manifest still said "grade Just"
+        /// (which is <c>default(PendulumGrade)</c>) and "marker NaN" (the never-set sentinel). One
+        /// line of alpha-and-scale in the heartbeat says immediately whether the pop was on screen
+        /// when the shutter opened, which is the thing the tile is actually asserting.</para>
+        /// </summary>
+        void NotePopState(string name, string when)
+        {
+            var go = FindAny(name);
+            if (go == null) { Note("pop_" + when, name + ": NOT FOUND"); return; }
+
+            var g  = go.GetComponent<CanvasGroup>();
+            var rt = go.GetComponent<RectTransform>();
+            var lbl = go.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
+
+            // Which ancestor, if any, is switched off — an active component under an inactive
+            // parent renders nothing and still reports activeSelf true.
+            string offAt = "none";
+            for (var t = go.transform; t != null; t = t.parent)
+                if (!t.gameObject.activeSelf) { offAt = t.name; break; }
+
+            var r = rt != null ? CanvasRect(rt) : new Rect();
+            Note("pop_" + when,
+                 $"{name} activeSelf={go.activeSelf} inHierarchy={go.activeInHierarchy} " +
+                 $"offAncestor={offAt} alpha={(g != null ? g.alpha.ToString("F3") : "<no group>")} " +
+                 $"scale={go.transform.localScale.x:F3} " +
+                 $"rect x[{r.xMin:F0},{r.xMax:F0}] y[{r.yMin:F0},{r.yMax:F0}] " +
+                 $"text='{(lbl != null ? lbl.text : "<none>")}' " +
+                 $"labelAlpha={(lbl != null ? lbl.color.a.ToString("F2") : "-")} " +
+                 $"labelEnabled={(lbl != null ? lbl.enabled.ToString() : "-")}");
+        }
+
         static bool IsOpaque(GameObject go)
         {
             var group = go.GetComponent<CanvasGroup>();
