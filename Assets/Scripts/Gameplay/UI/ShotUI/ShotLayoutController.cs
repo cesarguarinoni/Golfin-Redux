@@ -76,6 +76,24 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// canvas.</summary>
         public static ShotLayoutController Active { get; private set; }
 
+        /// <summary>
+        /// True once <see cref="Apply"/> has run in this domain — INCLUDING from the editor
+        /// capture harness, which <see cref="Active"/> cannot tell you because that is only set in
+        /// <c>OnEnable</c> and therefore only in play mode.
+        ///
+        /// <para>This exists so a capture can prove its framing is current. selector_carousel
+        /// (2026-09-07) surfaced an edit-mode scaffolding render whose ball still sat at the
+        /// pre-<c>shot_view_layout</c> centre, because nothing had applied the layout; it read as
+        /// a real frame. <c>CaptureCore.InspectProvenance</c> reads this by reflection and stamps
+        /// any frame taken without it as NOT-REAL.</para>
+        /// </summary>
+        public static bool  LayoutApplied     { get; private set; }
+
+        /// <summary>Ball viewport Y of the last <see cref="Apply"/>, recorded statically for the
+        /// same reason as <see cref="LayoutApplied"/>. A frame showing 0.5 when the live scheme
+        /// asks for 0.38 is the stale authored framing.</summary>
+        public static float LastAppliedBallY  { get; private set; } = float.NaN;
+
         /// <summary>Last values applied — surfaced for the acceptance run and the reviewers'
         /// bbox checks rather than re-derived from the rects. <see cref="LastHandleYAtFullPull"/>
         /// is the one the baseline guard is actually about (D3); the lane end is reported beside
@@ -163,6 +181,8 @@ namespace Golfin.Gameplay.UI.ShotUI
             ApplyPowerHud(cfg, height);
 
             LastBallY            = ballY;
+            LastAppliedBallY     = ballY;
+            LayoutApplied        = true;
             LastBaseline         = baseline;
             LastBaselineY        = baselineY;
             LastLaneEndY         = LaneEndFor(scheme, cfg, ballY);

@@ -21,11 +21,31 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         Action _onTap;
 
-        CanvasGroup _canvasGroup;
-        bool        _selectable = true;
+        CanvasGroup    _canvasGroup;
+        RectTransform  _rt;
+        bool           _selectable = true;
 
         /// <summary>False when this card is gated out and must not commit (K11 green gate).</summary>
         public bool IsSelectable => _selectable;
+
+        /// <summary>
+        /// Item index (bag / owned-ball index) this pool card currently shows, or -1 when unbound.
+        /// selector_carousel §2: the six pool cards are rebound as the ring scrolls, so the card's
+        /// tap callback is created ONCE per card and reads this field instead of capturing an
+        /// index — which is what keeps <c>Layout()</c> allocation-free once bound.
+        /// </summary>
+        public int BoundItem { get; set; } = -1;
+
+        /// <summary>Cached RectTransform — <c>Layout()</c> writes anchoredPosition every frame
+        /// while dragging, and <c>transform as RectTransform</c> per card per frame is churn.</summary>
+        public RectTransform Rt
+        {
+            get
+            {
+                if (_rt == null) _rt = transform as RectTransform;
+                return _rt;
+            }
+        }
 
         public void SetClub(ClubEntry e, Action onTap)
         {

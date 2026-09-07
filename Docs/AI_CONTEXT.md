@@ -74,6 +74,86 @@ cone's own DUFF band line, and straight chords against curved band lines) are bo
 removing the lines. Detail: `Docs/Specs/Completed/flick_pull_mapping/IMPLEMENTER_REPORT.md`.
 
 ---
+## 2026-09-07 — selector_carousel: **the club/ball stacks become a 4-slot ring — code done, Unity steps BLOCKED**
+
+Both in-game selectors (`SelectorOverlay`, `SelectorOverlay_Ball`) stop rendering the whole bag at
+once and become a **4-slot vertical carousel**: a fixed viewport with a `RectMask2D`, a 6-card pool
+(4 visible + 1 buffer each side) rebound as the ring turns, a gold `FocusHalo` on the bottom slot,
+finger-slide scrolling in modal mode, wrap at N ≥ 5, and an eased snap with the selection committed
+**at snap start** so the trigger button relabels while the card is still moving. `Populate()`'s
+destroy/re-instantiate loop is gone.
+
+**Hold mode is untouched.** `SelectorDragRouter.cs` is byte-identical; `UpdateHoldHover` /
+`EvaluateRelease` / `CommitHighlighted` now run over the *visible* pool cards, rebuilt at the end of
+every `Layout()` pass. Chevron mapping is unchanged (`ScrollUp` = +1).
+
+**New:** `SelectorCarouselMath.cs` (pure ring arithmetic — `Mod`, `SlotY`, `EaseOutCubic`,
+`SnapDuration`, K11-aware `ResolveSnapTarget`), `SelectorCarouselDrag.cs` (modal-mode drag handlers),
+`SelectorCarouselMathTests.cs` (21 EditMode tests; the putter-skip cases sweep 13 scroll positions ×
+7 velocities and assert a snap never rests on a gated club).
+
+**The geometry trap worth remembering:** the viewport carries a 36 px dead margin BELOW the focus
+slot (so the 312-tall halo can glow past the 240-tall card without the mask shearing it). A
+bottom-pivoted `ContentSizeFitter` root grows *upward from a fixed bottom*, so it does NOT absorb
+that margin — left alone, the focus card sits 36 px high. Fixed by shifting the overlay root down by
+exactly `_viewportMargin`: authored y 28 → −8 in `ActionButtonsBuilder`, and `SetOpenBaselineY(y)`
+now applies `y − _viewportMargin`. Net on screen: the focus card's bottom edge lands where the old
+bottom card's did, to the pixel.
+
+**iter-1 was rejected on sight and iter-2 fixes all four defects, verified in REAL PLAY** (booted
+Home -> PRACTICE -> PLAY -> Lomond hole 2, selectors opened through the real trigger buttons):
+
+1. **The capture was a lie.** iter-1's canonical frame was an edit-mode LabScaffold render with
+   injected FakeState. `ShotLayoutController.Apply` runs only in `OnEnable`, so the ball sat at the
+   pre-`shot_view_layout` centre and the whole framing was stale — plausible enough that every gate
+   passed it.
+2. **Carousel misaligned with the buttons by 68 px.** `SetOpenBaselineY` set the overlay ROOT's y to
+   the baseline, but the focus slot sits `chevron + gap + margin` above the root. The baseline now
+   means the FOCUS SLOT, and `PositionRoot` derives the root from it via
+   `FocusSlotOffsetFromRootBottom()` (read live, because club and ball chevrons differ: 60 vs 73).
+   Measured: focus card bottom 170.00 vs `DriverButton` 170.00 = **+0.00 px**.
+3. **Halo didn't fit.** The 217x312 PNG's drawn RING is only 154x249 of it, so at native size the
+   ring sat 4.5 px outside the 145x240 card. Sized so the ring maps to the card (204.32 x 300.72);
+   measured ring 145.0x240.0, centre offset (0.00, 0.00).
+4. **Ball selector completely dead.** `OutsideClickCatcher_Selector_Ball` was built AFTER its
+   overlay, so the full-screen catcher rendered on top and ate every pointer event. Hold mode hid it
+   (it hit-tests screen positions rather than raycasting); the carousel needs raycasts. Builder now
+   pins the catcher beneath its overlay. Verified: drag scrolls (`GOLFIN` -> `PAR PERFECT`), tap
+   selects (-> `FYLOE SOFT`).
+
+**iter-3, two more real defects — both from measuring against the wrong reference.** (a) The halo
+was sized/pinned to the card's RectTransform, but `Button - All.png` is 153x248 with its art at
+(4,0)-(148,239) — 4px L/R, **0 top, 8 bottom** — so the drawn card is 137.4x232.3 and its centre is
+~4.3px ABOVE the rect centre. The halo was therefore both too big and visibly low. Now derived from
+the card ART (`CardSpriteW/H` + `CardArtL/R/T/B` in the builder); real-play delta (0.00, 0.00) on
+both size and centre. (b) A thin white line over both chevrons was the buffer card's top edge: with
+margin 36 and a 34px card gap, 2px of it sat inside the mask at each end. The margin is bounded
+below (~29.4px, or the halo glow shears) and above (<34px, or a buffer card shows) — set to 28.
+**Lesson: "the card" is its drawn sprite art, not its RectTransform; 9-sliced/padded UI sprites
+rarely fill their rect.**
+
+**Three capture-provenance guards now make a fake frame unusable** (`CaptureCore`, the single
+sanctioned path): a non-real frame is renamed `NOT-REAL_*`, has red diagonal hatching burned into
+the pixels (measured 22.9 % coverage), and gets a `<file>.png.json` sidecar recording `realPlay`,
+`fakeStateLocked`, `shotLayoutApplied`, `ballViewportY` and the loaded scenes. Hook **Rule 24**
+blocks a canonical screenshot that is NOT-REAL or `realPlay:false` (`TestCaptureProvenance`, 6
+tests). A bug found while testing the guard: it looked up `Golfin.EditorTools.FakeStateLock`, but
+the type is `Golfin.Gameplay.UI.HUD.FakeStateLock` — the fake-state check had been silently dead.
+
+**Scaffolding shows the CURRENT shot UI.** `ShotLayoutController` gained a static `LayoutApplied` /
+`LastAppliedBallY` (the existing `Active` is play-mode-only, which is why nothing could tell a stale
+frame from a live one). `CaptureHelper.ApplyCurrentShotLayout()` runs `Apply` against the open
+scene and every `Fake State - *` preset and both `SelectorScreenshotHelper` captures call it.
+
+**Pre-existing issues surfaced, not fixed:** `PendulumSchemeDriverTests.MarkerFreezes_AtTheUpswing
+Reversal_NotAtRelease` is red (unmodified file, last touched by `270eec9a4 miss_grade_duff`); and
+`TestLiveEditorIntegration.test_real_clone_matches` fails against unrelated shop prefabs when the
+editor is up. Also fixed: `ActionButtonsBuilder` leaked one orphaned `SelectorCard_Prefab` scene
+root per run (HEAD carried 14), hence the scene diff being a net -8,129 lines.
+
+Full detail: `Docs/Specs/Active/selector_carousel/IMPLEMENTER_REPORT.md`.
+
+---
 ## 2026-09-07 — flick_shot_view: **Flick joins the framing; the cone is 792, not 1160**
 
 Flick was the one scheme `shot_view_layout` left behind, and only because of its own geometry:

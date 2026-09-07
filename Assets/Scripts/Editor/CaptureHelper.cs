@@ -3,6 +3,8 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.UI.ShotUI;
+using Golfin.Gameplay.UI.Controls;
 using Golfin.Gameplay.Session;
 using Golfin.Diagnostics.Runtime;
 // §2b: CaptureHelper is now a thin editor-side wrapper around Golfin.Diagnostics.Runtime.CaptureCore.
@@ -63,6 +65,38 @@ namespace Golfin.EditorTools
         // ────────────────────────────────────────────────────────────────────────
         // FAKE STATE PRESETS
         // ────────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Run <c>ShotLayoutController.Apply</c> against the open scene so a scaffolding capture
+        /// shows the CURRENT shot UI instead of the authored one.
+        ///
+        /// <para>Cesar, 2026-09-07: "In case you use scaffolding in the future, make sure it shows
+        /// the correct shoot UI and not the old one as well." The controller only applies in
+        /// <c>OnEnable</c>, i.e. play mode — so every edit-mode render of LabScaffold shows the
+        /// framing as authored: ball at the viewport centre, cluster at the authored 96 baseline,
+        /// none of <c>shot_view_layout</c> / <c>flick_shot_view</c>. That is what made the
+        /// selector_carousel capture wrong in a way that looked right.</para>
+        ///
+        /// <para>Every Fake State preset calls this, and it also sets
+        /// <c>ShotLayoutController.LayoutApplied</c>, which is what stops CaptureCore stamping the
+        /// resulting frame NOT-REAL. It dirties RectTransforms — do NOT save the scene after a
+        /// capture (PIPELINE_HARDENING §14).</para>
+        /// </summary>
+        [MenuItem("GOLFIN/Capture/Apply Current Shot Layout (fix stale framing)")]
+        public static void ApplyCurrentShotLayout()
+        {
+            var controller = Object.FindFirstObjectByType<ShotLayoutController>(FindObjectsInactive.Include);
+            if (controller == null)
+            {
+                Debug.LogWarning("[CaptureHelper] No ShotLayoutController in the open scenes — " +
+                                 "captures will show the AUTHORED (old) shot framing.");
+                return;
+            }
+            controller.Apply(ControlSchemeService.Current);
+            Canvas.ForceUpdateCanvases();
+            Debug.Log($"[CaptureHelper] Shot layout applied for {ControlSchemeService.Current} — " +
+                      $"ballY={ShotLayoutController.LastAppliedBallY:F4}, framing is current.");
+        }
 
         [MenuItem("GOLFIN/Capture/Fake State Lock - ON")]
         public static void FakeStateLockOn()
@@ -163,7 +197,10 @@ namespace Golfin.EditorTools
 
             Debug.Log("[FakeState:MidAim] Player=CAMILA Lv13 Hole=Lomond#1 Par5 425y Wind=8mph@270 Turn=5 Ball=GOLFIN Club=DRIVER 230y Mode=Straight Spin=(0,0) MatchContext.Players[0]=CAMILA Lv13");
             ReleaseMouseAfterMenu();
-        }
+        
+            // Scaffolding must render the CURRENT shot UI, not the authored one.
+            ApplyCurrentShotLayout();
+}
 
         // ────────────────────────────────────────────────────────────────────────
         // FAKE STATE — 1v1 Versus mid-aim (Camila vs Taro, Lomond H1)
@@ -211,7 +248,10 @@ namespace Golfin.EditorTools
 
             Debug.Log("[FakeState:1v1MidAim] IsVersus=true P1=CAMILA Lv13 (active) P2=TARO Lv17 (inactive) Hole=Lomond#1 Turn=1");
             ReleaseMouseAfterMenu();
-        }
+        
+            // Scaffolding must render the CURRENT shot UI, not the authored one.
+            ApplyCurrentShotLayout();
+}
 
         [MenuItem("GOLFIN/Capture/Fake State - Putt (Olivia, Lomond H7, Putter)")]
         public static void FakePutt()
@@ -263,7 +303,10 @@ namespace Golfin.EditorTools
 
             Debug.Log("[FakeState:Putt] Player=OLIVIA Lv7 Hole=Lomond#7 Par4 Turn=3 Wind=0 Club=PUTTER 0y Mode=Straight Spin=(0,0)");
             ReleaseMouseAfterMenu();
-        }
+        
+            // Scaffolding must render the CURRENT shot UI, not the authored one.
+            ApplyCurrentShotLayout();
+}
 
         [MenuItem("GOLFIN/Capture/Fake State - Strong Wind (extreme indicator test)")]
         public static void FakeStrongWind()

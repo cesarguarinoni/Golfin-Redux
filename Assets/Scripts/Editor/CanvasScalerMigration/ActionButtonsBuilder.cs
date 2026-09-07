@@ -14,6 +14,73 @@ using Golfin.Gameplay.UI.HUD;
 /// </summary>
 public static class ActionButtonsBuilder
 {
+    // ── Selector carousel geometry (selector_carousel §1) ──────────────────────
+    // The viewport is a FIXED window, not a content-sized stack: four card slots plus a 36px
+    // dead margin top and bottom. The margins are what let the focus card's halo (312 tall vs
+    // the card's 240) glow past the card without the RectMask2D shearing it off, while still
+    // clipping the two buffer cards the pool keeps just outside the window.
+    const float SelectorCardHeight     = 240f;
+    const float SelectorCardGap        = 34f;
+    const int   SelectorVisibleSlots   = 4;
+    /// <summary>
+    /// Dead space above and below the four slots. Bounded on BOTH sides:
+    ///   lower bound — the halo glow hangs (haloH - cardArtH)/2 ~= 29.4px below the focus card, so
+    ///                 a smaller margin would shear the glow off;
+    ///   upper bound — the buffer card's edge sits <see cref="SelectorCardGap"/> = 34px beyond the
+    ///                 focus slot, so a margin of 34+ lets a sliver of it through the mask. At 36
+    ///                 exactly 2px showed at both ends, which is the thin white line Cesar spotted
+    ///                 over the bottom chevron ("since it's infinite now, remove it").
+    /// 28 sits inside [29.4-ish, 34) with headroom at both ends.
+    /// </summary>
+    const float SelectorViewportMargin = 28f;
+    const float SelectorSlotPitch      = SelectorCardHeight + SelectorCardGap;                 // 274
+    const float SelectorViewportHeight = SelectorVisibleSlots * SelectorCardHeight
+                                       + (SelectorVisibleSlots - 1) * SelectorCardGap
+                                       + 2f * SelectorViewportMargin;                          // 1134
+    const float SelectorCardWidth      = 145f;
+    // ── Halo geometry: match the card's DRAWN ART, not its RectTransform ───────
+    //
+    // Two sprites both have transparent padding, and BOTH matter:
+    //
+    //   Halo - Selector.png  217x312, ring bbox (32,32)-(185,280) => ring 154x249, centred in the
+    //                        sprite (insets 32/31 both axes). The rest is glow falloff.
+    //   Button - All.png     153x248, card art bbox (4,0)-(148,239) => art 145x240 with 4px
+    //                        padding left/right, NONE at the top and 8px at the BOTTOM.
+    //
+    // Stretched into the 145x240 card rect, that bottom-only padding means the DRAWN card is
+    // 137.4 x 232.3 and its centre sits ~4.3px ABOVE the rect centre. selector_carousel iter-2
+    // sized and pinned the halo to the RECT, so it rendered both too large and visibly low —
+    // Cesar: "still bigger than the club/ball portrait and is not centered (clearly more empty
+    // space at the bottom than at the top)". Everything below is derived from those two measured
+    // bboxes so re-exported art only needs the constants updated.
+    const float CardSpriteW = 153f, CardSpriteH = 248f;
+    const float CardArtL = 4f, CardArtR = 4f, CardArtT = 0f, CardArtB = 8f;
+
+    /// <summary>Drawn card art size inside the 145x240 card rect.</summary>
+    const float CardArtWidth  = SelectorCardWidth  * (CardSpriteW - CardArtL - CardArtR) / CardSpriteW;   // 137.42
+    const float CardArtHeight = SelectorCardHeight * (CardSpriteH - CardArtT - CardArtB) / CardSpriteH;   // 232.26
+
+    /// <summary>Centre of the drawn card art, measured from the card rect's bottom-left.</summary>
+    const float CardArtCentreX = SelectorCardWidth  * (CardArtL + (CardSpriteW - CardArtL - CardArtR) * 0.5f) / CardSpriteW;                 // 72.03
+    const float CardArtCentreY = SelectorCardHeight * (CardArtB + (CardSpriteH - CardArtT - CardArtB) * 0.5f) / CardSpriteH;                 // 124.35
+
+    const float SelectorHaloRingWidth  = 154f;
+    const float SelectorHaloRingHeight = 249f;
+    /// <summary>Sprite size that puts the halo's RING exactly on the drawn card art.</summary>
+    const float SelectorHaloWidth      = 217f * (CardArtWidth  / SelectorHaloRingWidth);    // 193.62
+    const float SelectorHaloHeight     = 312f * (CardArtHeight / SelectorHaloRingHeight);   // 291.03
+    const string SelectorHaloPath      = "Assets/Art/In-Game UI/Halo - Selector.png";
+    const string SelectorHaloTintHex   = "FCF195";   // §D7 selected-state gold
+
+    /// <summary>
+    /// The canvas y the FOCUS SLOT's bottom edge is authored at — the same y the trigger buttons'
+    /// bottom edge sits at (<c>ShotLayoutController.AuthoredClusterBaselinePx</c>). This is a
+    /// BASELINE, not a root position: <c>SelectorOverlayWidget.PositionRoot</c> drops the root by
+    /// the chevron + gap + viewport margin beneath the focus slot, so the selected card lines up
+    /// with its button in the authored frame AND at runtime.
+    /// </summary>
+    const float SelectorOverlayAuthoredY = 96f;
+
     // CONFIG SNAPSHOT (synced from Cesar's manual adjustments — update here if you change values in the scene):
     // IconArea width = 135, text width = 120, fontStyle = Bold, autoSize min=20 max=30
     // GolfinButton icon = S_Controls_Ball_GOLFIN, DriverButton icon = S_Menu_Driver_GOLFIN
@@ -44,6 +111,7 @@ public static class ActionButtonsBuilder
         CoerceSprite("Assets/Art/In-Game UI/Icon - Straight.png");
         CoerceSprite("Assets/Art/In-Game UI/Icon - Up Arrow.png");
         CoerceSprite("Assets/Art/In-Game UI/Icon - Down Arrow.png");
+        CoerceHaloSprite(SelectorHaloPath);
 
         // ── Load sprites ───────────────────────────────────────────────────────
         Sprite btnAllSprite    = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Button - All.png");
@@ -52,6 +120,8 @@ public static class ActionButtonsBuilder
         Sprite iconStraSprite  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Icon - Straight.png");
         Sprite iconUpArrow     = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Icon - Up Arrow.png");
         Sprite iconDownArrow   = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Icon - Down Arrow.png");
+        Sprite haloSprite      = AssetDatabase.LoadAssetAtPath<Sprite>(SelectorHaloPath);
+        if (haloSprite == null) Debug.LogWarning($"[ActionButtonsBuilder] {SelectorHaloPath} not found as Sprite — focus halo will be blank.");
         if (iconUpArrow   == null) Debug.LogWarning("[ActionButtonsBuilder] Icon - Up Arrow.png not found as Sprite");
         if (iconDownArrow == null) Debug.LogWarning("[ActionButtonsBuilder] Icon - Down Arrow.png not found as Sprite");
 
@@ -89,6 +159,14 @@ public static class ActionButtonsBuilder
         RemoveChild(canvasGo.transform, "OutsideClickCatcher_Selector");
         RemoveChild(canvasGo.transform, "OutsideClickCatcher_Selector_Ball");
         RemoveChild(canvasGo.transform, "OutsideClickCatcher_Spin");
+
+        // SelectorCard_Prefab is a SCENE ROOT, not a canvas child, so the RemoveChild sweep above
+        // never touched it and every past run of this builder leaked one more copy into
+        // LabScaffold (14 of them by 2026-09-07). Sweep the roots too, or the scene keeps growing
+        // by one orphaned card hierarchy per rebuild.
+        foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
+            if (root.name == "SelectorCard_Prefab")
+                Object.DestroyImmediate(root);
 
         Color white     = Color.white;
         Color navyColor = HexToColor("001E39");
@@ -201,8 +279,9 @@ public static class ActionButtonsBuilder
         overlayRt.anchorMin = overlayRt.anchorMax = new Vector2(1f, 0f);
         overlayRt.pivot     = new Vector2(1f, 0f);
         // 48px gap to LEFT of DriverButton. DriverButton left edge = 58+145=203px from right.
-        // Y=28 so ArrowDown bottom=28, gap 8, DRIVER card bottom=96 (matches DriverButton bottom).
-        overlayRt.anchoredPosition = new Vector2(-251f, 28f);
+        // The widget re-derives this from the baseline every open; the authored value just keeps
+        // the inactive object sane in the scene file. Clubs: chevron 60 + VLG gap 8 + margin 36.
+        overlayRt.anchoredPosition = new Vector2(-251f, SelectorOverlayAuthoredY - (60f + 8f + SelectorViewportMargin));
         // Width = card width. Height grows via ContentSizeFitter on the overlay root VLG.
         overlayRt.sizeDelta = new Vector2(145f, 0f);
 
@@ -243,19 +322,10 @@ public static class ActionButtonsBuilder
         var arrowUpBtn = arrowUpContainerRt.gameObject.AddComponent<Button>();
         arrowUpBtn.targetGraphic = arrowUpContainerImg;
 
-        // ── CardsContainer (VerticalLayoutGroup spacing=34, LowerCenter) ─────
-        var cardsContainerRt = CreateRectTransform("CardsContainer", overlayGo.transform);
-        var vlg = cardsContainerRt.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing              = 34f;
-        vlg.childAlignment       = TextAnchor.LowerCenter;
-        vlg.childForceExpandWidth  = true;   // stretch cards to container width (145)
-        vlg.childForceExpandHeight = false;
-        vlg.childControlWidth      = true;
-        vlg.childControlHeight     = false;
-        var csf = cardsContainerRt.gameObject.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        var cardsLe = cardsContainerRt.gameObject.AddComponent<LayoutElement>();
-        cardsLe.flexibleWidth = 1f;
+        // ── CardsContainer — the carousel VIEWPORT (selector_carousel §1) ────
+        var cardsContainerRt = BuildSelectorViewport(overlayGo.transform, haloSprite,
+                                                     out RectTransform focusHaloRt,
+                                                     out SelectorCarouselDrag carouselDrag);
 
         // ── ArrowDown container ────────────────────────────────────────────────
         var arrowDownContainerRt = CreateRectTransform("ArrowDownContainer", overlayGo.transform);
@@ -281,17 +351,28 @@ public static class ActionButtonsBuilder
         var overlayWidget = overlayGo.AddComponent<SelectorOverlayWidget>();
         var overlaySo = new SerializedObject(overlayWidget);
         overlaySo.FindProperty("_root").objectReferenceValue               = overlayRt;
-        overlaySo.FindProperty("_cardsContainer").objectReferenceValue     = cardsContainerRt;
+        overlaySo.FindProperty("_cardsViewport").objectReferenceValue       = cardsContainerRt;
+        overlaySo.FindProperty("_focusHalo").objectReferenceValue           = focusHaloRt;
+        overlaySo.FindProperty("_carouselDrag").objectReferenceValue        = carouselDrag;
+        overlaySo.FindProperty("_slotPitch").floatValue                     = SelectorSlotPitch;
+        overlaySo.FindProperty("_visibleSlots").intValue                    = SelectorVisibleSlots;
+        overlaySo.FindProperty("_viewportMargin").floatValue                = SelectorViewportMargin;
         overlaySo.FindProperty("_cardPrefab").objectReferenceValue         = cardPrefabGo;
         overlaySo.FindProperty("_arrowUpContainer").objectReferenceValue   = arrowUpContainerRt;
         overlaySo.FindProperty("_arrowDownContainer").objectReferenceValue = arrowDownContainerRt;
         overlaySo.FindProperty("_arrowUp").objectReferenceValue            = arrowUpBtn;
         overlaySo.FindProperty("_arrowDown").objectReferenceValue          = arrowDownBtn;
         overlaySo.FindProperty("_outsideClickCatcher").objectReferenceValue = selectorCatcher;
-        // Clubs: pivot=(1,0), position aligned to DriverButton bottom edge
-        overlaySo.FindProperty("_anchoredPositionForClub").vector2Value    = new Vector2(-251f, 28f);
-        overlaySo.FindProperty("_anchoredPositionForBall").vector2Value    = new Vector2(251f, 28f);
+        // Clubs: pivot=(1,0), position aligned to DriverButton bottom edge (less the viewport margin)
+        overlaySo.FindProperty("_anchoredPositionForClub").vector2Value    = new Vector2(-251f, SelectorOverlayAuthoredY);
+        overlaySo.FindProperty("_anchoredPositionForBall").vector2Value    = new Vector2(251f, SelectorOverlayAuthoredY);
         overlaySo.ApplyModifiedProperties();
+
+        // The drag component finds its overlay in Awake as a fallback, but wire it explicitly:
+        // a serialized reference is what a reviewer can read back off the scene.
+        var clubDragSo = new SerializedObject(carouselDrag);
+        clubDragSo.FindProperty("_overlay").objectReferenceValue = overlayWidget;
+        clubDragSo.ApplyModifiedProperties();
 
         overlayGo.SetActive(false);
 
@@ -511,8 +592,9 @@ public static class ActionButtonsBuilder
         var overlayRtBall = overlayGoBall.AddComponent<RectTransform>();
         overlayRtBall.anchorMin = overlayRtBall.anchorMax = new Vector2(0f, 0f);
         overlayRtBall.pivot     = new Vector2(0f, 0f);
-        // 48px gap to RIGHT of GolfinButton. Y=28 matches DRIVER card to button bottom.
-        overlayRtBall.anchoredPosition = new Vector2(251f, 28f);
+        // 48px gap to RIGHT of GolfinButton. Balls author a 73px chevron container, not 60 —
+        // which is exactly why the widget derives this rather than sharing a constant.
+        overlayRtBall.anchoredPosition = new Vector2(251f, SelectorOverlayAuthoredY - (73f + 8f + SelectorViewportMargin));
         overlayRtBall.sizeDelta = new Vector2(145f, 0f);
 
         var overlayVlgBall = overlayGoBall.AddComponent<VerticalLayoutGroup>();
@@ -544,19 +626,10 @@ public static class ActionButtonsBuilder
         var arrowUpBtnBall = arrowUpContBallRt.gameObject.AddComponent<Button>();
         arrowUpBtnBall.targetGraphic = arrowUpContBallImg;
 
-        // CardsContainer for ball overlay
-        var cardsContBallRt = CreateRectTransform("CardsContainer", overlayGoBall.transform);
-        var vlgBall = cardsContBallRt.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlgBall.spacing              = 34f;
-        vlgBall.childAlignment       = TextAnchor.LowerCenter;
-        vlgBall.childForceExpandWidth  = true;   // stretch cards to container width
-        vlgBall.childForceExpandHeight = false;
-        vlgBall.childControlWidth      = true;
-        vlgBall.childControlHeight     = false;
-        var csfBall = cardsContBallRt.gameObject.AddComponent<ContentSizeFitter>();
-        csfBall.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        var cardsLeBall = cardsContBallRt.gameObject.AddComponent<LayoutElement>();
-        cardsLeBall.flexibleWidth = 1f;
+        // CardsContainer for ball overlay — same carousel viewport as the club side
+        var cardsContBallRt = BuildSelectorViewport(overlayGoBall.transform, haloSprite,
+                                                    out RectTransform focusHaloBallRt,
+                                                    out SelectorCarouselDrag carouselDragBall);
 
         // ArrowDown container for ball overlay
         var arrowDownContBallRt = CreateRectTransform("ArrowDownContainer", overlayGoBall.transform);
@@ -584,20 +657,35 @@ public static class ActionButtonsBuilder
         selectorCatcherBallImg.color = new Color(0f, 0f, 0f, 0f);
         var selectorCatcherBall = selectorCatcherBallGo.AddComponent<OutsideClickCatcher>();
         selectorCatcherBallGo.SetActive(false);
+        // ORDER MATTERS. This catcher is a full-screen raycast target; created here it would be a
+        // LATER sibling than SelectorOverlay_Ball and would therefore render ON TOP of it and eat
+        // every pointer event aimed at the ball cards — no scrolling, no selecting. The club-side
+        // catcher happens to be built before its overlay and so was always fine; this one was not.
+        // Put it directly beneath the ball overlay instead of relying on construction order.
+        selectorCatcherBallGo.transform.SetSiblingIndex(overlayGoBall.transform.GetSiblingIndex());
 
         var overlayWidgetBall = overlayGoBall.AddComponent<SelectorOverlayWidget>();
         var overlaySoBall = new SerializedObject(overlayWidgetBall);
         overlaySoBall.FindProperty("_root").objectReferenceValue               = overlayRtBall;
-        overlaySoBall.FindProperty("_cardsContainer").objectReferenceValue     = cardsContBallRt;
+        overlaySoBall.FindProperty("_cardsViewport").objectReferenceValue       = cardsContBallRt;
+        overlaySoBall.FindProperty("_focusHalo").objectReferenceValue           = focusHaloBallRt;
+        overlaySoBall.FindProperty("_carouselDrag").objectReferenceValue        = carouselDragBall;
+        overlaySoBall.FindProperty("_slotPitch").floatValue                     = SelectorSlotPitch;
+        overlaySoBall.FindProperty("_visibleSlots").intValue                    = SelectorVisibleSlots;
+        overlaySoBall.FindProperty("_viewportMargin").floatValue                = SelectorViewportMargin;
         overlaySoBall.FindProperty("_cardPrefab").objectReferenceValue         = cardPrefabGo;
         overlaySoBall.FindProperty("_arrowUpContainer").objectReferenceValue   = arrowUpContBallRt;
         overlaySoBall.FindProperty("_arrowDownContainer").objectReferenceValue = arrowDownContBallRt;
         overlaySoBall.FindProperty("_arrowUp").objectReferenceValue            = arrowUpBtnBall;
         overlaySoBall.FindProperty("_arrowDown").objectReferenceValue          = arrowDownBtnBall;
         overlaySoBall.FindProperty("_outsideClickCatcher").objectReferenceValue = selectorCatcherBall;
-        overlaySoBall.FindProperty("_anchoredPositionForClub").vector2Value    = new Vector2(-251f, 96f);
-        overlaySoBall.FindProperty("_anchoredPositionForBall").vector2Value    = new Vector2(251f, 96f);
+        overlaySoBall.FindProperty("_anchoredPositionForClub").vector2Value    = new Vector2(-251f, SelectorOverlayAuthoredY);
+        overlaySoBall.FindProperty("_anchoredPositionForBall").vector2Value    = new Vector2(251f, SelectorOverlayAuthoredY);
         overlaySoBall.ApplyModifiedProperties();
+
+        var ballDragSo = new SerializedObject(carouselDragBall);
+        ballDragSo.FindProperty("_overlay").objectReferenceValue = overlayWidgetBall;
+        ballDragSo.ApplyModifiedProperties();
 
         overlayGoBall.SetActive(false);
 
@@ -918,6 +1006,98 @@ public static class ActionButtonsBuilder
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    // ── Selector carousel viewport ────────────────────────────────────────────
+
+    /// <summary>
+    /// Build one selector's <c>CardsContainer</c> as a fixed carousel viewport
+    /// (selector_carousel §1). Identical for clubs and balls, so it lives here rather than
+    /// twice inline: a fixed-height window, a <see cref="RectMask2D"/> widened 36px each side so
+    /// the halo's glow survives, a transparent hit area so a drag that starts in the 34px gap
+    /// between two cards is still caught, the focus halo behind the cards, and the drag handler.
+    ///
+    /// <para>The six pool cards are NOT created here — <c>SelectorOverlayWidget</c> instantiates
+    /// them from <c>_cardPrefab</c> on first open, exactly as the old Populate() did.</para>
+    /// </summary>
+    static RectTransform BuildSelectorViewport(Transform overlayRoot, Sprite haloSprite,
+                                               out RectTransform focusHaloRt,
+                                               out SelectorCarouselDrag carouselDrag)
+    {
+        var viewportRt = CreateRectTransform("CardsContainer", overlayRoot);
+
+        // Fixed window. No VerticalLayoutGroup and no ContentSizeFitter any more: the cards are
+        // positioned by SelectorOverlayWidget.Layout() at fractional offsets, which a layout
+        // group would overwrite on the next rebuild.
+        var le = viewportRt.gameObject.AddComponent<LayoutElement>();
+        le.preferredHeight = SelectorViewportHeight;
+        le.flexibleWidth   = 1f;
+
+        // Transparent hit area FIRST so it draws behind every card.
+        var hit = viewportRt.gameObject.AddComponent<Image>();
+        hit.color         = new Color(0f, 0f, 0f, 0f);
+        hit.raycastTarget = true;
+
+        // Negative padding GROWS the mask rect (x=left, y=bottom, z=right, w=top). The halo is
+        // 217 wide inside a 145 wide viewport, so it needs 36px of room on each side; top and
+        // bottom already have it, baked into SelectorViewportHeight.
+        var mask = viewportRt.gameObject.AddComponent<RectMask2D>();
+        mask.padding = new Vector4(-36f, 0f, -36f, 0f);
+
+        // Focus halo — child 0, so it renders BEHIND the cards. Centred on the focus slot.
+        focusHaloRt = CreateRectTransform("FocusHalo", viewportRt,
+                                          new Vector2(SelectorHaloWidth, SelectorHaloHeight));
+        focusHaloRt.anchorMin = focusHaloRt.anchorMax = Vector2.zero;   // viewport bottom-left
+        focusHaloRt.pivot     = new Vector2(0.5f, 0.5f);
+        focusHaloRt.anchoredPosition = new Vector2(CardArtCentreX,
+                                                   SelectorViewportMargin + CardArtCentreY);
+        var haloImg = focusHaloRt.gameObject.AddComponent<Image>();
+        haloImg.sprite        = haloSprite;
+        haloImg.type          = Image.Type.Simple;
+        haloImg.color         = HexToColor(SelectorHaloTintHex);
+        haloImg.raycastTarget = false;
+        var haloLe = focusHaloRt.gameObject.AddComponent<LayoutElement>();
+        haloLe.ignoreLayout = true;
+
+        carouselDrag = viewportRt.gameObject.AddComponent<SelectorCarouselDrag>();
+        carouselDrag.enabled = false;   // modal mode turns it on
+        var dragSo = new SerializedObject(carouselDrag);
+        dragSo.FindProperty("_viewport").objectReferenceValue = viewportRt;
+        dragSo.ApplyModifiedProperties();
+
+        return viewportRt;
+    }
+
+    /// <summary>
+    /// Force the focus-halo PNG to import as a full-rect Sprite. Idempotent — re-running the
+    /// builder on an already-correct import does nothing — so this is safe to call every build,
+    /// and it is what lets Robin drop finished art at the same path with zero code changes.
+    /// </summary>
+    static void CoerceHaloSprite(string assetPath)
+    {
+        var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer == null)
+        {
+            Debug.LogWarning($"[ActionButtonsBuilder] Could not get TextureImporter for {assetPath}");
+            return;
+        }
+        var settings = new TextureImporterSettings();
+        importer.ReadTextureSettings(settings);
+        bool alreadyRight = importer.textureType      == TextureImporterType.Sprite
+                         && importer.spriteImportMode == SpriteImportMode.Single
+                         && !importer.mipmapEnabled
+                         && settings.spriteMeshType   == SpriteMeshType.FullRect;
+        if (alreadyRight) return;
+
+        importer.textureType      = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Single;
+        importer.mipmapEnabled    = false;
+        importer.ReadTextureSettings(settings);
+        settings.spriteMeshType = SpriteMeshType.FullRect;
+        importer.SetTextureSettings(settings);
+        importer.SaveAndReimport();
+        AssetDatabase.Refresh();
+        Debug.Log($"[ActionButtonsBuilder] Coerced {assetPath} to full-rect Sprite.");
+    }
 
     static void CoerceSprite(string assetPath)
     {

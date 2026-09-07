@@ -1474,6 +1474,78 @@ def validate_canonical_resolution(report_path: Path) -> list[str]:
     return errors
 
 
+def validate_capture_provenance(report_path: Path) -> list[str]:
+    """Rule 24: a canonical screenshot must be a REAL PLAY frame.
+
+    selector_carousel (2026-09-07). An edit-mode capture of LabScaffold, driven by
+    injected FakeState, was surfaced as the running game. It looked plausible — real
+    art, real cards, real halo — but ShotLayoutController only runs in play mode, so
+    the ball sat at the pre-shot_view_layout centre and the ENTIRE framing was the old
+    layout. Cesar caught it on sight; every automated gate passed it, because none of
+    them could tell a harness render from the game.
+
+    CaptureCore now stamps provenance on every frame it writes (see its
+    § Provenance block): a non-real frame is renamed with a NOT-REAL_ prefix AND
+    hatched in red AND accompanied by a <file>.png.json sidecar. This rule reads that
+    sidecar and refuses to let a fake frame stand as canonical evidence.
+
+    Deliberately NOT requiring the sidecar to exist: tasks whose captures predate the
+    stamp would otherwise be blocked retroactively. A missing sidecar warns instead —
+    but a NOT-REAL_ filename, or a sidecar that says realPlay:false, is a hard block
+    and cannot be laundered by renaming, because the hatching is in the pixels.
+    """
+    errors: list[str] = []
+    if not report_path.exists():
+        return errors
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+    if not _extract_image_paths(content):
+        return errors
+
+    for ss_rel in CANONICAL_DECLARATION_RE.findall(content):
+        if "NOT-REAL" in Path(ss_rel).name.upper():
+            errors.append(
+                f"Canonical screenshot '{ss_rel}' is a NOT-REAL frame — CaptureCore "
+                f"renamed it because it was captured outside real play (edit mode, "
+                f"injected FakeState, or before ShotLayoutController applied). Capture "
+                f"the canonical frame by booting the app and navigating with the real "
+                f"widgets. (Rule 24.)"
+            )
+            continue
+
+        resolved = _resolve_image(report_path, ss_rel)
+        if resolved is None:
+            continue  # Rule 14 already reports a missing canonical file.
+
+        sidecar = resolved.with_suffix(resolved.suffix + ".json")
+        if not sidecar.exists():
+            print(
+                f"[enforce_implementer_done] WARNING: canonical '{ss_rel}' has no "
+                f"CaptureCore provenance sidecar. Cannot verify it is a real-play "
+                f"frame. Re-capture through CaptureCore. (Rule 24.)",
+                file=sys.stderr,
+            )
+            continue
+
+        try:
+            data = json.loads(sidecar.read_text(encoding="utf-8", errors="ignore"))
+        except Exception as exc:  # noqa: BLE001 - malformed sidecar must not crash the hook
+            print(
+                f"[enforce_implementer_done] WARNING: could not parse {sidecar.name}: {exc}",
+                file=sys.stderr,
+            )
+            continue
+
+        if data.get("realPlay") is not True:
+            errors.append(
+                f"Canonical screenshot '{ss_rel}' is not a real-play frame — its "
+                f"CaptureCore sidecar reports realPlay=false ({data.get('reason', 'no reason recorded')}). "
+                f"playing={data.get('playing')} fakeStateLocked={data.get('fakeStateLocked')} "
+                f"shotLayoutApplied={data.get('shotLayoutApplied')}. Boot the app and "
+                f"navigate with the real widgets, then re-capture. (Rule 24.)"
+            )
+    return errors
+
+
 def validate_rejection_followup(report_path: Path, task_dir: Path) -> list[str]:
     """Rule 15: when CESAR_REJECTION.md exists, the report must carry a
     'Rejection follow-up' section with a resolution verdict AND a screenshot
@@ -3229,6 +3301,7 @@ def main() -> int:
     # Rule 14: a report citing screenshots must declare one canonical frame and
     # it must clear the resolution floor (blocks the iter-9 256px-render PASS).
     errors.extend(validate_canonical_resolution(report_path))
+    errors.extend(validate_capture_provenance(report_path))
 
     # Rule 15: when CESAR_REJECTION.md exists, the report must carry a
     # 'Rejection follow-up' section re-shooting the flagged defect at full res.

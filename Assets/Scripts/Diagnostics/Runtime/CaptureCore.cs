@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -96,6 +97,156 @@ namespace Golfin.Diagnostics.Runtime
 #endif
         }
 
+        // ── Provenance: a frame must not be able to lie about what it is ──────
+        //
+        // selector_carousel (2026-09-07): an edit-mode capture of LabScaffold, driven by injected
+        // FakeState, was surfaced as if it were the running game. It was not obviously wrong — it
+        // had real art, real cards, a real halo — but the ball sat at the pre-shot_view_layout
+        // centre because ShotLayoutController only runs in play mode, so the whole framing was the
+        // OLD layout. Cesar spotted it in seconds; nothing in the pipeline did.
+        //
+        // Three overlapping defences, cheapest first:
+        //   1. FILENAME. A frame that is not real play is written as "NOT-REAL_<label>_...png".
+        //      That prefix travels into every path anyone pastes, including chat.
+        //   2. PIXELS. Red diagonal hatching is burned into the frame itself, so it cannot be
+        //      laundered by copying or renaming the file.
+        //   3. SIDECAR. Every capture gets a <file>.json stating play state, fake-state lock,
+        //      whether the shot layout had been applied, the ball's viewport Y and the loaded
+        //      scenes. `enforce_implementer_done.py` reads it and blocks the review transition on
+        //      a canonical screenshot that is not real play.
+        //
+        // Reflection rather than asmdef references on purpose: Golfin.Gameplay.UI already
+        // references this assembly, so naming ShotLayoutController here would be circular, and
+        // FakeStateLock lives in Golfin.Gameplay.UI.HUD (NOT EditorTools, despite being a
+        // capture-harness concept) and is a public static FIELD, not a property — hence
+        // ReadStaticBool checking both.
+
+        public struct CaptureProvenance
+        {
+            public bool   RealPlay;
+            public bool   Playing;
+            public bool   FakeStateLocked;
+            public bool   ShotLayoutApplied;
+            public float  BallViewportY;
+            public string Reason;
+        }
+
+        public static CaptureProvenance InspectProvenance()
+        {
+            var p = new CaptureProvenance
+            {
+                Playing           = Application.isPlaying,
+                FakeStateLocked   = ReadStaticBool("Golfin.Gameplay.UI.HUD.FakeStateLock", "IsLocked"),
+                ShotLayoutApplied = ReadStaticBool("Golfin.Gameplay.UI.ShotUI.ShotLayoutController", "LayoutApplied"),
+                BallViewportY     = ReadStaticFloat("Golfin.Gameplay.UI.ShotUI.ShotLayoutController", "LastAppliedBallY", float.NaN),
+            };
+
+            var reasons = new System.Collections.Generic.List<string>();
+            if (!p.Playing)          reasons.Add("EDIT MODE - NOT REAL PLAY");
+            if (p.FakeStateLocked)   reasons.Add("FAKE STATE INJECTED");
+            if (!p.ShotLayoutApplied) reasons.Add("SHOT LAYOUT NOT APPLIED - STALE AUTHORED FRAMING");
+
+            p.RealPlay = reasons.Count == 0;
+            p.Reason   = reasons.Count == 0 ? "real play" : string.Join(" | ", reasons);
+            return p;
+        }
+
+        static System.Type FindType(string fullName)
+        {
+            foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                System.Type t = null;
+                try { t = a.GetType(fullName, false); } catch { }
+                if (t != null) return t;
+            }
+            return null;
+        }
+
+        static object ReadStaticObject(string typeName, string member)
+        {
+            var t = FindType(typeName);
+            if (t == null) return null;
+            var pi = t.GetProperty(member, BindingFlags.Public | BindingFlags.Static);
+            if (pi != null) { try { return pi.GetValue(null); } catch { return null; } }
+            var fi = t.GetField(member, BindingFlags.Public | BindingFlags.Static);
+            if (fi != null) { try { return fi.GetValue(null); } catch { return null; } }
+            return null;
+        }
+
+        static bool  ReadStaticBool(string t, string m)  { var v = ReadStaticObject(t, m); return v is bool b && b; }
+        static float ReadStaticFloat(string t, string m, float dflt) { var v = ReadStaticObject(t, m); return v is float f ? f : dflt; }
+
+        /// <summary>
+        /// Rewrites <paramref name="path"/> to carry a NOT-REAL prefix, hatches the texture, and
+        /// writes the sidecar. Returns the path the caller should actually write to.
+        /// </summary>
+        static string ApplyProvenance(Texture2D tex, string path, out CaptureProvenance prov)
+        {
+            prov = InspectProvenance();
+            if (!prov.RealPlay)
+            {
+                string dir  = Path.GetDirectoryName(path);
+                string name = Path.GetFileName(path);
+                if (!name.StartsWith("NOT-REAL_")) name = "NOT-REAL_" + name;
+                path = string.IsNullOrEmpty(dir) ? name : $"{dir}/{name}";
+                HatchTexture(tex);
+                Debug.LogWarning($"[CaptureCore] PROVENANCE: {prov.Reason}. Frame hatched and renamed -> {path}");
+            }
+            return path;
+        }
+
+        /// <summary>Burn red diagonal hatching across the frame so it cannot pass as a real one.</summary>
+        static void HatchTexture(Texture2D tex)
+        {
+            if (tex == null) return;
+            try
+            {
+                int w = tex.width, h = tex.height;
+                var px = tex.GetPixels32();
+                const int period = 96, thickness = 22;
+                for (int y = 0; y < h; y++)
+                {
+                    for (int x = 0; x < w; x++)
+                    {
+                        if (((x + y) % period) >= thickness) continue;
+                        int i = y * w + x;
+                        var c = px[i];
+                        px[i] = new Color32((byte)Mathf.Min(255, c.r / 2 + 190), (byte)(c.g / 3), (byte)(c.b / 3), c.a);
+                    }
+                }
+                tex.SetPixels32(px);
+                tex.Apply(false);
+            }
+            catch (System.Exception e) { Debug.LogWarning($"[CaptureCore] hatching failed: {e.Message}"); }
+        }
+
+        static void WriteSidecar(string pngPath, CaptureProvenance p)
+        {
+            try
+            {
+                var scenes = new System.Text.StringBuilder();
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    var sc = SceneManager.GetSceneAt(i);
+                    if (i > 0) scenes.Append(", ");
+                    scenes.Append('"').Append(string.IsNullOrEmpty(sc.path) ? sc.name : sc.path).Append('"');
+                }
+                string json =
+                    "{\n" +
+                    $"  \"capturedAt\": \"{DateTime.Now:o}\",\n" +
+                    $"  \"realPlay\": {(p.RealPlay ? "true" : "false")},\n" +
+                    $"  \"playing\": {(p.Playing ? "true" : "false")},\n" +
+                    $"  \"fakeStateLocked\": {(p.FakeStateLocked ? "true" : "false")},\n" +
+                    $"  \"shotLayoutApplied\": {(p.ShotLayoutApplied ? "true" : "false")},\n" +
+                    $"  \"ballViewportY\": {(float.IsNaN(p.BallViewportY) ? "null" : p.BallViewportY.ToString("F4"))},\n" +
+                    $"  \"loadedScenes\": [{scenes}],\n" +
+                    $"  \"reason\": \"{p.Reason}\"\n" +
+                    "}\n";
+                File.WriteAllText(pngPath + ".json", json);
+            }
+            catch (System.Exception e) { Debug.LogWarning($"[CaptureCore] sidecar failed: {e.Message}"); }
+        }
+
         // ── SnapGameView ───────────────────────────────────────────────────────
 
         public static string SnapGameViewWithLabel(string label)
@@ -116,13 +267,17 @@ namespace Golfin.Diagnostics.Runtime
                 tex = ScreenCapture.CaptureScreenshotAsTexture();
             }
 
+            path = ApplyProvenance(tex, path, out var prov);
+            path = ApplyProvenance(tex, path, out var prov0);
             File.WriteAllBytes(path, tex.EncodeToPNG());
+            WriteSidecar(path, prov0);
+            WriteSidecar(path, prov);
             UnityEngine.Object.DestroyImmediate(tex);
 
 #if UNITY_EDITOR
             AssetDatabase.Refresh();
 #endif
-            Debug.Log($"[CaptureCore] Wrote {path}");
+            Debug.Log($"[CaptureCore] Wrote {path} ({prov.Reason})");
             return Path.GetFullPath(path);
         }
 
@@ -195,7 +350,9 @@ namespace Golfin.Diagnostics.Runtime
                 tex = new Texture2D(width, height, TextureFormat.RGBA32, false, false);
                 tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
                 tex.Apply(false);
+                path = ApplyProvenance(tex, path, out var prov1);
                 File.WriteAllBytes(path, tex.EncodeToPNG());
+                WriteSidecar(path, prov1);
             }
             finally
             {
@@ -253,7 +410,9 @@ namespace Golfin.Diagnostics.Runtime
 
             if (tex != null)
             {
+                path = ApplyProvenance(tex, path, out var prov2);
                 File.WriteAllBytes(path, tex.EncodeToPNG());
+                WriteSidecar(path, prov2);
                 // Use Destroy (deferred) in play mode to avoid GC paths that can
                 // collect MCP plugin background threads. DestroyImmediate is only safe
                 // in edit mode; SnapPlayModeSafe is intended for play-mode callers.
@@ -296,7 +455,9 @@ namespace Golfin.Diagnostics.Runtime
             if (tex == null)
                 tex = ScreenCapture.CaptureScreenshotAsTexture();
 
+            path = ApplyProvenance(tex, path, out var prov3);
             File.WriteAllBytes(path, tex.EncodeToPNG());
+            WriteSidecar(path, prov3);
             // Use Destroy (deferred) in play mode to avoid triggering GC that collects MCP
             // plugin background threads. DestroyImmediate is only safe/needed in edit mode.
             if (Application.isPlaying)

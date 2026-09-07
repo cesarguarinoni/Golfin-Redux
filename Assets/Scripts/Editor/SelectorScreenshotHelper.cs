@@ -91,6 +91,11 @@ public static class SelectorScreenshotHelper
             }
         }
 
+        // 4b. Apply the CURRENT shot layout. Without this the scaffolding renders the
+        //     authored framing (ball at the viewport centre, pre-shot_view_layout), which
+        //     is exactly the stale frame selector_carousel surfaced as if it were the game.
+        CaptureHelper.ApplyCurrentShotLayout();
+
         // 5. Force layout rebuild: inner CSFs first, then overlay root.
         ForceRebuildOverlay(overlayT.GetComponent<RectTransform>());
 
@@ -160,6 +165,9 @@ public static class SelectorScreenshotHelper
                 }
             }
         }
+
+        // 4b. Apply the CURRENT shot layout (see the club-side note).
+        CaptureHelper.ApplyCurrentShotLayout();
 
         // 5. Force layout rebuild
         ForceRebuildOverlay(overlayT.GetComponent<RectTransform>());

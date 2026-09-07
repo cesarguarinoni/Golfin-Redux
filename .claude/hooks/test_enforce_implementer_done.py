@@ -2238,3 +2238,76 @@ class TestBotSwingDoor(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestCaptureProvenance(unittest.TestCase):
+    """Rule 24 — a canonical screenshot must be a REAL PLAY frame.
+
+    selector_carousel (2026-09-07): an edit-mode LabScaffold capture driven by
+    injected FakeState was surfaced as the running game. It had real art and real
+    widgets, but ShotLayoutController only runs in play mode, so the framing was the
+    pre-shot_view_layout one. Every gate passed it; Cesar caught it on sight.
+    """
+
+    REPORT = (
+        "# Report\n\n"
+        "Canonical screenshot: `screenshots/{name}`\n\n"
+        "Evidence: `screenshots/{name}`\n"
+    )
+
+    def _task(self, td: str, name: str, sidecar: dict | None):
+        task = Path(td) / "task"
+        (task / "screenshots").mkdir(parents=True)
+        png = task / "screenshots" / name
+        _write_noisy_png(png, 1170, 2532)
+        if sidecar is not None:
+            png.with_suffix(png.suffix + ".json").write_text(json.dumps(sidecar))
+        report = task / "IMPLEMENTER_REPORT.md"
+        report.write_text(self.REPORT.format(name=name))
+        return report
+
+    def test_real_play_sidecar_passes(self):
+        with tempfile.TemporaryDirectory() as td:
+            report = self._task(td, "canon.png", {"realPlay": True, "reason": "real play"})
+            self.assertEqual(eid.validate_capture_provenance(report), [])
+
+    def test_fake_state_sidecar_blocks(self):
+        with tempfile.TemporaryDirectory() as td:
+            report = self._task(td, "canon.png", {
+                "realPlay": False, "playing": False, "fakeStateLocked": True,
+                "shotLayoutApplied": False, "reason": "EDIT MODE - NOT REAL PLAY | FAKE STATE INJECTED",
+            })
+            errs = eid.validate_capture_provenance(report)
+            self.assertTrue(errs, "an edit-mode fake-state frame must not stand as canonical")
+            self.assertIn("realPlay=false", errs[0])
+
+    def test_layout_not_applied_blocks(self):
+        """The exact selector_carousel failure: in play mode, but the shot layout
+        had not applied, so the frame carries the stale authored framing."""
+        with tempfile.TemporaryDirectory() as td:
+            report = self._task(td, "canon.png", {
+                "realPlay": False, "playing": True, "fakeStateLocked": False,
+                "shotLayoutApplied": False,
+                "reason": "SHOT LAYOUT NOT APPLIED - STALE AUTHORED FRAMING",
+            })
+            self.assertTrue(eid.validate_capture_provenance(report))
+
+    def test_not_real_filename_blocks_even_without_sidecar(self):
+        """Renaming away the sidecar must not launder the frame."""
+        with tempfile.TemporaryDirectory() as td:
+            report = self._task(td, "NOT-REAL_canon.png", None)
+            errs = eid.validate_capture_provenance(report)
+            self.assertTrue(errs)
+            self.assertIn("NOT-REAL", errs[0])
+
+    def test_missing_sidecar_warns_but_does_not_block(self):
+        """Captures predating the stamp must not be blocked retroactively."""
+        with tempfile.TemporaryDirectory() as td:
+            report = self._task(td, "canon.png", None)
+            self.assertEqual(eid.validate_capture_provenance(report), [])
+
+    def test_non_visual_task_is_skipped(self):
+        with tempfile.TemporaryDirectory() as td:
+            report = Path(td) / "IMPLEMENTER_REPORT.md"
+            report.write_text("# Report\n\nPure refactor, no screenshots.\n")
+            self.assertEqual(eid.validate_capture_provenance(report), [])
