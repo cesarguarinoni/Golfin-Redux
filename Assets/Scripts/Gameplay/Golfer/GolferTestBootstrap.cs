@@ -37,6 +37,24 @@ namespace Golfin.Gameplay.Golfer
     {
         public const string ResourcePath = "GolferTest/PfGolfer_Test";
 
+        /// <summary>
+        /// SPEC §9.8 — which golfer this round spawns. Empty = <see cref="ResourcePath"/>.
+        ///
+        /// <para>The §9.8 comparison is only worth anything if both prefabs reach the hole down
+        /// the SAME path: same bootstrap, same GameSession.OnRoundStarted, same PlaceAtBall, same
+        /// harness. Swapping the asset at the Resources path instead, or spawning the Mixamo one
+        /// by hand from the harness, would mean the two frames differ by more than the thing under
+        /// test. One string, read at spawn, is the smallest change that keeps the comparison
+        /// honest.</para>
+        ///
+        /// <para>Already inside <c>#if GOLFIN_GOLFER_TEST</c>, so it does not exist in a shipping
+        /// build any more than the rest of this file does.</para>
+        /// </summary>
+        public static string ResourcePathOverride = "";
+
+        static string ActiveResourcePath =>
+            string.IsNullOrEmpty(ResourcePathOverride) ? ResourcePath : ResourcePathOverride;
+
         static bool       _installed;
         static GameObject _golfer;
 
@@ -73,12 +91,12 @@ namespace Golfin.Gameplay.Golfer
 
             if (_golfer != null) Destroy(_golfer);
 
-            var prefab = Resources.Load<GameObject>(ResourcePath);
+            var prefab = Resources.Load<GameObject>(ActiveResourcePath);
             if (prefab == null)
             {
                 // The expected state in any build whose gate stashed _Test — say so once and
                 // stay out of the way rather than throwing on a hole start.
-                Debug.LogWarning($"[GolferTest] Resources/{ResourcePath} not found — no golfer this round.");
+                Debug.LogWarning($"[GolferTest] Resources/{ActiveResourcePath} not found — no golfer this round.");
                 return;
             }
 

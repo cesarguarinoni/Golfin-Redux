@@ -84,6 +84,22 @@ namespace Golfin.EditorTools
         // the shot.launchDeferredToImpact number either way.
         const string VideoKey = "GolferTestVerification.Video";
 
+        // ── SPEC §9.8 — the Mixamo-native variant ────────────────────────────────────
+        //
+        // Same hole, same harness, same sequence; only the spawned prefab differs. The variant
+        // goes in through GolferTestBootstrap.ResourcePathOverride so BOTH golfers arrive down
+        // the identical path (GameSession.OnRoundStarted -> bootstrap -> PlaceAtBall). Spawning
+        // the Mixamo one some other way would make the two frames differ by more than the thing
+        // under test, which is the whole point of the comparison.
+        const string VariantKey = "GolferTestVerification.Variant";
+
+        [MenuItem("GOLFIN/Golfer Test/Verify Mixamo-native on Hole 06 (§9.8)")]
+        public static void VerifyMixamoNative()
+        {
+            SessionState.SetString(VariantKey, "GolferTest/PfGolfer_MixamoNative");
+            Launch(6);
+        }
+
         [MenuItem("GOLFIN/Golfer Test/Record video on Hole 06")]
         public static void RecordHole06()
         {
@@ -147,6 +163,19 @@ namespace Golfin.EditorTools
             SessionState.SetBool(ArmedKey, false);
 
             if (SessionState.GetBool(VideoKey, false)) VideoArm();
+
+            // §9.8: point the bootstrap at the variant BEFORE the round starts. Set by
+            // reflection — Golfin.Gameplay.Golfer lives in Golfin.Physics.Viewer via the asmref
+            // and this editor file may not name it. Cleared to "" for a normal run so the
+            // override can never leak into the next take.
+            string variant = SessionState.GetString(VariantKey, "");
+            SessionState.SetString(VariantKey, "");
+            var bootType = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(a => { try { return a.GetType("Golfin.Gameplay.Golfer.GolferTestBootstrap"); } catch { return null; } })
+                .FirstOrDefault(t => t != null);
+            bootType?.GetField("ResourcePathOverride", BindingFlags.Public | BindingFlags.Static)
+                    ?.SetValue(null, variant);
+            Debug.Log("[GolferVerify] spawning " + (string.IsNullOrEmpty(variant) ? "PfGolfer_Test (default)" : variant));
 
             var host = new GameObject("[GolferTestVerificationBot]");
             UnityEngine.Object.DontDestroyOnLoad(host);
@@ -452,9 +481,11 @@ namespace Golfin.EditorTools
             // §9.2 evidence + gate, running alongside the swing: the gameplay camera at
             // t = 0.6 s after commit, plus the assertion that the ball has NOT left yet.
             var deferProbe = StartCoroutine(ProveLaunchDeferred(shot, anim, 0.6f));
+            var slideProbe = StartCoroutine(MeasureFootSlide(golfer, anim));
             yield return DriveARealShot(shot);
             if (addrProbe != null) StopCoroutine(addrProbe);
             yield return deferProbe;
+            yield return slideProbe;
             bool addressed = addrSeen.Any(x => x.StartsWith("Address"));
             // NOT a render check, and it must never be read as one: it samples states seen ACROSS
             // the drag, so a single Address frame anywhere in that window passes it. The gate for
@@ -645,6 +676,59 @@ namespace Golfin.EditorTools
                    " s) and the animator is '" + st + "' (want a Swing state). Before §9.2 the ball " +
                    "left on the commit frame, so this measured metres and the cut landed on a " +
                    "golfer who had not moved.");
+        }
+
+        /// <summary>
+        /// SPEC §9.8 — foot slide during the swing, the number that separates "the clips are
+        /// wrong" from "the retarget is wrong".
+        ///
+        /// <para>A planted foot should not travel. Unity Humanoid retargeting has no foot pinning,
+        /// so mocap replayed on a body of different proportions drags the feet along the ground —
+        /// that is the sliding-legs artefact §9 blames on retargeting. A character animated by
+        /// clips authored on ITS OWN skeleton has nothing to retarget and should slide far less.
+        /// Measured in the golfer's own space so his re-placement at the ball cannot be mistaken
+        /// for slide, and reported for BOTH prefabs with no tuning either way.</para>
+        ///
+        /// <para>Peak-to-peak of each foot's planar position across the swing, taking the worse
+        /// foot. Peak-to-peak rather than start-to-end because a foot that slides out and comes
+        /// back has still slid.</para>
+        /// </summary>
+        IEnumerator MeasureFootSlide(GameObject golfer, Animator anim)
+        {
+            Transform Foot(HumanBodyBones b)
+            {
+                if (anim != null && anim.avatar != null && anim.avatar.isHuman)
+                { var t = anim.GetBoneTransform(b); if (t != null) return t; }
+                string want = b == HumanBodyBones.LeftFoot ? "foot_l" : "foot_r";
+                return golfer.GetComponentsInChildren<Transform>(true)
+                             .FirstOrDefault(x => x.name == want ||
+                                                  x.name.EndsWith(b == HumanBodyBones.LeftFoot ? "LeftFoot" : "RightFoot"));
+            }
+            var fl = Foot(HumanBodyBones.LeftFoot);
+            var fr = Foot(HumanBodyBones.RightFoot);
+            if (fl == null || fr == null)
+            { Mark("§9.8 foot-slide SKIPPED: feet not resolvable (l=" + (fl != null) + " r=" + (fr != null) + ")"); yield break; }
+
+            var lo = new Vector2(float.MaxValue, float.MaxValue); var hi = new Vector2(float.MinValue, float.MinValue);
+            var lo2 = lo; var hi2 = hi;
+            void Acc(Transform f, ref Vector2 mn, ref Vector2 mx)
+            {
+                // Golfer-local, so PlaceAtBall moving him down the fairway is not counted as slide.
+                Vector3 p = golfer.transform.InverseTransformPoint(f.position);
+                mn = Vector2.Min(mn, new Vector2(p.x, p.z));
+                mx = Vector2.Max(mx, new Vector2(p.x, p.z));
+            }
+
+            float t0 = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - t0 < 2.5f)
+            { Acc(fl, ref lo, ref hi); Acc(fr, ref lo2, ref hi2); yield return null; }
+
+            float slideL = (hi - lo).magnitude;
+            float slideR = (hi2 - lo2).magnitude;
+            float worst  = Mathf.Max(slideL, slideR);
+            Mark("§9.8 foot-slide during the swing: left=" + F(slideL) + " m  right=" + F(slideR) +
+                 " m  WORST=" + F(worst) + " m (planted feet should not travel; golfer-local, " +
+                 "peak-to-peak over 2.5 s from commit)");
         }
 
         /// <summary>Blocks until the ball has not moved for 1.5 s, or the timeout expires.</summary>
