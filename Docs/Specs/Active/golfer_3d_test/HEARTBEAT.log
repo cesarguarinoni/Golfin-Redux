@@ -174,3 +174,52 @@ DIRTY (git status --porcelain --untracked-files=all):
   is a BENEFIT here — the authored grip pose has nothing to fight, so the Mixamo failure mode
   (empty-hand fingers over un-rolled wrists) cannot recur. Bandai Namco ruled out: CC BY-NC.
   Recommendation: retarget CMU 64 + keep the authored finger pose. Motion Cast #05 is the fallback.
+
+2026-09-07T10:10:00Z  PC session. ADDRESS BUG FIXED — root-caused to TWO independent defects,
+  both proven on a real Hole 06 play-mode render, not on the JSON.
+
+  Baseline re-run first (pass=30 fail=5) and the address PNG reproduced the report exactly:
+  golfer bolt upright, back to camera, arms at his sides, club dangling.
+
+  Cause 1 — address was keyed on the wrong signal. GolferPresenter drove Address off
+  ShotInputState: "anything but ShotState.Idle means address". But ShotController.State is Idle
+  whenever the player is not physically touching the screen — Aiming does not begin until
+  `justTouched` (ShotController.Tick, case ShotState.Idle). The entire window in which a golfer
+  is at address IS a window in which ShotState is Idle, so the presenter was firing Cancel
+  through all of it and addressing only for the fraction of a second the finger was down.
+  That is also exactly why shot.addressBeforeSwing PASSed on a visibly wrong frame: it samples
+  states seen while the harness drives a synthetic drag — the one moment the old rule held.
+  Fix: address is now derived from BallState.Aiming ("no shot in flight; player can input"),
+  via a single idempotent RefreshStance() that every handler funnels into, applied once at bind
+  because the SM starts in Aiming and fires no event for its initial state.
+
+  Cause 2 — the animator's `Reset` trigger is an ANY-STATE transition to Idle with
+  canTransitionToSelf=0. HandleShotComplete sets it while the animator is ALREADY in Idle, so
+  the transition is not taken and the trigger is NOT consumed. It sits armed; Address then moves
+  him to Address_Drive, and on the next frame the still-pending Reset is finally valid and drags
+  him straight back to Idle. This hit on every shot after the first — fixing cause 1 alone left
+  the at-rest frame still showing the upright-with-club-dangling pose at Turn 2. Animator trace:
+  `-> Address_Drive` immediately followed by `-> Idle` with nothing in the presenter asking for
+  it. Fix: RefreshStance disarms EVERY competing trigger (Cancel AND Reset) before setting the
+  one it wants.
+
+  Result: pass=35 fail=1 (was 30/5). The only remaining fail is the known budget.tris
+  (15,632 vs 15,000).
+
+  ALL FOUR GRIP FAILURES CLEARED WITH ZERO GRIP CHANGES, exactly as KICKOFF_PC.md predicted:
+    grip.fingersClosed   FAIL 0.0873 -> PASS 0.0276
+    grip.leadHandOnGrip  FAIL -0.0036 -> PASS 0.0531
+    grip.wrapped_r       FAIL 0.0573 -> PASS 0.0324
+    grip.wrapped_l       FAIL 0.5724 -> PASS 0.0309
+  So the kickoff's "second unresolved bug" (ApplyGripPose not taking effect at sample time) was
+  not a bug. The numbers were frozen across solver rewrites because the golfer was in Idle, where
+  the lead arm hangs at his side and there is no grip to measure. Nothing to chase there.
+
+  Harness hardened against the trap that hid all of this:
+   - NEW shot.addressAtRest — asserts the LIVE animator state on the frame the canonical address
+     PNG is captured, with no shot in progress. This is the gate that matches the picture.
+   - shot.backToIdle (accepted "Idle OR Address", which is precisely what let the defect through)
+     replaced by shot.addressAfterShot, which REQUIRES an Address state once the ball has
+     re-armed, after a bounded 3s wait.
+   - shot.addressBeforeSwing kept but its detail now states plainly that it samples across the
+     drag and is NOT a render check.

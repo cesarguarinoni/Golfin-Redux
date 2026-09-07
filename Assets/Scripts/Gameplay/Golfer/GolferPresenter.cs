@@ -531,9 +531,13 @@ namespace Golfin.Gameplay.Golfer
             _shot.OnShotResolved += HandleShotResolved;
             _shot.OnStateChanged += HandleShotState;
             _sm.OnShotComplete   += HandleShotComplete;
+            _sm.OnStateChanged   += HandleBallState;
             _bound = true;
 
             PlaceAtBall();
+            // BallStateMachine starts in Aiming and fires no event for its initial state, so the
+            // first stance has to be derived here or the golfer stands idle until the first shot.
+            RefreshStance();
             Debug.Log("[GolferTest] bound to ShotController + BallStateMachine.");
         }
 
@@ -541,8 +545,9 @@ namespace Golfin.Gameplay.Golfer
         {
             if (!_bound) return;
             if (_shot != null) { _shot.OnShotResolved -= HandleShotResolved; _shot.OnStateChanged -= HandleShotState; }
-            if (_sm   != null) _sm.OnShotComplete -= HandleShotComplete;
+            if (_sm   != null) { _sm.OnShotComplete -= HandleShotComplete; _sm.OnStateChanged -= HandleBallState; }
             _shot = null; _sm = null; _lab = null; _bound = false;
+            _stanceKnown = false;
         }
 
         // ── Event handlers ────────────────────────────────────────────────────────────
@@ -551,39 +556,90 @@ namespace Golfin.Gameplay.Golfer
         {
             if (anim == null) return;
             _swinging = true;
+            _stanceKnown = false;                 // the swing owns the body; re-derive after it
             ApplyCulling();                       // never cull a swing — the camera cuts away mid-shot
             anim.SetBool(PIsPutt, _shot != null && _shot.IsPutt);
             anim.SetTrigger(PSwing);
         }
 
         /// <summary>
-        /// Address covers EVERY non-idle shot state, not just <see cref="ShotState.Aiming"/>.
+        /// ADDRESS IS A RESTING STATE, NOT AN INPUT STATE.
         ///
-        /// <para>SPEC §5.2 says to pick "the first state after idle", and Aiming is that state —
-        /// but keying on it alone meant the golfer stood in his Idle pose with a club stretched
-        /// out to the ball for the whole shot, because a swing can pass through Aiming in a
-        /// frame or two on its way to Pulling / Timing / Flicking. Every one of those states is
-        /// the player setting up or making a shot, which is exactly when a golfer is over the
-        /// ball. Anything other than Idle means address.</para>
+        /// <para>This used to be edge-triggered off <see cref="ShotInputState.State"/>: anything
+        /// other than <see cref="ShotState.Idle"/> meant address. That is wrong at the root, and
+        /// it is why in a real round the golfer stood bolt upright, back to camera, arms at his
+        /// sides with the club dangling and the head nowhere near the ball.
+        /// <c>ShotController.State</c> is Idle whenever the player is not physically touching the
+        /// screen — <c>Aiming</c> does not begin until <c>justTouched</c> (ShotController.Tick,
+        /// <c>case ShotState.Idle</c>) — so the ENTIRE window in which a golfer is at address,
+        /// standing over the ball lining the shot up, is a window in which ShotState is Idle and
+        /// this presenter was firing <c>Cancel</c>. The only moments it addressed were the
+        /// fraction of a second the finger was down, on the way into the swing. That is also why
+        /// the <c>shot.addressBeforeSwing</c> invariant PASSed on a render that plainly showed
+        /// Idle: the harness samples it while it is driving a synthetic drag, which is the one
+        /// time the old rule happened to be true.</para>
+        ///
+        /// <para>The signal that actually means "the player may hit" is
+        /// <see cref="BallState.Aiming"/>, whose own definition is "no shot in flight; player can
+        /// input". So: address whenever the ball is armed and we are not mid-swing, idle while it
+        /// is Flying or Rolling.</para>
+        ///
+        /// <para>DERIVED, NOT EDGE-TRIGGERED. Every handler funnels into this one idempotent
+        /// apply, which fires a trigger only when the wanted stance actually changes. The old
+        /// comment's failure mode — a trigger left permanently pending because Cancel was set on
+        /// every idle frame — cannot come back, because nothing here fires on a frame where the
+        /// answer did not change. <c>_stanceKnown</c> is false until the first apply and is
+        /// cleared whenever the swing takes the body, so re-arming after a shot always re-fires
+        /// Address rather than assuming it is still held.</para>
         /// </summary>
-        ShotState _lastShotState = ShotState.Idle;
+        bool _addressed;
+        bool _stanceKnown;
 
+        void RefreshStance()
+        {
+            if (anim == null) return;
+
+            // _sm == null only before the bind completes; standing at address is the right
+            // default there — the golfer is beside a ball nobody has hit yet.
+            bool wantAddress = !_swinging && (_sm == null || _sm.State == BallState.Aiming);
+
+            if (_stanceKnown && wantAddress == _addressed) return;
+            _stanceKnown = true;
+            _addressed   = wantAddress;
+
+            // CLEAR EVERY COMPETING TRIGGER, NOT JUST THE OPPOSITE ONE. `Reset` is an ANY-STATE
+            // transition to Idle with canTransitionToSelf = 0, which makes it a delayed-action
+            // trap: HandleShotComplete sets it while the animator is ALREADY in Idle, so the
+            // any-state transition is not taken (it would be Idle→Idle) and the trigger is not
+            // consumed. It sits armed. Address then moves him to Address_Drive — and on the very
+            // next frame the still-pending Reset is finally valid and drags him straight back to
+            // Idle. That is a second, independent cause of the standing-upright bug, and it hit
+            // on every shot after the first: the animator trace read `-> Address_Drive` followed
+            // immediately by `-> Idle` with nothing in this presenter having asked for it.
+            // Whichever stance wins, it must disarm the others.
+            if (wantAddress)
+            {
+                anim.ResetTrigger(PCancel);
+                anim.ResetTrigger(PReset);
+                anim.SetTrigger(PAddress);
+            }
+            else
+            {
+                anim.ResetTrigger(PAddress);
+                anim.SetTrigger(PCancel);
+            }
+        }
+
+        void HandleBallState(BallStateChange _) => RefreshStance();
+
+        /// <summary>
+        /// Putter-vs-driver only. The stance itself is <see cref="RefreshStance"/>'s business —
+        /// see its remarks for why shot state is the wrong thing to key address on.
+        /// </summary>
         void HandleShotState(ShotInputState s)
         {
             if (anim == null || _swinging) return;
             anim.SetBool(PIsPutt, s.IsPutt);
-
-            // EDGE-TRIGGERED, and that is the whole point. OnStateChanged publishes every frame,
-            // so setting a trigger unconditionally leaves one permanently pending: fire Cancel on
-            // every idle frame and the golfer reaches Address only to be yanked straight back out
-            // by the Cancel queued the frame before. He then renders as Idle — standing upright
-            // with a club stretched out to the ball — for the entire shot, which is exactly what
-            // it looked like.
-            if (s.State == _lastShotState) return;
-            _lastShotState = s.State;
-
-            if (s.State != ShotState.Idle) { anim.ResetTrigger(PCancel);  anim.SetTrigger(PAddress); }
-            else                           { anim.ResetTrigger(PAddress); anim.SetTrigger(PCancel);  }
         }
 
         void HandleShotCancelled()
@@ -592,16 +648,21 @@ namespace Golfin.Gameplay.Golfer
             _swinging = false;
             ApplyCulling();
             anim.ResetTrigger(PSwing);
-            anim.SetTrigger(PCancel);
+            _stanceKnown = false;   // the swing may have left him mid-clip; re-derive from scratch
+            RefreshStance();        // a cancelled shot returns him to address, not to idle
         }
 
         void HandleShotComplete(ShotResult _)
         {
             if (anim != null) { anim.ResetTrigger(PSwing); anim.SetTrigger(PReset); }
             _swinging = false;
-            _lastShotState = ShotState.Idle;
+            _stanceKnown = false;
             ApplyCulling();
             PlaceAtBall();          // same frame as OnShotComplete, per SPEC §6
+            // Ball is AtRest/InCup/OB here, so this settles him into Idle. The owner's ReArm()
+            // follows on the same beat the camera returns to aiming framing, and its
+            // OnStateChanged(→Aiming) is what puts him back over the ball.
+            RefreshStance();
         }
 
         void HandlePutterMode(bool putt)

@@ -154,6 +154,22 @@ namespace Golfin.EditorTools
             yield return Snap("golfer_h" + _hole.ToString("00") + "_address");
             LogStance("address", golfer, ballT, shot);
 
+            // THE ASSERTION THAT MATCHES THE PICTURE. Everything below measures bone positions,
+            // which are only meaningful if the golfer is actually in an Address state — and for
+            // most of this task's life he was not. He stood upright with the club dangling for
+            // the whole of a real round, while `shot.addressBeforeSwing` (further down) reported
+            // PASS, because that one samples states seen WHILE the harness drives a synthetic
+            // drag and the presenter used to address only during input. Nothing asserted the
+            // state that is live at the moment the canonical frame is drawn, so a render that
+            // was visibly wrong cleared the gate. This does exactly that, on the same frame the
+            // PNG above was captured, with no shot in progress — the resting state a player
+            // spends nearly all of a hole looking at.
+            string liveAtAddress = CurrentState(anim);
+            Assert("shot.addressAtRest", liveAtAddress.StartsWith("Address"),
+                   "animator state live on the captured address frame (no shot in progress) = '" +
+                   liveAtAddress + "' — must be Address_Drive/Address_Putt; 'Idle' means the " +
+                   "golfer is standing upright with the club dangling, which is the bug");
+
             // The grip is asserted HERE, at address, and nowhere else. It used to run after the
             // club-swap section, by which point the shot has gone back to Idle and the lead arm
             // is hanging at the golfer's side — so "is the lead hand on the club" was measuring
@@ -335,8 +351,12 @@ namespace Golfin.EditorTools
             yield return DriveARealShot(shot);
             if (addrProbe != null) StopCoroutine(addrProbe);
             bool addressed = addrSeen.Any(x => x.StartsWith("Address"));
+            // NOT a render check, and it must never be read as one: it samples states seen ACROSS
+            // the drag, so a single Address frame anywhere in that window passes it. The gate for
+            // "is he actually at address" is shot.addressAtRest, up at the canonical frame.
             Assert("shot.addressBeforeSwing", addressed,
-                   "animator states seen while the shot was being set up: " +
+                   "animator states seen at any point while the shot was being set up (sampled " +
+                   "across the drag, NOT the state on any one rendered frame): " +
                    string.Join(", ", addrSeen.Distinct().Take(6)));
             yield return Hold(0.35f);
             string stateAtSwing = CurrentState(anim);
@@ -356,10 +376,26 @@ namespace Golfin.EditorTools
             Assert("shot.ballMoved", ballMoved > 5f, "ball travelled " + F(ballMoved) + " m in plan");
             Assert("shot.golferFollowed", golferMoved > 5f && Mathf.Abs(golferMoved - ballMoved) < ballMoved * 0.25f + 2f,
                    "golfer moved " + F(golferMoved) + " m (ball " + F(ballMoved) + " m) — re-placed at the new lie on OnShotComplete");
+            // "Idle OR Address" is exactly the looseness that let the bug live here for a whole
+            // task. The ball has re-armed by now (the owner calls ReArm on the AtRest branch, the
+            // same beat the camera returns to aiming framing), so the player is looking at the
+            // next shot and the golfer must be OVER it — Idle at this point is him standing bolt
+            // upright with the club dangling, which is the reported defect one shot later. The
+            // old assertion accepted precisely that and reported PASS on it.
+            //
+            // Bounded wait rather than an instant read: re-arm and the animator transition land
+            // within a frame or two of ball-at-rest, and "returns to address promptly" is the
+            // real requirement.
+            float addrDeadline = Time.realtimeSinceStartup + 3f;
+            while (!CurrentState(anim).StartsWith("Address") && Time.realtimeSinceStartup < addrDeadline)
+                yield return null;
             LogStance("atRest", golfer, ballAfterT, shot);
             yield return Snap("golfer_h" + _hole.ToString("00") + "_atrest");
-            Assert("shot.backToIdle", CurrentState(anim) == "Idle" || CurrentState(anim).StartsWith("Address"),
-                   "animator state at rest = '" + CurrentState(anim) + "'");
+            string atRestState = CurrentState(anim);
+            Assert("shot.addressAfterShot", atRestState.StartsWith("Address"),
+                   "animator state once the ball is at rest and re-armed = '" + atRestState +
+                   "' — must be an Address state; 'Idle' means he stands upright with the club " +
+                   "dangling while the player lines up the next shot");
 
             yield return Finish();
         }
