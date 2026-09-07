@@ -4,6 +4,49 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 (later) — golfer_3d_test close-out: **the ball now waits for impact**
+
+**The swing was never visible in play.** The ball left on the COMMIT frame, so the existing
+cut-to-ball fired while the golfer had not started moving — you saw a ball in flight and no swing.
+
+**The seam, and the wall around it.** The launch is `ballAnimator.Play(trajectory)` plus
+`BallSM.OnTrajectoryComputed`, and with them the Director's `ArmChaseForShot`, all inside
+`PhysicsLabController.HandleShotResolved` — under `Assets/Scripts/Physics/`, which CLAUDE.md rule 7
+bans and a hook enforces. The only other seam reaching that whole block is the invoke site of
+`ShotController.OnShotResolved`, which is NOT banned. That is where the deferral went; no file under
+`Assets/Scripts/Physics/` was touched.
+
+**Why a second event.** `GolferPresenter` starts the swing off `OnShotResolved` too, so delaying it
+wholesale would delay the swing — deferring the very thing the delay exists to reveal. New
+define-gated `OnShotResolvedImmediate` fires at commit and carries the golfer; `OnShotResolved` now
+carries the ball, held to `GolferImpactDelayDriveSeconds` 1.167 s / `GolferImpactDelayPuttSeconds`
+1.333 s. Guarded three ways: the `#if`, "is a golfer actually listening" (self-disabling), and
+`Application.isPlaying` — the last is what keeps the EditMode suite green with the define ON, since
+those tests drive `CommitFlick` synchronously and a coroutine would never run.
+
+**Proof is a number, not a vibe.** `shot.launchDeferredToImpact`: at 0.6 s after commit the ball has
+moved **0.0000 m** and the animator is `Swing_Drive`. The frame at that instant — gameplay camera,
+no harness camera — shows him mid-backswing with the ball still at his feet. **37 pass / 0 fail.**
+
+**Gate proof went Editor-only (§9.6 amended — no iOS builds).** New EditMode suite
+`GolferTestBuildGateTests` (5 tests, all green) exercises the stash/restore against the real folder:
+`_Test/Resources` leaves the tree for an ordinary build and comes back, the stash path carries no
+`/Resources` segment, restore is idempotent. It reaches the gate by REFLECTION because
+`GolferTestBuildGate` compiles into the predefined `Assembly-CSharp-Editor`, which no asmdef can
+reference. Full sweep 2713/2718 with the define ON; the 2 failures are pre-existing and were PROVEN
+so by stashing the §9.2 edits and re-running (`RemoteContentSource` = Windows path separators;
+`PendulumSchemeDriver` marker-freeze arrived with `392539899`).
+
+**Define off is byte-identical**: `#if` at 828–830 vanishes and `OnShotResolved?.Invoke(...)` at 831
+is the entire commit path, as it always was.
+
+**Needs a ruling:** `PublishShotSfx` plays the swing AND the hit sound at commit, so the HIT sound
+now lands ~1.17 s early — flagged rather than silently moved, since it is shared by three call sites
+including a test seam. Also `SPEC.md` still has no §9 (it ends at §8, which still lists this work as
+out of scope), and the active profile was left on `iOS-Full-Golfer` rather than restored to
+`iOS-Full-GPS`, because GPS compiles the feature out and this is the animation-testing machine.
+
+---
 ## 2026-09-07 — golfer_3d_test: **Address fixed, then closed out to 36/0**
 
 **In a real round the golfer never entered Address.** He stood bolt upright, back to camera, arms at

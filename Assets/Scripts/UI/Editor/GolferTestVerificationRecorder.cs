@@ -362,8 +362,12 @@ namespace Golfin.EditorTools
             // Address state, not standing in Idle with a club stretched out to the ball.
             var addrSeen = new List<string>();
             var addrProbe = StartCoroutine(SampleStates(anim, addrSeen, 20, 0.1f));
+            // §9.2 evidence + gate, running alongside the swing: the gameplay camera at
+            // t = 0.6 s after commit, plus the assertion that the ball has NOT left yet.
+            var deferProbe = StartCoroutine(ProveLaunchDeferred(shot, anim, 0.6f));
             yield return DriveARealShot(shot);
             if (addrProbe != null) StopCoroutine(addrProbe);
+            yield return deferProbe;
             bool addressed = addrSeen.Any(x => x.StartsWith("Address"));
             // NOT a render check, and it must never be read as one: it samples states seen ACROSS
             // the drag, so a single Address frame anywhere in that window passes it. The gate for
@@ -488,6 +492,62 @@ namespace Golfin.EditorTools
                    (executor?.GetType().Name ?? "<null>"));
             yield return Golfin.Gameplay.UI.Controls.Bot.BotSwing.PlayPerfect(
                 power01: 0.85f, aimYawRad: Heading(shot), isPutt: false, ctx: ctx);
+        }
+
+        /// <summary>
+        /// SPEC §9.2 — proves the ball launch is held back to the swing's impact frame.
+        ///
+        /// <para>THE PICTURE AND THE NUMBER, from the same moment. §9.2 asks for a gameplay-camera
+        /// frame at t = 0.6 s after commit; a frame alone only shows that something looked right,
+        /// so the same instant is also asserted: the golfer must be mid-SWING and the ball must
+        /// still be sitting where it was at commit. Drive impact is 1.167 s, so at 0.6 s the ball
+        /// has not been struck. Before §9.2 the ball left on the commit frame, which is exactly
+        /// what put the cut-to-ball on a golfer who had not moved.</para>
+        ///
+        /// <para>Capture is the Game View through <c>CaptureCore.SnapPlayModeSafe</c> (see
+        /// <see cref="Snap"/>) — the gameplay camera, no harness camera, per §9.2 and CAPTURE
+        /// RULE 0.</para>
+        /// </summary>
+        IEnumerator ProveLaunchDeferred(Component shot, Animator anim, float atSeconds)
+        {
+            var stateProp = shot?.GetType().GetProperty("State");
+            if (stateProp == null) { Mark("§9.2 probe: no State property — skipped"); yield break; }
+
+            // Commit == the frame State becomes Resolving.
+            float deadline = Time.realtimeSinceStartup + 25f;
+            while (Time.realtimeSinceStartup < deadline &&
+                   stateProp.GetValue(shot)?.ToString() != "Resolving")
+                yield return null;
+
+            if (stateProp.GetValue(shot)?.ToString() != "Resolving")
+            { Mark("§9.2 probe: never reached Resolving within 25 s — skipped"); yield break; }
+
+            var b0 = BallTransform();
+            Vector3 ballAtCommit = b0 != null ? b0.position : Vector3.zero;
+
+            float t0 = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - t0 < atSeconds) yield return null;
+
+            var b1 = BallTransform();
+            Vector3 ballNow = b1 != null ? b1.position : ballAtCommit;
+            float moved = Vector3.Distance(ballAtCommit, ballNow);
+            string st = CurrentState(anim);
+
+            yield return Snap("golfer_h" + _hole.ToString("00") + "_t0_6_after_commit");
+
+            // Read the impact constant off the live type: Golfin.Gameplay.Input is
+            // autoReferenced:false, so no editor assembly may NAME ShotController.
+            object impact = shot.GetType()
+                .GetField("GolferImpactDelayDriveSeconds", BindingFlags.Public | BindingFlags.Static)
+                ?.GetValue(null);
+
+            Assert("shot.launchDeferredToImpact", moved < 0.05f && st.StartsWith("Swing"),
+                   "at t=" + F(Time.realtimeSinceStartup - t0) + " s after commit the ball has moved " +
+                   F(moved) + " m (want < 0.05 — impact is at " +
+                   (impact == null ? "<no GolferImpactDelayDriveSeconds — define off?>" : F((float)impact)) +
+                   " s) and the animator is '" + st + "' (want a Swing state). Before §9.2 the ball " +
+                   "left on the commit frame, so this measured metres and the cut landed on a " +
+                   "golfer who had not moved.");
         }
 
         /// <summary>Blocks until the ball has not moved for 1.5 s, or the timeout expires.</summary>

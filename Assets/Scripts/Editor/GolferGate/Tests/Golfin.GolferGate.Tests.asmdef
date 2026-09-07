@@ -1,0 +1,12 @@
+{
+    "name": "Golfin.GolferGate.Tests",
+    "rootNamespace": "Golfin.GolferGate.Tests",
+    "references": [],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

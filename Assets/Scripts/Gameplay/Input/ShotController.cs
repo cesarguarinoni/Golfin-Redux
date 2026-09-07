@@ -182,6 +182,35 @@ namespace Golfin.Gameplay.Input
         public event Action<ShotInputState>                     OnStateChanged;
         public event Action<ShotInput, BallPhysicsModifiers>    OnShotResolved;
 
+#if GOLFIN_GOLFER_TEST
+        /// <summary>
+        /// golfer_3d_test §9.2 — fires at the instant of commit, where
+        /// <see cref="OnShotResolved"/> used to. EXPERIMENT-ONLY: the whole member vanishes
+        /// without <c>GOLFIN_GOLFER_TEST</c>.
+        ///
+        /// <para>WHY IT EXISTS. §9.2 wants the ball to leave at the swing's IMPACT frame rather
+        /// than at commit, so the existing cut-to-ball lands on impact instead of on a golfer who
+        /// has not started moving. The launch itself — <c>ballAnimator.Play(trajectory)</c> plus
+        /// <c>BallSM.OnTrajectoryComputed</c>, and with them the Director's ArmChaseForShot —
+        /// all hangs off <see cref="OnShotResolved"/> inside
+        /// <c>PhysicsLabController.HandleShotResolved</c>, which is under
+        /// <c>Assets/Scripts/Physics/</c> and may not be edited (CLAUDE.md rule 7, hook-enforced).
+        /// So the deferral is applied at the ONLY other seam that reaches all of it: this
+        /// event's invoke site.</para>
+        ///
+        /// <para>Deferring <see cref="OnShotResolved"/> wholesale would also delay the golfer's
+        /// swing, since the presenter starts the swing from that same event — which would defer
+        /// the very thing the delay exists to reveal. The golfer therefore moves to this
+        /// immediate event and keeps swinging on the commit frame, while physics waits.</para>
+        /// </summary>
+        public event Action<ShotInput, BallPhysicsModifiers>    OnShotResolvedImmediate;
+
+        /// <summary>Measured commit→impact time of `ANIM_Golf_Drive` (§9.2). Chip shares it.</summary>
+        public const float GolferImpactDelayDriveSeconds = 1.167f;
+        /// <summary>Measured commit→impact time of the putt clip (§9.2).</summary>
+        public const float GolferImpactDelayPuttSeconds  = 1.333f;
+#endif
+
         // --- Test injection API ---
         public void InjectInputSource(IShotInputSource source)  => _inputSource = source;
         public void InjectConfig(ControlsConfig cfg)            => _config = cfg;
@@ -796,8 +825,60 @@ namespace Golfin.Gameplay.Input
             // LiveStatProviderHost.ResolveLive seam unchanged — no edit needed there.
 
             State = ShotState.Resolving;
+#if GOLFIN_GOLFER_TEST
+            if (TryDeferLaunchToImpact(input, ballMods)) return;
+#endif
             OnShotResolved?.Invoke(input, ballMods);
         }
+
+#if GOLFIN_GOLFER_TEST
+        /// <summary>
+        /// golfer_3d_test §9.2. Lets the golfer swing now and the ball leave at impact.
+        /// Returns true when the launch has been deferred and the caller must NOT invoke
+        /// <see cref="OnShotResolved"/> itself.
+        ///
+        /// <para>THREE CONDITIONS, and each earns its place:</para>
+        /// <list type="bullet">
+        /// <item>The <c>#if</c> at the call site. Without the define this method does not exist
+        /// and the commit path is the single <c>OnShotResolved?.Invoke</c> line it has always
+        /// been — byte-identical, which is §9.2's requirement.</item>
+        /// <item><c>OnShotResolvedImmediate != null</c> — i.e. a golfer is actually listening.
+        /// No golfer means nothing to wait for, so the ball leaves on the commit frame exactly
+        /// as it does today. This also makes the deferral self-disabling rather than something
+        /// that has to be remembered.</item>
+        /// <item><c>Application.isPlaying</c>. EditMode tests drive <c>CommitFlick</c>
+        /// synchronously and assert on <c>OnShotResolved</c> in the same call; a coroutine would
+        /// never run and every one of those assertions would fail. Guarding on play mode keeps
+        /// the EditMode suite green with the define ON as well as OFF, which matters because
+        /// this machine's active profile (iOS-Full-Golfer) has it ON.</item>
+        /// </list>
+        ///
+        /// <para>KNOWN CONSEQUENCE, NOT FIXED HERE. <c>PublishShotSfx</c> plays the swing AND the
+        /// hit sound at commit (order 350, before the resolve maths). The swing sound stays
+        /// correct; the HIT sound now lands ~1.17 s before the ball actually leaves. Moving it
+        /// would mean changing SFX behaviour shared by three call sites including a test seam,
+        /// which is past what §9.2 asked for — flagged in IMPLEMENTER_REPORT instead.</para>
+        /// </summary>
+        bool TryDeferLaunchToImpact(ShotInput input, BallPhysicsModifiers ballMods)
+        {
+            OnShotResolvedImmediate?.Invoke(input, ballMods);
+
+            if (OnShotResolvedImmediate == null || !Application.isPlaying) return false;
+
+            StartCoroutine(ReleaseAtImpact(input, ballMods,
+                IsPutt ? GolferImpactDelayPuttSeconds : GolferImpactDelayDriveSeconds));
+            return true;
+        }
+
+        System.Collections.IEnumerator ReleaseAtImpact(
+            ShotInput input, BallPhysicsModifiers ballMods, float delay)
+        {
+            // Unscaled would desync from an animator running on scaled time; the swing clip and
+            // this delay must measure the same seconds or the ball leaves off the impact frame.
+            yield return new WaitForSeconds(delay);
+            OnShotResolved?.Invoke(input, ballMods);
+        }
+#endif
 
         // ─────────────────────────────── Arrow / timing ─────────────────────
 

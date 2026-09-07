@@ -1,7 +1,7 @@
 {
   "task": "golfer_3d_test",
   "hole": 6,
-  "pass": 36,
+  "pass": 37,
   "fail": 0,
   "assertions": [
     {"id": "spawn.exists", "verdict": "PASS", "detail": "GolferTest instantiated from Resources on GameSession.OnRoundStarted"},
@@ -26,11 +26,12 @@
     {"id": "grip.wrapped_l", "verdict": "PASS", "detail": "l-hand worst fingertip (index) is 0.0210 m from the shaft centre line; contact is 0.0210 m, so anything past 0.0420 m is not touching the club"},
     {"id": "grip.thumbDownShaft_r", "verdict": "PASS", "detail": "r-hand thumb is 0.0 deg off the shaft axis (down the shaft is 0, curled into the fist is ~90)"},
     {"id": "grip.thumbDownShaft_l", "verdict": "PASS", "detail": "l-hand thumb is 0.0 deg off the shaft axis (down the shaft is 0, curled into the fist is ~90)"},
-    {"id": "perf.frameDelta", "verdict": "PASS", "detail": "median frame ms with=16.6848 without=16.6883 delta=-0.0035 (Editor, not device)"},
+    {"id": "perf.frameDelta", "verdict": "PASS", "detail": "median frame ms with=16.6744 without=16.6666 delta=0.0078 (Editor, not device)"},
     {"id": "budget.tris", "verdict": "PASS", "detail": "rendered tris = 14648 (limit 15000) | Grip=192 ClubHead=1058 Shaft=64 Eyes=768 SuperHero_Male=12566"},
     {"id": "tier.low", "verdict": "PASS", "detail": "Low: Eyes q=Bone2 shadow=Off, SuperHero_Male q=Bone2 shadow=Off animatorCulling=CullCompletely"},
     {"id": "tier.high", "verdict": "PASS", "detail": "High: Eyes q=Bone4 shadow=On, SuperHero_Male q=Bone4 shadow=On"},
     {"id": "shot.driver", "verdict": "PASS", "detail": "swinging through BotSwing.PlayPerfect; active executor = FlickBotExecutor"},
+    {"id": "shot.launchDeferredToImpact", "verdict": "PASS", "detail": "at t=0.7747 s after commit the ball has moved 0.0000 m (want < 0.05 — impact is at 1.1670 s) and the animator is 'Swing_Drive' (want a Swing state). Before §9.2 the ball left on the commit frame, so this measured metres and the cut landed on a golfer who had not moved."},
     {"id": "shot.addressBeforeSwing", "verdict": "PASS", "detail": "animator states seen at any point while the shot was being set up (sampled across the drag, NOT the state on any one rendered frame): Address_Drive"},
     {"id": "shot.swingPlays", "verdict": "PASS", "detail": "animator state right after OnShotResolved = 'Swing_Drive' (was 'Address_Drive')"},
     {"id": "shot.ballMoved", "verdict": "PASS", "detail": "ball travelled 41.0976 m in plan"},
