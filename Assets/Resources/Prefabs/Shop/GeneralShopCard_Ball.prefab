@@ -784,8 +784,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: b2ae6196bf901b54eaf57aea53472a8c, type: 3}
-  m_Type: 1
+  m_Sprite: {fileID: 0}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -11151,6 +11151,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02314f9977ca748f5ac07a0cec040db5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Shop.GeneralShopCard
+  _iconClubControl: {fileID: 0}
+  _iconRecovery: {fileID: 0}
+  _iconStamina: {fileID: 0}
+  _iconItemRestore: {fileID: 0}
 --- !u!1 &8107368599858452116 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 378638019881613533, guid: afa7f93918438476eae5712c66071981, type: 3}

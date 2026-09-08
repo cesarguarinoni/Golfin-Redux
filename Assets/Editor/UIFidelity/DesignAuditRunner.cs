@@ -73,6 +73,9 @@ namespace Golfin.EditorTools.UIFidelity
         [MenuItem("GOLFIN/Design Audit/Q3 · capture the two ModeCard surfaces (AFTER)", priority = 415)]
         public static void LaunchQ3After() => Launch("q3:after");
 
+        [MenuItem("GOLFIN/Design Audit/Q4 · capture the oval-pill surfaces (A/B in one run)", priority = 416)]
+        public static void LaunchQ4() => Launch("q4");
+
         public static void Launch(string mode)
         {
             if (EditorApplication.isPlaying)
@@ -126,6 +129,7 @@ namespace Golfin.EditorTools.UIFidelity
                 else if (Mode == "capture") yield return CapturePass();
                 else if (Mode.StartsWith("q2:")) yield return Q2Pass(Mode.Substring(3));
                 else if (Mode.StartsWith("q3:")) yield return Q3Pass(Mode.Substring(3));
+                else if (Mode == "q4") yield return Q4Pass();
 
                 Line("done");
                 EditorApplication.isPlaying = false;
@@ -421,6 +425,240 @@ namespace Golfin.EditorTools.UIFidelity
                 yield return Tap("NavTeeButton", 20f);
                 yield return new WaitForSecondsRealtime(3.5f);
                 yield return QSnap(outDir, "q3", tag, "modeselection");
+            }
+
+            // ── Q4 · da_q4_oval_pills_and_rims ──────────────────────────────
+            //
+            // The A/B for a CORNER fix has to come out of ONE session. Two separate runs —
+            // one before the prefab edit, one after — would differ in scroll position,
+            // catalog order and card contents, and "the only differing pixels are the
+            // corners" would be unprovable against that noise. So each surface is snapped in
+            // the shipped (fixed) state first, then the PRE-FIX values are re-applied to the
+            // LIVE Images ONLY, snapped again, and restored. Nothing is saved — play-mode
+            // edits to scene objects die with play mode, exactly as the §20 tripwire relies on.
+
+            const string Q4Dir = "Docs/Specs/Quick/_attachments";
+
+            /// <summary>Screen-space AABB of a RectTransform, in the same bottom-left origin the
+            /// captured PNG uses, so a crop needs only the GameView/Screen scale factor.</summary>
+            static Rect ScreenRectOf(RectTransform rt)
+            {
+                var canvas = rt.GetComponentInParent<Canvas>();
+                var cam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                    ? canvas.worldCamera : null;
+                var corners = new Vector3[4];
+                rt.GetWorldCorners(corners);
+                var min = new Vector2(float.MaxValue, float.MaxValue);
+                var max = new Vector2(float.MinValue, float.MinValue);
+                foreach (var w in corners)
+                {
+                    var sp = RectTransformUtility.WorldToScreenPoint(cam, w);
+                    min = Vector2.Min(min, sp);
+                    max = Vector2.Max(max, sp);
+                }
+                return new Rect(min, max - min);
+            }
+
+            static Rect Union(Rect a, Rect b) => Rect.MinMaxRect(
+                Mathf.Min(a.xMin, b.xMin), Mathf.Min(a.yMin, b.yMin),
+                Mathf.Max(a.xMax, b.xMax), Mathf.Max(a.yMax, b.yMax));
+
+            /// <summary>Crop a captured frame to `r` grown by `pad` screen px.
+            /// `Screen.width` in the editor is the GameView WINDOW size, which need not equal the
+            /// captured render texture — so the rect is rescaled by the frame's real width rather
+            /// than assumed 1:1 (reference_screen_width_lies_in_editor_playmode).</summary>
+            static bool CropTo(string src, Rect r, float pad, string dest)
+            {
+                if (string.IsNullOrEmpty(src) || !System.IO.File.Exists(src))
+                { Line("CROP FAIL: no source frame for " + dest); return false; }
+
+                var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (!tex.LoadImage(System.IO.File.ReadAllBytes(src)))
+                { Object.DestroyImmediate(tex); Line("CROP FAIL: undecodable " + src); return false; }
+
+                float scale = tex.width / (float)Mathf.Max(1, Screen.width);
+                int x = Mathf.Clamp(Mathf.FloorToInt((r.xMin - pad) * scale), 0, tex.width - 1);
+                int y = Mathf.Clamp(Mathf.FloorToInt((r.yMin - pad) * scale), 0, tex.height - 1);
+                int w = Mathf.Clamp(Mathf.CeilToInt((r.width + pad * 2f) * scale), 1, tex.width - x);
+                int h = Mathf.Clamp(Mathf.CeilToInt((r.height + pad * 2f) * scale), 1, tex.height - y);
+
+                var crop = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                crop.SetPixels(tex.GetPixels(x, y, w, h));
+                crop.Apply();
+                System.IO.File.WriteAllBytes(dest, crop.EncodeToPNG());
+                Line($"crop {dest} = {w}x{h} from {tex.width}x{tex.height} (scale {scale:0.###})");
+                Object.DestroyImmediate(crop);
+                Object.DestroyImmediate(tex);
+                return true;
+            }
+
+            /// <summary>Snap the shipped state, re-apply the pre-fix values, snap again, restore.
+            /// Both frames are cropped to the SAME screen rect, so the pair is directly
+            /// subtractable and the "only the corners moved" claim is checkable.</summary>
+            IEnumerator Q4AB(string label, Rect rect, float pad,
+                             System.Action applyBefore, System.Action restore)
+            {
+                if (rect.width < 1f || rect.height < 1f)
+                { Line("SKIP " + label + ": degenerate crop rect " + rect); yield break; }
+
+                for (int i = 0; i < 5; i++) yield return null;
+                yield return new WaitForSecondsRealtime(0.75f);
+                yield return new WaitForEndOfFrame();
+                string after = Golfin.Diagnostics.Runtime.CaptureCore.SnapPlayModeSafe("q4_after_" + label);
+                CropTo(after, rect, pad, System.IO.Path.Combine(Q4Dir, "da_q4_after_" + label + ".png"));
+
+                applyBefore();
+                Canvas.ForceUpdateCanvases();
+                // SnapPlayModeSafe returns REAL, byte-identical STALE frames when the capture
+                // lands before the canvas rebuild has reached the backbuffer. One yielded frame
+                // was not enough — the close-button pair came back identical while an isolated
+                // render of the same prefab at the same two ppu values differs by 12,519 px.
+                for (int i = 0; i < 5; i++) yield return null;
+                yield return new WaitForSecondsRealtime(0.75f);
+                yield return new WaitForEndOfFrame();
+                string before = Golfin.Diagnostics.Runtime.CaptureCore.SnapPlayModeSafe("q4_before_" + label);
+                CropTo(before, rect, pad, System.IO.Path.Combine(Q4Dir, "da_q4_before_" + label + ".png"));
+
+                restore();
+                Canvas.ForceUpdateCanvases();
+                yield return null;
+
+                if (!string.IsNullOrEmpty(after) && !string.IsNullOrEmpty(before)
+                    && System.IO.File.Exists(after) && System.IO.File.Exists(before)
+                    && Md5(after) == Md5(before))
+                    Line($"FAIL {label}: BEFORE and AFTER frames are byte-identical — the A/B proved nothing.");
+            }
+
+            IEnumerator Q4Pass()
+            {
+                System.IO.Directory.CreateDirectory(Q4Dir);
+
+                var corner8 = AssetDatabase.LoadAssetAtPath<Sprite>(
+                    "Assets/Art/Original UI/Common/S_Common_BGCorner8.png");
+                if (corner8 == null) Line("WARN: S_Common_BGCorner8 not loadable — divider A/B will be skipped");
+
+                // ── 1. The shop, reached the way a player reaches it ──────────
+                yield return Tap("NavGachaButton", 20f);
+                yield return new WaitForSecondsRealtime(5f);
+                var shop = CurrentScreenRoot();
+                if (shop == null) { Line("FAIL: no shop root"); }
+                else
+                {
+                    Line("shop root = " + shop.name);
+                    yield return QSnap(Q4Dir, "q4", "live", "shop_full");
+
+                    var linter = System.AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                        .FirstOrDefault(t => t.Name == "UIFidelityLinter");
+                    var lintRoot = linter?.GetMethod("LintRoot",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (lintRoot == null) Line("FAIL: LintRoot not found");
+                    else
+                    {
+                        var res = lintRoot.Invoke(null, new object[] { shop, "LIVE_" + shop.name, null }) as string;
+                        Line($"LintRoot {shop.name}: {(res ?? "").Split('\n').LastOrDefault(x => x.Length > 0)}");
+                        Line($"LintRoot {shop.name} tally: " +
+                             (res ?? "").Split('\n').FirstOrDefault(x => x.StartsWith("—")));
+                    }
+
+                    // NavGachaButton seats the Rewards Center on its GACHA tab. The shop card
+                    // grid — and every HDiv — lives under STORE, which the tab bar names
+                    // `WeeklyTab` (GachaTabController.WeeklyTabPath). Built but inactive until
+                    // tapped, which is why the linter (includeInactive) sees the dividers and a
+                    // live activeInHierarchy query does not.
+                    yield return Tap("WeeklyTab", 15f);
+                    yield return new WaitForSecondsRealtime(3.5f);
+                    yield return QSnap(Q4Dir, "q4", "live", "shop_store_tab");
+
+                    var divs = shop.GetComponentsInChildren<Image>(false)
+                                   .Where(i => i.name == "HDiv" && i.gameObject.activeInHierarchy)
+                                   .Take(2).ToArray();
+                    if (divs.Length == 0) Line("SKIP shop_divider: no active HDiv in the live shop");
+                    else if (corner8 != null)
+                    {
+                        var r = ScreenRectOf(divs[0].rectTransform);
+                        foreach (var d in divs) r = Union(r, ScreenRectOf(d.rectTransform));
+                        Line($"shop divider A/B on {divs.Length} HDiv(s) of card '{divs[0].transform.parent?.name}' rect={r}");
+                        yield return Q4AB("shop_divider", r, 44f,
+                            () => { foreach (var d in divs) { d.sprite = corner8; d.type = Image.Type.Sliced; } },
+                            () => { foreach (var d in divs) { d.sprite = null;    d.type = Image.Type.Simple; } });
+                    }
+                }
+
+                // ── 2. Tournament selection — the entry-fee badge ─────────────
+                if (!Force("TournamentSelection")) Line("WARN: could not reach TournamentSelection");
+                else
+                {
+                    yield return new WaitForSecondsRealtime(4.5f);
+                    var t = CurrentScreenRoot();
+                    if (t == null || !t.name.Contains("Tournament")) Line($"SKIP tournaments: root is '{(t == null ? "<null>" : t.name)}'");
+                    else
+                    {
+                        yield return QSnap(Q4Dir, "q4", "live", "tournaments_full");
+                        var badge = t.GetComponentsInChildren<Image>(false)
+                            .FirstOrDefault(i => (i.name == "FreeEntryBadge" || i.name == "PaidEntryBadge")
+                                                 && i.gameObject.activeInHierarchy);
+                        if (badge == null) Line("SKIP entry_badge: no active Free/PaidEntryBadge on the live card");
+                        else
+                        {
+                            var fill = badge.transform.Find("PillFill")?.GetComponent<Image>();
+                            float bPpu = badge.pixelsPerUnitMultiplier;
+                            float fPpu = fill != null ? fill.pixelsPerUnitMultiplier : 0f;
+                            Line($"entry badge A/B on '{badge.name}' (ppu {bPpu}, fill ppu {fPpu})");
+                            yield return Q4AB("entry_badge", ScreenRectOf(badge.rectTransform), 16f,
+                                () => { badge.pixelsPerUnitMultiplier = 4f; if (fill != null) fill.pixelsPerUnitMultiplier = 4f; },
+                                () => { badge.pixelsPerUnitMultiplier = bPpu; if (fill != null) fill.pixelsPerUnitMultiplier = fPpu; });
+                        }
+                    }
+                }
+
+                // ── 3. The 120px main-button rims ─────────────────────────────
+                // Reached opportunistically: whichever of these screens actually seats, the
+                // pass takes the first live Image named as one of the four fixed buttons.
+                foreach (var id in new[] { "TournamentLeaderboard", "TournamentHoleSelection", "HoleSelection" })
+                {
+                    if (!Force(id)) continue;
+                    yield return new WaitForSecondsRealtime(3.5f);
+                    var close = Object.FindObjectsByType<Image>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                        .FirstOrDefault(i => i.name == "TournamentCloseButton" && i.gameObject.activeInHierarchy);
+                    if (close == null) continue;
+                    float p0 = close.pixelsPerUnitMultiplier;
+                    Line($"close button A/B on screen '{id}' (ppu {p0})");
+                    yield return QSnap(Q4Dir, "q4", "live", "closebutton_full");
+                    yield return Q4AB("close_button", ScreenRectOf(close.rectTransform), 20f,
+                        () => close.pixelsPerUnitMultiplier = 1f,
+                        () => close.pixelsPerUnitMultiplier = p0);
+                    break;
+                }
+
+                // ── 4. HoleComplete — opened through its own controller ───────
+                var hc = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .FirstOrDefault(m => m != null && m.GetType().Name.Contains("HoleComplete")
+                                         && m.GetType().GetMethod("Show", System.Type.EmptyTypes) != null);
+                if (hc == null) Line("SKIP hole_complete: no HoleComplete controller with a parameterless Show()");
+                else
+                {
+                    bool ok = true;
+                    try { hc.GetType().GetMethod("Show", System.Type.EmptyTypes)!.Invoke(hc, null); }
+                    catch (System.Exception e) { ok = false; Line($"SKIP hole_complete: Show() threw {e.GetBaseException().GetType().Name}"); }
+                    if (ok)
+                    {
+                        yield return new WaitForSecondsRealtime(3f);
+                        var btn = hc.GetComponentsInChildren<Image>(false)
+                            .FirstOrDefault(i => (i.name == "PlayNextButton" || i.name == "ReplayButton" || i.name == "PlayButton")
+                                                 && i.sprite != null && i.gameObject.activeInHierarchy);
+                        if (btn == null) Line("SKIP hole_complete: no live PlayNext/Replay/Play button image");
+                        else
+                        {
+                            float p0 = btn.pixelsPerUnitMultiplier;
+                            Line($"hole-complete button A/B on '{btn.name}' (ppu {p0})");
+                            yield return QSnap(Q4Dir, "q4", "live", "holecomplete_full");
+                            yield return Q4AB("holecomplete_button", ScreenRectOf(btn.rectTransform), 20f,
+                                () => btn.pixelsPerUnitMultiplier = 1f,
+                                () => btn.pixelsPerUnitMultiplier = p0);
+                        }
+                    }
+                }
             }
 
             /// <summary>One frame, checked for existence AND for an md5 differing from the previous

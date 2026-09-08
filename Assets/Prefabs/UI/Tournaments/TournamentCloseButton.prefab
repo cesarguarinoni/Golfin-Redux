@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: SETTINGS_CLOSE
+  japaneseFontScale: 0
 --- !u!1 &5867896456911582480
 GameObject:
   m_ObjectHideFlags: 0
@@ -228,7 +229,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 1.02
 --- !u!114 &7456489348382125289
 MonoBehaviour:
   m_ObjectHideFlags: 0

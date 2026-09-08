@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: STAMINA_MENU
+  japaneseFontScale: 0
 --- !u!1 &237132749494683817
 GameObject:
   m_ObjectHideFlags: 0
@@ -888,6 +889,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: RESULT_RETRY
+  japaneseFontScale: 0
 --- !u!1 &1935558608017736178
 GameObject:
   m_ObjectHideFlags: 0
@@ -1054,6 +1056,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: RESULT_SUCCESS
+  japaneseFontScale: 0
 --- !u!1 &2493335368861643751
 GameObject:
   m_ObjectHideFlags: 0
@@ -1651,6 +1654,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: BTN_START
+  japaneseFontScale: 0
 --- !u!1 &4925567157157444671
 GameObject:
   m_ObjectHideFlags: 0
@@ -2503,6 +2507,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 0
   _widget: {fileID: 0}
 --- !u!1 &7041689180996471413
 GameObject:
@@ -2580,7 +2585,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 1.02
 --- !u!114 &6392708343432622284
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2972,6 +2977,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: RESULT_PLAY_NEXT
+  japaneseFontScale: 0
 --- !u!1 &7255917094336296024
 GameObject:
   m_ObjectHideFlags: 0
@@ -3419,6 +3425,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: RESULT_FAILED
+  japaneseFontScale: 0
 --- !u!1 &8408675563667768853
 GameObject:
   m_ObjectHideFlags: 0

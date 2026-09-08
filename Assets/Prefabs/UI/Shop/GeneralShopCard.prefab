@@ -735,7 +735,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 4
+  m_PixelsPerUnitMultiplier: 5.2
 --- !u!114 &302227943888918865
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -834,7 +834,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 4
+  m_PixelsPerUnitMultiplier: 4.632
 --- !u!1 &2608205481967074784
 GameObject:
   m_ObjectHideFlags: 0
@@ -1136,6 +1136,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_OPEN
+  japaneseFontScale: 0
 --- !u!1 &4090960494586428474
 GameObject:
   m_ObjectHideFlags: 0
@@ -1362,6 +1363,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_ENTRY
+  japaneseFontScale: 0
 --- !u!1 &5192666313562706902
 GameObject:
   m_ObjectHideFlags: 0
@@ -1436,7 +1438,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 4
+  m_PixelsPerUnitMultiplier: 5.2
 --- !u!1 &5458051538812435997
 GameObject:
   m_ObjectHideFlags: 0
@@ -1513,7 +1515,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 4
+  m_PixelsPerUnitMultiplier: 4.632
 --- !u!1 &6158445514879490491
 GameObject:
   m_ObjectHideFlags: 0
@@ -1665,6 +1667,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_FREE_ENTRY
+  japaneseFontScale: 0
 --- !u!1 &6369728809936049641
 GameObject:
   m_ObjectHideFlags: 0
@@ -2028,6 +2031,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_GOLFIN_PRESENTS
+  japaneseFontScale: 0
 --- !u!1 &7958461590187395592
 GameObject:
   m_ObjectHideFlags: 0
