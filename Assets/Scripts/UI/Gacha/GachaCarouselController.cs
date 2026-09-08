@@ -148,11 +148,74 @@ namespace GolfinRedux.UI.Gacha
             // client happened to write — a pull on another device, or an admin grant, moves it with
             // nothing local to notice (gacha_client_real_pull §4.4).
             GachaTicketManager.Instance?.RefreshFromServer();
+
+            // polish_regressions_0909 R4 — repaint a card when its art finally lands.
+            Golfin.Tournaments.TournamentArtService.CatalogArt.ArtCached += OnCatalogArtCached;
         }
 
         private void OnDisable()
         {
+            Golfin.Tournaments.TournamentArtService.CatalogArt.ArtCached -= OnCatalogArtCached;
             if (ReferenceEquals(Instance, this)) Instance = null;
+        }
+
+        /// <summary>
+        /// A banner's `artUrl` has just finished downloading — re-bind the card (or cards) drawing
+        /// it, and nothing else.
+        ///
+        /// <para>
+        /// WHY THIS EXISTS: <c>GachaBannerCatalog</c> warms the cache with a fire-and-forget
+        /// <c>Prefetch</c> at catalog load, so a newly published banner — or one whose art was
+        /// re-uploaded, which mints a NEW url because the bucket filename is content-hashed —
+        /// resolved to nothing on the launch it appeared and drew its bundled `artSprite`
+        /// placeholder. Nothing rebound it when the bytes arrived a few hundred ms later, so the
+        /// real art could not show up until the NEXT launch. Now it shows up on this one.
+        /// </para>
+        /// <para>
+        /// ONE CARD, NOT A REBUILD. <see cref="RebuildCarousel"/> destroys and re-spawns the whole
+        /// strip and resets the scroll — visible, and actively hostile if the player is mid-swipe.
+        /// <c>Bind</c> is idempotent and re-reads every slot from the same entry, so re-binding the
+        /// matching card swaps the sprite and changes nothing else.
+        /// </para>
+        /// </summary>
+        private void OnCatalogArtCached(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return;
+
+            int rebound = 0;
+            foreach (var card in _cards)
+            {
+                if (card == null || card.Entry == null) continue;
+                if (!string.Equals(card.Entry.ArtUrl, url, StringComparison.Ordinal)) continue;
+
+                card.Bind(card.Entry);
+                rebound++;
+            }
+
+            if (rebound > 0)
+            {
+                Debug.Log($"[GachaCarousel] Banner art arrived — re-bound {rebound} card(s) to the " +
+                          $"downloaded sprite instead of the bundled placeholder: {url}");
+                return;
+            }
+
+            // No card draws this url. It may still belong to a banner the catalog is WITHHOLDING
+            // for want of art: a banner published since this build shipped has no bundled
+            // `artSprite`, so GachaBannerArt.Resolve returned null, §3.1 withheld it, and it has
+            // no card to re-bind. Now that its bytes are here it is rollable, and the only way it
+            // can appear is a rebuild — the strip has to GAIN a card, which no re-bind can do.
+            //
+            // Guarded on the url actually belonging to a banner, so art landing for any other
+            // catalog (characters, clubs, the shop) never rebuilds this strip.
+            foreach (var entry in GachaBannerCatalog.Entries)
+            {
+                if (entry == null || !string.Equals(entry.ArtUrl, url, StringComparison.Ordinal)) continue;
+
+                Debug.Log($"[GachaCarousel] Art arrived for '{entry.BannerId}', which was withheld for " +
+                          "want of it — rebuilding the strip so the banner appears this launch.");
+                RebuildCarousel();
+                return;
+            }
         }
 
         /// <summary>Re-read the catalog and rebuild the strip. Called after the server has told the

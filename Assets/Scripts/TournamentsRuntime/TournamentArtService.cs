@@ -235,6 +235,24 @@ namespace Golfin.Tournaments
         }
 
         /// <summary>
+        /// Raised once per URL, on the main thread, the moment its bytes have been decoded and
+        /// <see cref="TryGet"/> will answer for it — from the network OR from the disk cache.
+        ///
+        /// <para>
+        /// For screens that are ALREADY DRAWN. A row painted before its art resolved is holding a
+        /// bundled placeholder and has nothing outstanding to be called back on, because
+        /// <see cref="Prefetch"/> requests with a null callback. Subscribers should re-bind only
+        /// the rows that actually name this url — a full rebuild would be visible, and the player
+        /// may be mid-swipe.
+        /// </para>
+        /// <para>
+        /// A subscriber that throws is logged and skipped; art delivery must not depend on the
+        /// good behaviour of a UI script.
+        /// </para>
+        /// </summary>
+        public event Action<string>? ArtCached;
+
+        /// <summary>
         /// Warm the cache for a whole schedule at boot/sign-in, so T7 is already painted when opened.
         /// </summary>
         public void Prefetch(IEnumerable<TournamentDefinition>? defs)
@@ -433,6 +451,19 @@ namespace Golfin.Tournaments
                     catch (Exception ex) { Debug.LogWarning($"{Tag} Art callback threw: {ex.Message}"); }
                 }
             }
+
+            // polish_regressions_0909 R4 — the BROADCAST, as opposed to the per-request callbacks
+            // above.
+            //
+            // The waiter list only has entries for callers that asked for THIS url and are still
+            // waiting. Prefetch deliberately passes a null callback (it is warming the cache, not
+            // drawing anything), so every row painted from a Prefetch had no way to learn that its
+            // art had arrived — it drew the bundled placeholder and stayed that way until the next
+            // launch re-resolved the url from disk. This is how a screen already on display finds
+            // out, without any of them having to hold a request handle.
+            try { ArtCached?.Invoke(url); }
+            catch (Exception ex) { Debug.LogWarning($"{Tag} ArtCached subscriber threw: {ex.Message}"); }
+
             return true;
         }
 

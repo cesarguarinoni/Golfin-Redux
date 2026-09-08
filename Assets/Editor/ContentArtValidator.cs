@@ -107,6 +107,18 @@ namespace Golfin.EditorTools
                 new Column("portraitSprite", "Clubs/Portraits", primary: true),
                 new Column("portraitFull",   "Clubs/Full"),
                 new Column("controlSprite",  "Clubs/Controls")),
+
+            // The two gacha catalogs (polish_regressions_0909 R4). They landed four days after
+            // this validator shipped and were never added, so a banner whose artSprite named a
+            // file that does not exist was invisible here — while GachaBannerCatalog §3.1
+            // WITHHELD it from the player. That is the exact pairing this tool exists to catch.
+            //
+            // No placeholder policy: an unresolvable banner is withheld, not degraded.
+            new CatalogSpec("gacha_banners", "Assets/Resources/Data/gacha_banners.csv", "bannerId", false,
+                new Column("artSprite", "Art/Gacha/Banners", primary: true)),
+
+            new CatalogSpec("ticket_types", "Assets/Resources/Data/ticket_types.csv", "id", false,
+                new Column("iconSprite", "Art/Gacha/Tickets", primary: true)),
         };
 
         // ── Findings ────────────────────────────────────────────────────────

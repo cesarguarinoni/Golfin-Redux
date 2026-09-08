@@ -542,7 +542,17 @@ namespace Golfin.EditorTools
                     if (string.IsNullOrEmpty(c.gameObject.scene.name) || !c.gameObject.activeInHierarchy) continue;
                     var b1 = c.transform.GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == "PullX1Button");
                     var b2 = c.transform.GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == "PullX10Button");
-                    sb.Append($"[{(c.Entry != null ? c.Entry.BannerId : c.name)} x1={(b1 != null ? b1.interactable.ToString() : "-")} " +
+                    // polish_regressions_0909 R4 — read the sprite BACK off the live Image rather
+                    // than trusting the CSV cell: a bundled name that does not resolve renders as
+                    // nothing, and only the drawn object knows which rung of GachaBannerArt's
+                    // ladder actually answered.
+                    var artField = typeof(GachaBannerCard).GetField("_artImage",
+                        BindingFlags.NonPublic | BindingFlags.Instance);
+                    var img = artField?.GetValue(c) as Image;
+                    string art = img != null && img.sprite != null ? img.sprite.name : "<NONE>";
+
+                    sb.Append($"[{(c.Entry != null ? c.Entry.BannerId : c.name)} art={art} " +
+                              $"x1={(b1 != null ? b1.interactable.ToString() : "-")} " +
                               $"x10={(b2 != null ? b2.interactable.ToString() : "-")}] ");
                 }
                 return sb.ToString();

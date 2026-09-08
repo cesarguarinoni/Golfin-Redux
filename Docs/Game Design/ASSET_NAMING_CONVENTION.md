@@ -197,6 +197,8 @@ Files inside `Resources/` are loaded by name via `Resources.Load<Sprite>("path/n
 | `Items/Full/{Name}-{Rarity}` | Items.csv → `fullSprite` | `{Pascal(name)}-{rarity}` |
 | `Balls/Thumbnails/{Name}` | Balls.csv → `thumbnailSprite` | `{Pascal(name)}` — Balls.csv has no `rarity` column, so the suffix is omitted (`ball_putt_ace` → `PuttAce`) |
 | `Balls/Full/{Name}` | Balls.csv → `fullSprite` | `{Pascal(name)}` |
+| `Art/Gacha/Banners/GachaBanner_{Name}` | gacha_banners.csv → `artSprite` | `GachaBanner_{Pascal(bannerId minus "banner_")}` — `banner_standard_club1` → `GachaBanner_StandardClub1` |
+| `Art/Gacha/Tickets/Ticket_{Name}` | ticket_types.csv → `iconSprite` | `Ticket_{Pascal(key)}` — the **key**, not the id: the id column is a bare enum ordinal (`0`, `1`), so `standard` → `Ticket_Standard` |
 | `Rarities/{RarityName}` | RarityHelper.cs code | `Common`, `Uncommon`, `Rare`, `Mythic`, `Legendary`, `Supreme` |
 
 **Items and balls share one rule** (added 2026-08-28 with `content_art_bundling` §4): `{Pascal(name)}-{rarity}`
@@ -213,8 +215,18 @@ art set. `BRANDTAG` is the brand's alphanumerics, upper-cased (`G&F` → `GF`, `
 `RoyalSwing`). Each of the three club folders keeps its own prefix — a bare `{Type}-{Brand}` file in
 `Clubs/Controls` would be the only one of 78 without `S_Controls_`.
 
+**The two gacha rules** (added 2026-09-09 with `polish_regressions_0909` R4). They are stated here because
+they were the gap: `ContentArtFetcher` shipped on 2026-08-27 knowing four catalogs, the gacha catalogs
+landed on 08-31, and nobody came back — so a banner's `artUrl` was outside the bundler AND outside
+`Validate Catalog Art` for twelve days. The symptom was subtle rather than loud: `banner_test_a` and
+`banner_test_b` each carried real uploaded art and both still pointed `artSprite` at
+`GachaBanner_StandardClub1`, so they rendered the wrong picture rather than no picture.
+
 > `Assets/Editor/ContentArtFetcher.cs` (`GOLFIN/Content/Fetch URL Art`) derives names by exactly these
-> rules when it pulls an admin-uploaded URL into `Resources/`. Change a rule here and change it there.
+> rules when it pulls an admin-uploaded URL into `Resources/`, and
+> `Assets/Editor/ContentArtValidator.cs` (`GOLFIN/Content/Validate Catalog Art`) checks the resulting
+> names resolve. Both know **six** catalogs — characters, items, balls, clubs, gacha_banners,
+> ticket_types. Change a rule here and change it in both.
 
 ---
 

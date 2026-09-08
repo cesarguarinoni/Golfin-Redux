@@ -190,7 +190,46 @@ namespace Golfin.EditorTools
                     f => $"{ClubArtType(f("type"))}-{BrandPascal(f("brand"))}"),
                 new ArtSlot("controlUrl", "controlSprite", "Clubs/Controls",
                     f => $"S_Controls_{ClubArtType(f("type"))}_{BrandTag(f("brand"))}")),
+
+            // ── The two gacha catalogs (polish_regressions_0909 R4) ──────────
+            //
+            // WHY THEY WERE MISSING, because it is not an oversight worth repeating: this file
+            // shipped with `content_art_bundling` on 2026-08-27 and knew the four catalogs that
+            // existed then. The gacha catalogs landed four days later (`gacha_admin_catalogs`,
+            // 08-31) and nobody came back. The repo shows the cost directly — banner_test_a and
+            // banner_test_b each carry a real uploaded `artUrl` and BOTH still point `artSprite`
+            // at GachaBanner_StandardClub1, the only file in Art/Gacha/Banners. A banner's art
+            // was therefore never bundled, and since `GachaBannerCatalog` only warms the URL
+            // cache with a fire-and-forget Prefetch, the real art could not appear until the
+            // NEXT launch (see GachaBannerModel §"WARM THE CACHE" — and the rebind that now
+            // makes the same launch enough, GachaCarouselController.OnCatalogArtCached).
+            //
+            // banners — GachaBanner_{Pascal(bannerId minus "banner_")}. Verified against the
+            // folder's only file: banner_standard_club1 -> StandardClub1 ->
+            // GachaBanner_StandardClub1.png, which is exactly what that row's artSprite says.
+            new CatalogSpec("gacha_banners", "Assets/Resources/Data/gacha_banners.csv", "bannerId",
+                new ArtSlot("artUrl", "artSprite", "Art/Gacha/Banners",
+                    f => "GachaBanner_" + BannerName(f("bannerId")))),
+
+            // tickets — Ticket_{Pascal(key)}, and the KEY rather than the id because the id
+            // column here is a bare enum ordinal ("0", "1"): deriving from it would produce
+            // Ticket_0. Verified against both shipped files — key `standard` -> Ticket_Standard,
+            // key `gold` -> Ticket_Gold, matching each row's iconSprite byte for byte.
+            new CatalogSpec("ticket_types", "Assets/Resources/Data/ticket_types.csv", "id",
+                new ArtSlot("iconUrl", "iconSprite", "Art/Gacha/Tickets",
+                    f => "Ticket_" + Pascal(f("key")))),
         };
+
+        /// <summary>`banner_standard_club1` → `StandardClub1`. The id minus its `banner_` prefix,
+        /// Pascal-cased — the same shape as <see cref="FirstName"/>, kept separate so the two
+        /// prefixes cannot be "tidied" into one helper that then strips the wrong one.</summary>
+        static string BannerName(string bannerId)
+        {
+            string bare = bannerId.StartsWith("banner_", StringComparison.Ordinal)
+                ? bannerId.Substring(7)
+                : bannerId;
+            return Pascal(bare);
+        }
 
         /// <summary>`char_zoe` → `Zoe`. The id minus its `char_` prefix, Pascal-cased.</summary>
         static string FirstName(string id)

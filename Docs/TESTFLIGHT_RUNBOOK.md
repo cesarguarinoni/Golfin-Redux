@@ -174,7 +174,17 @@ second `--check` direction above — so the loop is the IMPORTER, not the export
 matters:
 
 1. **Unity → `GOLFIN/Content/Fetch URL Art`** — pulls new URL art into `Resources/`, sets the
-   sprite-name columns, appends its size summary to `Docs/Reports/content_art.txt`.
+   sprite-name columns, appends its size summary to `Docs/Reports/content_art.txt`. It knows
+   **six** catalogs: `characters`, `items`, `balls`, `clubs`, `gacha_banners`, `ticket_types`.
+   (The two gacha ones were added 2026-09-09, `polish_regressions_0909` R4 — they had been outside
+   both this tool and `Validate Catalog Art` since they landed on 2026-08-31, so banner art was
+   never bundled. If you add a seventh catalog, add it to BOTH tools and to
+   `ASSET_NAMING_CONVENTION.md` §5 in the same commit.)
+
+   ⚠️ It only fills a sprite-name column that is **EMPTY** — that is what makes a second run a
+   no-op. A row already naming a placeholder sprite is therefore skipped, and reports as
+   `nothing to fetch — every row with a URL already names a bundled sprite`. If that row is
+   meant to carry its OWN art, blank its sprite cell first and re-run.
 2. `python3 Tools/content/import_content.py --env-file … --apply` — the names become drafts.
 3. **Publish** the affected catalogs in the admin panel.
 4. `python3 Tools/content/export_content.py --env-file …` — the usual export.
