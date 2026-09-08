@@ -41,7 +41,15 @@ namespace Golfin.EditorTools.ShotUI
     {
         const string ShellScenePath = "Assets/Scenes/ShellScene.unity";
         const string ArmedKey       = "FreeSwingSchemeVideo.Armed";
-        public const string TaskDir  = "Docs/Specs/Active/scheme_freeswing";
+        /// <summary>
+        /// The task folder, RESOLVED rather than hardcoded. <c>scheme_freeswing</c> is DONE and
+        /// lives in <c>Completed/</c>; this constant still said <c>Active/</c>, so every re-run
+        /// created a stray task folder next to the real one and wrote its evidence there instead
+        /// of with the task. Reuses <see cref="SchemeConfirmTilesCapture.ResolveTaskDir"/> — the
+        /// same Active-then-Completed lookup that class already does — rather than swapping one
+        /// literal for another that expires the next time a folder moves.
+        /// </summary>
+        public static readonly string TaskDir = SchemeConfirmTilesCapture.ResolveTaskDir("scheme_freeswing");
         public static string VideosDir => TaskDir + "/videos";
 
         /// <summary>Watchdog budget. Six beats with real ball flight between them, one of which is
