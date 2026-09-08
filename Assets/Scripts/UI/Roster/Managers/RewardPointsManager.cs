@@ -100,6 +100,7 @@ namespace Golfin.Roster
 
             SaveDataHost.Instance.Data.rewardPoints -= amount;
             SaveDataHost.Instance.MarkDirty();
+            ArmTopBarCountUp();
             OnPointsChanged?.Invoke(GetPoints());
 
             Debug.Log($"[RewardPointsManager] Spent {amount}R, now have {GetPoints()}R");
@@ -125,6 +126,7 @@ namespace Golfin.Roster
                                "the server ledger cannot record it. Use EarnPointsLocalOnly for dev grants.");
             }
 
+            ArmTopBarCountUp();
             if (!EarnLocal(amount)) return;
 
             EnqueueServerEarn(amount, action);
@@ -136,6 +138,28 @@ namespace Golfin.Roster
         /// silently reverted by the next balance refresh.
         /// </summary>
         public void EarnPointsLocalOnly(int amount) => EarnLocal(amount);
+
+        // ── game_polish_b §D3 — the top bar counts every delta the PLAYER caused ─────
+        //
+        // WHY HERE AND NOT AT THE CALL SITES. The SPEC names seven screens to arm from. There
+        // are in fact EIGHT production call sites that move RP (character level-up, club
+        // level-up, RewardGranter, three in ShopTransaction, the mode entry fee, and the
+        // tournament adapter's entry and prize) — and a list of screens is the wrong shape for
+        // this anyway: the ninth one written next year would snap, and nothing would say so.
+        //
+        // Arming HERE is complete by construction, because this is what "the player caused it"
+        // means in this class. SpendPoints and EarnPoints are the two player-driven paths;
+        // ApplyServerBalance and SetPoints — a balance refresh, a server correction, the cache
+        // load at boot — are deliberately NOT armed and still snap, which is exactly the
+        // discrimination the one-shot arm exists to make. A balance that moves because another
+        // device spent something should not animate as though this player just did.
+        //
+        // Deviation D-4 in the report: same visible behaviour as the SPEC's seven, one edit
+        // instead of eight, and no way for a future call site to miss it.
+
+        /// <summary>Make the next top-bar repaint COUNT rather than snap.</summary>
+        private static void ArmTopBarCountUp()
+            => Golfin.UI.PersistentUIManager.Instance?.ArmRewardPointsCountUp();
 
         /// <summary>The unchanged local earn: save-data write, leaderboard accumulation, event, SFX.
         /// Returns false when the amount was rejected.</summary>

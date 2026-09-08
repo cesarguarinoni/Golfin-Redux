@@ -498,9 +498,15 @@ namespace Golfin.UI
         ///
         /// <para>The top bar is shared with the whole game, and the SPEC is explicit that only a
         /// delta a GPS action caused may animate: the game's own RP updates are `game_polish`.
-        /// So this is a one-shot ARM, set by the GPS call site immediately before it spends or
+        /// So this is a one-shot ARM, set by the call site immediately before it spends or
         /// earns, consumed by the first <see cref="SetRewardPoints"/> that follows and expiring on
         /// its own if none does.</para>
+        ///
+        /// <para>game_polish_b §D3 — the game arms it too now, at every site that moves RP:
+        /// shop and stamina purchases, a gacha pull, a mission claim, hole-complete rewards, a
+        /// tournament result and a level-up spend. The one-shot arm is what keeps that safe: an
+        /// RP change nobody armed still snaps, so a background refresh or a balance correction
+        /// cannot be mistaken for something the player just did.</para>
         /// </summary>
         public void ArmRewardPointsCountUp()
         {
@@ -550,8 +556,16 @@ namespace Golfin.UI
             bool armed = Time.unscaledTime <= _rpCountUpArmedUntil;
             if (armed &&
                 TryParseTopBarNumber(rewardPointsText.text, out int from) &&
-                points > from)
+                points != from)
             {
+                // §D3 — `!=`, not `>`. gps_polish only ever counted UP because the only armed GPS
+                // delta was an earn; the game's armed deltas are mostly SPENDS (a level-up, a
+                // shop purchase, a tournament entry fee), and those are the numbers a player most
+                // wants to see move. UiMotion.CountUp lerps from -> to and is directionless, so
+                // counting down needs no new primitive — only permission to run.
+                //
+                // Equality is still excluded: a repaint with an unchanged balance would otherwise
+                // start a 0.4 s tween from a number to itself and burn the arm on nothing.
                 _rpCountUpArmedUntil = -1f;
                 Golfin.UI.Polish.UiMotion.Run(this, ref _rpCountUp,
                     Golfin.UI.Polish.UiMotion.CountUp(rewardPointsText, from, points,

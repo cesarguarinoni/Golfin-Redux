@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,6 +22,38 @@ namespace Golfin.Gameplay.UI.ShotUI
     /// </summary>
     public class HoleCompleteWidget : MonoBehaviour
     {
+        // ── game_polish_b §D1.3 — this widget pops like the other fourteen ────────
+        //
+        // Every game modal pops now, and this one cannot get there the way the others did.
+        // HoleCompleteModalController.Show() is overridden as a no-op — visibility belongs to
+        // THIS widget's _root.SetActive — so setting `animateShow` on the modal makes no
+        // difference at all. Without the pop below, the one result screen the player sees most
+        // would be the only modal in the game that still snaps.
+        //
+        // WHY THE CURVE IS COPIED RATHER THAN CALLED. Golfin.UI.Polish.UiMotion lives in
+        // Assembly-CSharp and this asmdef (Golfin.Gameplay.UI) cannot reference it. That is the
+        // same wall SelectorOverlayWidget and SelectorCarouselMath already document and solve the
+        // same way, and this follows their precedent rather than inventing a third answer:
+        // identical constants (0.9 -> 1 over PopDur 0.20, `1 - (1-t)^3`, FadeDur 0.15), unscaled
+        // time, and a settle on the exact final value including on interruption.
+        //
+        // The CanvasGroups are added at RUNTIME, never authored, so the prefab is untouched and
+        // A3's rest parity cannot move: an alpha-1 CanvasGroup draws nothing differently.
+
+        /// <summary>Modal pop-in scale. UiMotion.PopDur.</summary>
+        const float PopDur = 0.20f;
+        /// <summary>Scrim cross-fade. UiMotion.FadeDur.</summary>
+        const float FadeDur = 0.15f;
+        /// <summary>UiMotion.Pop's start scale.</summary>
+        const float PopFromScale = 0.9f;
+        /// <summary>UiMotion.Unpop's end scale.</summary>
+        const float UnpopToScale = 0.95f;
+
+        CanvasGroup _rootGroup;
+        CanvasGroup _dimGroup;
+        Coroutine _popRoutine;
+        Coroutine _dimRoutine;
+
         [Header("Root (SetActive on Show/Hide)")]
         [SerializeField] GameObject _root;
 
@@ -53,6 +86,11 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             if (_root != null) _root.SetActive(true);
 
+            // §D1.3 — pop the card stack, fade the scrim. Independent properties on purpose, the
+            // same way ModalController does it: a scrim arriving at full speed under a panel that
+            // is still growing reads as "on top of" rather than "instead of".
+            StartPop();
+
             // Card 1 → current-hole variant
             if (_card1 != null)
                 _card1.BindCurrentHole(data, OnAnyButtonTap);
@@ -71,11 +109,163 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         public void Hide()
         {
+            // §D1.3 — reverse the pop, THEN deactivate. HideNow is chained off the unpop rather
+            // than called here so the panel is never deactivated out from under its own shrink.
+            //
+            // The HUD is restored immediately rather than on the tween's tail: RestoreHUD is what
+            // gives the player their controls back, and holding it for 0.15 s of animation would
+            // be the one part of this change that a player could actually feel.
+            _closeCallback = null;
+            RestoreHUD();
+
+            if (_root == null || !_root.activeSelf || !isActiveAndEnabled)
+            {
+                HideNow();
+                return;
+            }
+            StartUnpop();
+        }
+
+        /// <summary>Deactivate the root and the scrim. The end of every hide path.</summary>
+        void HideNow()
+        {
+            StopMotion();
             if (_root != null) _root.SetActive(false);
             // §2d iter-8: deactivate DimBackground when hiding.
             if (_dimBackground != null) _dimBackground.gameObject.SetActive(false);
-            _closeCallback = null;
-            RestoreHUD();
+        }
+
+        // ── §D1.3 motion ─────────────────────────────────────────────────────────
+
+        void StartPop()
+        {
+            EnsureGroups();
+            StopMotion();
+            if (!isActiveAndEnabled)
+            {
+                // No coroutines off-screen: settle on the final state so a widget shown while
+                // disabled is fully visible rather than stranded at 0.9 and alpha 0.
+                SettlePop();
+                return;
+            }
+            if (_root != null) _popRoutine = StartCoroutine(PopRoutine());
+            if (_dimGroup != null) _dimRoutine = StartCoroutine(FadeRoutine(_dimGroup, 0f, 1f, FadeDur, null));
+        }
+
+        void StartUnpop()
+        {
+            EnsureGroups();
+            StopMotion();
+            if (!isActiveAndEnabled) { HideNow(); return; }
+            _popRoutine = StartCoroutine(UnpopRoutine());
+            if (_dimGroup != null)
+                _dimRoutine = StartCoroutine(FadeRoutine(_dimGroup, _dimGroup.alpha, 0f, FadeDur, null));
+        }
+
+        void StopMotion()
+        {
+            if (_popRoutine != null) { StopCoroutine(_popRoutine); _popRoutine = null; }
+            if (_dimRoutine != null) { StopCoroutine(_dimRoutine); _dimRoutine = null; }
+        }
+
+        /// <summary>The state a completed pop leaves behind. Also the interruption settle — a root
+        /// stranded at 0.94 is a visibly wrong-sized card stack that survives until the next show.</summary>
+        void SettlePop()
+        {
+            if (_root != null) _root.transform.localScale = Vector3.one;
+            if (_rootGroup != null) _rootGroup.alpha = 1f;
+            if (_dimGroup != null) _dimGroup.alpha = 1f;
+        }
+
+        IEnumerator PopRoutine()
+        {
+            Transform rt = _root.transform;
+            rt.localScale = new Vector3(PopFromScale, PopFromScale, 1f);
+            if (_rootGroup != null) _rootGroup.alpha = 0f;
+
+            float elapsed = 0f;
+            while (elapsed < PopDur)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                if (_root == null) yield break;
+                float e = EaseOut(elapsed / PopDur);
+                float s = Mathf.Lerp(PopFromScale, 1f, e);
+                rt.localScale = new Vector3(s, s, 1f);
+                if (_rootGroup != null) _rootGroup.alpha = e;
+                yield return null;
+            }
+            if (_root != null) _root.transform.localScale = Vector3.one;
+            if (_rootGroup != null) _rootGroup.alpha = 1f;
+            _popRoutine = null;
+        }
+
+        IEnumerator UnpopRoutine()
+        {
+            Transform rt = _root.transform;
+            float elapsed = 0f;
+            while (elapsed < FadeDur)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                if (_root == null) break;
+                float e = EaseIn(elapsed / FadeDur);
+                float s = Mathf.Lerp(1f, UnpopToScale, e);
+                rt.localScale = new Vector3(s, s, 1f);
+                if (_rootGroup != null) _rootGroup.alpha = 1f - e;
+                yield return null;
+            }
+            // Scale settles at ONE, not at UnpopToScale: the root is about to be deactivated and
+            // the next Show must find it at rest.
+            if (_root != null) _root.transform.localScale = Vector3.one;
+            if (_rootGroup != null) _rootGroup.alpha = 1f;
+            _popRoutine = null;
+            HideNow();
+        }
+
+        IEnumerator FadeRoutine(CanvasGroup g, float from, float to, float dur, Action after)
+        {
+            g.alpha = from;
+            float elapsed = 0f;
+            while (elapsed < dur)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                if (g == null) yield break;
+                g.alpha = Mathf.Lerp(from, to, EaseOut(elapsed / dur));
+                yield return null;
+            }
+            if (g != null) g.alpha = to;
+            _dimRoutine = null;
+            after?.Invoke();
+        }
+
+        /// <summary>Ease-out cubic — the same curve as <c>Golfin.UI.Polish.UiMotion.EaseOut</c>,
+        /// which this asmdef cannot reference.</summary>
+        static float EaseOut(float t)
+        {
+            t = Mathf.Clamp01(t);
+            float inv = 1f - t;
+            return 1f - inv * inv * inv;
+        }
+
+        /// <summary>Cubic ease-in — UiMotion.EaseIn, the leaving half of the pair.</summary>
+        static float EaseIn(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t * t * t;
+        }
+
+        /// <summary>Both CanvasGroups, created on demand. Never authored — see the class header.</summary>
+        void EnsureGroups()
+        {
+            if (_root != null && _rootGroup == null)
+            {
+                _rootGroup = _root.GetComponent<CanvasGroup>();
+                if (_rootGroup == null) _rootGroup = _root.AddComponent<CanvasGroup>();
+            }
+            if (_dimBackground != null && _dimGroup == null)
+            {
+                _dimGroup = _dimBackground.GetComponent<CanvasGroup>();
+                if (_dimGroup == null) _dimGroup = _dimBackground.gameObject.AddComponent<CanvasGroup>();
+            }
         }
 
         void OnAnyButtonTap()
