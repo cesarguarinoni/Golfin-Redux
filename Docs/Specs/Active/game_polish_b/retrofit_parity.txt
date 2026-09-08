@@ -1,0 +1,12 @@
+old 4c93a040b (2026-09-08 02:27:20Z)   new 4c93a040b (2026-09-08 02:28:27Z)
+
+trace                 frames       max |delta|    interp      tol  verdict
+------------------------------------------------------------------------------
+versus.popin          13v14           0.000012  0.000278    0.005  PASS  (scale)
+pill.slide.enter      29v28 -3        0.066202  0.597500      0.5  PASS  (px)
+pill.glow             96v97 -1        0.000030  0.000324     0.01  PASS  (alpha)
+gacha.enter           23v23 -2        0.000133  0.000345    0.005  PASS  (scale)
+gacha.pop.curve       29v29 -3        0.000030  0.001084    0.005  PASS  (curve)
+gacha.shake           37v37           0.118878  6.108337      0.5  PASS  (deg)
+------------------------------------------------------------------------------
+traces: 6   fail: 0

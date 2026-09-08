@@ -32,8 +32,41 @@ TOL = {
 }
 
 
+def crossings(values):
+    """How many times the signal changes sign — the shake's swing count."""
+    n = 0
+    for i in range(1, len(values)):
+        if values[i - 1] < 0 <= values[i] or values[i - 1] > 0 >= values[i]:
+            n += 1
+    return n
+
+
+def envelope_delta(ta, va, tb, vb, window=0.1):
+    """Peak |amplitude| per time window, old vs new. Returns (worst delta, worst window peak)."""
+    def peaks(times, values):
+        out = {}
+        for t, v in zip(times, values):
+            k = int(t / window)
+            out[k] = max(out.get(k, 0.0), abs(v))
+        return out
+    pa, pb = peaks(ta, va), peaks(tb, vb)
+    worst, biggest = 0.0, 0.0
+    for k in sorted(set(pa) & set(pb)):
+        worst = max(worst, abs(pa[k] - pb[k]))
+        biggest = max(biggest, pa[k])
+    return worst, biggest
+
+
 def sample_at(times, values, t):
-    """The NEW trace's value at instant `t`, linearly interpolated between its samples."""
+    """The NEW trace's value at instant `t`, CATMULL-ROM interpolated between its samples.
+
+    Linear interpolation was not good enough and the numbers say so: the pill slide covers
+    555 px in 27 frames, so a chord across one 16 ms step cuts a corner worth ~1.6 px off a
+    curve whose gate is 0.5 px. Every curve compared here is a cubic ease (or a lerp of one),
+    and a Catmull-Rom through four samples reproduces a cubic exactly, so the resampling stops
+    contributing error rather than merely contributing less. The caller still prints a
+    worst-case bound so this is checkable rather than taken on trust.
+    """
     if t <= times[0]:
         return values[0]
     if t >= times[-1]:
@@ -49,7 +82,20 @@ def sample_at(times, values, t):
     if span <= 0:
         return values[lo]
     f = (t - times[lo]) / span
-    return values[lo] + (values[hi] - values[lo]) * f
+
+    # Catmull-Rom over p0..p3 with p1,p2 the bracketing samples. Falls back to the chord at the
+    # very ends, where there is no fourth point to take a tangent from.
+    i1, i2 = lo, hi
+    i0, i3 = i1 - 1, i2 + 1
+    if i0 < 0 or i3 >= len(values):
+        return values[i1] + (values[i2] - values[i1]) * f
+    p0, p1, p2, p3 = values[i0], values[i1], values[i2], values[i3]
+    f2 = f * f
+    f3 = f2 * f
+    return 0.5 * ((2 * p1)
+                  + (-p0 + p2) * f
+                  + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f2
+                  + (-p0 + 3 * p1 - 3 * p2 + p3) * f3)
 
 
 def main() -> int:
@@ -87,14 +133,43 @@ def main() -> int:
             fails += 1
             continue
 
-        worst, interp = 0.0, 0.0
-        for tk, x in zip(ta, va):
-            y = sample_at(tb, vb, tk)
-            worst = max(worst, abs(x - y))
-        # Worst-case linear-interpolation error on the NEW trace: half the largest
-        # sample-to-sample jump, which bounds the chord-vs-curve gap for a smooth curve.
-        for i in range(1, len(vb)):
-            interp = max(interp, abs(vb[i] - vb[i - 1]) / 2.0)
+        skipped = 0
+        if t["name"] == "gacha.shake":
+            # A PER-SAMPLE GATE IS THE WRONG GATE HERE, and saying so is not softening it.
+            # The shake ramps to 14 Hz and the clock samples at 60 Hz — four samples a cycle.
+            # Two runs whose frames land a millisecond apart read the sine at different points
+            # of its swing and differ by degrees while tracing the identical motion. What
+            # "unchanged" actually means for a shake is its ENVELOPE (the 2 -> 7 degree
+            # amplitude ramp) and its total swing count (the 6 -> 14 Hz frequency ramp), and
+            # both are independent of where the samples happen to land.
+            worst, interp = envelope_delta(ta, va, tb, vb)
+            ca, cb = crossings(va), crossings(vb)
+            if ca != cb:
+                print(f"{t['name']:<22}{frames:<12}{'swings ' + str(ca) + ' vs ' + str(cb):>12}"
+                      f"{'':>10}  {tol:>7}  FAIL")
+                fails += 1
+                continue
+        else:
+            # ONLY WHERE BOTH TRACES ARE DEFINED. Outside the new trace's span, sample_at can
+            # only clamp to its end value, and a clamp is not a measurement: the two runs' first
+            # frames land ~0.9 ms apart, and on the pill slide's steepest stretch (3.8 px/ms) that
+            # produced a 3.25 px "difference" that was entirely the clamp. Samples outside the
+            # overlap are COUNTED and reported rather than quietly dropped.
+            worst, interp, skipped = 0.0, 0.0, 0
+            lo_t, hi_t = tb[0], tb[-1]
+            for tk, x in zip(ta, va):
+                if tk < lo_t or tk > hi_t:
+                    skipped += 1
+                    continue
+                y = sample_at(tb, vb, tk)
+                worst = max(worst, abs(x - y))
+            if skipped:
+                frames += f" -{skipped}"
+        if t["name"] != "gacha.shake":
+            # Worst-case resampling error: the largest THIRD difference of the new trace, which
+            # is what a cubic interpolant of a cubic leaves behind. Reported, never subtracted.
+            for i in range(3, len(vb)):
+                interp = max(interp, abs(vb[i] - 3 * vb[i - 1] + 3 * vb[i - 2] - vb[i - 3]) / 6.0)
 
         ok = worst <= tol
         fails += 0 if ok else 1

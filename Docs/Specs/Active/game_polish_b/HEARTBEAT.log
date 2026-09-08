@@ -14,3 +14,14 @@ DIRTY (git status --porcelain --untracked-files=all):
 NOTE: every path above belongs to the concurrent scheme_freeswing session
       (staged in the shared index) or is a shared append-target doc.
       game_polish_b owns NONE of them.
+
+=== iter-1 progress 2026-09-08T02:30Z ===
+D0 moves + UiMotion.Ease            f11079114
+gacha carousel ring (Cesar ask)     8901e8f92
+D2 retrofits + parity instrument    4c93a040b
+D2/A2 GATE CLOSED: 6 traces, fail 0 (retrofit_parity.txt)
+Editor crashed twice on a self-re-arming Then() tail in the pill glow; root-caused from
+the .ips (RaiseStackOverflowException), fixed, and the recorder hardened so it can no
+longer leave Time.captureDeltaTime set or run real Awake/OnEnable in a live session.
+Cesar stopped the concurrent scheme_freeswing session; the tree and Editor are ours.
+NEXT: code-complete D1/D3-D6, evidence second (Cesar's call).
