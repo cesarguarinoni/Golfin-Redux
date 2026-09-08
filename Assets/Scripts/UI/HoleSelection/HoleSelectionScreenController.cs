@@ -275,7 +275,9 @@ namespace GolfinRedux.UI.HoleSelection
             if (_firstCardPaint && _cards.Count > 0)
             {
                 _firstCardPaint = false;
-                Debug.Log($"[HoleSelection] holes paint(local) n={_cards.Count} — staggered (first this entry)");
+                Debug.Log($"[HoleSelection] holes paint(local) n={_cards.Count} — " +
+                          (Golfin.Gps.UI.GpsPaintMotion.SuppressedByPush
+                              ? "instant (push)" : "staggered (first this entry)"));
                 var rows = new List<Transform>(_cards.Count);
                 foreach (HoleCardController c in _cards) if (c != null) rows.Add(c.transform);
                 Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);

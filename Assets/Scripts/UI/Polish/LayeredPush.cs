@@ -73,9 +73,39 @@ namespace Golfin.UI.Polish
             Back,
         }
 
-        /// <summary>How far the leaving content drifts, as a fraction of the entering travel.
-        /// Small on purpose: it is depth, not a second slide. GpsScreenTransition's number.</summary>
+        /// <summary>How far the leaving content drifts, as a fraction of the entering travel, when
+        /// the two BACKDROPS DIFFER. Small on purpose: it is depth, not a second slide.
+        /// GpsScreenTransition's number.</summary>
         public const float ParallaxFactor = 0.3f;
+
+        /// <summary>
+        /// The same fraction on a SAME-BACKDROP pair, and it is 1 — i.e. no parallax at all
+        /// (push_arrival_hitch fix 3).
+        ///
+        /// <para>Parallax is a depth cue and it needs something to be deep RELATIVE TO. On the
+        /// cross-fade path the backdrop itself dissolves, so a leaver drifting at 0.3·W reads as
+        /// a layer receding behind a changing room. On a same-backdrop pair the backdrop is one
+        /// fixed picture the eye can measure both contents against, and two different speeds over
+        /// a fixed reference read as a stutter rather than as depth. At 1 the leaver and the
+        /// arriver are one rigid strip sliding over a static room, which is what a same-room move
+        /// is supposed to look like.</para>
+        /// </summary>
+        public const float SameBackdropParallaxFactor = 1f;
+
+        /// <summary>
+        /// The largest slice of the tween any single frame may advance: two frames at 60 fps
+        /// (push_arrival_hitch fix 1).
+        ///
+        /// <para>The arriving screen is BUILT on the frame it is activated — OnEnable, the first
+        /// layout, the card instantiation — and that frame has been measured at 50-70 ms on
+        /// ModeSelection → MissionSelection. Feeding that whole hitch into the ease-out puts the
+        /// content 20-28 % of the way home in ONE step: it teleports a fifth of the distance and
+        /// then glides, which is the clunk. The held frame below removes most of it; this cap
+        /// makes the remainder unable to matter, at the cost of a push that runs a frame or two
+        /// long in wall-clock on a genuinely slow device — which nobody can see, whereas the
+        /// jump is the whole complaint.</para>
+        /// </summary>
+        public const float MaxTweenStep = 1f / 30f;
 
         // ═════════════════════════════════════════════════════════════════════
         // §D1.1 — the layer table
@@ -294,6 +324,19 @@ namespace Golfin.UI.Polish
         /// <summary>Test seam: arm the flag as <see cref="Push"/> does.</summary>
         internal static void ArmSkipEntry(bool v) => _skipEntry = v;
 
+        /// <summary>
+        /// True for the WHOLE arrival, not just the instant of the <c>SetActive</c>: from the
+        /// moment the flag is armed until <see cref="Settle"/> hands over. The paint paths need
+        /// this wider window and <see cref="ScreenEntryMotion"/> does not — a rise decides itself
+        /// in <c>OnEnable</c>, whereas a list can be painted by a fetch that answers three frames
+        /// into the slide, and that paint must not stagger either (push_arrival_hitch fix 2).
+        ///
+        /// <para>Read by <c>GpsPaintMotion.StaggerRise</c> and <c>PanelReveal</c>. The GPS surface
+        /// has its own push and its own flag; nothing here arms on a GPS transition, so consulting
+        /// this from the shared paint file cannot change GPS behaviour.</para>
+        /// </summary>
+        public static bool ArrivingViaPush => _skipEntry || _active != null;
+
         // ═════════════════════════════════════════════════════════════════════
         // §D1.3 — the push
         // ═════════════════════════════════════════════════════════════════════
@@ -351,6 +394,34 @@ namespace Golfin.UI.Polish
         /// is "never both chrome layers below 0.5", i.e. this stays ≥ 0.5.</summary>
         public static float LastPushSeamWorstCover { get; private set; }
 
+        // ── push_arrival_hitch ─────────────────────────────────────────────
+
+        /// <summary>Wall-clock milliseconds spent BUILDING the arriving screen — from just before
+        /// the <c>SetActive</c> that runs its <c>OnEnable</c> to the moment the held frame ends.
+        /// The tween clock starts after this, so this is the cost that used to be charged to the
+        /// first slid frame (fix 1). Visible per pair in the invariants.</summary>
+        public static float LastPushArrivalFrameMs { get; private set; }
+
+        /// <summary>The largest fraction of <c>PushDur</c> any single frame of the most recent push
+        /// advanced. <c>MaxTweenStep / PushDur</c> is the ceiling by construction; the invariants
+        /// assert it rather than trusting the constant.</summary>
+        public static float LastPushMaxStepFrac { get; private set; }
+
+        /// <summary>Which parallax fraction the leaver actually drifted at — 1 on a same-backdrop
+        /// pair, <see cref="ParallaxFactor"/> on a cross-fade. Recorded rather than restated so a
+        /// reviewer reads the number the tween used.</summary>
+        public static float LastPushParallaxFactor { get; private set; }
+
+        /// <summary>Whether the arriving screen was the LAST sibling on every frame of the tween —
+        /// i.e. actually drawn on top of the leaver. Sampled from the live transform inside the
+        /// loop, because "the code calls SetAsLastSibling" is not a measurement (P0).</summary>
+        public static bool LastPushArriverOnTop { get; private set; }
+
+        /// <summary>Highest alpha the ARRIVER's chrome reached during the tween. On a same-backdrop
+        /// pair this must stay 0: the arriver is on top, its backdrop is the same picture as the
+        /// leaver's, and drawing it would cut the leaver's content away on frame 1 (P0).</summary>
+        public static float LastPushArriverChromeAlphaMax { get; private set; }
+
         /// <summary>
         /// Finish the running push NOW — snap everything to rest and run the deferred
         /// <c>ApplyScreen</c>. Called when a second navigation arrives mid-push (§D1.3: "no
@@ -385,19 +456,45 @@ namespace Golfin.UI.Polish
 
             float w = TravelWidth(toGo, p.To);
             float enterOffset = dir == Dir.Forward ?  w : -w;
-            float leaveOffset = dir == Dir.Forward ? -w * ParallaxFactor : w * ParallaxFactor;
+
+            // FIX 3 — parallax only where there is something to be parallax RELATIVE TO. See
+            // SameBackdropParallaxFactor: over a fixed backdrop, two speeds read as a stutter.
+            float parallax    = crossFadeChrome ? ParallaxFactor : SameBackdropParallaxFactor;
+            float leaveOffset = dir == Dir.Forward ? -w * parallax : w * parallax;
 
             Debug.Log($"{Tag} {from} -> {to} dir={dir} W={w:0.#} enterOffset={enterOffset:0.#} " +
-                      $"leaveOffset={leaveOffset:0.#} chromeCrossFade={crossFadeChrome} dur={UiMotion.PushDur}");
+                      $"leaveOffset={leaveOffset:0.#} parallax={parallax:0.##} " +
+                      $"chromeCrossFade={crossFadeChrome} dur={UiMotion.PushDur}");
 
             // ── Stage the target under the push's rules, THEN activate it ────
             // Order matters: SkipEntry must be armed before OnEnable runs, and the chrome must
             // already be at alpha 0 before the first frame the target is drawn.
             p.ToSiblingIndex = toGo.transform.GetSiblingIndex();
-            if (crossFadeChrome) toGo.transform.SetAsLastSibling();
 
-            if (crossFadeChrome)
-                for (int i = 0; i < p.To.ChromeGroups.Count; i++) p.To.ChromeGroups[i].alpha = 0f;
+            // P0 — THE ARRIVER GOES ON TOP, ALWAYS. This used to be `if (crossFadeChrome)`, and
+            // that one condition was the whole "janky push" report.
+            //
+            // ScreensRoot order is the order fourteen screens happened to be authored in
+            // (… HoleSelection 7, MissionSelection 8, ModeSelection 10 … GeneralShop 16,
+            // GachaHistory 17, GachaPrizes 18). Every screen's chrome is an OPAQUE full-screen
+            // Image. So on a same-backdrop pair whose arriver is the EARLIER sibling —
+            // ModeSelection → MissionSelection, GachaPrizes → GeneralShop on back — the whole
+            // arriving screen slid the full 250 ms underneath the leaver's backdrop, and what the
+            // player actually saw was the leaver's content drifting 0.3·W and then a hard cut.
+            // Which is exactly "janky and not smooth", and exactly "empty screen on the left".
+            //
+            // The reverse order looked correct, which is why it read as direction-specific rather
+            // than as a compositing bug — and why a's invariants never caught it: chromeAlphaMin
+            // and seamWorstCover sample CanvasGroup ALPHAS, and nothing sampled who was on top.
+            toGo.transform.SetAsLastSibling();
+
+            // …and with the arriver on top, its chrome must be OFF for the whole push on a
+            // same-backdrop pair. Same picture, drawn opaque above the leaver, would cut the
+            // leaver's content away on frame 1 — the same defect mirrored. The seam is still
+            // covered because the LEAVER's chrome is the identical sprite at alpha 1 underneath;
+            // Rest() puts the arriver's back to 1. On the cross-fade path the 0 is the start of
+            // the dissolve, exactly as before.
+            for (int i = 0; i < p.To.ChromeGroups.Count; i++) p.To.ChromeGroups[i].alpha = 0f;
 
             for (int i = 0; i < p.To.Content.Count; i++)
                 p.To.Content[i].anchoredPosition =
@@ -406,9 +503,25 @@ namespace Golfin.UI.Polish
             SetBlocks(p.To, false);
             SetBlocks(p.From, false);
 
+            // ── FIX 1 — BUILD BEFORE YOU MOVE ───────────────────────────────
+            // SetActive runs the target's whole OnEnable (MissionSelection: MissionCatalog
+            // .EnsureLoaded, the card instantiation, RefreshDaily — 10.4 MB and a 50-70 ms
+            // frame), and the tween used to start its clock in that SAME frame. The first
+            // `elapsed += unscaledDeltaTime` therefore consumed 50-70 ms of a 250 ms animation
+            // in one step: the content appeared a fifth of the way home and then glided.
+            //
+            // So: activate, force the layout, and give the frame BACK once. The content is
+            // already parked at RestX + enterOffset, so the held frame shows nothing move — it
+            // is the frame the arriving screen is built in, and it is now honest about that.
+            float buildStart = Time.realtimeSinceStartup;
+
             _skipEntry = true;
             if (!toGo.activeSelf) toGo.SetActive(true);
             _skipEntry = false;   // consumed by the target's OnEnable; never leaks to the next screen
+
+            // Flush the layout the OnEnable just dirtied, so the held frame absorbs that cost too
+            // rather than leaving it for the first slid frame.
+            Canvas.ForceUpdateCanvases();
 
             _active = p;
 
@@ -429,12 +542,33 @@ namespace Golfin.UI.Polish
             LastPushLeaverRestX    = p.From.RestX.Count > 0 ? p.From.RestX[0] : 0f;
             LastPushChromeAlphaMin = 1f;
             LastPushSeamWorstCover = 1f;
+            LastPushMaxStepFrac    = 0f;
+            LastPushParallaxFactor = parallax;
+            LastPushArriverOnTop   = true;
+            LastPushArriverChromeAlphaMax = 0f;
+            LastPushArrivalFrameMs = 0f;
+
+            // THE HELD FRAME. One yield, before the clock starts. t = 0 for the invariants is the
+            // first SLID frame, which is the frame after this one.
+            yield return null;
+            if (_active != p) yield break;       // an interrupting Navigate settled us mid-build
+
+            LastPushArrivalFrameMs = (Time.realtimeSinceStartup - buildStart) * 1000f;
+            Debug.Log($"{Tag} {from} -> {to} arrival frame {LastPushArrivalFrameMs:0.#} ms " +
+                      "(build + layout, held before the slide)");
 
             // ── The tween ───────────────────────────────────────────────────
             float elapsed = 0f;
             while (elapsed < UiMotion.PushDur)
             {
-                elapsed += Time.unscaledDeltaTime;
+                // FIX 1, second half: cap the step. Even with the held frame, ONE late hitch
+                // (a shader compile, a GC) would otherwise jump the ease-out several frames'
+                // worth in a single draw, which is the same visible defect at a lower rate.
+                float step = Mathf.Min(Time.unscaledDeltaTime, MaxTweenStep);
+                elapsed += step;
+                float stepFrac = step / Mathf.Max(0.0001f, UiMotion.PushDur);
+                if (stepFrac > LastPushMaxStepFrac) LastPushMaxStepFrac = stepFrac;
+
                 LastPushElapsed = elapsed;
                 LastPushFrames++;
                 if (_active != p) yield break;   // an interrupting Navigate already settled us
@@ -474,15 +608,28 @@ namespace Golfin.UI.Polish
                     if (cover < LastPushSeamWorstCover) LastPushSeamWorstCover = cover;
                 }
 
-                // Only meaningful on the SAME-background path, where nothing should touch the
-                // chrome at all. On the cross-fade path the incoming chrome is SUPPOSED to start at
-                // 0, so a minimum of 0 there is the feature working — the seam cover above is the
-                // assertion that applies to that path.
+                // Only meaningful on the SAME-background path, and since P0 it samples the
+                // LEAVER's chrome alone. That is the layer that has to stay opaque: it is the one
+                // backdrop being drawn, under an arriver whose identical chrome is deliberately
+                // held at 0. Sampling both would now read 0 every frame and assert nothing — the
+                // arriver's side is asserted separately, as a MAXIMUM, just below.
                 if (!crossFadeChrome)
                 {
-                    float minAlpha = Mathf.Min(MinAlpha(p.To.ChromeGroups), MinAlpha(p.From.ChromeGroups));
+                    float minAlpha = MinAlpha(p.From.ChromeGroups);
                     if (minAlpha < LastPushChromeAlphaMin) LastPushChromeAlphaMin = minAlpha;
                 }
+
+                // P0, measured rather than asserted: who is actually on top, and is the arriver's
+                // backdrop actually off. Both are read from the live objects, every frame.
+                if (p.ToGo != null)
+                {
+                    Transform t = p.ToGo.transform;
+                    Transform? parent = t.parent;
+                    if (parent != null && t.GetSiblingIndex() != parent.childCount - 1)
+                        LastPushArriverOnTop = false;
+                }
+                float toChromeMax = MaxAlpha(p.To.ChromeGroups);
+                if (toChromeMax > LastPushArriverChromeAlphaMax) LastPushArriverChromeAlphaMax = toChromeMax;
 
                 yield return null;
             }
@@ -497,6 +644,15 @@ namespace Golfin.UI.Polish
         {
             float m = 1f;
             for (int i = 0; i < gs.Count; i++) if (gs[i] != null && gs[i].alpha < m) m = gs[i].alpha;
+            return m;
+        }
+
+        /// <summary>0 for an empty list — a screen with no chrome layer has nothing drawn over the
+        /// leaver, which is the same thing the assertion wants "chrome off" to mean.</summary>
+        private static float MaxAlpha(List<CanvasGroup> gs)
+        {
+            float m = 0f;
+            for (int i = 0; i < gs.Count; i++) if (gs[i] != null && gs[i].alpha > m) m = gs[i].alpha;
             return m;
         }
 

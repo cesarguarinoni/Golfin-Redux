@@ -116,16 +116,10 @@ namespace GolfinRedux.UI.Gacha
 
         private void OnEnable()
         {
-            // The mode is DERIVED from the result rather than carried alongside it, so the
-            // labels and the grid can never disagree about what was pulled.
-            int pullCount = s_result.Count == 1 ? 1 : 10;
-            bool playEntrance = s_pendingEntrance;
-            s_pendingEntrance = false;
-
-            _pullCount = pullCount;
-            ApplyMode(pullCount);
-
-            if (playEntrance) _entranceRoutine = StartCoroutine(PlayEntrance());
+            // ONE BINDING PATH (push_arrival_hitch P1). Everything that turns s_result into what
+            // is on screen lives in Rebind, so a pull made FROM this screen — which does not
+            // re-enable it — cannot end up showing the previous pull's prizes.
+            Rebind();
 
             // The PULL label is resolved imperatively here, so — unlike a LocalizedText label —
             // nothing repaints it when the language changes. The toggle lives in the Settings
@@ -135,6 +129,37 @@ namespace GolfinRedux.UI.Gacha
 
             EnsureTicketSubscription();
             RefreshAffordability();
+        }
+
+        /// <summary>
+        /// Bind the screen to <c>s_result</c> — the whole of what <c>OnEnable</c> used to do.
+        ///
+        /// <para>PUBLIC because the screen can be "opened" while it is already open: PULL AGAIN
+        /// lives here, so <c>GachaPullFlow.ShowPrizes</c> asks for GachaPrizes while GachaPrizes
+        /// is the current screen, and <c>ScreenManager.ShowScreen</c> answers that with
+        /// "Already on … ignoring" and returns. OnEnable therefore never ran, the new result was
+        /// never picked up, and the player was shown the prizes they had already seen — Cesar,
+        /// 2026-09-09: "the animation does not end up in a new Prizes screen but the old one".
+        /// A latent bug on this path since it was written, not a polish regression.</para>
+        /// </summary>
+        public void Rebind()
+        {
+            // The mode is DERIVED from the result rather than carried alongside it, so the
+            // labels and the grid can never disagree about what was pulled.
+            int pullCount = s_result.Count == 1 ? 1 : 10;
+            bool playEntrance = s_pendingEntrance;
+            s_pendingEntrance = false;
+
+            _pullCount = pullCount;
+            ApplyMode(pullCount);
+
+            // A rebind lands on a screen that may still be mid-entrance from the previous pull.
+            if (_entranceRoutine != null) { StopCoroutine(_entranceRoutine); _entranceRoutine = null; }
+            if (playEntrance && isActiveAndEnabled) _entranceRoutine = StartCoroutine(PlayEntrance());
+
+            Debug.Log($"[GachaPrizesScreenController] Rebind x{pullCount} " +
+                      $"first={(s_result.Count > 0 ? s_result[0].Kind + ":" + s_result[0].RefId : "<none>")} " +
+                      $"entrance={playEntrance}");
         }
 
         private void OnDisable()

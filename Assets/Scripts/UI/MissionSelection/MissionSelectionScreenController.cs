@@ -101,6 +101,11 @@ namespace GolfinRedux.UI.MissionSelection
         /// <summary>First card paint of this screen entry — the one that staggers.</summary>
         private bool _firstCardPaint = true;
 
+        /// <summary>Whether the one-time clear of anything authored under <c>cardsContent</c> has
+        /// run. See <see cref="RebuildCards"/>: with cards reused across entries, that sweep can
+        /// no longer be the opening move of every rebuild.</summary>
+        private bool _cardsContentSwept;
+
         private void OnEnable()
         {
             _dailyGate.Rearm();
@@ -218,15 +223,6 @@ namespace GolfinRedux.UI.MissionSelection
                 return;
             }
 
-            foreach (var c in _cards)
-            {
-                if (c == null) continue;
-                c.OnCardTapped -= HandleCardTapped;
-                c.OnActionButtonClicked -= HandleActionClicked;
-            }
-            foreach (Transform child in cardsContent) Destroy(child.gameObject);
-            _cards.Clear();
-
             var inTier = new List<MissionDefinition>();
             foreach (var m in MissionCatalog.All)
                 if (m.Tier == _activeTier) inTier.Add(m);
@@ -243,30 +239,93 @@ namespace GolfinRedux.UI.MissionSelection
             }
             cleared.Reverse();   // most recently cleared reads first
 
+            var ordered = new List<MissionDefinition>(inTier.Count);
+            ordered.AddRange(cleared); ordered.AddRange(open); ordered.AddRange(locked);
+
+            // ── push_arrival_hitch fix 4 — REBIND, DO NOT REBUILD ────────────────────
+            //
+            // This method used to Destroy every card and Instantiate the tier again, and it runs
+            // from OnEnable — which, since the push shipped, runs INSIDE the transition. a's own
+            // perf sweep measured the result: ModeSelection -> MissionSelection allocated 10.4 MB
+            // over the push with a worst frame of 68.75 ms, and that frame is the one the slide
+            // used to start in. The held frame (fix 1) stops that cost from deforming the tween;
+            // this stops most of it from being paid at all.
+            //
+            // A card is keyed by its MISSION, not by its position, because position is the thing
+            // that legitimately changes: clearing a mission moves it into the `cleared` block. So
+            // the pool is claimed by id, re-Bound (mode / state / warning are all re-derived, as
+            // before), and re-ORDERED with SetSiblingIndex. Nothing about what a card shows is
+            // carried over — only the GameObject.
+            //
+            // Handlers are subscribed ONCE, when the object is created, and unsubscribed where it
+            // is destroyed. Re-subscribing a reused card every entry is the classic way to get one
+            // tap counted four times by visit five.
+            // The old code opened with `foreach (Transform child in cardsContent) Destroy(...)`,
+            // which also cleared anything authored into the scene under the list — a design-time
+            // placeholder row, say. Reuse means that sweep can no longer run every rebuild, so it
+            // runs ONCE, before the pool is ever populated, and the pool owns everything after.
+            if (!_cardsContentSwept)
+            {
+                _cardsContentSwept = true;
+                foreach (Transform child in cardsContent) Destroy(child.gameObject);
+            }
+
+            var pool = new Dictionary<string, MissionCardController>(_cards.Count);
+            foreach (MissionCardController c in _cards)
+            {
+                if (c == null || c.Mission == null) continue;
+                if (!pool.ContainsKey(c.Mission.Id)) pool[c.Mission.Id] = c;
+            }
+            _cards.Clear();
+
+            int reused = 0, made = 0;
             MissionCardController? nextCard = null;
             _nextCard = null;
-            foreach (var list in new[] { cleared, open, locked })
+
+            for (int i = 0; i < ordered.Count; i++)
             {
-                foreach (var m in list)
+                MissionDefinition m = ordered[i];
+
+                MissionCardController? card;
+                if (pool.TryGetValue(m.Id, out card) && card != null)
                 {
-                    var card = Instantiate(cardPrefab, cardsContent);
-
-                    bool isCleared = P.HasCleared(m.Id);
-                    bool isUnlocked = P.IsUnlocked(m);
-                    var mode = isCleared ? MissionCardMode.Replay : MissionCardMode.Play;
-                    var state = !isUnlocked ? MissionCardState.Locked : MissionCardState.Collapsed;
-
-                    MissionCatalog.Warnings.TryGetValue(m.Id, out string warning);
-                    card.Bind(m, mode, state, warning ?? "");
-                    PlaceStartMarker(card, m);
-
+                    pool.Remove(m.Id);          // claimed; what is left over is destroyed below
+                    reused++;
+                }
+                else
+                {
+                    card = Instantiate(cardPrefab, cardsContent);
                     card.OnCardTapped += HandleCardTapped;
                     card.OnActionButtonClicked += HandleActionClicked;
-                    _cards.Add(card);
-
-                    if (nextCard == null && !isCleared && isUnlocked) { nextCard = card; _nextCard = card; }
+                    made++;
                 }
+
+                card.transform.SetSiblingIndex(i);
+
+                bool isCleared = P.HasCleared(m.Id);
+                bool isUnlocked = P.IsUnlocked(m);
+                var mode = isCleared ? MissionCardMode.Replay : MissionCardMode.Play;
+                var state = !isUnlocked ? MissionCardState.Locked : MissionCardState.Collapsed;
+
+                MissionCatalog.Warnings.TryGetValue(m.Id, out string warning);
+                card.Bind(m, mode, state, warning ?? "");
+                PlaceStartMarker(card, m);
+                _cards.Add(card);
+
+                if (nextCard == null && !isCleared && isUnlocked) { nextCard = card; _nextCard = card; }
             }
+
+            // Anything still in the pool belongs to a tier the player just switched away from.
+            foreach (MissionCardController stale in pool.Values)
+            {
+                if (stale == null) continue;
+                stale.OnCardTapped -= HandleCardTapped;
+                stale.OnActionButtonClicked -= HandleActionClicked;
+                Destroy(stale.gameObject);
+            }
+
+            Debug.Log($"[MissionSelection] cards rebind tier={_activeTier} reused={reused} " +
+                      $"instantiated={made} destroyed={pool.Count}");
 
             // §D6 — the campaign list rises in on the first paint of a screen entry. There is no
             // fetch to gate on (the catalog is local), so the gate here is "have these cards been
@@ -274,7 +333,12 @@ namespace GolfinRedux.UI.MissionSelection
             if (_firstCardPaint && _cards.Count > 0)
             {
                 _firstCardPaint = false;
-                Debug.Log($"[MissionSelection] missions.cards paint(local) n={_cards.Count} — staggered (first this entry)");
+                // push_arrival_hitch fix 2 — StaggerRise itself refuses under a push; the WHY
+                // belongs in this screen's own line, or the log reads "staggered" for a paint
+                // that did not move.
+                Debug.Log($"[MissionSelection] missions.cards paint(local) n={_cards.Count} — " +
+                          (Golfin.Gps.UI.GpsPaintMotion.SuppressedByPush
+                              ? "instant (push)" : "staggered (first this entry)"));
                 var rows = new List<Transform>(_cards.Count);
                 foreach (MissionCardController c in _cards) if (c != null) rows.Add(c.transform);
                 Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);

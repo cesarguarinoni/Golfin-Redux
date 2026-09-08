@@ -159,7 +159,9 @@ namespace GolfinRedux.UI.Shop
             if (_firstCardPaint && _cards.Count > 0)
             {
                 _firstCardPaint = false;
-                Debug.Log($"[GeneralShop] shop.catalog paint(local) n={_cards.Count} — staggered (first this entry)");
+                Debug.Log($"[GeneralShop] shop.catalog paint(local) n={_cards.Count} — " +
+                          (Golfin.Gps.UI.GpsPaintMotion.SuppressedByPush
+                              ? "instant (push)" : "staggered (first this entry)"));
                 var rows = new List<Transform>(_cards.Count);
                 foreach (GeneralShopCard c in _cards) if (c != null) rows.Add(c.transform);
                 Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);

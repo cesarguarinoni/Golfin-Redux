@@ -407,15 +407,44 @@ namespace GolfinRedux.UI.Gacha
         {
             GachaPrizesScreenController.SetPendingResult(result);
 
-            if (ScreenManager.Instance != null)
-            {
-                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
-            }
-            else
+            if (ScreenManager.Instance == null)
             {
                 Debug.LogWarning("[GachaPullFlow] ScreenManager not found — cannot open GachaPrizes.");
                 ToastController.Instance?.Show("Coming soon");
+                return;
             }
+
+            // ── push_arrival_hitch P1 — PULL AGAIN lands back HERE ────────────────────
+            //
+            // The "again" button is on the Prizes screen, so this runs with GachaPrizes already
+            // current, and ShowScreen answers that with "Already on GachaPrizes, ignoring" and
+            // returns. OnEnable — the only thing that reads s_result — therefore never ran, and
+            // the player watched a full reveal and was handed the PREVIOUS pull's prizes.
+            // Rebind is that binding, addressable without a navigation.
+            if (ScreenManager.Instance.CurrentScreen == ScreenId.GachaPrizes)
+            {
+                var live = UnityEngine.Object.FindObjectOfType<GachaPrizesScreenController>();
+                if (live != null) { live.Rebind(); return; }
+                // No live instance while the screen is current should not be reachable; if it is,
+                // fall through to the navigation rather than leaving the player on stale prizes.
+                Debug.LogWarning("[GachaPullFlow] GachaPrizes is current but no controller found — navigating.");
+            }
+
+            // INSTANT, not a push. Two reasons, and the second is the visible one:
+            //
+            //  · This call is made under the reveal modal's still-opaque scrim (see the comment
+            //    above) — the transition the player actually sees is the modal fading out. A
+            //    250 ms slide underneath it is motion nobody can watch.
+            //  · GeneralShop -> GachaPrizes is a same-backdrop pair, so it WAS a push, and the
+            //    prize cards' own PlayEntrance (armed by SetPendingResult, consumed in OnEnable,
+            //    which runs inside the push's SetActive) popped every card from scale 0 in place
+            //    while the panel slid. Two motions on one object again — Cesar: "the prize seems
+            //    to be there before and not moving with the screen". The card pop is the right
+            //    entrance here and it keeps it; the slide is what goes.
+            //
+            // BACK from Prizes is untouched and stays a push — P0 is what makes it correct.
+            Debug.Log("[GachaPullFlow] Opening GachaPrizes instant (under the reveal scrim).");
+            ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes, instant: true);
         }
     }
 }

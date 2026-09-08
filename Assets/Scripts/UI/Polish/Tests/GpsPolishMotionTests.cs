@@ -591,4 +591,99 @@ namespace Golfin.UI.Polish.Tests
         }
     }
 
+    // ═════════════════════════════════════════════════════════════════════════
+    // push_arrival_hitch fix 2 — no stagger under a push
+    //
+    // TWO MOTIONS ON ONE THING is the shape of three of the four defects in this
+    // task, and this is the one that survives every still: the panel slides in
+    // from ±W while every card inside it rises 16 px from alpha 0. The slide IS
+    // the entrance, so the rows land.
+    //
+    // WHY THE FIXTURE USES A PLAIN Transform FOR ONE ROW. Outside play mode
+    // UiMotion.Run finalizes immediately, so a staggered row and an instant one
+    // both END at alpha 1 and the two paths are indistinguishable by their
+    // result — which would make an alpha assertion here green under either
+    // behaviour. A row whose Transform is not a RectTransform is the one input
+    // on which they genuinely differ: the stagger path primes it to 0 and its
+    // per-item callback then bails on the null rect, leaving it there, while the
+    // suppressed path never primes anything and guarantees 1. That is not a
+    // trick for the test's benefit — "a row is left invisible" is exactly the
+    // failure the suppressed branch's explicit alpha = 1 exists to prevent.
+    // ═════════════════════════════════════════════════════════════════════════
+    [TestFixture]
+    public class StaggerUnderPushTests
+    {
+        static Type Paint => Probe.Type("Golfin.Gps.UI.GpsPaintMotion");
+        static Type Push  => Probe.Type("Golfin.UI.Polish.LayeredPush");
+
+        static bool Suppressed => (bool)Paint.GetProperty("SuppressedByPush")!.GetValue(null)!;
+
+        static void Arm(bool v) => Push.GetMethod("ArmSkipEntry",
+            BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, new object[] { v });
+
+        static void StaggerRise(MonoBehaviour host, System.Collections.Generic.IList<Transform> rows)
+            => Paint.GetMethod("StaggerRise", new[] { typeof(MonoBehaviour),
+                   typeof(System.Collections.Generic.IList<Transform>) })!
+                .Invoke(null, new object[] { host, rows });
+
+        sealed class Host : MonoBehaviour { }
+
+        GameObject? _go;
+        Host Make() { _go = new GameObject("host"); return _go.AddComponent<Host>(); }
+
+        [TearDown]
+        public void Cleanup()
+        {
+            Arm(false);
+            Push.GetMethod("CompleteActiveNow")!.Invoke(null, null);
+            if (_go != null) { UnityEngine.Object.DestroyImmediate(_go); _go = null; }
+        }
+
+        [Test]
+        public void TheSuppressionPredicateIsTheGamePushesOwnFlag()
+        {
+            Assert.IsFalse(Suppressed, "nothing is arriving");
+            Arm(true);
+            Assert.IsTrue(Suppressed, "GpsPaintMotion asks LayeredPush, it does not keep its own flag");
+            Arm(false);
+            Assert.IsFalse(Suppressed);
+        }
+
+        [Test]
+        public void RowsLandInPlaceWhenTheScreenIsArrivingByPush()
+        {
+            Host host = Make();
+            var row = new GameObject("row").transform;      // deliberately NOT a RectTransform
+            try
+            {
+                Arm(true);
+                StaggerRise(host, new[] { row });
+
+                var cg = row.GetComponent<CanvasGroup>();
+                Assert.IsNotNull(cg, "the row still gets its group — only the motion is skipped");
+                Assert.AreEqual(1f, cg!.alpha, 0.0001f,
+                    "under a push the rows land: full alpha, no rise, the slide is the entrance");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(row.gameObject); }
+        }
+
+        [Test]
+        public void AndStillStaggersOnAFadePathArrival()
+        {
+            Host host = Make();
+            var row = new GameObject("row").transform;
+            try
+            {
+                Arm(false);
+                StaggerRise(host, new[] { row });
+
+                var cg = row.GetComponent<CanvasGroup>();
+                Assert.IsNotNull(cg);
+                Assert.AreEqual(0f, cg!.alpha, 0.0001f,
+                    "the front-door stagger is untouched off the push path — it primes every row " +
+                    "to 0 before the first beat (Cesar's rule, game_polish_b D6)");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(row.gameObject); }
+        }
+    }
 }

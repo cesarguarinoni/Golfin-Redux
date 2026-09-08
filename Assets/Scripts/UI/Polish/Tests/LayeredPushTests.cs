@@ -25,6 +25,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
+using System.Collections;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -283,6 +284,300 @@ namespace Golfin.UI.Polish.Tests
             var c = new GameObject(name, typeof(RectTransform));
             c.transform.SetParent(parent.transform, false);
             return c;
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // push_arrival_hitch — the arrival, driven for real
+    //
+    // WHY THESE DRIVE THE COROUTINE INSTEAD OF ASSERTING ON THE CODE. Every one
+    // of the four defects this task fixes was invisible to an assertion about
+    // shape: the compositing bug (P0) was one `if` in front of a
+    // SetAsLastSibling that a reader would have called correct; the first-frame
+    // jump was arithmetic that was also correct, applied to a delta that was
+    // not. So the enumerator is stepped by hand, frame by frame, and the
+    // assertions read the same LastPush* numbers the probe's invariants read —
+    // which means a green test here and a green invariant there cannot disagree
+    // about what happened.
+    //
+    // EditMode, no play session: Push touches PersistentUIManager only through
+    // `?.`, Canvas.ForceUpdateCanvases is legal outside play mode, and
+    // UiMotion.Run finalizes immediately when !Application.isPlaying — so the
+    // whole coroutine is steppable here.
+    // ═════════════════════════════════════════════════════════════════════════
+    [TestFixture]
+    public class LayeredPushArrivalTests
+    {
+        static Type T   => Probe.Type("Golfin.UI.Polish.LayeredPush");
+        static Type Ids => Probe.Type("GolfinRedux.UI.ScreenId");
+
+        static object Id(string name) => Enum.Parse(Ids, name);
+        static object Dir(string name) => Enum.Parse(T.GetNestedType("Dir")!, name);
+
+        static object? P(string name) => T.GetProperty(name)!.GetValue(null);
+        static float   Pf(string name) => (float)P(name)!;
+        static bool    Pb(string name) => (bool)P(name)!;
+        static float   Const(string name) => (float)T.GetField(name)!.GetRawConstantValue()!;
+
+        static float PushDur => (float)Probe.Type("Golfin.UI.Polish.UiMotion")
+                                             .GetProperty("PushDur")!.GetValue(null)!;
+
+        /// <summary>The whole rig: a common parent, the ARRIVER authored FIRST (the occluded
+        /// shape — ModeSelection at ScreensRoot 10 arriving over MissionSelection at 8), the
+        /// leaver second, and one shared Sprite on both chrome layers so the pair is
+        /// same-backdrop.</summary>
+        sealed class Rig : IDisposable
+        {
+            public readonly GameObject Root, ToGo, FromGo;
+            readonly Sprite _sprite;
+            readonly Texture2D _tex;
+
+            public Rig(string to, string from, bool sameBackground)
+            {
+                Root   = new GameObject("ScreensRoot", typeof(RectTransform));
+                ToGo   = Build(to);
+                FromGo = Build(from);
+                ToGo.transform.SetParent(Root.transform, false);     // sibling 0 — the arriver
+                FromGo.transform.SetParent(Root.transform, false);   // sibling 1 — the leaver
+
+                _tex    = new Texture2D(4, 4);
+                _sprite = Sprite.Create(_tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f));
+                Paint(ToGo,   to,   _sprite);
+                Paint(FromGo, from, sameBackground ? _sprite : null);
+            }
+
+            static GameObject Build(string id)
+            {
+                var go = new GameObject(id + "Screen", typeof(RectTransform));
+                object map = T.GetMethod("LayerMap")!.Invoke(null, new[] { Id(id) })!;
+                foreach (string n in (string[])map.GetType().GetField("Chrome")!.GetValue(map)!)
+                    Kid(go, n).AddComponent<UnityEngine.UI.Image>();
+                foreach (string n in (string[])map.GetType().GetField("Content")!.GetValue(map)!)
+                    Kid(go, n);
+                return go;
+            }
+
+            static void Paint(GameObject go, string id, Sprite? sprite)
+            {
+                object map = T.GetMethod("LayerMap")!.Invoke(null, new[] { Id(id) })!;
+                foreach (string n in (string[])map.GetType().GetField("Chrome")!.GetValue(map)!)
+                {
+                    Transform? t = go.transform.Find(n);
+                    var img = t != null ? t.GetComponent<UnityEngine.UI.Image>() : null;
+                    if (img != null) img.sprite = sprite;
+                }
+            }
+
+            static GameObject Kid(GameObject parent, string name)
+            {
+                var c = new GameObject(name, typeof(RectTransform));
+                c.transform.SetParent(parent.transform, false);
+                return c;
+            }
+
+            public RectTransform Content(GameObject screen, string id)
+            {
+                object map = T.GetMethod("LayerMap")!.Invoke(null, new[] { Id(id) })!;
+                string first = ((string[])map.GetType().GetField("Content")!.GetValue(map)!)[0];
+                return (RectTransform)screen.transform.Find(first)!;
+            }
+
+            public CanvasGroup? Chrome(GameObject screen, string id)
+            {
+                object map = T.GetMethod("LayerMap")!.Invoke(null, new[] { Id(id) })!;
+                string first = ((string[])map.GetType().GetField("Chrome")!.GetValue(map)!)[0];
+                Transform? t = screen.transform.Find(first);
+                return t != null ? t.GetComponent<CanvasGroup>() : null;
+            }
+
+            public void Dispose()
+            {
+                UnityEngine.Object.DestroyImmediate(Root);
+                UnityEngine.Object.DestroyImmediate(_sprite);
+                UnityEngine.Object.DestroyImmediate(_tex);
+            }
+        }
+
+        static IEnumerator Start(Rig rig, string from, string to, string dir, Action apply)
+            => (IEnumerator)T.GetMethod("Push")!.Invoke(null, new object[]
+               { Id(from), Id(to), rig.FromGo, rig.ToGo, Dir(dir), apply })!;
+
+        /// <summary>Step to completion, with a hard bound: the Editor's unscaledDeltaTime is not
+        /// guaranteed to advance outside play mode, and a test that hangs is worse than one that
+        /// fails. When the bound is hit the push is snapped exactly as an interrupting Navigate
+        /// would snap it, which is a settle path worth exercising anyway.</summary>
+        static void Drain(IEnumerator it, int maxFrames = 400)
+        {
+            int n = 0;
+            while (it.MoveNext())
+            {
+                if (++n < maxFrames) continue;
+                T.GetMethod("CompleteActiveNow")!.Invoke(null, null);
+                while (it.MoveNext()) { }
+                return;
+            }
+        }
+
+        [TearDown]
+        public void ClearAnyLivePush() => T.GetMethod("CompleteActiveNow")!.Invoke(null, null);
+
+        // ── P0 ──────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// THE BUG CESAR REPORTED. The arriver is authored EARLIER in ScreensRoot than the
+        /// leaver, and every shell screen's chrome is an opaque full-screen Image — so before
+        /// this fix the whole arriving screen slid for 250 ms underneath the leaver's backdrop
+        /// and the player saw the leaver drift and then a hard cut.
+        ///
+        /// <para>Asserted from the LIVE transform mid-tween, not from the fact that
+        /// SetAsLastSibling is called: it was called before too, behind an `if`.</para>
+        /// </summary>
+        [Test]
+        public void ArriverIsDrawnOnTop_EvenWhenItIsTheEarlierSibling_AndTheOrderIsRestored()
+        {
+            using var rig = new Rig(to: "MissionSelection", from: "ModeSelection", sameBackground: true);
+            Assert.AreEqual(0, rig.ToGo.transform.GetSiblingIndex(), "rig: the arriver starts underneath");
+
+            bool applied = false;
+            IEnumerator it = Start(rig, "ModeSelection", "MissionSelection", "Forward", () => applied = true);
+
+            it.MoveNext();   // staging + the held frame
+            Assert.AreEqual(rig.Root.transform.childCount - 1, rig.ToGo.transform.GetSiblingIndex(),
+                "the arriver must be the LAST sibling for the whole push, or it slides under the " +
+                "leaver's opaque backdrop (P0)");
+
+            Drain(it);
+            Assert.IsTrue(Pb("LastPushArriverOnTop"), "sampled every frame from inside the tween");
+            Assert.AreEqual(0, rig.ToGo.transform.GetSiblingIndex(),
+                "and the authored ScreensRoot order is restored at Settle");
+            Assert.IsTrue(applied, "the deferred ApplyScreen still runs, last");
+        }
+
+        /// <summary>
+        /// P0's other half. On top of an IDENTICAL backdrop the arriver's own chrome must be off
+        /// for the whole push — drawn, it would cut the leaver's content away on frame 1, which
+        /// is the same defect mirrored. The seam is covered by the leaver's chrome, which stays
+        /// at 1 and is what <c>LastPushChromeAlphaMin</c> now samples.
+        /// </summary>
+        [Test]
+        public void SameBackdrop_ArriverChromeIsHeldOff_AndRestoredAtSettle()
+        {
+            using var rig = new Rig(to: "MissionSelection", from: "ModeSelection", sameBackground: true);
+            IEnumerator it = Start(rig, "ModeSelection", "MissionSelection", "Forward", () => { });
+
+            it.MoveNext();
+            CanvasGroup? toChrome   = rig.Chrome(rig.ToGo,   "MissionSelection");
+            CanvasGroup? fromChrome = rig.Chrome(rig.FromGo, "ModeSelection");
+            Assert.IsNotNull(toChrome); Assert.IsNotNull(fromChrome);
+            Assert.AreEqual(0f, toChrome!.alpha, 0.0001f, "arriver chrome off while it is on top");
+            Assert.AreEqual(1f, fromChrome!.alpha, 0.0001f, "the leaver's backdrop is the one being drawn");
+
+            Drain(it);
+            Assert.AreEqual(0f, Pf("LastPushArriverChromeAlphaMax"), 0.0001f);
+            Assert.AreEqual(1f, Pf("LastPushChromeAlphaMin"), 0.0001f,
+                "the leaver's chrome never dipped — the seam invariant, narrowed to the layer it is about");
+            Assert.AreEqual(1f, toChrome.alpha, 0.0001f, "Rest() puts the arriver's chrome back");
+        }
+
+        // ── fix 1 ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// THE HELD FRAME. The arriving screen is built by the SetActive — OnEnable, the first
+        /// layout, the cards — and that frame has been measured at 50-70 ms. The first
+        /// `elapsed += unscaledDeltaTime` used to eat it, putting the content a fifth of the way
+        /// home in one step. Now the frame the screen is built in is a frame in which NOTHING
+        /// moves: the content is still parked at rest + the full enter offset.
+        /// </summary>
+        [Test]
+        public void TheFirstFrameIsHeld_TheContentHasNotMovedWhenTheScreenIsBuilt()
+        {
+            using var rig = new Rig(to: "MissionSelection", from: "ModeSelection", sameBackground: true);
+            RectTransform content = rig.Content(rig.ToGo, "MissionSelection");
+            float restX = content.anchoredPosition.x;
+
+            IEnumerator it = Start(rig, "ModeSelection", "MissionSelection", "Forward", () => { });
+            it.MoveNext();
+
+            Assert.IsTrue(rig.ToGo.activeSelf, "the target IS activated before the held frame");
+            Assert.AreEqual(0, (int)P("LastPushFrames")!, "no tween frame has run yet");
+            Assert.AreEqual(restX + Pf("LastPushEnterOffset"), content.anchoredPosition.x, 0.01f,
+                "the held frame must show the content exactly where staging left it");
+
+            Drain(it);
+            Assert.GreaterOrEqual(Pf("LastPushArrivalFrameMs"), 0f,
+                "the arrival cost is recorded per pair so fix 4 has a number to move");
+        }
+
+        /// <summary>
+        /// THE STEP CAP. The held frame absorbs the build, but one late hitch — a shader compile,
+        /// a GC — would otherwise jump the ease-out several frames' worth in a single draw: the
+        /// same visible defect at a lower rate. No frame may advance more than
+        /// <c>MaxTweenStep</c> of real time, whatever the Editor's delta happens to be.
+        /// </summary>
+        [Test]
+        public void NoSingleFrameAdvancesMoreThanTwoFramesOfTravel()
+        {
+            using var rig = new Rig(to: "MissionSelection", from: "ModeSelection", sameBackground: true);
+            IEnumerator it = Start(rig, "ModeSelection", "MissionSelection", "Forward", () => { });
+            Drain(it);
+
+            float ceiling = Const("MaxTweenStep") / PushDur;
+            Assert.LessOrEqual(Pf("LastPushMaxStepFrac"), ceiling + 0.0001f,
+                $"a frame advanced more than {Const("MaxTweenStep"):0.###}s of a {PushDur:0.###}s tween");
+            Assert.AreEqual(1f / 30f, Const("MaxTweenStep"), 0.0001f, "two frames at 60 fps");
+        }
+
+        // ── fix 3 ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// PARALLAX NEEDS SOMETHING TO BE DEEP RELATIVE TO. Over one fixed backdrop, a leaver at
+        /// 0.3 W and an arriver at 1.0 W read as a stutter, not as depth; the two contents move
+        /// as one strip instead. The cross-fade path, where the room itself is changing, keeps
+        /// the 0.3.
+        /// </summary>
+        [Test]
+        public void SameBackdropPairsDriftTheLeaverAtFullWidth_CrossFadePairsKeepTheDepthCue()
+        {
+            using (var same = new Rig(to: "MissionSelection", from: "ModeSelection", sameBackground: true))
+            {
+                Drain(Start(same, "ModeSelection", "MissionSelection", "Forward", () => { }));
+                Assert.AreEqual(Const("SameBackdropParallaxFactor"), Pf("LastPushParallaxFactor"), 0.0001f);
+                Assert.AreEqual(1f, Const("SameBackdropParallaxFactor"), 0.0001f, "one strip, not two speeds");
+            }
+
+            using (var diff = new Rig(to: "TournamentSelection", from: "ModeSelection", sameBackground: false))
+            {
+                Drain(Start(diff, "ModeSelection", "TournamentSelection", "Forward", () => { }));
+                Assert.AreEqual(Const("ParallaxFactor"), Pf("LastPushParallaxFactor"), 0.0001f,
+                    "a pair whose backdrop cross-fades still gets the depth cue");
+            }
+        }
+
+        // ── fix 2 ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// The window the paint paths need, and why it is NOT <c>EnteringViaPush</c>.
+        /// <c>EnteringViaPush</c> is armed around one SetActive because a 16 px rise decides
+        /// itself in OnEnable; a list can be painted by a fetch that answers three frames into
+        /// the slide, and that paint must not stagger either. So the flag the paint paths read
+        /// covers the WHOLE arrival, and it must be false the moment the push is over.
+        /// </summary>
+        [Test]
+        public void ArrivingViaPush_IsTrueForTheWholeSlide_AndFalseOnceItSettles()
+        {
+            Assert.IsFalse(Pb("ArrivingViaPush"), "nothing is arriving before the test starts");
+
+            using var rig = new Rig(to: "MissionSelection", from: "ModeSelection", sameBackground: true);
+            IEnumerator it = Start(rig, "ModeSelection", "MissionSelection", "Forward", () => { });
+
+            it.MoveNext();
+            Assert.IsTrue(Pb("ArrivingViaPush"), "true across the held frame");
+            it.MoveNext();
+            Assert.IsTrue(Pb("ArrivingViaPush"), "and across the tween");
+
+            Drain(it);
+            Assert.IsFalse(Pb("ArrivingViaPush"),
+                "and false again at Settle — a flag left armed suppresses every later stagger");
         }
     }
 }

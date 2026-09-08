@@ -141,6 +141,24 @@ namespace Golfin.UI.Polish.EditorTools
             public bool   SameBackground;
             public int    Frames;
             public int    ApplyScreenCalls;                // the ScreenChanged event count
+
+            // ── push_arrival_hitch ───────────────────────────────────────────
+            /// <summary>Cost of the HELD frame — the arriving screen's OnEnable plus the forced
+            /// layout — in ms. Not scored (it is a property of the screen, not of the push), but
+            /// it is the number fix 4 is judged on, so it is per-pair in the JSON.</summary>
+            public float  ArrivalFrameMs;
+            /// <summary>Largest fraction of PushDur any single frame advanced. Capped by
+            /// <c>LayeredPush.MaxTweenStep</c>; asserted here rather than trusted.</summary>
+            public float  MaxStepFrac;
+            /// <summary>The parallax fraction the leaver actually drifted at: 1 on a same-backdrop
+            /// pair since fix 3, 0.3 on a cross-fade.</summary>
+            public float  ParallaxFactor = 1f;
+            /// <summary>P0: was the arriver the last sibling on EVERY frame of the tween.</summary>
+            public bool   ArriverOnTop = true;
+            /// <summary>P0: highest alpha the arriver's own chrome reached mid-tween. Must be 0 on
+            /// a same-backdrop pair — its backdrop is the leaver's backdrop, drawn on top.</summary>
+            public float  ArriverChromeAlphaMax;
+
             public readonly List<string> Fails = new List<string>();
         }
 
@@ -713,6 +731,11 @@ namespace Golfin.UI.Polish.EditorTools
                 r.EndLeaverRestX        = LayeredPush.LastPushLeaverRestX;
                 r.ChromeAlphaMinOverRun = LayeredPush.LastPushChromeAlphaMin;
                 r.SeamWorstCover        = LayeredPush.LastPushSeamWorstCover;
+                r.ArrivalFrameMs        = LayeredPush.LastPushArrivalFrameMs;
+                r.MaxStepFrac           = LayeredPush.LastPushMaxStepFrac;
+                r.ParallaxFactor        = LayeredPush.LastPushParallaxFactor;
+                r.ArriverOnTop          = LayeredPush.LastPushArriverOnTop;
+                r.ArriverChromeAlphaMax = LayeredPush.LastPushArriverChromeAlphaMax;
                 r.EndTargetX            = toContent   != null ? toContent.anchoredPosition.x   : float.NaN;
                 r.EndLeaverX            = fromContent != null ? fromContent.anchoredPosition.x : float.NaN;
                 r.EndTargetContentAlpha = GroupAlpha(toContent);
@@ -756,14 +779,45 @@ namespace Golfin.UI.Polish.EditorTools
                 if (!r.EndBlocksRaycasts)             r.Fails.Add("blocksRaycasts not restored");
                 if (r.ApplyScreenCalls != 1)          r.Fails.Add($"ApplyScreen ran {r.ApplyScreenCalls}x, expected exactly 1 (at the end)");
 
+                // ── push_arrival_hitch ──────────────────────────────────────
+                //
+                // P0. THE ASSERTION a's INVARIANTS DID NOT HAVE, and its absence is the whole
+                // reason a compositing bug survived a green gate: chromeAlphaMin and
+                // seamWorstCover sample CanvasGroup ALPHAS, and an arriver drawn UNDERNEATH an
+                // opaque leaver has perfectly correct alphas on every frame. Who is on top is a
+                // separate fact and it now has its own number.
+                if (!r.ArriverOnTop)
+                    r.Fails.Add("arriver was not the last sibling for the whole tween — it slid " +
+                                "under the leaver's opaque backdrop (P0)");
+
+                // The cap, asserted from the measurement rather than from the constant. Two frames
+                // at 60 fps is the ceiling; the tolerance is one frame of float slack.
+                float stepCeil = (LayeredPush.MaxTweenStep + 1f / 60f) / Mathf.Max(0.0001f, r.ExpectedDur);
+                if (!r.FrameStarved && r.MaxStepFrac > stepCeil)
+                    r.Fails.Add($"a single frame advanced {r.MaxStepFrac:P1} of the tween " +
+                                $"(ceiling {stepCeil:P1}) — the step cap did not hold");
+
                 // WHICH chrome assertion applies is decided by the PAIR, not by a global flag —
                 // option (b) shipped, so both paths are live at once and each has its own rule.
                 if (r.SameBackground)
                 {
-                    // Same sprite: nothing may touch the chrome on any frame. A5's assertion,
-                    // taken from inside the tween rather than off a video.
+                    // The LEAVER's chrome is the one backdrop being drawn, and nothing may touch
+                    // it on any frame. A5's assertion, taken from inside the tween rather than off
+                    // a video, and narrowed to the leaver by P0 (the arriver's identical chrome is
+                    // now deliberately held at 0 — see the next assertion).
                     if (r.ChromeAlphaMinOverRun < 0.999f)
-                        r.Fails.Add($"chrome alpha dropped to {r.ChromeAlphaMinOverRun:0.###} on the same-background path");
+                        r.Fails.Add($"leaver chrome alpha dropped to {r.ChromeAlphaMinOverRun:0.###} on the same-background path");
+
+                    // P0's other half: the arriver is on top, so its backdrop must be OFF, or it
+                    // cuts the leaver's content away on frame 1 — the same defect mirrored.
+                    if (r.ArriverChromeAlphaMax > 0.001f)
+                        r.Fails.Add($"arriver chrome reached {r.ArriverChromeAlphaMax:0.###} while on top of an " +
+                                    "identical backdrop — it occluded the leaver's content (P0)");
+
+                    // Fix 3: one strip, not two speeds, over a fixed room.
+                    if (Mathf.Abs(r.ParallaxFactor - LayeredPush.SameBackdropParallaxFactor) > 0.001f)
+                        r.Fails.Add($"same-backdrop pair drifted the leaver at parallax {r.ParallaxFactor:0.##}, " +
+                                    $"expected {LayeredPush.SameBackdropParallaxFactor:0.##} (fix 3)");
                 }
                 else
                 {
@@ -779,7 +833,9 @@ namespace Golfin.UI.Polish.EditorTools
                 _records.Add(r);
                 Line($"  measured {r.From} -> {r.To} dir={r.Direction} W={r.W:0.#} " +
                      $"dur={r.MeasuredDur:0.000}s frames={r.Frames} chromeMin={r.ChromeAlphaMinOverRun:0.###} " +
-                     $"fails={r.Fails.Count}");
+                     $"onTop={r.ArriverOnTop} arriverChromeMax={r.ArriverChromeAlphaMax:0.###} " +
+                     $"arrivalFrame={r.ArrivalFrameMs:0.#}ms maxStep={r.MaxStepFrac:P1} " +
+                     $"parallax={r.ParallaxFactor:0.##} fails={r.Fails.Count}");
                 foreach (string f in r.Fails) Line("    FAIL " + f);
             }
 
@@ -982,6 +1038,8 @@ namespace Golfin.UI.Polish.EditorTools
                     j.AppendLine("      \"endLeaverX\": " + F(r.EndLeaverX) + ", \"endLeaverRestX\": " + F(r.EndLeaverRestX) + ",");
                     j.AppendLine("      \"endTargetContentAlpha\": " + F(r.EndTargetContentAlpha) + ", \"endLeaverContentAlpha\": " + F(r.EndLeaverContentAlpha) + ",");
                     j.AppendLine("      \"chromeAlphaMinOverRun\": " + F(r.ChromeAlphaMinOverRun) + ", \"seamWorstCover\": " + F(r.SeamWorstCover) + ",");
+                    j.AppendLine("      \"arriverOnTop\": " + (r.ArriverOnTop ? "true" : "false") + ", \"arriverChromeAlphaMax\": " + F(r.ArriverChromeAlphaMax) + ",");
+                    j.AppendLine("      \"arrivalFrameMs\": " + F(r.ArrivalFrameMs) + ", \"maxStepFrac\": " + F(r.MaxStepFrac) + ", \"parallaxFactor\": " + F(r.ParallaxFactor) + ",");
                     j.AppendLine("      \"blocksRaycastsRestored\": " + (r.EndBlocksRaycasts ? "true" : "false") + ",");
                     j.AppendLine("      \"applyScreenCalls\": " + r.ApplyScreenCalls + ", \"completed\": " + (r.Completed ? "true" : "false") + ", \"frameStarved\": " + (r.FrameStarved ? "true" : "false") + ", \"sameBackground\": " + (r.SameBackground ? "true" : "false") + ",");
                     j.Append    ("      \"fails\": [");

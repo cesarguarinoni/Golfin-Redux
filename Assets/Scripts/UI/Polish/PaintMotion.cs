@@ -169,6 +169,10 @@ namespace Golfin.Gps.UI
             if (_revealed) { _group.alpha = 1f; return; }
             _revealed = true;
 
+            // push_arrival_hitch fix 2 — a panel fading in ON a panel that is sliding in is two
+            // entrances on one object. The slide IS the entrance.
+            if (GpsPaintMotion.SuppressedByPush) { _group.alpha = 1f; return; }
+
             if (!animate) { _group.alpha = 1f; return; }
             UiMotion.Run(host, UiMotion.Fade(_group, 0f, 1f));
         }
@@ -177,6 +181,21 @@ namespace Golfin.Gps.UI
     /// <summary>The staggered rise itself, and the shimmer show/hide that shares its gate.</summary>
     public static class GpsPaintMotion
     {
+        /// <summary>
+        /// Is a game-shell push putting a screen on screen right now? (push_arrival_hitch fix 2.)
+        ///
+        /// <para>ONE PREDICATE, read by <see cref="StaggerRise"/>, by <see cref="PanelReveal"/>
+        /// and by the seven screen controllers whose own log line has to say WHY a paint was
+        /// instant. Duplicating the condition at the call sites is how six of the seven end up
+        /// agreeing and one does not.</para>
+        ///
+        /// <para>It consults the GAME push only. GPS screens call the same StaggerRise but arrive
+        /// through <c>GpsScreenTransition</c>, which never arms this flag — so this file can be
+        /// shared by both surfaces without fix 2 leaking into the GPS one, whose chrome
+        /// cross-fades and which was never the complaint.</para>
+        /// </summary>
+        public static bool SuppressedByPush => Golfin.UI.Polish.LayeredPush.ArrivingViaPush;
+
         /// <summary>
         /// Rise a group of freshly painted rows, <see cref="UiMotion.StaggerDelay"/> apart.
         ///
@@ -191,6 +210,31 @@ namespace Golfin.Gps.UI
         public static void StaggerRise(MonoBehaviour host, IList<Transform> rows)
         {
             if (host == null || rows == null || rows.Count == 0) return;
+
+            // push_arrival_hitch fix 2 — TWO MOTIONS ON ONE THING.
+            //
+            // The screen this list lives on is, right now, sliding in from ±W. Rising every row
+            // inside it at the same time gives the eye two conflicting reference frames over the
+            // 250 ms of the slide, which is a large part of what Cesar read as "janky and not
+            // smooth" on ModeSelection -> MissionSelection. The rows land in place; the slide is
+            // their entrance, and it is a better one because the whole panel moves together.
+            //
+            // The front-door stagger (Cesar's rule, game_polish_b §D6) is untouched on every
+            // FADE-path arrival and every pillar reset — which is where it was designed to be
+            // read, on a screen that appears rather than one that arrives.
+            if (SuppressedByPush)
+            {
+                for (int k = 0; k < rows.Count; k++)
+                {
+                    Transform t = rows[k];
+                    if (t == null) continue;
+                    CanvasGroup cg = Ensure(t.gameObject);
+                    cg.alpha = 1f;                       // a row a previous stagger left at 0
+                }
+                Debug.Log($"[GamePush] stagger suppressed on {host.GetType().Name} " +
+                          $"n={rows.Count} — instant (push)");
+                return;
+            }
 
             int n = rows.Count;
             var rects  = new RectTransform[n];

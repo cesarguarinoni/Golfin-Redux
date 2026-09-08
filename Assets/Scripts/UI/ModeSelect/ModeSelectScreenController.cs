@@ -92,6 +92,11 @@ namespace GolfinRedux.UI.ModeSelect
         [SerializeField] private string _initialExpandedModeId = "practice";
 
         private readonly List<ModeCardController> _cards = new List<ModeCardController>();
+
+        /// <summary>Whether the one-time clear of anything authored under <c>cardsContent</c> has
+        /// run. With cards reused across entries (push_arrival_hitch fix 4) that sweep can no
+        /// longer be the opening move of every rebuild.</summary>
+        private bool _cardsContentSwept;
         // NOTE: _savedUsernameText and the SetUsername("MODE SELECTION") call were removed in
         // iter-10 (leaderboard_wiring). The "MODE SELECTION" top-bar center text is now driven
         // centrally by PersistentUIManager.HighlightScreen(ScreenId.ModeSelection) — the same
@@ -112,16 +117,17 @@ namespace GolfinRedux.UI.ModeSelect
 
         private void OnDisable()
         {
+            // NOT `_cards.Clear()` — push_arrival_hitch fix 4. The card objects survive the screen
+            // being deactivated and are claimed again by the next RebuildCards; dropping the list
+            // here would orphan them and force a full re-Instantiate on every entry, which is the
+            // cost this fix exists to stop paying. The handlers ARE dropped, and RebuildCards
+            // re-subscribes every card it keeps.
             UnwireCards();
-            _cards.Clear();
         }
 
         private void RebuildCards()
         {
             UnwireCards();
-            if (cardsContent != null)
-                foreach (Transform child in cardsContent) Destroy(child.gameObject);
-            _cards.Clear();
 
             var db = ModesDatabaseCSV.Instance;
             if (db == null)
@@ -138,9 +144,40 @@ namespace GolfinRedux.UI.ModeSelect
 
             var modes = db.GetAllModes();
 
+            // ── push_arrival_hitch fix 4 — REBIND, DO NOT REBUILD ────────────────────
+            // Same change as MissionSelection's, for the same reason and with the same rules:
+            // keyed by ModeId (not by position, so a mode added to the CSV cannot silently rebind
+            // one card onto another mode's data), re-ordered with SetSiblingIndex, and every kept
+            // card fully re-Bound. UnwireCards above has already dropped the handlers, so the
+            // subscribe below is correct for a reused card and a new one alike.
+            //
+            // This screen rebuilds one frame AFTER OnEnable (RebuildCardsNextFrame), which with
+            // fix 1's held frame is now the FIRST SLID frame — precisely the frame that must not
+            // carry an Instantiate storm.
+            if (!_cardsContentSwept && cardsContent != null)
+            {
+                _cardsContentSwept = true;
+                foreach (Transform child in cardsContent) Destroy(child.gameObject);
+                _cards.Clear();
+            }
+
+            var pool = new Dictionary<string, ModeCardController>(_cards.Count);
+            foreach (ModeCardController c in _cards)
+            {
+                if (c == null || string.IsNullOrEmpty(c.ModeId)) continue;
+                if (!pool.ContainsKey(c.ModeId)) pool[c.ModeId] = c;
+            }
+            _cards.Clear();
+
+            int reused = 0, made = 0, i = 0;
             foreach (var mode in modes)
             {
-                var card = Instantiate(cardPrefab, cardsContent);
+                ModeCardController card;
+                if (pool.TryGetValue(mode.id, out card) && card != null) { pool.Remove(mode.id); reused++; }
+                else { card = Instantiate(cardPrefab, cardsContent); made++; }
+
+                card.transform.SetSiblingIndex(i++);
+
                 ModeCardState state = mode.locked
                     ? ModeCardState.Locked
                     : (!string.IsNullOrEmpty(_initialExpandedModeId) && mode.id == _initialExpandedModeId
@@ -153,6 +190,17 @@ namespace GolfinRedux.UI.ModeSelect
                 card.OnPlayClicked += HandlePlayClicked;
                 _cards.Add(card);
             }
+
+            foreach (ModeCardController stale in pool.Values)
+            {
+                if (stale == null) continue;
+                stale.OnCardTapped  -= HandleCardTapped;
+                stale.OnPlayClicked -= HandlePlayClicked;
+                Destroy(stale.gameObject);
+            }
+
+            Debug.Log($"[ModeSelectScreen] cards rebind reused={reused} instantiated={made} " +
+                      $"destroyed={pool.Count}");
 
             if (cardsScrollRect != null)
                 cardsScrollRect.verticalNormalizedPosition = 1f;
@@ -169,7 +217,9 @@ namespace GolfinRedux.UI.ModeSelect
             // so no one reads it later as a fetch that was mislabelled.
             if (_cards.Count > 0)
             {
-                Debug.Log($"[ModeSelectScreen] modes paint(local) n={_cards.Count} — staggered (front door, every entry)");
+                Debug.Log($"[ModeSelectScreen] modes paint(local) n={_cards.Count} — " +
+                          (Golfin.Gps.UI.GpsPaintMotion.SuppressedByPush
+                              ? "instant (push)" : "staggered (front door, every entry)"));
                 var rows = new List<Transform>(_cards.Count);
                 foreach (ModeCardController c in _cards) if (c != null) rows.Add(c.transform);
                 Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);
