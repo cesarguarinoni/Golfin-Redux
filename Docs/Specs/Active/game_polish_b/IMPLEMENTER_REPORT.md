@@ -130,14 +130,24 @@ New suites: `UiMotionEaseTests` (13), `CountDownTests` (8), `ModalPopTests` (7),
 
 All 15 set, read back live as 19 on / 0 off. Builder is idempotent (second run: 8 "already").
 
-**On the scene diff, because the number is 8 and it took three attempts.** Saving ShellScene
-rewrites ~1300 lines — 154 RectTransforms whose anchors flip (0,1)→(0,0) with position and
+**On the scene diff, and on a conclusion I got wrong and then corrected.** Saving ShellScene
+rewrote ~1300 lines — 154 RectTransforms whose anchors flipped (0,1)→(0,0) with position and
 sizeDelta zeroed. The project's guidance says run a builder on a freshly opened scene, so I
-reverted and did that; it churned identically. So I ran the control: **open ShellScene, mark
-dirty, save, change NOTHING — 1297 lines.** The churn is a property of saving this scene in
-this Editor and has nothing to do with any builder. The 8 lines are the builder's hunks
-isolated out of that save and applied to HEAD's copy, then the scene reopened from disk.
-**The pre-existing churn deserves someone's attention on its own; it is not this task's.**
+reverted and did that; it churned identically. I then ran what I called a control — open,
+mark dirty, save, change nothing — got 1297 lines, and concluded the churn was **inherent to
+saving this scene** and nothing to do with a builder. **That conclusion was wrong.** The
+control was run in an Editor instance that had already been through several play sessions, so
+it carried the same contamination as the run it was supposed to be a control for. When §D4's
+`ApplyShimmer` was later run in a FRESH Editor with no play session — open the scene, build,
+save — the diff was 2012 insertions / 139 deletions with **4** anchor lines instead of 154,
+and those 4 were a block removed and re-added byte-identically (a YAML reordering).
+
+So the project's existing rule stands and my correction of it did not: the churn IS
+play-mode contamination (project memory: `scene_save_bakes_layout_churn`), and "run the
+builder on a freshly opened scene" means a freshly opened scene **in an Editor that has not
+been in play mode**. The §D1.1 result is unaffected — those 8 lines were hunk-isolated and
+are correct — but the reasoning published alongside them was not, and is corrected here
+rather than left to mislead the next person who hits this.
 
 ### §D1.3 · HoleComplete — done
 

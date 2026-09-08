@@ -186,6 +186,11 @@ namespace GolfinRedux.UI.Gacha
         /// </summary>
         private void OnHistoryChipTapped()
         {
+            // §D6 / G9 — bump FIRST, including on the arm that only shows a toast: that arm is
+            // the one where the chip otherwise appears to do nothing at all.
+            Transform? chip = transform.Find(HistoryChipPath);
+            if (chip != null) Golfin.UI.Polish.UiSelection.Bump(this, chip);
+
             if (_activeTab != RewardsTab.Gacha)
             {
                 Debug.Log($"[GachaTab] HistoryChip tapped on the {_activeTab} tab — no history screen yet.");

@@ -7,6 +7,7 @@ using TMPro;
 using GolfinRedux.UI;
 using Golfin.Tournaments;
 using Golfin.UI.Modals;
+using Golfin.UI.Polish;
 
 namespace GolfinRedux.UI.Tournaments
 {
@@ -90,8 +91,25 @@ namespace GolfinRedux.UI.Tournaments
             btn.onClick.AddListener(() => SelectTab(tab));
         }
 
+        // ── game_polish_b §D4/§D6 ────────────────────────────────────────────────
+        //
+        // Which paint is this? The screen has all three kinds and they must not look the same:
+        // the OnEnable rebuild paints whatever the backend already composed (cache or the bundled
+        // CSV — instant), OnScheduleChanged is the server answering, and a language change is a
+        // repaint of data that never moved. Only a genuinely COLD first fetch — an empty cached
+        // schedule, which is what a first-ever launch has — may shimmer or stagger.
+        private readonly Golfin.Gps.UI.PaintGate _gate =
+            new Golfin.Gps.UI.PaintGate("[TournamentSelectionScreen]", "tournaments");
+
+        /// <summary>Which kind the next RebuildCards is. Set by whichever path scheduled it —
+        /// RebuildNextFrame is one frame removed from its caller, so the kind cannot be inferred
+        /// once it runs.</summary>
+        private Golfin.Gps.UI.PaintKind _nextPaint = Golfin.Gps.UI.PaintKind.Cache;
+
         private void OnEnable()
         {
+            _gate.Rearm();
+
             // A server fetch that lands while the player is already on this screen repaints it;
             // entering the screen later is already covered by the rebuild below.
             TournamentService.OnScheduleChanged += HandleScheduleChanged;
@@ -101,7 +119,7 @@ namespace GolfinRedux.UI.Tournaments
             // language with T7 still active and this OnEnable never re-fires. Every card string
             // is language-dependent (the name ladder's JP rung, the venue line, the date line),
             // so the cards have to be rebuilt in place.
-            LocalizationManager.OnLanguageChanged += HandleScheduleChanged;
+            LocalizationManager.OnLanguageChanged += HandleLanguageChanged;
 
             // A refresh that lands while a modal is open is deferred, not dropped (see
             // HandleScheduleChanged); this is what flushes it once the stack empties.
@@ -113,6 +131,7 @@ namespace GolfinRedux.UI.Tournaments
             // a socket. There is deliberately no spinner and no gate: a good cached list is what the
             // player sees while the network is asked whether it is stale.
             StopAllCoroutines();
+            _nextPaint = Golfin.Gps.UI.PaintKind.Cache;
             StartCoroutine(RebuildNextFrame());
 
             // ── ...then ask the server whether it changed ─────────────────────
@@ -124,7 +143,7 @@ namespace GolfinRedux.UI.Tournaments
         private void OnDisable()
         {
             TournamentService.OnScheduleChanged -= HandleScheduleChanged;
-            LocalizationManager.OnLanguageChanged -= HandleScheduleChanged;
+            LocalizationManager.OnLanguageChanged -= HandleLanguageChanged;
             ModalController.ModalStackEmptied -= HandleModalStackEmptied;
             _rebuildDeferred = false;
             ClearCards();
@@ -134,6 +153,14 @@ namespace GolfinRedux.UI.Tournaments
         /// A schedule arrived while a modal was open, and the rebuild was deferred until it closes.
         /// </summary>
         private bool _rebuildDeferred;
+
+        /// <summary>A language change repaints strings that are already on screen — never a
+        /// fetch, so it must not stagger and must not gate a shimmer (§D4).</summary>
+        private void HandleLanguageChanged()
+        {
+            _nextPaint = Golfin.Gps.UI.PaintKind.Repaint;
+            HandleScheduleChanged();
+        }
 
         /// <summary>Repaint in place — the schedule changed under us, or the language did.</summary>
         private void HandleScheduleChanged()
@@ -154,6 +181,8 @@ namespace GolfinRedux.UI.Tournaments
             }
 
             StopAllCoroutines();
+            if (_nextPaint != Golfin.Gps.UI.PaintKind.Repaint)
+                _nextPaint = Golfin.Gps.UI.PaintKind.Fetch;
             StartCoroutine(RebuildNextFrame());
         }
 
@@ -260,6 +289,20 @@ namespace GolfinRedux.UI.Tournaments
 
             if (_cardsScrollRect != null)
                 _cardsScrollRect.verticalNormalizedPosition = 1f;
+
+            // ── §D4/§D6 — one verdict, then the shimmer and the stagger ───────────────
+            Golfin.Gps.UI.PaintKind kind = _nextPaint;
+            _nextPaint = Golfin.Gps.UI.PaintKind.Repaint;   // anything unlabelled after this is one
+
+            bool animate = _gate.Should(kind, _cards.Count);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.TournamentCards, _gate.IsCold);
+
+            if (animate)
+            {
+                var rows = new List<Transform>(_cards.Count);
+                foreach (TournamentSelectionCard c in _cards) if (c != null) rows.Add(c.transform);
+                Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);
+            }
         }
 
         // ── MapCardState ──────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using GolfinRedux.UI;
 using Golfin.UI.Rankings;
 using Golfin.Tournaments;
+using Golfin.UI.Polish;
 
 namespace GolfinRedux.UI.Tournaments
 {
@@ -116,15 +117,26 @@ namespace GolfinRedux.UI.Tournaments
                 _closeButton.onClick.AddListener(Close);
         }
 
+        // ── game_polish_b §D4/§D6 ────────────────────────────────────────────────
+        //
+        // This screen paints twice by design (SPEC §4): the disk snapshot renders instantly, then
+        // the server's board replaces it if a NEW one landed. Only the first of those, and only
+        // when the snapshot had nothing, is a cold fetch — which is exactly the case a player on a
+        // first-ever open sees, and exactly the case that used to be an empty board.
+        private readonly Golfin.Gps.UI.PaintGate _gate =
+            new Golfin.Gps.UI.PaintGate("[TournamentLeaderboard]", "tournament.board");
+
         private void OnEnable()
         {
+            _gate.Rearm();
+
             if (_titleLabel != null && !string.IsNullOrEmpty(_titleText))
                 _titleLabel.text = _titleText;
 
             // Cached board first, refresh second (tournament_async_board SPEC §4). The snapshot the
             // last fetch left on disk renders instantly — including on a cold open in airplane mode —
             // and the repaint below only happens if a NEW board actually landed.
-            PopulateLive();
+            PopulateLive(Golfin.Gps.UI.PaintKind.Cache);
             RefreshRemoteBoard();
 
             // The ENDS IN pill was authored scene text that nothing ever wrote, so every
@@ -154,7 +166,8 @@ namespace GolfinRedux.UI.Tournaments
             {
                 // The response can land after the player has left; rebuilding a disabled screen
                 // would bind rows nobody is looking at and fight the next OnEnable.
-                if (changed && this != null && isActiveAndEnabled) PopulateLive();
+                if (changed && this != null && isActiveAndEnabled)
+                    PopulateLive(Golfin.Gps.UI.PaintKind.Fetch);
             });
         }
 
@@ -166,14 +179,27 @@ namespace GolfinRedux.UI.Tournaments
             ScreenManager.Instance?.GoBack(_backScreen);
         }
 
+        /// <summary>
+        /// §D4 — the board could not be read at all. Spend the paint (so the NEXT one is not
+        /// treated as the first) and show the placeholder if this is genuinely a cold open.
+        /// </summary>
+        private void ShowColdPlaceholder(Golfin.Gps.UI.PaintKind kind)
+        {
+            _gate.Should(kind, 0);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.TournamentLeaderboard, _gate.IsCold);
+        }
+
         // ── Live data fill ────────────────────────────────────────────────────
 
-        private void PopulateLive()
+        private void PopulateLive() => PopulateLive(Golfin.Gps.UI.PaintKind.Repaint);
+
+        private void PopulateLive(Golfin.Gps.UI.PaintKind kind)
         {
             // Guard: service + selected id
             if (TournamentService.Instance == null)
             {
                 Debug.LogWarning("[TournamentLeaderboard] TournamentService not ready; falling back to empty board.");
+                ShowColdPlaceholder(kind);
                 return;
             }
 
@@ -181,6 +207,7 @@ namespace GolfinRedux.UI.Tournaments
             if (string.IsNullOrEmpty(id))
             {
                 Debug.LogWarning("[TournamentLeaderboard] SelectedTournamentId is null/empty — normal nav always sets it.");
+                ShowColdPlaceholder(kind);
                 return;
             }
 
@@ -256,6 +283,7 @@ namespace GolfinRedux.UI.Tournaments
             BindCard(modal.Find("Top3/Top3Card"), ranked, 2, roster, isPodium: true);
 
             // ── Ranking rows (#4+) ────────────────────────────────────────────
+            var bound = new List<Transform>();
             var grid = modal.Find("Bottom97/ScrollArea/Viewport/GridContent");
             if (grid != null)
             {
@@ -264,10 +292,19 @@ namespace GolfinRedux.UI.Tournaments
                 {
                     if (!row.name.StartsWith("TournamentRankingRow")) continue;
                     if (entryIdx < ranked.Count)
+                    {
                         BindCard(row, ranked, entryIdx, roster, isPodium: false);
+                        bound.Add(row);          // §D6 — only rows that actually got data stagger
+                    }
                     entryIdx++;
                 }
             }
+
+            // ── §D4/§D6 — one verdict for the shimmer and the stagger ─────────
+            bool animate = _gate.Should(kind, ranked.Count);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.TournamentLeaderboard, _gate.IsCold);
+            if (animate && bound.Count > 0)
+                Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, bound);
 
             // ── Sticky "you" row ─────────────────────────────────────────────
             //

@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Golfin.UI;
 using Golfin.UI.Matchmaking;
+using Golfin.UI.Polish;
 using Golfin.Gameplay.Session;
 
 namespace GolfinRedux.UI.ModeSelect
@@ -155,6 +156,24 @@ namespace GolfinRedux.UI.ModeSelect
 
             if (cardsScrollRect != null)
                 cardsScrollRect.verticalNormalizedPosition = 1f;
+
+            // ── game_polish_b §D6 — the FRONT-DOOR EXCEPTION (Cesar) ──────────────────
+            //
+            // Every other stagger in this task is gated on a cold FETCH, because a list that
+            // re-flows while the player is reading it is worse than one that snaps. Mode Select
+            // is the exception Cesar asked for, and the reason is not that the rule bends: this
+            // screen has no fetch to gate on — ModesDatabaseCSV is local, so the gate would say
+            // "cache, instant" forever and the cards would never move. It is also the Play
+            // pillar's front door, three or four cards, entered deliberately rather than scrolled
+            // back into. So: EVERY entry paint, not the first, and stated in the log as `local`
+            // so no one reads it later as a fetch that was mislabelled.
+            if (_cards.Count > 0)
+            {
+                Debug.Log($"[ModeSelectScreen] modes paint(local) n={_cards.Count} — staggered (front door, every entry)");
+                var rows = new List<Transform>(_cards.Count);
+                foreach (ModeCardController c in _cards) if (c != null) rows.Add(c.transform);
+                Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);
+            }
         }
 
         private void UnwireCards()
@@ -169,7 +188,13 @@ namespace GolfinRedux.UI.ModeSelect
 
         private void HandleCardTapped(ModeCardController card)
         {
-            if (card == null || card.State == ModeCardState.Locked) return;
+            if (card == null) return;
+            // §D6 / G9 — the tap is acknowledged before anything else happens. A card that
+            // expands answers for itself, but a LOCKED one and a second tap that collapses look
+            // identical to no response at all, so the bump goes above the guards rather than
+            // inside the success path.
+            UiSelection.Bump(this, card.transform);
+            if (card.State == ModeCardState.Locked) return;
 
             if (card.State == ModeCardState.Expanded)
             {

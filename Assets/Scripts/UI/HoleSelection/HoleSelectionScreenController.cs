@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using GolfinRedux.UI;
 using Golfin.Gameplay.Session;
 using Golfin.Roster;
+using Golfin.UI.Polish;
 using Golfin.UI.GameplayTransition;
 using Golfin.Utilities;
 
@@ -78,8 +79,15 @@ namespace GolfinRedux.UI.HoleSelection
                 GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.Leaderboard);
         }
 
+        /// <summary>game_polish_b §D6 — first card paint of this screen entry; the one that
+        /// staggers. The hole database is local, so there is no fetch to gate on — a filter-pill
+        /// change repaints the same data and must not re-flow a list the player is reading.</summary>
+        private bool _firstCardPaint = true;
+
         private void OnEnable()
         {
+            _firstCardPaint = true;
+
             // NOTE: We deliberately do NOT inject runtime dividers anymore. Cesar baked
             // the dividers into the filter row background sprites
             // (Background - Filter 1.png / Background - Filter 2.png) during his polish pass.
@@ -262,6 +270,20 @@ namespace GolfinRedux.UI.HoleSelection
             {
                 cardsScrollRect.verticalNormalizedPosition = 1f;
             }
+
+            // ── §D6 — the list rises in on arrival, once per visit ────────────────────
+            if (_firstCardPaint && _cards.Count > 0)
+            {
+                _firstCardPaint = false;
+                Debug.Log($"[HoleSelection] holes paint(local) n={_cards.Count} — staggered (first this entry)");
+                var rows = new List<Transform>(_cards.Count);
+                foreach (HoleCardController c in _cards) if (c != null) rows.Add(c.transform);
+                Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);
+            }
+            else
+            {
+                Debug.Log($"[HoleSelection] holes paint(local) n={_cards.Count} — instant (filter change)");
+            }
         }
 
         private void OnDisable()
@@ -278,6 +300,12 @@ namespace GolfinRedux.UI.HoleSelection
         private void HandleCardTapped(HoleCardController card)
         {
             if (card == null) return;
+
+            // §D6 / G9 — the tap is acknowledged before anything else happens. A card that
+            // expands answers for itself, but a LOCKED one and a second tap that collapses look
+            // identical to no response at all, so the bump goes above the guards rather than
+            // inside the success path.
+            UiSelection.Bump(this, card.transform);
 
             // Belt-and-suspenders: ignore locked cards
             if (card.State == HoleCardState.Locked) return;

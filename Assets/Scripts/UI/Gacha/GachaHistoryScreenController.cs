@@ -103,8 +103,27 @@ namespace GolfinRedux.UI.Gacha
                 _closeButton.onClick.AddListener(OnClose);
         }
 
+        // ── game_polish_b §D4/§D6 ────────────────────────────────────────────────
+        //
+        // The disk mirror is the cache paint and stays motionless (that was already this screen's
+        // deliberate choice — see OnEnable). The server replacing the log is the fetch paint, and
+        // the first COLD one — no mirror on disk, which is a player who has never pulled on this
+        // device — is the only one that shimmers or staggers.
+        private readonly Golfin.Gps.UI.PaintGate _gate =
+            new Golfin.Gps.UI.PaintGate("[GachaHistory]", "gacha.history");
+
+        /// <summary>Whether the fill now running is the one allowed to stagger. Held as a field
+        /// because the rows are spawned across frames by <see cref="FillTo"/>, so the verdict is
+        /// reached long before there is anything to animate.</summary>
+        private bool _staggerThisFill;
+
+        /// <summary>Rows spawned by the current fill, in order, for the §D6 stagger.</summary>
+        private readonly List<Transform> _fillRows = new List<Transform>();
+
         private void OnEnable()
         {
+            _gate.Rearm();
+
             // Draw the disk mirror immediately, then re-draw when the server answers. The screen
             // never waits on a socket — an offline open shows the last log the server confirmed
             // rather than an empty list that reads as "you have never pulled".
@@ -118,7 +137,7 @@ namespace GolfinRedux.UI.Gacha
                 _scrollRect.onValueChanged.AddListener(OnScrolled);
             }
 
-            RebuildList();                      // the FIRST paint is the rest state: no motion
+            RebuildList(Golfin.Gps.UI.PaintKind.Cache);   // the FIRST paint is the rest state: no motion
             GachaHistoryStore.Refresh();
         }
 
@@ -168,7 +187,7 @@ namespace GolfinRedux.UI.Gacha
 
             // The server replaced the log. Rebuild the FIRST PAGE only — never all of it.
             Debug.Log("[GachaHistoryScreenController] rebuild");
-            UiSelection.FadeSwap(this, ListGroup(), RebuildList);
+            UiSelection.FadeSwap(this, ListGroup(), () => RebuildList(Golfin.Gps.UI.PaintKind.Fetch));
         }
 
         /// <summary>
@@ -216,13 +235,22 @@ namespace GolfinRedux.UI.Gacha
 
         /// <summary>Draws the FIRST PAGE. Named `RebuildList` still because that is what every
         /// caller means by it — the difference is that it now stops at <see cref="PageSize"/>.</summary>
-        private void RebuildList()
+        private void RebuildList() => RebuildList(Golfin.Gps.UI.PaintKind.Repaint);
+
+        private void RebuildList(Golfin.Gps.UI.PaintKind kind)
         {
             if (_scrollContent == null)
             {
                 Debug.LogWarning("[GachaHistoryScreenController] _scrollContent not wired.");
                 return;
             }
+
+            // §D4/§D6 — the verdict is taken from the RECORD count, not the rendered count: the
+            // rows do not exist yet (FillTo spawns them over several frames) and a gate asked
+            // "how many rows are on screen?" here would always hear zero and call every paint cold.
+            _staggerThisFill = _gate.Should(kind, GachaHistoryStore.All.Count);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.GachaHistory, _gate.IsCold);
+            _fillRows.Clear();
 
             // Cancel a fill that is still running — otherwise it keeps spawning rows into content
             // that is being cleared, and the two interleave.
@@ -278,7 +306,8 @@ namespace GolfinRedux.UI.Gacha
                 int i = _renderedCount;
                 if (i > 0 && _dividerPrefab != null)
                     Instantiate(_dividerPrefab, _scrollContent);
-                SpawnRow(records[i]);
+                GameObject spawned = SpawnRow(records[i]);
+                if (_staggerThisFill && spawned != null) _fillRows.Add(spawned.transform);
 
                 _renderedCount = i + 1;
                 _firstRenderedRecord = records[0];
@@ -291,6 +320,16 @@ namespace GolfinRedux.UI.Gacha
             }
 
             _fill = null;
+
+            // §D6 — stagger the page that just landed, once, at the end. Doing it per row as they
+            // spawn would fight FillTo's own frame budget: the rows already arrive a few per
+            // frame, so a rise started on each would run at whatever rate the fill happened to
+            // manage rather than on StaggerDelay.
+            if (_staggerThisFill && _fillRows.Count > 0)
+            {
+                Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, _fillRows);
+                _staggerThisFill = false;      // page 1 only (§D4/§D6); page 2 is a scroll, not an arrival
+            }
         }
 
         /// <summary>Inserts the <paramref name="count"/> newest records above everything already

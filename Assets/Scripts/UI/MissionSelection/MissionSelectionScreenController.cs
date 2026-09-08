@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Golfin.Gameplay.Missions;
 using Golfin.Gameplay.Session;
 using Golfin.UI.GameplayTransition;
+using Golfin.UI.Polish;
 using Golfin.Utilities;
 using TMPro;
 using UnityEngine;
@@ -85,8 +86,26 @@ namespace GolfinRedux.UI.MissionSelection
             if (rankingsButton != null) rankingsButton.onClick.AddListener(OnRankingsClicked);
         }
 
+        // ── game_polish_b §D4/§D6 ────────────────────────────────────────────────
+        //
+        // TWO DIFFERENT KINDS OF PAINT ON ONE SCREEN, and conflating them is what §D4's own
+        // wording invites. The mission CARDS come from MissionCatalog.EnsureLoaded — local and
+        // synchronous, never waiting on anything — so they get no shimmer; they stagger on the
+        // first paint of a screen entry, the front-door rule Cesar set for Mode Select. The DAILY
+        // is genuinely fetched and deliberately hidden until the server answers ("hidden, fetch,
+        // and shown only if the server answers", RefreshDaily below), so it is the one region
+        // here where a player waits in front of a blank space — and it is where the shimmer goes.
+        private readonly Golfin.Gps.UI.PaintGate _dailyGate =
+            new Golfin.Gps.UI.PaintGate("[MissionSelection]", "missions.daily", staggers: false);
+
+        /// <summary>First card paint of this screen entry — the one that staggers.</summary>
+        private bool _firstCardPaint = true;
+
         private void OnEnable()
         {
+            _dailyGate.Rearm();
+            _firstCardPaint = true;
+
             // MissionLoadoutResolver installs itself from [RuntimeInitializeOnLoadMethod], which
             // does NOT re-run after a mid-session domain reload — statics come back null and the
             // attribute has already fired for this play session. MissionCatalog then resolves
@@ -249,6 +268,22 @@ namespace GolfinRedux.UI.MissionSelection
                 }
             }
 
+            // §D6 — the campaign list rises in on the first paint of a screen entry. There is no
+            // fetch to gate on (the catalog is local), so the gate here is "have these cards been
+            // drawn yet this visit" — the same rule as the Mode Select front door.
+            if (_firstCardPaint && _cards.Count > 0)
+            {
+                _firstCardPaint = false;
+                Debug.Log($"[MissionSelection] missions.cards paint(local) n={_cards.Count} — staggered (first this entry)");
+                var rows = new List<Transform>(_cards.Count);
+                foreach (MissionCardController c in _cards) if (c != null) rows.Add(c.transform);
+                Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);
+            }
+            else
+            {
+                Debug.Log($"[MissionSelection] missions.cards paint(local) n={_cards.Count} — instant (tier switch)");
+            }
+
             // NEXT is expanded by default and scrolled to (§C2). After the layout settles —
             // expanding before the content rect has a height scrolls to the wrong place.
             //
@@ -279,7 +314,13 @@ namespace GolfinRedux.UI.MissionSelection
 
         private void HandleCardTapped(MissionCardController card)
         {
-            if (card == null || card.State == MissionCardState.Locked) return;
+            if (card == null) return;
+            // §D6 / G9 — the tap is acknowledged before anything else happens. A card that
+            // expands answers for itself, but a LOCKED one and a second tap that collapses look
+            // identical to no response at all, so the bump goes above the guards rather than
+            // inside the success path.
+            UiSelection.Bump(this, card.transform);
+            if (card.State == MissionCardState.Locked) return;
             if (card.State == MissionCardState.Expanded)
             {
                 card.SetState(MissionCardState.Collapsed);
@@ -470,7 +511,26 @@ namespace GolfinRedux.UI.MissionSelection
         {
             if (dailyCard == null) return;
             dailyCard.gameObject.SetActive(false);
+
+            // §D4 — the card is hidden from here until the server answers, and THAT is the gap the
+            // placeholder fills. Asked before the request rather than after, because the whole
+            // point is to occupy the space during the wait.
+            _dailyGate.Cache(0);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.MissionsDaily, _dailyGate.IsCold);
+
             StartCoroutine(FetchDailyRoutine());
+        }
+
+        /// <summary>
+        /// §D4 — the daily fetch answered, however it answered. EVERY arm calls this, including
+        /// the two failures: a placeholder left standing over a card that is never coming is
+        /// worse than no placeholder at all, and the failure arms are exactly the ones a shimmer
+        /// gets stranded on.
+        /// </summary>
+        private void EndDailyWait(int count)
+        {
+            _dailyGate.Fetch(count);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.MissionsDaily, cold: false);
         }
 
         private IEnumerator FetchDailyRoutine()
@@ -480,6 +540,7 @@ namespace GolfinRedux.UI.MissionSelection
                 if (!r.Success || r.Data?.Recipe == null)
                 {
                     Debug.Log($"[MissionSelection] no daily today ({r.ErrorMessage ?? "no recipe"}) — card stays hidden.");
+                    EndDailyWait(0);
                     // Tell the Home pill too: it must not advertise a daily this screen just
                     // failed to find (daily_mission_home_pill §2).
                     Golfin.Gameplay.Missions.DailyMissionState.SetNoDaily();
@@ -497,9 +558,11 @@ namespace GolfinRedux.UI.MissionSelection
                 if (def == null || def.ClubIds.Count == 0)
                 {
                     Debug.LogWarning("[MissionSelection] the daily recipe could not be resolved — card stays hidden.");
+                    EndDailyWait(0);
                     return;
                 }
 
+                EndDailyWait(1);
                 dailyCard!.gameObject.SetActive(true);
 
                 // The daily card is a SERIALIZED SCENE OBJECT, not one of the rows RebuildCards

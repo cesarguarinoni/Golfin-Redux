@@ -56,8 +56,21 @@ namespace GolfinRedux.UI.Shop
             WireChip("TICKETSChip",    ShopCategory.Ticket);
         }
 
+        /// <summary>
+        /// game_polish_b §D6 — first card paint of this screen entry; the one that staggers.
+        ///
+        /// <para>NO SHIMMER ON THIS SCREEN, and that is a deviation from §D4 with a reason.
+        /// GeneralShopCatalog reads a BUNDLED <c>Resources/Data/shop_catalog.csv</c> plus a
+        /// content overlay, synchronously, on first access — there is no state in which the
+        /// player waits on a network for the catalog. A shimmer would be a loading animation
+        /// played over data that never left, which is the exact thing GPS §D8's cold-only rule
+        /// exists to prevent.</para>
+        /// </summary>
+        private bool _firstCardPaint = true;
+
         private void OnEnable()
         {
+            _firstCardPaint = true;
             StopAllCoroutines();
             StartCoroutine(RebuildNextFrame());
             if (RewardPointsManager.Instance != null)
@@ -139,6 +152,22 @@ namespace GolfinRedux.UI.Shop
 
             if (_banner != null) _banner.SetAsFirstSibling(); // banner stays atop the list
             RestyleChips();
+
+            // ── §D6 — the grid rises in on arrival, once per visit. A category chip repaints
+            // the same catalog through a different filter, and re-flowing it under the player's
+            // finger is what the cache/repaint distinction exists to avoid.
+            if (_firstCardPaint && _cards.Count > 0)
+            {
+                _firstCardPaint = false;
+                Debug.Log($"[GeneralShop] shop.catalog paint(local) n={_cards.Count} — staggered (first this entry)");
+                var rows = new List<Transform>(_cards.Count);
+                foreach (GeneralShopCard c in _cards) if (c != null) rows.Add(c.transform);
+                Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);
+            }
+            else
+            {
+                Debug.Log($"[GeneralShop] shop.catalog paint(local) n={_cards.Count} — instant (filter change)");
+            }
         }
 
         private void ClearCards()

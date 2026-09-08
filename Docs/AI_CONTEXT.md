@@ -37,9 +37,13 @@ come. `Docs/Specs/Active/game_polish_b/IMPLEMENTER_REPORT.md` § What is NOT don
    of the routine and inside the finalizer it registers, so `Then(x, RestartMe)` recurses until
    the stack dies. It crashed the Editor twice before it was root-caused from the `.ips`. Use a
    long-lived coroutine that yields fresh routines instead.
-2. **Saving `ShellScene` churns ~1300 lines on its own.** Open it, mark it dirty, save it,
-   change nothing: 1297 lines of anchor/sizeDelta rewrites. Not caused by any builder — proven
-   by control experiment. Isolate your hunks; do not go looking for a cleaner moment to save.
+2. **Saving `ShellScene` after ANY play session churns ~1300 lines** — 154 RectTransforms whose
+   anchors flip (0,1)→(0,0). I first concluded this was inherent to the scene, on the strength of
+   a "control" (open, dirty, save, change nothing → 1297 lines) — but that control ran in an
+   Editor that had already been through play mode, so it was contaminated too. **The conclusion
+   was wrong.** The same builder+save in a FRESH Editor gave 4 anchor lines, and those 4 were a
+   byte-identical reordering. The existing rule holds: run a builder on a freshly opened scene
+   **in an Editor that has not entered play mode**. If you cannot, isolate your hunks.
 
 Also, at Cesar's request and outside this SPEC: **the gacha banner carousel is a ring now**
 (`8901e8f92`) — swiping past the last banner reaches the first, by arithmetic rather than cloned

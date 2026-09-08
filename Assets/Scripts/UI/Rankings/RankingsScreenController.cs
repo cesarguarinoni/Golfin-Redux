@@ -307,16 +307,14 @@ namespace Golfin.UI.Rankings
             IReadOnlyList<LeaderboardEntry>? ranking = LeaderboardManager.Instance?.GetRanking(_activePeriod);
             if (ranking == null || ranking.Count == 0)
             {
-                // The empty arm still has to spend the paint, or the NEXT one would be treated
-                // as the first and stagger a list the player has already been reading.
-                //
-                // §D4's shimmer belongs here and is NOT wired yet: GamePolishBuilder.ApplyShimmer
-                // has not placed the hosts, and GpsPaintMotion.Shimmer warns LOUDLY (by design)
-                // for a site whose host is missing — which would be three warnings per screen
-                // entry describing a feature that is not finished. The gate below is what §D4
-                // will need when the hosts land; calling Shimmer before then would be noise, not
-                // progress. Tracked in IMPLEMENTER_REPORT § What is NOT done.
+                // §D4 — the EMPTY arm is the one that matters. This is the frame the player is
+                // actually looking at while the board is fetched for the first time, and it used
+                // to be a blank panel with three empty card frames on it. Spending the paint
+                // matters too: without it the NEXT one would be treated as the first and stagger
+                // a list the player has already been reading.
                 _gate.Should(kind, 0);
+                Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.RankingsTop3, _gate.IsCold);
+                Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.RankingsList, _gate.IsCold);
                 return;
             }
 
@@ -372,8 +370,10 @@ namespace Golfin.UI.Rankings
                 }
             }
 
-            // ── §D6 — one verdict: does this paint animate? ───────────────────────────
+            // ── §D4/§D6 — one verdict, for both the shimmer and the stagger ───────────
             bool animate = _gate.Should(kind, _rowPool.Count);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.RankingsTop3, _gate.IsCold);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.RankingsList, _gate.IsCold);
 
             if (animate)
             {

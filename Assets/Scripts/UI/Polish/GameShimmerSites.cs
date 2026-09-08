@@ -40,8 +40,16 @@ namespace Golfin.UI.Polish
         /// <summary>General shop — the catalog cards.</summary>
         public const string ShopCatalog = "shop.catalog";
 
-        /// <summary>Mission selection — the mission cards and their server-side progress.</summary>
-        public const string Missions = "missions.cards";
+        /// <summary>
+        /// Mission selection — the DAILY card, and only it.
+        ///
+        /// <para>§D4 names "MissionSelection cards", but the cards are not the cold thing:
+        /// <c>MissionCatalog.EnsureLoaded()</c> is local and synchronous, so the mission list is
+        /// never waiting on anything. The DAILY is genuinely fetched — the controller's own words
+        /// are "hidden, fetch, and shown only if the server answers" — which makes it the one
+        /// region on this screen where a player waits in front of a blank space.</para>
+        /// </summary>
+        public const string MissionsDaily = "missions.daily";
 
         /// <summary>Every site, for the builder and for the tests that check the builder placed
         /// one host per site. A list that has to be maintained by hand is a list that drifts, so
@@ -49,7 +57,7 @@ namespace Golfin.UI.Polish
         public static readonly string[] All =
         {
             RankingsList, RankingsTop3, TournamentCards, TournamentLeaderboard,
-            GachaHistory, ShopCatalog, Missions,
+            GachaHistory, ShopCatalog, MissionsDaily,
         };
     }
 }
