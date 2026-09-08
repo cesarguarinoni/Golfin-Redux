@@ -171,6 +171,28 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
+- **`weekly_rotation_admin` — SPEC_READY, AMENDED 2026-09-08 evening (§3.1 pin columns, §3.1a year plan, §4.1 step 0 pins-first, seed = 52 rows from `reference/rotations_seed.csv`). The kickoff below is the RE-ISSUED one; an earlier same-day kickoff without the pins is superseded.** `Docs/Specs/Active/weekly_rotation_admin/SPEC.md`. Weekly STORE lineup + weekly GACHA banner authored in the admin as one unit: new catalog #21 `rotations` (window, quotas, seed), additive `rotationId` on `shop_catalog` + `gacha_banners`, `pityGroup` on banners; Rotations panel with deterministic generator (PREVIEW / MATERIALIZE / PUBLISH ROTATION in five-catalog order / calendar / ARCHIVE), validator R1–R4, ball price ladder, one playlife migration keying pity by group. No Unity C#. Plan: `Docs/Economy/MONETIZATION_PLAN.md` §1.2.
+
+```
+Read Docs/Specs/Active/weekly_rotation_admin/SPEC.md and implement it.
+
+Context:
+- Weekly rotation of clubs/balls/characters in the STORE and a weekly rate-up GACHA banner, authored in the admin as ONE unit and published with no build. New catalog #21 `rotations` (Assets/Resources/Data/rotations.csv = the 52 planned rows in Docs/Specs/Active/weekly_rotation_admin/reference/rotations_seed.csv, verbatim; seed migration via seed_from_csv.py, catalogs.py 20→21, byte-identical round trip). Columns include pinnedClubs/pinnedBalls/pinnedCharacter/pinnedFeatured — PINS WIN (SPEC §4.1 step 0): the generator uses them verbatim and fills only blanks; a pin that does not resolve blocks. Additive columns THROUGH THE IMPORTER: shop_catalog.rotationId, gacha_banners.rotationId + pityGroup.
+- Admin: app/(panels)/rotations/ = CatalogPanel for `rotations` + a Lineup workbench above it. Pure generator lib/rotation.ts (mulberry32(seed) from lib/gachaOdds.ts; quotas per rarity; club type spread; excludeWeeks; ladders from ECONOMY_MASTER §3 + the new ball ladder) → PREVIEW (writes nothing) → MATERIALIZE (upsertDraftRow per row, typed confirm on overwrite) → PUBLISH ROTATION (publishCatalog in order gacha_rates → gacha_pools → gacha_banners → shop_catalog → rotations, stop on first failure) → 8-week calendar → ARCHIVE ended (deactivate, never delete). Precedent for a deterministic PREVIEW/PIN generator: daily-panel.tsx. Validator rules R1–R4 in contentValidate.ts (overlap = error, gap = warn, rotationId resolves + window inside, pityGroup threshold parity, recent-repeat warn). DICT strings en+ja. Mock mode.
+- playlife: ONE migration replacing golfin_gacha_pull (base = 2026_09_02_default_ball_guard.sql body): pity key = coalesce(pityGroup, bannerId); maxPullsPerPlayer stays per banner. FULL SQL IN CHAT for both migrations. Deploy + flyctl status + smoke. Live E2E per SPEC §6.4 (pity continues across two banners sharing the group), SQL quoted.
+- Placeholder banner art GachaBanner_Weekly.png derived from GachaBanner_StandardClub1 (re-tint, the TicketIconDerive approach) — committed, not skipped.
+- Minimal diff. Reuse CatalogPanel, upsertDraftRow, publishCatalog, validateCatalog ctx.otherCatalogs, effectiveOdds. No new endpoints, no live tables.
+- Out of scope: any Unity C# (weekly_rotation_client), scheduled auto-publish, per-player rotations, weekly sales, POPULAR/OFFERS chips, stockLimit/minPlayerLevel, anything paid.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+checklist in SPEC §7 (quote the vitest determinism hash, the materialize counts,
+the publish-order stop, the pity E2E SQL and the §23 deployment proofs), flag
+which items need manual verification, update STATUS.md + IMPLEMENTER_REPORT.md
+in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+- **`weekly_rotation_client` — SPEC_READY (2026-09-08), start ONLY after `weekly_rotation_admin` is DONE and its first rotation is published.** `Docs/Specs/Active/weekly_rotation_client/SPEC.md`. `RotationCatalog` loader, `rotationId` on shop entries + banners, lineup header with a shared countdown formatter, `NEW` tags, `THIS WEEK` on the weekly banner, once-per-second roll-over at the boundary (RefreshNow → Reload → Rebuild → toast), `shop_catalog` + `rotations` added to the live re-apply allowlist (I5 exception, justified in the spec). Eight strings via the importer. **Figma made 2026-09-08:** `Badge` component set (NEW / SALE / DISCOUNT / LAST CHANCE / THIS WEEK / LIMITED / OWNED), `Countdown Pill`, `Lineup Header` on the Store page (section `14163:105273`), placement demos Store `14163:105654` / Gacha `14163:106259`; renders in the spec's `reference/`. Kickoff issued when the admin spec closes.
+
 - **`flick_pull_mapping` — SPEC_READY (2026-09-07, Quick), run AFTER `flick_shot_view` closes (same files).** `Docs/Specs/Active/flick_pull_mapping/SPEC.md`. Flick power becomes rest-relative like the other three schemes: 0 % at touch (was 31.8 %), 40 px dead zone, `FlickPull100Px` 540 / `FlickPull120Px` 648, the cone BASE is 120 % (Flick had no 120 %), never on putts; `FlickHandleStartY01` 0.6818 → 0.8182; 100 %/120 % tick lines on the cone; `FlickPullMath` + inverse for the drawn club; three Flick tiles recaptured. Idle-cone alpha stays parked (Cesar).
 
 ```
@@ -217,26 +239,7 @@ verification (feel of the 20 %/0.35 duff), update STATUS.md +
 IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
 ```
 
-- **`selector_carousel` — SPEC_READY (2026-09-06), pasteable NOW.** `Docs/Specs/Active/selector_carousel/SPEC.md`. In-game club + ball selector (`SelectorOverlayWidget`) → 4-slot vertical carousel: focus slot (bottom) with a gold halo IS the selection, finger-slide to scroll in modal mode, wraps when ≥5 items, eased snap, 6-card pool (no more destroy/instantiate per step). Hold-mode + `SelectorDragRouter` untouched. Halo placeholder already in `Assets/Art/In-Game UI/Halo - Selector.png`. Kickoff:
-
-```
-Read Docs/Specs/Active/selector_carousel/SPEC.md and implement it.
-
-Context:
-- Club + ball selector overlays (Assets/Scripts/Gameplay/UI/ShotUI/SelectorOverlayWidget.cs, built by Assets/Scripts/Editor/CanvasScalerMigration/ActionButtonsBuilder.cs into LabScaffold.unity) become a 4-slot vertical carousel: fixed viewport + RectMask2D, 6-card pool rebound per frame (SPEC §2), focus slot at the bottom carries the FocusHalo (Assets/Art/In-Game UI/Halo - Selector.png, tint #FCF195), finger-slide via new SelectorCarouselDrag on CardsContainer (modal mode only, §4), wrap when N>=5, eased snap with selection committed at snap start (§3).
-- Pure math in new SelectorCarouselMath.cs + EditMode SelectorCarouselMathTests (K11 putter-skip cases are the important ones). ClubSelectionGreenGateTests must stay green and unmodified.
-- Hold-mode is UNCHANGED: SelectorDragRouter.cs is not edited; UpdateHoldHover/EvaluateRelease/CommitHighlighted keep working over the visible pool cards. Chevron mapping unchanged (ScrollUp = +1).
-- UiMotion is unreachable from Golfin.Gameplay.UI (asmdef) — local coroutine, unscaled time, interruption-safe, ease-out cubic. Do NOT add an asmdef reference.
-- Re-run GOLFIN/Build/Build Action Buttons (8.5) once for both overlays; LabScaffold.unity is already dirty from control-scheme work — commit the scene with this task and say so.
-- Minimal diff. No new strings, no localisation, no settings UI.
-- Out of scope: hold-drag scrolling, open/close animation, scale/alpha falloff on non-focus cards, reduced-motion switch, chevron flip, inventory-screen carousels, any edit to ClubContext/BallContext/ClubSelectionBroadcast.
-
-When done: list changed files with a 1-line summary each, run the acceptance
-checklist in the spec (write the bottom-card vs DriverButton y numbers and the
-Profiler alloc reading in the report), flag which items need manual on-device
-verification (the feel constants), update STATUS.md + IMPLEMENTER_REPORT.md in
-the spec folder, and update Docs/AI_CONTEXT.md.
-```
+- ~~`selector_carousel`~~ **DONE 2026-09-07** (`4a405ddc3` + `0a24ef3d5`, approved by Cesar after iter-3; folder in `Docs/Specs/Completed/`). Outstanding items filed in Notion GOLFIN_Roadmap Orders 2185–2188: hold-mode/chevron/Profiler regression pass NOT RUN in play mode, `_arrowStepDur` mirrors the router's 0.15, N≤4 sparse-stack question, pre-existing red `PendulumSchemeDriverTests` case.
 
 - **`golfer_3d_test` — UNBLOCKED 2026-09-07 by Cesar (Address fix at `9c3da7e3d` reviewed PASS, 35/1). Close-out scope is SPEC §9; kickoff below SUPERSEDES the original one.** Original: SPEC_READY (2026-09-05), assets DONE. EXPERIMENT: opt-in only via `GOLFIN_GOLFER_TEST`, default OFF — must not reach normal builds.** Free-asset proof of the golfer pipeline: Quaternius Universal Base Characters (CC0) + 11 Mixamo golf clips on Y Bot, both already in `Assets/Art/3D/Characters/_Test/` → `PfGolfer_Test` + shared `AnimatorController_Golfer` + `GolferPresenter` driven by `ShotController.OnShotResolved` / `BallStateMachine.OnShotComplete` / `ClubSelectionBroadcast.OnPutterModeChanged`. Only the FBX changes when the real roster models land (`Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md`). Kickoff:
 
@@ -614,9 +617,10 @@ the EditMode count, and flag anything that needed a judgment call.
 
 - ~~`gps_standalone_shell`~~ **DONE 2026-09-04** (`b3506dba3`; folder in `Docs/Specs/Completed/`; Architect review PASS 2026-09-04 — standalone build 2637 on TestFlight, user assets 555 → 98.6 MB).
 
-- **Audit Quick fixes (approved by Cesar 2026-09-06, from `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` § 5) — run in this order, one at a time, BEFORE `game_polish_b`:** `Docs/Specs/Quick/da_q9_missions_card_reward_copy.md` (XS, data + 1 string via importer) → `da_q2_default_font_readouts.md` (S, 41 LiberationSans readouts → Rubik) → `da_q3_modecard_outline_to_rim.md` (S, 20 `Outline`s → baked rim) → `da_q4_oval_pills_and_rims.md` (S, every lint FAIL: badge pills, 120 px button rims, shop `HDiv`). Deferred groups → `Docs/POLISH_BACKLOG.md` P-016…P-021 (JA font binding, Filled bars, ÷1.4 / ÷1.2 / unexplained sizes, flat fills, audit gaps).
+- ~~**Audit Quick fixes**~~ — **ALL FOUR DONE 2026-09-08** (`6f389986a` q9 → `83c8491ca` q2 → `63aef0805` q3 → `7aadce75c` q4; specs in `Docs/Specs/Quick/Completed/`), Architect-verified against HEAD: `MODE_REWARDS_MISSIONS_AVG` = "x35 (average)" (the REAL missions average, not the node's mock x200), LiberationSans GUID hits 0/0/0, `Outline` GUID 0 in both ModeCard prefabs, lint FAIL 0 on all 5 prefabs + live GeneralShop. **NEXT: `game_polish_b`** (kickoff below). Original pointer:
+  **Audit Quick fixes (approved by Cesar 2026-09-06, from `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` § 5) — run in this order, one at a time, BEFORE `game_polish_b`:** `Docs/Specs/Quick/da_q9_missions_card_reward_copy.md` (XS, data + 1 string via importer) → `da_q2_default_font_readouts.md` (S, 41 LiberationSans readouts → Rubik) → `da_q3_modecard_outline_to_rim.md` (S, 20 `Outline`s → baked rim) → `da_q4_oval_pills_and_rims.md` (S, every lint FAIL: badge pills, 120 px button rims, shop `HDiv`). Deferred groups → `Docs/POLISH_BACKLOG.md` P-016…P-021 (JA font binding, Filled bars, ÷1.4 / ÷1.2 / unexplained sizes, flat fills, audit gaps).
 
-### Kickoffs · audit Quick fixes (issued 2026-09-06 — paste one at a time, in order)
+### Kickoffs · audit Quick fixes — ALL DONE 2026-09-08, do not paste
 
 ```
 Read Docs/Specs/Quick/da_q9_missions_card_reward_copy.md and implement.
@@ -637,9 +641,39 @@ Read Docs/Specs/Quick/da_q4_oval_pills_and_rims.md and implement.
 - ~~**`game_polish_a`**~~ — **DONE 2026-09-04**, approved by Cesar, folder in `Docs/Specs/Completed/game_polish_a/` (`b2496871d`). Do NOT re-dispatch. Option (b) push-with-cross-fade SHIPPED (Cesar's call mid-task); §D7 nav selected state live on both bars. Perf finding → `Docs/Specs/Quick/gacha_history_rebuild_stall.md` (kickoff below). Original pointer:
   **`game_polish_a`: SPEC_READY (2026-09-03, GAME polish track — Notion 2111, slice a of three).** `Docs/Specs/Active/game_polish_a/SPEC.md` — navigation & structure motion: a screen-agnostic `LayeredPush` (`Assets/Scripts/UI/Polish/`) for same-pillar SAME-background pairs (Play `2e5476ee…` group, Tournaments/Rankings `0d425c0a…` group, Gacha `5ec22d10…` group), 16 px entry `Rise` on fade-path arrivals, cross-fades for Inventory/Rankings/GachaHistory tabs and the Settings overlay + accordion, `UiSelection` bumps on tabs, and the NEW bottom-nav selected state (§D7: gold halo + brighter ring replaces the cyan tint, on the game bar AND the GPS bar — the one authorised `Gps/` touch is `GpsNavBarHighlight.cs`); fade-to-black kept for Home, cross-pillar and background-changing moves (Cesar). Option (b) push-with-background-cross-fade only as a 5 s video behind an OFF flag. Gates as gps_polish (invariants JSON, 0 px parity vs first-commit baselines, chrome seam ≤ 2, GC ≤ 32 B). Map approved 2026-09-03: `Docs/Specs/Queued/game_polish/MAP.md` (b = content & modals, c = sweep — specs follow). **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
 
-- **`game_polish_b`: SPEC_READY (2026-09-05, GAME polish track — Notion 2111, slice b of three).** `Docs/Specs/Active/game_polish_b/SPEC.md` — content & modal motion: all 13 game modals pop (`animateShow` via the builder; HoleComplete pops in its widget), result-modal choreography, the three `UiMotion` retrofits with a frame-identical gate (Versus / Daily pill / Gacha reveal — `UiMotion.Ease` is the one API change), RP count-ups on game deltas (up AND down), shimmer on cold fetches (helpers `git mv`'d out of `Gps/` with GUIDs + namespaces kept), `PendingSpend` audit, fetch-paint staggers, Mode Select front-door stagger, Rankings Top-3 3→2→1. **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
+- **`game_polish_c`: SPEC_READY (2026-09-08, GAME polish track — Notion 2111, slice c of three — the sweep).** `Docs/Specs/Active/game_polish_c/SPEC.md` — ButtonPressFeedback backfill on every player-facing Button (live table, builder fix, coverage test tripwired), one scroll feel (Elastic/0.1/inertia/0.135) on every draggable ScrollRect, safe-area verdict per surface at iPhone 15 Pro Max with `SafeAreaFitter` fixes, Toast onto `UiMotion.Fade`. No new motion, no `Gps/`, 0 px rest parity. **NEXT.**
 
-### Kickoff · game_polish_b (issued 2026-09-05 — after the audit + its Quick fixes)
+### Kickoff · game_polish_c (issued 2026-09-08)
+
+```
+Read Docs/Specs/Active/game_polish_c/SPEC.md and implement it.
+
+Context:
+- Slice c of game_polish (Notion 2111) — the sweep, no new motion. Three per-site
+  tables with a verdict for EVERY site (§22): (C1) ButtonPressFeedback on every
+  player-facing Button — enumerate LIVE via the a/b probe route, exclusions named,
+  fix by GamePolishBuilder on prefabs/scene objects (serialized baseline: 354 Button
+  refs vs 102 feedback refs); (C2) every draggable ScrollRect to Elastic / 0.1 /
+  inertia / 0.135 (sensitivity 20), custom-snap carousels excluded with a reason;
+  (C3) safe-area capture per surface on the iPhone 15 Pro Max simulator, hits fixed
+  with the existing SafeAreaFitter on the content layer; (C4) ToastController.Fade
+  → UiMotion.Fade with a per-frame parity log.
+- Counts in the report are script-generated from the JSON (b's discipline);
+  PressFeedbackCoverageTests is the regression guard and must be tripwired (§20).
+- Rest parity 0 px at 1170x2532 vs the b baselines — nothing here changes rest state.
+- Untouched: UiMotion API, ButtonPressFeedback.cs defaults, SafeAreaFitter.cs,
+  Gps/**, FadeController, LayeredPush, NavSlotHighlight.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- ~~**`game_polish_b`**~~ — **DONE 2026-09-08** (`9c3ae0daf`, approved by Cesar in chat — no reviewer/red-team pass ran; Architect verified against HEAD: D0 moves with GUIDs kept and `Gps/` diff = 2 lines of `GpsPolishBuilder`, `UiMotion` diff = `Ease` + public `Curve`/`EaseOutBack`, 15/15 `animateShow`, modal probe 14/fail 0, retrofit parity 6 traces fail 0, seven clips 2.2–10.5 MB, 2860/0 tests, citations 44/0). Do NOT re-dispatch. Gaps → Notion 2199–2201. Original pointer:
+  **`game_polish_b`: SPEC_READY (2026-09-05, GAME polish track — Notion 2111, slice b of three).** `Docs/Specs/Active/game_polish_b/SPEC.md` — content & modal motion: all 13 game modals pop (`animateShow` via the builder; HoleComplete pops in its widget), result-modal choreography, the three `UiMotion` retrofits with a frame-identical gate (Versus / Daily pill / Gacha reveal — `UiMotion.Ease` is the one API change), RP count-ups on game deltas (up AND down), shimmer on cold fetches (helpers `git mv`'d out of `Gps/` with GUIDs + namespaces kept), `PendingSpend` audit, fetch-paint staggers, Mode Select front-door stagger, Rankings Top-3 3→2→1. **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
+
+### Kickoff · game_polish_b — SUPERSEDED (DONE 2026-09-08, do not paste)
 
 ```
 Read Docs/Specs/Active/game_polish_b/SPEC.md and implement it.

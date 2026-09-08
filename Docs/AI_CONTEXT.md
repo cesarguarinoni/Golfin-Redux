@@ -216,7 +216,9 @@ cone's own DUFF band line, and straight chords against curved band lines) are bo
 removing the lines. Detail: `Docs/Specs/Completed/flick_pull_mapping/IMPLEMENTER_REPORT.md`.
 
 ---
-## 2026-09-07 — selector_carousel: **the club/ball stacks become a 4-slot ring — code done, Unity steps BLOCKED**
+## 2026-09-07 — selector_carousel: **the club/ball stacks become a 4-slot ring — DONE, approved by Cesar after iter-3**
+
+> Architect close-out 2026-09-07: the block below was written at iter-1 ("Unity steps BLOCKED") and superseded by iter-2/3 — real-play captures, focus card aligned to the trigger (Δ 0.00 px), halo fitted to the card ART, ball-side catcher sibling order fixed, viewport margin 28. Still NOT RUN in play mode: hold-mode regression on both triggers, chevron glide, Profiler 0 B/frame reading — filed in Notion GOLFIN_Roadmap Orders 2185–2188 (2185 = the regression pass, Queued P2). Report: `Docs/Specs/Completed/selector_carousel/IMPLEMENTER_REPORT.md`.
 
 Both in-game selectors (`SelectorOverlay`, `SelectorOverlay_Ball`) stop rendering the whole bag at
 once and become a **4-slot vertical carousel**: a fixed viewport with a `RectMask2D`, a 6-card pool
@@ -293,7 +295,7 @@ Reversal_NotAtRelease` is red (unmodified file, last touched by `270eec9a4 miss_
 editor is up. Also fixed: `ActionButtonsBuilder` leaked one orphaned `SelectorCard_Prefab` scene
 root per run (HEAD carried 14), hence the scene diff being a net -8,129 lines.
 
-Full detail: `Docs/Specs/Active/selector_carousel/IMPLEMENTER_REPORT.md`.
+Full detail: `Docs/Specs/Completed/selector_carousel/IMPLEMENTER_REPORT.md`.
 
 ---
 ## 2026-09-07 — flick_shot_view: **Flick joins the framing; the cone is 792, not 1160**

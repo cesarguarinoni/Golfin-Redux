@@ -110,6 +110,8 @@ Items consciously deferred to the polish phase (Roadmap item 9: UI/UX Polish). N
 
 ## Game polish track (Architect, 2026-09-03) — deferred from `design_consistency_audit` / `game_polish`
 
+> **MIGRATED TO NOTION 2026-09-08** (Cesar rule 2026-09-07: Notion `GOLFIN_Roadmap` is the GAME backlog). P-011 → 2195, P-012 → 2196, P-013 → 2197, P-014 → 2198, P-015 = 2130 (haptics, existing), P-016 → 2189, P-017 → 2190, P-018 → 2191, P-019 → 2192, P-020 → 2193, P-021 → 2194. The rows below are kept as the archive; Notion is authoritative from here.
+
 Rows added when the spec that deferred them was delivered (WORKFLOW_NOTES rule). When taken up, move the row into the new spec and delete it here.
 
 | Id | Item | Deferred from | Needs |
