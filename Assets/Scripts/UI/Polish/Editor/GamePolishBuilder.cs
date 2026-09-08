@@ -48,6 +48,7 @@ using GolfinRedux.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Golfin.UI.Polish.EditorTools
 {
@@ -425,7 +426,23 @@ namespace Golfin.UI.Polish.EditorTools
                 Transform? existing = parent.Find(hostName);
                 if (existing != null && existing.GetComponent<Golfin.Gps.UI.ShimmerHost>() != null)
                 {
-                    log.AppendLine($"  {site.Site}: already ({site.ParentPath}/{hostName})");
+                    // RE-RUN REPAIRS, it does not merely skip. A host placed by an earlier run of
+                    // this builder predates the corner fix below, and "already" would leave it
+                    // wrong forever.
+                    int fixedCorners = 0;
+                    foreach (Transform child in existing)
+                    {
+                        float before = 0f;
+                        foreach (Image img in child.GetComponentsInChildren<Image>(true))
+                            before += img != null ? img.pixelsPerUnitMultiplier : 0f;
+                        FixCornerScale(child.gameObject, site);
+                        float after = 0f;
+                        foreach (Image img in child.GetComponentsInChildren<Image>(true))
+                            after += img != null ? img.pixelsPerUnitMultiplier : 0f;
+                        if (!Mathf.Approximately(before, after)) fixedCorners++;
+                    }
+                    if (fixedCorners > 0) { dirty = true; log.AppendLine($"  {site.Site}: already — repaired {fixedCorners} corner scale(s)"); }
+                    else                   log.AppendLine($"  {site.Site}: already ({site.ParentPath}/{hostName})");
                     already++; continue;
                 }
 
@@ -465,6 +482,8 @@ namespace Golfin.UI.Polish.EditorTools
                     rt.anchoredPosition = site.Horizontal
                         ? new Vector2(offset, 0f)
                         : new Vector2(0f, -offset);   // first block at the TOP, like a list
+
+                    FixCornerScale(inst, site);
                 }
 
                 // LAST: inactive at rest. Done after the children exist so nothing is authored
@@ -485,6 +504,73 @@ namespace Golfin.UI.Polish.EditorTools
             log.AppendLine("  (GeneralShop has no site: its catalog is bundled and never cold — see the header.)");
             return log.ToString();
         }
+
+        /// <summary>
+        /// Keep the block's rounded corner proportionate to the size it was stretched to.
+        ///
+        /// <para>FOUND BY THE A11 LINT, and the first fix was WRONG in an instructive way.
+        /// ShimmerBlock is authored at 900x120 with `S_PillStadium` 9-sliced at
+        /// pixelsPerUnitMultiplier 3.67 — an effective ~24 px corner, right for a short wide pill.
+        /// The sites here stretch it a long way from that (the Rankings podium blocks are 282x433),
+        /// and at 24 px the corner arc kinks against a ~70 px cap radius (`9slice-cap-kink`,
+        /// trap C10). Pinning PPUM to 1 fixed those three sites and BROKE the other three: the full
+        /// ~88 px border on a 100 px-tall block exceeds the rect and the 9-slice collapses, which
+        /// the linter reported as 18 FAILs where there had been 6 warnings. One constant cannot
+        /// serve both shapes.</para>
+        ///
+        /// <para>So it is computed per image from the sprite's OWN border and the box that image
+        /// actually has. The linter leaves a band: it collapses when the two borders no longer fit
+        /// the rect (effective &gt; half the shorter side) and it kinks when the corner is under an
+        /// eighth of it (`UIFidelityLinter` P8b: estCapRadius = min(w,h)/4, warn below half of
+        /// that). A third of the shorter side sits in the middle of that band at every size, which
+        /// is why one rule covers a 282x433 podium block and a 978x100 row alike. Set on the
+        /// INSTANCE, so the shared prefab is untouched and the GPS blocks built from it are
+        /// unaffected.</para>
+        /// </summary>
+        private static void FixCornerScale(GameObject blockInstance, ShimmerSite site)
+            => FixCornerScale((RectTransform)blockInstance.transform,
+                              new Vector2(site.Width, site.Height));
+
+        /// <summary>
+        /// <paramref name="box"/> is the size this rect actually has. Walks down carrying it, so
+        /// every 9-sliced Image is scaled against ITS OWN box rather than the block's — the Band
+        /// is a fixed 180 px wide inside a 282 px block, and scaling it by the block's short side
+        /// would collapse it across the other axis, which is the mirror image of the mistake
+        /// above.
+        /// </summary>
+        private static void FixCornerScale(RectTransform rt, Vector2 box)
+        {
+            var img = rt.GetComponent<Image>();
+            if (img != null && img.sprite != null && img.type == Image.Type.Sliced)
+            {
+                Vector4 b = img.sprite.border;                       // l, b, r, t in sprite px
+                float authored = Mathf.Max(Mathf.Max(b.x, b.y), Mathf.Max(b.z, b.w));
+                float shortSide = Mathf.Min(box.x, box.y);
+                if (authored > 0f && shortSide > 1f)                 // 0 = not really 9-sliced
+                {
+                    float wanted = shortSide / 3f;                   // the effective corner we want
+                    float ppum   = Mathf.Clamp(authored / wanted, 0.05f, 20f);
+                    if (!Mathf.Approximately(img.pixelsPerUnitMultiplier, ppum))
+                    {
+                        img.pixelsPerUnitMultiplier = ppum;
+                        EditorUtility.SetDirty(img);
+                    }
+                }
+            }
+
+            for (int i = 0; i < rt.childCount; i++)
+                if (rt.GetChild(i) is RectTransform child)
+                    FixCornerScale(child, ChildBox(child, box));
+        }
+
+        /// <summary>
+        /// A RectTransform's own size given its parent's: the anchor span across the parent, plus
+        /// sizeDelta. That is the layout arithmetic itself, so it holds with no rebuild pass —
+        /// which matters here because these hosts are authored INACTIVE and never get one.
+        /// </summary>
+        private static Vector2 ChildBox(RectTransform rt, Vector2 parentBox)
+            => new Vector2((rt.anchorMax.x - rt.anchorMin.x) * parentBox.x + rt.sizeDelta.x,
+                           (rt.anchorMax.y - rt.anchorMin.y) * parentBox.y + rt.sizeDelta.y);
 
         private static void Stretch(RectTransform rt)
         {

@@ -39,7 +39,7 @@ read back live as **19 `animateShow` true, 0 false** (my 15 plus the 5 GPS modal
 | `Assets/Scripts/UI/Gps/Editor/GpsPolishBuilder.cs` | The ONLY `Gps/` edit: the ShimmerBlock path (code line + the doc comment naming that path). 2 lines. |
 | `Assets/Scripts/UI/Polish/UiMotion.cs` | `enum Ease`, `EaseOutBack`, `Curve`, `BackOvershoot`, optional trailing `Ease` on Pop/Unpop/Slide/Rise/Tween; lerps → `LerpUnclamped`, alphas → `Clamp01`. |
 | `Assets/Scripts/UI/Polish/GameShimmerSites.cs` | **New.** The game's 7 cold-fetch site names, beside the moved GPS table. |
-| `Assets/Scripts/UI/Polish/Editor/GamePolishBuilder.cs` | **New method** `ApplyModals()` + menu item. |
+| `Assets/Scripts/UI/Polish/Editor/GamePolishBuilder.cs` | **New methods** `ApplyModals()`, `ApplyShimmer()` (+ menu items) and `FixCornerScale`/`ChildBox`, which size each block's 9-slice corner to the box that block actually has — §A11. |
 | `Assets/Scripts/UI/Polish/Editor/RetrofitParityRecorder.cs` | **New.** The §D2 frame-by-frame gate. |
 | `Docs/Scripts/compare_retrofit.py` | **New.** Diffs the two trace JSONs. |
 | `Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs` | §D2: `PopInScaleRoutine` and the `Hide` override deleted. |
@@ -438,19 +438,25 @@ static mission data; a daily countdown, which is a clock; and a streak, which mo
 once animates nothing, and counting a clock would be absurd. Reported for Cesar to overrule if
 he meant something I have not found.
 
-### A14 · `check_report_counts.py` — run, with two adjudicated
+### A14 · `check_report_counts.py` — run, with five adjudicated
 
 `truth()` only knew `game_polish_a`'s `pushes` shape, so it was extended with a `records` arm
 (dispatched on the key the file actually has, so a third shape fails loudly rather than being
-mis-read). Against `modals_invariants.json` it produces `[0, 1, 2, 7, 12, 14]` and flags two
+mis-read). Against `modals_invariants.json` it produces `[0, 1, 2, 7, 12, 14]` and flags five
 integers for a human verdict — which is the tool working as designed, not a defect:
 
 | Line | Number | Verdict |
 |---|---|---|
-| 277 | `D-8` | a deviation ID, not a count |
-| 308 | `164–191 KB` | a figure from `perf_run.log`, not from the modals JSON it was checked against |
+| 281 | `D-8` | a deviation ID, not a count |
+| 312 | `164–191 KB` | a figure from `perf_run.log`, not from the modals JSON it was checked against |
+| 605 | `min(w,h)/4` | the lint's own cap-radius formula, quoted from `UIFidelityLinter.cs:202` |
+| 611 | `282×433` | a block size in px, read live off the scene in §A11 |
+| 649 | `120 lines` | the ShellScene diff size, from `git diff --stat` |
 
-`check_report_citations.py`: **31 cited, 0 unresolved.**
+The last three are §A11's and are checked against `modals_invariants.json`, which knows nothing
+about shimmer geometry; each is verified against its own source, named in the row.
+
+`check_report_citations.py`: **42 cited, 0 unresolved.**
 
 ### A3 · Rest parity — measured, and every difference opened
 
@@ -562,6 +568,112 @@ working:
 
 The last line is the one that matters: a CACHE paint reports `instant` and does not stagger,
 which is the distinction §D6 is built on.
+
+### A11 · UI fidelity lint — the modals are provably unchanged, and the shimmer blocks were not
+
+Two roots to check: the eight modal prefabs the `animateShow` flag was written into, and the six
+shimmer hosts §D4 authored into `ShellScene`. Neither has a Figma node, so both run render-health
+only (`specJsonPath = null`) — the layer that needs no reference.
+
+**The modals: delta zero, which is the whole claim.** `animateShow` is a serialized bool on
+`ModalController`; it cannot move a rect or swap a sprite, and the lint is how that stops being an
+assertion. Same eight prefabs, before the flag (checked out at `9575baaa2^`) and after:
+
+| prefab | FAIL | WARN before | WARN after |
+|---|---|---|---|
+| `GachaRatesModal` | 0 | 5 | 5 |
+| `GachaRevealModal` | 0 | 4 | 4 |
+| `HoleCompleteModal` | 0 | 8 | 8 |
+| `InGameSettingsModal` | 0 | 13 | 13 |
+| `SchemeConfirmModal` | 0 | 18 | 18 |
+| `StartingCharacterConfirmModal` | 0 | 4 | 4 |
+| `TournamentResultModal` | 0 | 10 | 10 |
+| `TournamentSignupModal` | 0 | 17 | 17 |
+| **total** | **0** | **79** | **79** |
+
+Per-prefab identical, `RESULT: PASS (health)` on all eight. The 79 warnings are pre-existing art
+debt in modals this task did not author; the number that matters is that it did not move.
+
+**The shimmer hosts: 6 warnings, and they were a real defect.** `ShimmerBlock` is authored at
+900×120 with `S_PillStadium` (176×176, 88px border on every side) 9-sliced at
+`pixelsPerUnitMultiplier` 3.667 — an effective 24px corner, right for a short wide pill. §D4
+stretches that one prefab to six different shapes, and three of them are a long way from 900×120.
+`9slice-cap-kink` (trap C10) fired six times, once per block of the three tall sites.
+
+**The first fix was wrong, and instructively so.** Pinning `pixelsPerUnitMultiplier` to 1 restored
+the full 88px border, which fixed the three tall sites and destroyed the three short ones: 88+88
+does not fit inside a 100px-tall row, the 9-slice collapses, and the lint came back **FAIL 18,
+WARN 0** — `rankings.list`, `tournament.leaderboard` and `gacha.history` at 6 each. One constant
+cannot serve both shapes; the corner has to be a function of the box.
+
+`GamePolishBuilder.FixCornerScale` now computes it per image, aiming the effective corner at a
+third of the shorter side. The linter leaves a band — collapse above half the shorter side, kink
+below an eighth of it (P8b: `estCapRadius = min(w,h)/4`, warn under half of that) — and a third
+sits mid-band at every size.
+
+**The second image of the same shape nearly repeated the mistake.** The first version of this fix
+took the shorter side from the *site* dimensions, which is right for the block root and wrong for
+the `Band` inside it: `Band` is a fixed 180px wide stretched to the block's height, so inside the
+282×433 podium block a site-derived corner of 94px would not have fit across its 180px width — the
+mirror image of the collapse above, in a place the first fix could not see. It is resolved per rect
+now (`ChildBox`: anchor span across the parent, plus `sizeDelta` — the layout arithmetic itself, so
+it holds without a rebuild pass, which matters because these hosts are authored inactive). Caught
+by working the numbers before applying, not by the lint after.
+
+Every image, measured live after the apply. Threshold is the shorter side ÷ 8:
+
+| site | image | box | kink threshold | before | verdict | after | verdict |
+|---|---|---|---|---|---|---|---|
+| `rankings.top3` ×3 | Block | 282×433 | 35.3px | 24px | **WARN** | 94.0px (ppum 0.936) | PASS |
+| | Band | 180×433 | 22.5px | 24px | PASS | 60.0px (ppum 1.467) | PASS |
+| `rankings.list` ×3 | Block | 978×100 | 12.5px | 24px | PASS | 33.3px (ppum 2.64) | PASS |
+| | Band | 180×100 | 12.5px | 24px | PASS | 33.3px (ppum 2.64) | PASS |
+| `tournament.cards` ×2 | Block | 978×220 | 27.5px | 24px | **WARN** | 73.3px (ppum 1.2) | PASS |
+| | Band | 180×220 | 22.5px | 24px | PASS | 60.0px (ppum 1.467) | PASS |
+| `tournament.leaderboard` ×3 | Block | 978×100 | 12.5px | 24px | PASS | 33.3px (ppum 2.64) | PASS |
+| | Band | 180×100 | 12.5px | 24px | PASS | 33.3px (ppum 2.64) | PASS |
+| `gacha.history` ×3 | Block | 978×100 | 12.5px | 24px | PASS | 33.3px (ppum 2.64) | PASS |
+| | Band | 180×100 | 12.5px | 24px | PASS | 33.3px (ppum 2.64) | PASS |
+| `missions.daily` ×1 | Block | 978×374 | 46.8px | 24px | **WARN** | 124.7px (ppum 0.706) | PASS |
+| | Band | 180×374 | 22.5px | 24px | PASS | 60.0px (ppum 1.467) | PASS |
+
+Six warnings, six blocks: three podium blocks, two tournament cards, one daily card. After:
+
+```
+shimmer_rankings_top3           — 0 FAIL, 0 WARN, 0 INFO —  RESULT: PASS (health)
+shimmer_rankings_list           — 0 FAIL, 0 WARN, 0 INFO —  RESULT: PASS (health)
+shimmer_tournament_cards        — 0 FAIL, 0 WARN, 0 INFO —  RESULT: PASS (health)
+shimmer_tournament_leaderboard  — 0 FAIL, 0 WARN, 0 INFO —  RESULT: PASS (health)
+shimmer_gacha_history           — 0 FAIL, 0 WARN, 0 INFO —  RESULT: PASS (health)
+shimmer_missions_daily          — 0 FAIL, 0 WARN, 0 INFO —  RESULT: PASS (health)
+```
+
+JSONs: `Docs/Diagnostics/_capture/shimmer_{rankings_top3,rankings_list,tournament_cards,tournament_leaderboard,gacha_history,missions_daily}_lint.json`, `fail: 0` in each.
+Every host went back inactive (`restoredInactive=True` on all six) and the lint itself left the
+scene undirtied — `dirty=False` before and after.
+
+**The scene diff is 120 lines, all additions, and every one of them is the same field:** 30
+`m_PixelsPerUnitMultiplier` overrides, two per block across the fifteen blocks. No rect, no anchor,
+no active-state.
+
+**The same shape, audited across the seven sites this task does not own.** `ShimmerBlock` is shared
+with GPS, so a corner rule that only looked at six of thirteen sites would be half an answer. All
+seven GPS hosts linted clean at the authored 3.667 and were left alone:
+
+| GPS site | block | shorter side | threshold | effective | verdict |
+|---|---|---|---|---|---|
+| `hub.rounds` | 894×106 | 106 | 13.3px | 24px | PASS |
+| `rounds.history` | 894×106 | 106 | 13.3px | 24px | PASS |
+| `rounds.spots` | 894×106 | 106 | 13.3px | 24px | PASS |
+| `gift.supporters` | 894×72 | 72 | 9.0px | 24px | PASS |
+| `gift.golfers` | 894×72 | 72 | 9.0px | 24px | PASS |
+| `badges.grid` | 220.5×153 | 153 | 19.1px | 24px | PASS |
+| `vote.list` | 958×232 | 180 (Band) | 22.5px | 24px | PASS |
+
+`0 FAIL, 0 WARN` on all seven. They pass because none is stretched as far as this task's three tall
+sites — which is the same finding from the other side. One is close: `vote.list`'s Band clears the
+threshold by 7% (`vote.list`'s block root is `Image.Type.Simple`, so the check skips it). That is a
+GPS-owned prefab instance and out of scope here; flagged, not touched.
 
 ## What is NOT done
 
