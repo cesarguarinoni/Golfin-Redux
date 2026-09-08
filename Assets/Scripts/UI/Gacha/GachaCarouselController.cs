@@ -1,6 +1,6 @@
 // Assets/Scripts/UI/Gacha/GachaCarouselController.cs
 // gacha_screen Stage 2 — §3c Carousel + Countdown driver
-// Horizontal drag/swipe, snap-to-center, NO wrap, distance-based scale/alpha falloff.
+// Horizontal drag/swipe, snap-to-center, INFINITE WRAP, distance-based scale/alpha falloff.
 // ONE Update ticker for countdown and position lerp (not per-card coroutines).
 // Dot indicators: dynamic count = live banners, center = active index.
 // On expiry: RemoveBanner, rebuild dots, snap to nearest live; zero live → EmptyState.
@@ -51,6 +51,12 @@ namespace GolfinRedux.UI.Gacha
         [Tooltip("Min drag distance (px) to advance the index.")]
         [SerializeField] private float _dragThreshold = 80f;
 
+        [Tooltip("Carousel wraps: swiping past the last banner continues onto the first, and past " +
+                 "the first back onto the last, with no end stop. Needs at least two banners to " +
+                 "mean anything. Defaults ON — a serialized bool rather than a constant so the " +
+                 "behaviour can be turned off from the Inspector without a code change.")]
+        [SerializeField] private bool _loop = true;
+
         // ── Internal state ────────────────────────────────────────────────────
 
         private readonly List<GachaBannerCard> _cards     = new();
@@ -66,6 +72,46 @@ namespace GolfinRedux.UI.Gacha
         // ── Countdown update interval ──────────────────────────────────────────
         private float _countdownTimer = 0f;
         private const float CountdownInterval = 1f; // update text every second
+
+        // ── Wrapping ──────────────────────────────────────────────────────────
+        //
+        // The carousel is a RING, not a strip. Card i sits at `i * spacing`, so the whole set
+        // repeats every `count * spacing` — and if a card's offset from the centre is reduced
+        // modulo that span into (-span/2, +span/2], every card is drawn at its NEAREST copy.
+        // The last card is then one slot to the LEFT of the first, exactly as if there were an
+        // endless run of them in both directions, and no card is ever cloned to achieve it.
+        //
+        // Scroll position is therefore unbounded while a gesture is in flight — that is what makes
+        // the wrap feel continuous instead of snapping round — and is re-based to [0, span) the
+        // moment it settles, so a long session cannot walk `_currentOffset` out to a magnitude
+        // where a float stops resolving single pixels.
+
+        /// <summary>The scroll distance after which the ring repeats.</summary>
+        private float Span => _cards.Count * _cardSpacing;
+
+        /// <summary>Whether the ring is closed. One banner has no ring — with a single card every
+        /// position is the same position, and a "wrap" would be a swipe that never moves.</summary>
+        private bool Wraps => _loop && _cards.Count >= 2 && _cardSpacing > 0f;
+
+        /// <summary>Reduce a signed distance to the nearest equivalent on the ring.</summary>
+        private float WrapDelta(float d) => Wraps ? WrapOnRing(d, _cards.Count, _cardSpacing) : d;
+
+        /// <summary>
+        /// The ring reduction itself, as a pure function of its inputs — <c>internal static</c> so
+        /// the EditMode suite exercises THIS, the code that ships, rather than a mirror of it that
+        /// can drift (feedback_tests_must_target_production_type). A count below two or a
+        /// non-positive spacing is not a ring and is returned untouched.
+        /// </summary>
+        internal static float WrapOnRing(float delta, int count, float spacing)
+        {
+            if (count < 2 || spacing <= 0f) return delta;
+            float span = count * spacing;
+            return Mathf.Repeat(delta + span * 0.5f, span) - span * 0.5f;
+        }
+
+        /// <summary>Positive modulo — C#'s % keeps the sign of the dividend, so a scroll that has
+        /// run left of zero would index backwards off the list. Internal for the same reason.</summary>
+        internal static int Mod(int a, int n) => n <= 0 ? 0 : ((a % n) + n) % n;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
@@ -121,7 +167,22 @@ namespace GolfinRedux.UI.Gacha
         {
             // Continuous scroll: ease to the snap target only when not actively dragging.
             if (!_isDragging)
+            {
                 _currentOffset = Mathf.Lerp(_currentOffset, _targetOffset, Time.deltaTime * _snapSpeed);
+
+                // Re-base the ring ONLY once the ease has arrived. Doing it mid-lerp would move the
+                // target the lerp is chasing and the cards would jump a whole span in one frame.
+                if (Wraps && Mathf.Abs(_currentOffset - _targetOffset) < 0.01f)
+                {
+                    float span = Span;
+                    float turns = Mathf.Floor(_targetOffset / span);
+                    if (!Mathf.Approximately(turns, 0f))
+                    {
+                        _targetOffset  -= turns * span;
+                        _currentOffset -= turns * span;
+                    }
+                }
+            }
             UpdateCardTransforms();
 
             // Countdown tick
@@ -154,9 +215,22 @@ namespace GolfinRedux.UI.Gacha
         {
             _isDragging = false;
             // Snap to the nearest card from where the scroll landed — smooth ease, no binary index flip.
-            int idx = Mathf.Clamp(Mathf.RoundToInt(_currentOffset / _cardSpacing), 0, _cards.Count - 1);
-            _currentIndex = idx;
-            _targetOffset = idx * _cardSpacing;
+            int idx = Mathf.RoundToInt(_cardSpacing > 0f ? _currentOffset / _cardSpacing : 0f);
+            if (Wraps)
+            {
+                // No clamp: the scroll is allowed off the end of the list, and the index it maps to
+                // is taken modulo the count. THAT is the whole loop — a swipe left off card 0 snaps
+                // to slot -1, which is the last banner, and the ease travels one card's width to
+                // reach it rather than the width of the entire strip.
+                _targetOffset = idx * _cardSpacing;
+                _currentIndex = Mod(idx, _cards.Count);
+            }
+            else
+            {
+                idx = Mathf.Clamp(idx, 0, _cards.Count - 1);
+                _currentIndex = idx;
+                _targetOffset = idx * _cardSpacing;
+            }
             UpdateDots();
         }
 
@@ -183,7 +257,13 @@ namespace GolfinRedux.UI.Gacha
 
                 if (i == _currentIndex) return;   // already centred
                 _currentIndex = i;
-                _targetOffset = i * _cardSpacing; // Update()'s lerp eases us there, same as a snap
+                // Ease to the card's NEAREST copy on the ring, not to its absolute slot: the player
+                // tapped the banner they can see, so it must come in from the side it is on. Its
+                // absolute slot could be a whole span away and the card would sail off the other
+                // edge to arrive.
+                _targetOffset = Wraps
+                    ? _currentOffset + WrapDelta(i * _cardSpacing - _currentOffset)
+                    : i * _cardSpacing;           // Update()'s lerp eases us there, same as a snap
                 UpdateDots();
                 return;
             }
@@ -257,8 +337,9 @@ namespace GolfinRedux.UI.Gacha
                 var cg = _cards[i].GetComponent<CanvasGroup>();
                 if (rt == null || cg == null) continue;
 
-                // Position: continuous scroll — card i is at i*spacing minus the scroll position.
-                float targetX = i * _cardSpacing - _currentOffset;
+                // Position: continuous scroll — card i is at i*spacing minus the scroll position,
+                // reduced to its nearest copy on the ring so the strip has no ends (see § Wrapping).
+                float targetX = WrapDelta(i * _cardSpacing - _currentOffset);
                 rt.anchoredPosition = new Vector2(targetX, _cardYOffset);
 
                 // Falloff: normalised distance from centre (0 = centre, 1 = one card away)
@@ -347,7 +428,8 @@ namespace GolfinRedux.UI.Gacha
                     ClearDots();
                     return;
                 }
-                // Clamp index to valid range, re-snap scroll to it, and rebuild dots
+                // Re-base onto the shortened ring. The span just changed, so a scroll left over
+                // from the old one no longer means the card it used to: rebuild it from the index.
                 _currentIndex = Mathf.Clamp(_currentIndex, 0, _cards.Count - 1);
                 _targetOffset = _currentIndex * _cardSpacing;
                 _currentOffset = _targetOffset;
