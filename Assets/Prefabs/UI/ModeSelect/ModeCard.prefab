@@ -5778,7 +5778,6 @@ GameObject:
   - component: {fileID: 4330095190153008082}
   - component: {fileID: 8750747558669262051}
   - component: {fileID: 4256354369524467075}
-  - component: {fileID: 2922669104204946249}
   - component: {fileID: 8585482483969962222}
   - component: {fileID: 6308365798502498209}
   m_Layer: 0
@@ -5904,7 +5903,6 @@ MonoBehaviour:
   rootRect: {fileID: 3007450472791557535}
   collapsedContainer: {fileID: 1772648086435284170}
   expandedContainer: {fileID: 3448166192395282832}
-  cardBorderOutline: {fileID: 2922669104204946249}
   borderImage: {fileID: 0}
   cardBackground: {fileID: 2515516523977785228}
   panelActiveSprite: {fileID: 21300000, guid: 99fb7f168b66e4d73a9e9614789b4daa, type: 3}
@@ -5954,21 +5952,6 @@ MonoBehaviour:
   _collapseDuration: 0.15
   _collapsedHeight: 268
   _expandedHeight: 968
---- !u!114 &2922669104204946249
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8143446089654729295}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 1, g: 1, b: 1, a: 1}
-  m_EffectDistance: {x: 2, y: -2}
-  m_UseGraphicAlpha: 0
 --- !u!114 &8585482483969962222
 MonoBehaviour:
   m_ObjectHideFlags: 0

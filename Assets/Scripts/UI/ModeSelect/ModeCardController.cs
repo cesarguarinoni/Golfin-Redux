@@ -41,9 +41,13 @@ namespace GolfinRedux.UI.ModeSelect
         // ── Card border ───────────────────────────────────────────────────────
         // NOTE: iter-8 — replaced Outline (which doesn't respect corner radius) with a
         // full-bleed sliced Image (FillCenter=false) that draws only the border ring.
-        // cardBorderOutline kept as optional fallback; borderImage is the primary path.
+        // da_q3 (2026-09-08): the Outline fallback is GONE, field and component. It was never a
+        // border — UnityEngine.UI.Outline is an offset copy of the graphic (here: +2,-2 of the
+        // whole card panel), so it read as a blur outside the real rim and ignored the r50 corner
+        // (trap C5, linter `outline-border`). The rim the node draws lives in the panel SPRITE
+        // (S_ModeCardPanel / _Blue: 3 px, white→#818EA1 gradient top-to-bottom, r50) and is
+        // selected by the sprite swap below, so nothing was lost by deleting it.
         [Header("Card Border")]
-        [SerializeField] private Outline cardBorderOutline;   // legacy fallback (may be null)
         [SerializeField] private Image   borderImage;         // iter-8: sliced border ring
         // iter-11: §6.2 border via SPRITE SWAP on the card background. The panel sprite has the
         // border baked in (white = active, #3E7CA8 = collapsed/inactive). Swapped in SetState.
@@ -257,7 +261,6 @@ namespace GolfinRedux.UI.ModeSelect
                 : (isExpanded && !isLocked);
             Color borderColor = whiteBorder ? borderActiveColor : borderInactiveColor;
             if (borderImage != null)        borderImage.color        = borderColor;
-            if (cardBorderOutline != null)  cardBorderOutline.effectColor = borderColor;
             if (cardBackground != null && panelActiveSprite != null && panelCollapsedSprite != null)
                 cardBackground.sprite = whiteBorder ? panelActiveSprite : panelCollapsedSprite;
 

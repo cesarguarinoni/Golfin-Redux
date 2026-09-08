@@ -67,6 +67,12 @@ namespace Golfin.EditorTools.UIFidelity
         [MenuItem("GOLFIN/Design Audit/Q2 · capture the four font surfaces (AFTER)", priority = 413)]
         public static void LaunchQ2After() => Launch("q2:after");
 
+        [MenuItem("GOLFIN/Design Audit/Q3 · capture the two ModeCard surfaces (BEFORE)", priority = 414)]
+        public static void LaunchQ3Before() => Launch("q3:before");
+
+        [MenuItem("GOLFIN/Design Audit/Q3 · capture the two ModeCard surfaces (AFTER)", priority = 415)]
+        public static void LaunchQ3After() => Launch("q3:after");
+
         public static void Launch(string mode)
         {
             if (EditorApplication.isPlaying)
@@ -119,6 +125,7 @@ namespace Golfin.EditorTools.UIFidelity
                 else if (Mode.StartsWith("modals:")) yield return ModalPass(Mode.Substring(7));
                 else if (Mode == "capture") yield return CapturePass();
                 else if (Mode.StartsWith("q2:")) yield return Q2Pass(Mode.Substring(3));
+                else if (Mode.StartsWith("q3:")) yield return Q3Pass(Mode.Substring(3));
 
                 Line("done");
                 EditorApplication.isPlaying = false;
@@ -363,7 +370,7 @@ namespace Golfin.EditorTools.UIFidelity
             // for the A/B to mean anything — a font swap judged only against the two frames the
             // audit already had would be judged on two of its four surfaces.
 
-            string _lastQ2Md5 = "";
+            string _lastSnapMd5 = "";
 
             IEnumerator Q2Pass(string tag)
             {
@@ -374,15 +381,15 @@ namespace Golfin.EditorTools.UIFidelity
                 yield return new WaitForSecondsRealtime(3.5f);
                 yield return Tap("CLUBSTab", 10f);
                 yield return new WaitForSecondsRealtime(2.5f);
-                yield return Q2Snap(outDir, tag, "inventory_clubs");
+                yield return QSnap(outDir, "q2", tag, "inventory_clubs");
 
                 yield return Tap("NavCharactersButton", 20f);
                 yield return new WaitForSecondsRealtime(3.5f);
-                yield return Q2Snap(outDir, tag, "roster_detail");
+                yield return QSnap(outDir, "q2", tag, "roster_detail");
 
                 yield return Tap("CompareButton", 10f);
                 yield return new WaitForSecondsRealtime(2.5f);
-                yield return Q2Snap(outDir, tag, "roster_compare");
+                yield return QSnap(outDir, "q2", tag, "roster_compare");
 
                 yield return Tap("CloseCompareButton", 10f);
                 yield return new WaitForSecondsRealtime(1.5f);
@@ -391,24 +398,46 @@ namespace Golfin.EditorTools.UIFidelity
                 yield return new WaitForSecondsRealtime(2.5f);
                 yield return Tap("UserProfileRow", 10f);
                 yield return new WaitForSecondsRealtime(2.5f);
-                yield return Q2Snap(outDir, tag, "settings_userprofile");
+                yield return QSnap(outDir, "q2", tag, "settings_userprofile");
+            }
+
+            // ── Q3 · da_q3_modecard_outline_to_rim ─────────────────────────
+            //
+            // The two surfaces the ModeCard family is live on. ModeSelection is the load-bearing
+            // one: it renders a COLLAPSED card (MULTIPLAYER) and an EXPANDED card (PRACTICE) in the
+            // same frame, so one capture carries both rim states the spec asks to see. Home carries
+            // the carousel — 15 ModeHomeCard clones — and is the parity surface: removing a border
+            // effect must not move a single card.
+
+            IEnumerator Q3Pass(string tag)
+            {
+                const string outDir = "Docs/Specs/Quick/_attachments";
+                System.IO.Directory.CreateDirectory(outDir);
+
+                yield return Tap("NavHomeButton", 20f);
+                yield return new WaitForSecondsRealtime(3.5f);
+                yield return QSnap(outDir, "q3", tag, "home_carousel");
+
+                yield return Tap("NavTeeButton", 20f);
+                yield return new WaitForSecondsRealtime(3.5f);
+                yield return QSnap(outDir, "q3", tag, "modeselection");
             }
 
             /// <summary>One frame, checked for existence AND for an md5 differing from the previous
             /// one — SnapPlayModeSafe returns a path for a file it never wrote, and returns real
             /// byte-identical STALE frames when the capture lands before the screen repaints.</summary>
-            IEnumerator Q2Snap(string outDir, string tag, string surface)
+            IEnumerator QSnap(string outDir, string group, string tag, string surface)
             {
                 yield return new WaitForEndOfFrame();
-                string path = Golfin.Diagnostics.Runtime.CaptureCore.SnapPlayModeSafe($"q2_{tag}_{surface}");
+                string path = Golfin.Diagnostics.Runtime.CaptureCore.SnapPlayModeSafe($"{group}_{tag}_{surface}");
                 if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
                 { Line($"FAIL {surface}: phantom capture path ({path})"); yield break; }
 
                 string md5 = Md5(path);
-                if (md5 == _lastQ2Md5) Line($"FAIL {surface}: STALE frame (md5 == previous)");
-                _lastQ2Md5 = md5;
+                if (md5 == _lastSnapMd5) Line($"FAIL {surface}: STALE frame (md5 == previous)");
+                _lastSnapMd5 = md5;
 
-                string dest = System.IO.Path.Combine(outDir, $"da_q2_{tag}_{surface}.png");
+                string dest = System.IO.Path.Combine(outDir, $"da_{group}_{tag}_{surface}.png");
                 System.IO.File.Copy(path, dest, true);
                 Line($"captured {dest} md5={md5.Substring(0, 8)}");
             }
