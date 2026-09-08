@@ -15976,6 +15976,7 @@ MonoBehaviour:
   _sideAlpha: 0.45
   _snapSpeed: 10
   _dragThreshold: 80
+  _loop: 1
 --- !u!1 &249416398
 GameObject:
   m_ObjectHideFlags: 0
@@ -31545,7 +31546,7 @@ MonoBehaviour:
   closeButton: {fileID: 887567601}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   titleText: {fileID: 629311613}
   cancelButton: {fileID: 887567601}
   filterBar: {fileID: 954662705}
@@ -36560,7 +36561,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   _screen: {fileID: 571272056}
   _matchmakingModal: {fileID: 4390230621042469647}
 --- !u!224 &562993541
@@ -68635,7 +68636,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   bagGridParent: {fileID: 1855815627}
   bagSlotPrefab: {fileID: 2423997766403935763, guid: 98d7dfd753000e04dbf1781081c534a2, type: 3}
   bagSlotLockedPrefab: {fileID: 3198209748708365106, guid: 7e7e5fe1b648ac345bf15e573478dbc7, type: 3}
@@ -91290,7 +91291,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   clubNameText: {fileID: 1980856036}
   rarityLabel: {fileID: 808399382}
   levelText: {fileID: 1718711809}
@@ -112650,7 +112651,7 @@ MonoBehaviour:
   closeButton: {fileID: 1647794050}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   titleText: {fileID: 1227611497}
   cancelButton: {fileID: 1647794050}
   backgroundImage: {fileID: 1929646834}
@@ -142571,7 +142572,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   characterNameText: {fileID: 1759322265}
   rarityLabel: {fileID: 959047623}
   levelText: {fileID: 874923823}
@@ -148234,7 +148235,7 @@ MonoBehaviour:
   closeButton: {fileID: 1028463650}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   playerCard: {fileID: 1028463667}
   playerUsernameText: {fileID: 1028463666}
   playerRankText: {fileID: 1028463665}

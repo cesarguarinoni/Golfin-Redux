@@ -1750,6 +1750,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 1
   _sponsorText: {fileID: 5885811953482475981}
   _titleText: {fileID: 9195297511905476637}
   _venueText: {fileID: 5701566224838646560}

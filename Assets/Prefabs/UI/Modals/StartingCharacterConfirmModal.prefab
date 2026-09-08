@@ -410,6 +410,7 @@ MonoBehaviour:
   closeButton: {fileID: 6355975644385387559}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 1
   _characterNameText: {fileID: 9195297511905476637}
   _characterPortrait: {fileID: 0}
   _confirmButton: {fileID: 26363193067858761}

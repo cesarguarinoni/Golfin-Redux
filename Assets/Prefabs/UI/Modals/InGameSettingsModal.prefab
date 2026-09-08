@@ -6518,7 +6518,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   gearButton: {fileID: 0}
   sfxSlider: {fileID: 7472045784596652492}
   musicSlider: {fileID: 2052383974580583290}

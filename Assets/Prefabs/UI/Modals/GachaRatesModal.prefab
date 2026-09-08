@@ -1383,6 +1383,7 @@ MonoBehaviour:
   closeButton: {fileID: 4813842546571934897}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 1
   _titleText: {fileID: 494727686749311}
   _bodyText: {fileID: 1170346656775896860}
   _bodyScroll: {fileID: 2923840350472763549}

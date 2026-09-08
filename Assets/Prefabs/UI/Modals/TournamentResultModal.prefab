@@ -2020,6 +2020,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 1
   _sponsorText: {fileID: 5544773983356553620}
   _titleText: {fileID: 4695203306956429013}
   _venueText: {fileID: 8231309326756006635}

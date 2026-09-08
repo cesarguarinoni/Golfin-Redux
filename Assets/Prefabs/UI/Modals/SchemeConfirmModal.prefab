@@ -1577,7 +1577,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   titleText: {fileID: 3068802914786192015}
   tileImages:
   - {fileID: 1053373985156122747}

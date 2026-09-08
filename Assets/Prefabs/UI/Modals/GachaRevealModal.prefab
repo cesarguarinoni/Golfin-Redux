@@ -307,6 +307,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 1
   _bagPivot: {fileID: 2030694411689859096}
   _bag: {fileID: 2702196232066766935}
   _bagGlow: {fileID: 5208347949447692089}

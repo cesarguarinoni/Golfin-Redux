@@ -2507,7 +2507,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
-  animateShow: 0
+  animateShow: 1
   _widget: {fileID: 0}
 --- !u!1 &7041689180996471413
 GameObject:
