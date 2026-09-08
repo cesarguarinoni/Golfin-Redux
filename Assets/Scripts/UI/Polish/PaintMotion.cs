@@ -1,4 +1,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
+// MOVED by game_polish_b §D0 (from Assets/Scripts/UI/Gps/GpsPaintMotion.cs).
+//
+// The namespace and the class names are DELIBERATELY unchanged — `Golfin.Gps.UI`
+// on a file under Polish/ reads wrong, and it stays wrong on purpose: renaming it
+// touches every GPS call site, and that rename belongs to the GPS session (there
+// is a Docs/GPS/GPS_BACKLOG.md row for it). This task moves the file and nothing
+// else, so the diff a GPS reviewer sees is a pure rename with the GUID intact.
+//
+// It moved because the GAME surface needs the same gate: `PaintGate` answers
+// "cache or cold fetch?", and that question is not GPS's. See Polish/GameShimmerSites.cs
+// for the game's site table — added BESIDE this file rather than inside it, so the
+// GPS table stays exactly as the GPS session left it.
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // gps_polish §D3 / §D8 — WHICH PAINT IS THIS, and what the answer is allowed to
 // animate.
 //

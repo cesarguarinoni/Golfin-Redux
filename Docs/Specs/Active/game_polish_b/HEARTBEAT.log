@@ -1,0 +1,16 @@
+=== iter-1 kickoff baseline 2026-09-08T01:40:00Z ===
+HEAD 0b8bce61a2d8051937c65fd1b5429f04d76a3462
+HEAD subject: free_swing: the trace follows the club, the toggle hides again, and the duff is a duration
+DIRTY (git status --porcelain --untracked-files=all):
+   M Assets/Editor/ShotUI/FreeSwingSchemeVerify.cs
+   M Assets/Editor/ShotUI/FreeSwingSchemeVideo.cs
+   M Docs/AI_CONTEXT.md
+   M Docs/POLISH_BACKLOG.md
+   M Docs/Reports/content_art.txt
+   M Docs/TellCode.md
+  ?? Docs/Specs/Active/game_polish_b/HEARTBEAT.log
+  ?? Docs/Specs/Active/scheme_freeswing/freeswing_invariants.json
+--- end baseline ---
+NOTE: every path above belongs to the concurrent scheme_freeswing session
+      (staged in the shared index) or is a shared append-target doc.
+      game_polish_b owns NONE of them.

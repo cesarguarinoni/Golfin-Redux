@@ -611,13 +611,13 @@ namespace Golfin.Gps.EditorTools
         // ═════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Build (or rebuild) <c>Assets/Prefabs/UI/Gps/ShimmerBlock.prefab</c> — a rounded dark
+        /// Build (or rebuild) <c>Assets/Prefabs/UI/Common/ShimmerBlock.prefab</c> — a rounded dark
         /// block with one highlight band, clipped by a RectMask2D. §D8.
         /// </summary>
         [MenuItem("GOLFIN/Gps/Build Shimmer Block", priority = 231)]
         public static void BuildShimmerBlock()
         {
-            const string path = PrefabDir + "ShimmerBlock.prefab";
+            const string path = "Assets/Prefabs/UI/Common/ShimmerBlock.prefab";  // game_polish_b §D0 — moved out of Gps/, shared with the game surface.
             GameObject root = CreateShimmerBlock(null, "ShimmerBlock");
             PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);

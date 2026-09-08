@@ -40,6 +40,30 @@ using UnityEngine;
 namespace Golfin.UI.Polish
 {
     /// <summary>
+    /// Which curve a primitive runs on. game_polish_b §D2 — the ONE public-API addition of the
+    /// `game_polish` track, and it is additive: every parameter that takes one is optional and
+    /// defaults to <see cref="Ease.OutCubic"/>, which is the curve every GPS call site already
+    /// got, so `gps_polish`'s behaviour is unchanged to the last frame.
+    ///
+    /// <para>It exists because <c>GachaRevealModalController</c> — the most-loved motion in the
+    /// game, and one of the three §D2 retrofits — overshoots. Routing it through
+    /// <see cref="UiMotion"/> without an overshoot curve would have meant either flattening the
+    /// reveal (a visible regression on the exact motion the retrofit promised not to change) or
+    /// leaving a fourth hand-rolled tween loop in the project, which is what
+    /// <see cref="UiMotion"/> exists to end.</para>
+    /// </summary>
+    public enum Ease
+    {
+        /// <summary>Today's curve, and the default everywhere: <c>1 - (1-t)^3</c>.</summary>
+        OutCubic,
+        /// <summary>Overshoots past 1 and settles back. See <see cref="UiMotion.EaseOutBack"/>.</summary>
+        OutBack,
+        /// <summary>No easing — <c>t</c>. For a driver whose OWN maths shapes the frame (the
+        /// gacha bag shake integrates a ramping frequency; easing its clock would double-ease it).</summary>
+        Linear,
+    }
+
+    /// <summary>
     /// Shared UI motion primitives — fade, pop, slide, rise, count-up, stagger, pulse.
     /// Static; all state lives on the coroutine or on <see cref="UiMotionRunner"/>.
     /// </summary>
@@ -216,6 +240,43 @@ namespace Golfin.UI.Polish
             return t * t * t;
         }
 
+        /// <summary>How far <see cref="Ease.OutBack"/> overshoots. NOT a new number: it is the
+        /// <c>c1 = 1.70158f</c> that <c>GachaRevealModalController.EaseOutBack</c> has used since
+        /// the reveal shipped, quoted here so the retrofit is a primitive swap and not a retune.</summary>
+        public const float BackOvershoot = 1.70158f;
+
+        /// <summary>
+        /// Ease-out-back — overshoots past 1 and settles. The expression is
+        /// <c>GachaRevealModalController.EaseOutBack</c>, character for character.
+        ///
+        /// <para>A caller easing with this MUST lerp unclamped, or the overshoot — the entire
+        /// point of the curve — is clipped away and the result is an ordinary ease-out. Every
+        /// primitive below does.</para>
+        /// </summary>
+        public static float EaseOutBack(float t)
+        {
+            t = Mathf.Clamp01(t);
+            const float c1 = BackOvershoot;
+            const float c3 = c1 + 1f;
+            float p = t - 1f;
+            return 1f + c3 * p * p * p + c1 * p * p;
+        }
+
+        /// <summary>
+        /// One curve, by name. Public because a routine that shapes SEVERAL quantities from one
+        /// clock needs the eased value itself, not a lerp of it — the gacha card pop moves a
+        /// position (clamped), a scale (unclamped, so it overshoots), an arc offset (on the RAW
+        /// clock) and an alpha (on the raw clock, over a different span) from one <c>t</c>. Such a
+        /// routine drives through <see cref="Tween"/> on <see cref="Ease.Linear"/> and asks for the
+        /// curve here, which is still one tween loop instead of a fourth hand-rolled one.
+        /// </summary>
+        public static float Curve(Ease ease, float t) => ease switch
+        {
+            Ease.OutBack => EaseOutBack(t),
+            Ease.Linear  => Mathf.Clamp01(t),
+            _            => EaseOut(t),
+        };
+
         // ═════════════════════════════════════════════════════════════════════
         // Primitives
         // ═════════════════════════════════════════════════════════════════════
@@ -247,17 +308,18 @@ namespace Golfin.UI.Polish
         /// <see cref="Vector3.one"/>, including on interruption — a modal stranded at 0.94
         /// is a visibly wrong-sized panel that survives until the next rebuild.
         /// </summary>
-        public static IEnumerator Pop(RectTransform rect, CanvasGroup? group, float dur = PopDur)
+        public static IEnumerator Pop(RectTransform rect, CanvasGroup? group, float dur = PopDur,
+                                     Ease ease = Ease.OutCubic)
         {
             if (rect == null) return Register(Empty(), Noop);
-            return Register(PopRoutine(rect, group, dur), () =>
+            return Register(PopRoutine(rect, group, dur, ease), () =>
             {
                 if (rect != null) rect.localScale = Vector3.one;
                 if (group != null) group.alpha = 1f;
             });
         }
 
-        private static IEnumerator PopRoutine(RectTransform rect, CanvasGroup? group, float dur)
+        private static IEnumerator PopRoutine(RectTransform rect, CanvasGroup? group, float dur, Ease ease)
         {
             const float fromScale = 0.9f;
             rect.localScale = new Vector3(fromScale, fromScale, 1f);
@@ -268,10 +330,15 @@ namespace Golfin.UI.Polish
             {
                 elapsed += Time.unscaledDeltaTime;
                 if (rect == null) yield break;
-                float e = EaseOut(dur <= 0f ? 1f : elapsed / dur);
-                float s = Mathf.Lerp(fromScale, 1f, e);
+                float e = Curve(ease, dur <= 0f ? 1f : elapsed / dur);
+                // UNCLAMPED so Ease.OutBack actually overshoots; identical to Lerp for OutCubic
+                // and Linear, whose curves never leave [0,1].
+                float s = Mathf.LerpUnclamped(fromScale, 1f, e);
                 rect.localScale = new Vector3(s, s, 1f);
-                if (group != null) group.alpha = e;
+                // Alpha is CLAMPED even when the scale overshoots — a panel is never more than
+                // opaque, and an alpha of 1.09 mid-pop would clip to 1 anyway on some paths and
+                // not on others.
+                if (group != null) group.alpha = Mathf.Clamp01(e);
                 yield return null;
             }
             if (rect != null) rect.localScale = Vector3.one;
@@ -279,17 +346,22 @@ namespace Golfin.UI.Polish
         }
 
         /// <summary>The reverse of <see cref="Pop"/> — used by a modal's Hide.</summary>
-        public static IEnumerator Unpop(RectTransform rect, CanvasGroup? group, float dur = FadeDur)
+        /// <param name="ease">SYMMETRY NOTE. <see cref="Ease.OutCubic"/> — the default — selects
+        /// today's curve here, which is the ease-IN half of the cubic pair: a panel leaving should
+        /// accelerate away, not decelerate into nothing. The name reads oddly for exactly one
+        /// primitive and the alternative was a fourth enum member that only Unpop could use.</param>
+        public static IEnumerator Unpop(RectTransform rect, CanvasGroup? group, float dur = FadeDur,
+                                       Ease ease = Ease.OutCubic)
         {
             if (rect == null) return Register(Empty(), Noop);
-            return Register(UnpopRoutine(rect, group, dur), () =>
+            return Register(UnpopRoutine(rect, group, dur, ease), () =>
             {
                 if (rect != null) rect.localScale = Vector3.one;
                 if (group != null) group.alpha = 0f;
             });
         }
 
-        private static IEnumerator UnpopRoutine(RectTransform rect, CanvasGroup? group, float dur)
+        private static IEnumerator UnpopRoutine(RectTransform rect, CanvasGroup? group, float dur, Ease ease)
         {
             const float toScale = 0.95f;
             float elapsed = 0f;
@@ -297,10 +369,11 @@ namespace Golfin.UI.Polish
             {
                 elapsed += Time.unscaledDeltaTime;
                 if (rect == null) yield break;
-                float e = EaseIn(dur <= 0f ? 1f : elapsed / dur);
-                float s = Mathf.Lerp(1f, toScale, e);
+                float raw = dur <= 0f ? 1f : elapsed / dur;
+                float e = ease == Ease.OutCubic ? EaseIn(raw) : Curve(ease, raw);
+                float s = Mathf.LerpUnclamped(1f, toScale, e);
                 rect.localScale = new Vector3(s, s, 1f);
-                if (group != null) group.alpha = 1f - e;
+                if (group != null) group.alpha = Mathf.Clamp01(1f - e);
                 yield return null;
             }
             // Scale settles at ONE, not at toScale: the panel is about to be deactivated and the
@@ -310,18 +383,22 @@ namespace Golfin.UI.Polish
         }
 
         /// <summary>Horizontal slide on anchoredPosition.x.</summary>
+        /// <param name="ease">SYMMETRY NOTE, as <see cref="Unpop"/>. <see cref="Ease.OutCubic"/>
+        /// — the default — defers to <paramref name="easeOut"/>, which is what every existing call
+        /// site passes and how the push has always behaved. Any OTHER member overrides the bool.</param>
         public static IEnumerator Slide(RectTransform rect, float fromX, float toX,
-                                        float dur = PushDur, bool easeOut = true)
+                                        float dur = PushDur, bool easeOut = true,
+                                        Ease ease = Ease.OutCubic)
         {
             if (rect == null) return Register(Empty(), Noop);
-            return Register(SlideRoutine(rect, fromX, toX, dur, easeOut), () =>
+            return Register(SlideRoutine(rect, fromX, toX, dur, easeOut, ease), () =>
             {
                 if (rect != null) rect.anchoredPosition = new Vector2(toX, rect.anchoredPosition.y);
             });
         }
 
         private static IEnumerator SlideRoutine(RectTransform rect, float fromX, float toX,
-                                                float dur, bool easeOut)
+                                                float dur, bool easeOut, Ease ease)
         {
             float y = rect.anchoredPosition.y;
             rect.anchoredPosition = new Vector2(fromX, y);
@@ -332,8 +409,8 @@ namespace Golfin.UI.Polish
                 elapsed += Time.unscaledDeltaTime;
                 if (rect == null) yield break;
                 float t = dur <= 0f ? 1f : elapsed / dur;
-                float e = easeOut ? EaseOut(t) : EaseIn(t);
-                rect.anchoredPosition = new Vector2(Mathf.Lerp(fromX, toX, e), y);
+                float e = ease == Ease.OutCubic ? (easeOut ? EaseOut(t) : EaseIn(t)) : Curve(ease, t);
+                rect.anchoredPosition = new Vector2(Mathf.LerpUnclamped(fromX, toX, e), y);
                 yield return null;
             }
             if (rect != null) rect.anchoredPosition = new Vector2(toX, y);
@@ -341,11 +418,12 @@ namespace Golfin.UI.Polish
 
         /// <summary>Rise into place: y from (rest − dy) to rest, with alpha 0 → 1.</summary>
         public static IEnumerator Rise(RectTransform rect, CanvasGroup? group,
-                                       float dy = RiseDy, float dur = EntryDur)
+                                       float dy = RiseDy, float dur = EntryDur,
+                                       Ease ease = Ease.OutCubic)
         {
             if (rect == null) return Register(Empty(), Noop);
             float restY = rect.anchoredPosition.y;
-            return Register(RiseRoutine(rect, group, dy, dur, restY), () =>
+            return Register(RiseRoutine(rect, group, dy, dur, restY, ease), () =>
             {
                 if (rect != null) rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, restY);
                 if (group != null) group.alpha = 1f;
@@ -353,7 +431,7 @@ namespace Golfin.UI.Polish
         }
 
         private static IEnumerator RiseRoutine(RectTransform rect, CanvasGroup? group,
-                                               float dy, float dur, float restY)
+                                               float dy, float dur, float restY, Ease ease)
         {
             float x = rect.anchoredPosition.x;
             rect.anchoredPosition = new Vector2(x, restY - dy);
@@ -364,9 +442,10 @@ namespace Golfin.UI.Polish
             {
                 elapsed += Time.unscaledDeltaTime;
                 if (rect == null) yield break;
-                float e = EaseOut(dur <= 0f ? 1f : elapsed / dur);
-                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, Mathf.Lerp(restY - dy, restY, e));
-                if (group != null) group.alpha = e;
+                float e = Curve(ease, dur <= 0f ? 1f : elapsed / dur);
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x,
+                                                    Mathf.LerpUnclamped(restY - dy, restY, e));
+                if (group != null) group.alpha = Mathf.Clamp01(e);
                 yield return null;
             }
             if (rect != null) rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, restY);
@@ -467,19 +546,20 @@ namespace Golfin.UI.Polish
         ///
         /// <para>ONE delegate allocation, at creation, never inside the loop — A13's budget.</para>
         /// </summary>
-        public static IEnumerator Tween(float from, float to, float dur, Action<float> apply)
+        public static IEnumerator Tween(float from, float to, float dur, Action<float> apply,
+                                        Ease ease = Ease.OutCubic)
         {
             if (apply == null) return Register(Empty(), Noop);
-            return Register(TweenRoutine(from, to, dur, apply), () => apply(to));
+            return Register(TweenRoutine(from, to, dur, apply, ease), () => apply(to));
         }
 
-        private static IEnumerator TweenRoutine(float from, float to, float dur, Action<float> apply)
+        private static IEnumerator TweenRoutine(float from, float to, float dur, Action<float> apply, Ease ease)
         {
             float elapsed = 0f;
             while (elapsed < dur)
             {
                 elapsed += Time.unscaledDeltaTime;
-                apply(Mathf.Lerp(from, to, EaseOut(dur <= 0f ? 1f : elapsed / dur)));
+                apply(Mathf.LerpUnclamped(from, to, Curve(ease, dur <= 0f ? 1f : elapsed / dur)));
                 yield return null;
             }
             apply(to);
