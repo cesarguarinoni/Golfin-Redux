@@ -14,6 +14,7 @@
 // withheld anything unrollable (§3.1), including a banner whose art does not resolve, so Bind can
 // draw unconditionally instead of guarding every slot with a fallback that would show a broken card.
 #nullable enable
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -299,19 +300,40 @@ namespace GolfinRedux.UI.Gacha
         // gacha_client_real_pull §4.2 — the ENTRY goes with the count, so the flow can price the
         // guard and name the banner without reaching back into a catalog that may have been
         // reloaded in between.
-        private void OnPullX1()
+        private void OnPullX1() => BeginPull(1);
+
+        private void OnPullX10() => BeginPull(10);
+
+        /// <summary>
+        /// game_polish_b §D5 — both PULL buttons show the `…` wait while the server decides.
+        ///
+        /// <para>The reveal modal already covers the round trip with its own waiting state, so
+        /// most of the time nobody sees this. It exists for the path where nobody sees the modal
+        /// either: GachaRevealModalController.Instance can be null — GachaPullFlow's own comment
+        /// calls that "today's degrade, kept" — and on that path the buttons stayed fully live
+        /// and untouched for the whole round trip, which is the exact defect PendingSpend was
+        /// written for. Both PULL buttons go down together because they spend the same balance.</para>
+        /// </summary>
+        private void BeginPull(int count)
         {
             if (_entry == null) return;
-            Debug.Log($"[GachaBannerCard] Pull x1 tapped on {_entry.BannerId}.");
-            GachaPullFlow.Pull(_entry, 1);
+            Debug.Log($"[GachaBannerCard] Pull x{count} tapped on {_entry.BannerId}.");
+
+            Button? primary = count == 1 ? _pullX1Button : _pullX10Button;
+            Button? other   = count == 1 ? _pullX10Button : _pullX1Button;
+
+            // BeginOn, not Begin: the two PULL buttons have no separately serialized label, and
+            // the only TMP_Text under each is its COST — swapping a price for an ellipsis would
+            // read as the price having changed. The Disabled transition alone is the affordance
+            // here, which is what BeginOn exists for.
+            System.IDisposable pending = other != null
+                ? PendingSpend.BeginOn(primary, other)
+                : PendingSpend.BeginOn(primary);
+
+            GachaPullFlow.Pull(_entry, count, pending);
         }
 
-        private void OnPullX10()
-        {
-            if (_entry == null) return;
-            Debug.Log($"[GachaBannerCard] Pull x10 tapped on {_entry.BannerId}.");
-            GachaPullFlow.Pull(_entry, 10);
-        }
+
 
         /// <summary>
         /// RULES &amp; RATES opens the in-app modal (gacha_ops_polish §2), never the browser. The

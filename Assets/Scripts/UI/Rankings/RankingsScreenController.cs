@@ -125,8 +125,19 @@ namespace Golfin.UI.Rankings
                 _backButton.onClick.AddListener(() => ScreenManager.Instance?.GoBack(_returnScreen));
         }
 
+        // ── game_polish_b §D4/§D6 — which paint is this? ─────────────────────────
+        //
+        // Rankings paints three ways and they must not look the same. OnEnable paints from the
+        // disk cache (instant — the numbers were right a moment ago); the refresh callback paints
+        // from the server (the first COLD one staggers, and only that one); a tab tap repaints
+        // data already on screen (never staggers, and never gates a shimmer). PaintGate answers
+        // all three from one place and logs its verdict, which is the acceptance evidence.
+        private readonly Golfin.Gps.UI.PaintGate _gate =
+            new Golfin.Gps.UI.PaintGate("[Rankings]", "rankings");
+
         private void OnEnable()
         {
+            _gate.Rearm();
             // A session can become signed-in after LeaderboardManager.Awake ran (first launch goes
             // through the auth gate). No-op when the provider is already the right one.
             LeaderboardManager.Instance?.EnsureProviderForSession();
@@ -140,7 +151,7 @@ namespace Golfin.UI.Rankings
             ApplyLeagueLabel();
             // Renders the disk-cached board instantly on the backend provider; the refresh below
             // replaces it in place once the server answers.
-            RebuildList();
+            RebuildList(Golfin.Gps.UI.PaintKind.Cache);
             // RebuildList early-returns on an empty ranking, so the remembered tab would not be
             // lit on a cold re-entry. Light it unconditionally (nav_back_memory F4).
             UpdateTabIndicators();
@@ -187,7 +198,7 @@ namespace Golfin.UI.Rankings
             if (_activePeriod == period) return;
             _activePeriod = period;
 
-            UiSelection.FadeSwap(this, ListGroup(), RebuildList);
+            UiSelection.FadeSwap(this, ListGroup(), () => RebuildList(Golfin.Gps.UI.PaintKind.Repaint));
             UpdateTabIndicators(animate: true);
             UiSelection.Bump(this, TabFor(period)?.transform);
 
@@ -248,7 +259,7 @@ namespace Golfin.UI.Rankings
                 LeaderboardManager.Instance?.InvalidateCache(period);
 
                 // Another tab may have been tapped since; that tab drove its own refresh.
-                if (_activePeriod == period) RebuildList();
+                if (_activePeriod == period) RebuildList(Golfin.Gps.UI.PaintKind.Fetch);
             });
         }
 
@@ -289,10 +300,21 @@ namespace Golfin.UI.Rankings
 
         // ── List building ─────────────────────────────────────────────────────
 
-        private void RebuildList()
+        private void RebuildList() => RebuildList(Golfin.Gps.UI.PaintKind.Repaint);
+
+        private void RebuildList(Golfin.Gps.UI.PaintKind kind)
         {
             IReadOnlyList<LeaderboardEntry>? ranking = LeaderboardManager.Instance?.GetRanking(_activePeriod);
-            if (ranking == null || ranking.Count == 0) return;
+            if (ranking == null || ranking.Count == 0)
+            {
+                // §D4 — the EMPTY arm is the one that matters. This is the frame the player is
+                // actually looking at while the board is fetched for the first time, and it used
+                // to be a blank panel with three empty card frames on it.
+                _gate.Should(kind, 0);
+                Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.RankingsTop3, _gate.IsCold);
+                Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.RankingsList, _gate.IsCold);
+                return;
+            }
 
             // ── Top 3 podium ──────────────────────────────────────────────────
             BindPodiumCard(_top1Card, ranking.Count > 0 ? ranking[0] : (LeaderboardEntry?)null);
@@ -346,7 +368,63 @@ namespace Golfin.UI.Rankings
                 }
             }
 
+            // ── §D4/§D6 — the verdict, once, for both the shimmer and the stagger ─────
+            bool animate = _gate.Should(kind, _rowPool.Count);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.RankingsTop3, _gate.IsCold);
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.RankingsList, _gate.IsCold);
+
+            if (animate)
+            {
+                RevealPodium();
+                var rows = new List<Transform>(_rowPool.Count);
+                foreach (GameObject row in _rowPool) if (row != null) rows.Add(row.transform);
+                Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows);
+            }
+
             UpdateTabIndicators();
+        }
+
+        /// <summary>
+        /// §D6 — the podium reveals 3 → 2 → 1, a StaggerDelay×3 apart. Cesar's call: the winner
+        /// lands last, which is the order a podium is announced in.
+        ///
+        /// <para>NOT <see cref="UiMotion.Pop"/>, and this is the trap worth naming. Pop settles on
+        /// <see cref="Vector3.one"/> unconditionally — that is deliberate there, because a modal
+        /// stranded at 0.94 is a visibly wrong-sized panel. But these three cards do NOT rest at
+        /// one: #1 is full size and #2/#3 sit at 0.85, which is the podium hierarchy itself.
+        /// Popping them would have quietly flattened all three to the same size and called it
+        /// polish. So each card tweens from 0.9 × ITS OWN rest scale back to that rest scale.</para>
+        /// </summary>
+        private void RevealPodium()
+        {
+            RevealPodiumCard(_top3Card, 0f);
+            RevealPodiumCard(_top2Card, UiMotion.StaggerDelay * 3f);
+            RevealPodiumCard(_top1Card, UiMotion.StaggerDelay * 6f);
+        }
+
+        private void RevealPodiumCard(Transform? card, float delay)
+        {
+            if (card == null) return;
+            var rect = card as RectTransform;
+            if (rect == null) return;
+
+            Vector3 rest = card.localScale;          // 1.0 for #1, 0.85 for #2 and #3
+            UiMotion.Run(this, Delayed(delay, () =>
+                UiMotion.Run(this, UiMotion.Tween(0.9f, 1f, UiMotion.PopDur,
+                    k => { if (rect != null) rect.localScale = rest * k; }))));
+        }
+
+        /// <summary>Wait, then act. The podium's three beats are offsets from one paint, and
+        /// UiMotion.Stagger fires an index rather than taking a per-item delay.</summary>
+        private static System.Collections.IEnumerator Delayed(float seconds, System.Action then)
+        {
+            float waited = 0f;
+            while (waited < seconds)
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            then?.Invoke();
         }
 
         private static void BindPodiumCard(Transform? card, LeaderboardEntry? entry)

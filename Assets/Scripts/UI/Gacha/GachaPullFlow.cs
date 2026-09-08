@@ -48,11 +48,15 @@ namespace GolfinRedux.UI.Gacha
         /// the player agreed to is the number that was on the card they touched.
         /// </para>
         /// </summary>
-        public static void Pull(GachaBannerEntry entry, int count)
+        /// <param name="pending">game_polish_b §D5 — the caller's PendingSpend scope, disposed
+        /// the moment the server answers, however it answers. Optional: the reveal modal covers
+        /// the wait when there is one, and this is what covers it when there is not.</param>
+        public static void Pull(GachaBannerEntry entry, int count, System.IDisposable? pending = null)
         {
             if (entry == null)
             {
                 Debug.LogError("[GachaPullFlow] Pull called with no banner entry — refusing.");
+                pending?.Dispose();
                 return;
             }
 
@@ -96,6 +100,10 @@ namespace GolfinRedux.UI.Gacha
                 entry.BannerId, count, expectedCost, ContentBuildNumber.Current,
                 outcome =>
                 {
+                    // §D5 — restore the buttons FIRST, before the outcome is acted on. Disposing
+                    // afterwards would undo whatever the result handler wrote (a closed card, a
+                    // re-priced banner) — the ordering PendingSpend's own header insists on.
+                    pending?.Dispose();
                     RecordResult(entry, count, startedAt, outcome);
                     OnPullAnswered(entry, count, modal, outcome);
                 });
