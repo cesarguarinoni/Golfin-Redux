@@ -1,0 +1,17 @@
+screen                              differing px    of total  bbox                verdict
+------------------------------------------------------------------------------------------------
+GachaHistory                                   0   2,962,440  None                  IDENTICAL
+GeneralShop                               13,457   2,962,440  (194, 533, 1170, 2531)REGION — INSPECT
+HoleSelection                                 97   2,962,440  (620, 422, 939, 450)  text-sized
+Home                                      23,708   2,962,440  (12, 733, 530, 2531)  REGION — INSPECT
+Inventory                                  9,541   2,962,440  (138, 449, 1110, 2527)REGION — INSPECT
+Leaderboard                                3,342   2,962,440  (758, 419, 1057, 438) text-sized
+MissionSelection                           5,427   2,962,440  (427, 667, 744, 694)  REGION — INSPECT
+ModeSelection                             16,664   2,962,440  (446, 2239, 723, 2514)REGION — INSPECT
+Roster                                    11,284   2,962,440  (964, 2337, 1156, 2532)REGION — INSPECT
+TournamentLeaderboard                     90,797   2,962,440  (96, 1827, 517, 2167) REGION — INSPECT
+TournamentSelection                            0   2,962,440  None                  IDENTICAL
+------------------------------------------------------------------------------------------------
+pairs: 11   worst differing-pixel count: 90,797
+0 everywhere is the A3 claim. A few thousand in one text-shaped bbox is a live clock
+or a live balance; a large bbox over a panel is a regression and must be opened.

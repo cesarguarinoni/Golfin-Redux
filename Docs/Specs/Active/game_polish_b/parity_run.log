@@ -1,0 +1,27 @@
+=== game_polish_b probe (parity) 2026-09-08 04:58:49Z ===
+tap the real StartButton
+--- pass 1: UiMotion.Enabled = TRUE (animated arrivals) ---
+  SHOT parity_anim_Home -> Docs/Specs/Active/game_polish_b/screenshots/parity_01_parity_anim_Home.png (3237 KB)
+  SHOT parity_anim_Roster -> Docs/Specs/Active/game_polish_b/screenshots/parity_02_parity_anim_Roster.png (3108 KB)
+  SHOT parity_anim_Inventory -> Docs/Specs/Active/game_polish_b/screenshots/parity_03_parity_anim_Inventory.png (2995 KB)
+  SHOT parity_anim_ModeSelection -> Docs/Specs/Active/game_polish_b/screenshots/parity_04_parity_anim_ModeSelection.png (2761 KB)
+  SHOT parity_anim_HoleSelection -> Docs/Specs/Active/game_polish_b/screenshots/parity_05_parity_anim_HoleSelection.png (2622 KB)
+  SHOT parity_anim_MissionSelection -> Docs/Specs/Active/game_polish_b/screenshots/parity_06_parity_anim_MissionSelection.png (2546 KB)
+  SHOT parity_anim_TournamentSelection -> Docs/Specs/Active/game_polish_b/screenshots/parity_07_parity_anim_TournamentSelection.png (2725 KB)
+  SHOT parity_anim_TournamentLeaderboard -> Docs/Specs/Active/game_polish_b/screenshots/parity_08_parity_anim_TournamentLeaderboard.png (2682 KB)
+  SHOT parity_anim_Leaderboard -> Docs/Specs/Active/game_polish_b/screenshots/parity_09_parity_anim_Leaderboard.png (2837 KB)
+  SHOT parity_anim_GeneralShop -> Docs/Specs/Active/game_polish_b/screenshots/parity_10_parity_anim_GeneralShop.png (3312 KB)
+  SHOT parity_anim_GachaHistory -> Docs/Specs/Active/game_polish_b/screenshots/parity_11_parity_anim_GachaHistory.png (2933 KB)
+--- pass 2: UiMotion.Enabled = FALSE (every helper settles instantly) ---
+  SHOT parity_instant_Home -> Docs/Specs/Active/game_polish_b/screenshots/parity_12_parity_instant_Home.png (3232 KB)
+  SHOT parity_instant_Roster -> Docs/Specs/Active/game_polish_b/screenshots/parity_13_parity_instant_Roster.png (3102 KB)
+  SHOT parity_instant_Inventory -> Docs/Specs/Active/game_polish_b/screenshots/parity_14_parity_instant_Inventory.png (2992 KB)
+  SHOT parity_instant_ModeSelection -> Docs/Specs/Active/game_polish_b/screenshots/parity_15_parity_instant_ModeSelection.png (2751 KB)
+  SHOT parity_instant_HoleSelection -> Docs/Specs/Active/game_polish_b/screenshots/parity_16_parity_instant_HoleSelection.png (2621 KB)
+  SHOT parity_instant_MissionSelection -> Docs/Specs/Active/game_polish_b/screenshots/parity_17_parity_instant_MissionSelection.png (2546 KB)
+  SHOT parity_instant_TournamentSelection -> Docs/Specs/Active/game_polish_b/screenshots/parity_18_parity_instant_TournamentSelection.png (2725 KB)
+  SHOT parity_instant_TournamentLeaderboard -> Docs/Specs/Active/game_polish_b/screenshots/parity_19_parity_instant_TournamentLeaderboard.png (2690 KB)
+  SHOT parity_instant_Leaderboard -> Docs/Specs/Active/game_polish_b/screenshots/parity_20_parity_instant_Leaderboard.png (2837 KB)
+  SHOT parity_instant_GeneralShop -> Docs/Specs/Active/game_polish_b/screenshots/parity_21_parity_instant_GeneralShop.png (3304 KB)
+  SHOT parity_instant_GachaHistory -> Docs/Specs/Active/game_polish_b/screenshots/parity_22_parity_instant_GachaHistory.png (2933 KB)
+compare with: python3 Docs/Scripts/parity_diff.py game_polish_b

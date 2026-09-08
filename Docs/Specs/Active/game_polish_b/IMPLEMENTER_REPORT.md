@@ -372,6 +372,117 @@ integers for a human verdict — which is the tool working as designed, not a de
 
 `check_report_citations.py`: **31 cited, 0 unresolved.**
 
+### A3 · Rest parity — measured, and every difference opened
+
+`GamePolishProbeB parity` walks eleven shell screens TWICE in ONE session — once with
+`UiMotion.Enabled` true, once false — and `Docs/Scripts/parity_diff.py` diffs the pairs
+(`parity_diff.txt`). Motion off makes every helper settle instantly and start no coroutine, so
+the passes can only differ if something this task added marks the SETTLED screen. Comparing
+against an hour-old baseline would instead diff a moved RP balance and a ticking clock.
+
+| screen | differing px | cause, established by looking |
+|---|---|---|
+| GachaHistory, TournamentSelection | **0** | identical |
+| HoleSelection | 97 | one text run — the countdown |
+| Leaderboard | 3,342 | the `RESETS IN` pill, 18h 54m **10s** vs **7s** |
+| MissionSelection | 5,427 | one text run |
+| Inventory / Roster / ModeSelection / GeneralShop | 9.5k–16.7k | the bottom-nav selected halo (game_polish_a's animated selected state) plus live text |
+| Home | 23,708 | the Daily-mission pill's **glow**. Cropped and compared: the pill's geometry, size and text are pixel-identical in both passes — only the glow rim differs, because it pulses continuously and the captures are ~40 s apart |
+| TournamentLeaderboard | 90,797 | the shimmer blocks' moving highlight band, sampled at different phases |
+
+**A literal "0 px" is not attainable on a screen carrying a pulsing glow, an animated nav
+halo and a live clock, and claiming it would be false.** What IS established, and is the
+substance of A3: **no resting geometry moved anywhere.** Every CanvasGroup this task adds is
+created at RUNTIME (pill glow, HoleComplete root and scrim, staggered rows, result rows), so no
+prefab or scene object gains a component; the only authored changes are 7 `animateShow` flags,
+8 prefab flags, and 6 shimmer hosts that are **inactive at rest** (`ShimmerHostTests`).
+
+**A3 FOUND A REAL DEFECT — see the shape audit below.**
+
+### §D4 shape audit — "an arm that ends the wait must clear the shimmer"
+
+The TournamentLeaderboard parity capture showed shimmer blocks over the screen's authored rows.
+The blocks were correct (that board is genuinely cold), but chasing it found the real fault:
+**three early returns that spend no paint and clear no shimmer.** That is the SECOND defect of
+this shape — I had explicitly guarded it in MissionSelection ("every arm that ends the wait
+clears it, INCLUDING the two failure arms") and not here — so per the project's own rule the
+shape was audited rather than the instance fixed. Every `Shimmer` call site, with the verdicts
+that were fine included:
+
+| Site | Early returns before the gate | Verdict |
+|---|---|---|
+| Rankings | 1 | ✅ already spends the paint AND shimmers both sites before returning |
+| MissionSelection (daily) | 3 | ✅ already routed through `EndDailyWait`, failures included |
+| **TournamentLeaderboard** | 3 | ❌ **fixed** — `EndBoardWait`, which also keeps the placeholder ONLY while an answer is still coming (on the local path `Remote` is null and nothing will ever arrive) |
+| **TournamentSelection** | 3 | ❌ **fixed** — `EndCardsWait`; the "service not ready" arm keeps the placeholder because `OnScheduleChanged` really will fire, the two wiring-null arms do not |
+| **GachaHistory** | 1 | ❌ **fixed** — unwired content is never filled, so the placeholder is cleared |
+| GeneralShop / ModeSelect / HoleSelection | — | N/A, no shimmer |
+
+### A6 · Shimmer — the gates' own verdicts, captured in the run
+
+The probe now listens on `Application.logMessageReceived` and writes the controllers' own
+`paint(...)` and `[Shimmer]` lines into `evidence_run.log`, so nothing is transcribed from a
+Console that may have moved on. The complete cold cycle, 0.18 s apart:
+
+```
+[23.77] [MissionSelection] missions.daily paint(cache) n=0 — instant (cache empty)
+[23.77] [Shimmer] missions.daily cold=True  hidden -> shown
+[23.95] [MissionSelection] missions.daily paint(fetch) n=1 — first paint
+[23.95] [Shimmer] missions.daily cold=False shown  -> hidden
+```
+
+And the cache path skipping it, which is A6's other half:
+
+```
+[9.27] [Rankings] rankings paint(cache) n=39 — instant
+[9.27] [Shimmer] rankings.top3 cold=False hidden -> hidden
+[9.43] [Rankings] rankings paint(fetch) n=39 — instant (cache hit)
+```
+
+**A cold frame for the other five sites was NOT obtainable in this session**, and the reason is
+worth stating rather than working around: `InvalidateAllCache()` clears the cache but the local
+leaderboard provider recomputes synchronously, so Rankings paints instantly and is never cold —
+the captured "cold" frame shows a fully painted board. The cold path needs the backend provider
+with an empty first response. `missions.daily` is the one site whose fetch is genuinely
+asynchronous in this environment, and it is captured end to end.
+
+### A7 · Pending state — `PendingSpend` opened on the real controls
+
+| CTA | During | After | Evidence |
+|---|---|---|---|
+| Tournament `CtaSilverButton` | interactable **False** | **True** | the full cycle; the button's label is cleared and it greys while the scope is open |
+| Shop `CtaGoldButton` | **False** | False | opened on the real control; that item was already owned, so it was non-interactable either side — weaker evidence, stated as such |
+| Gacha `PullX10Button` | **False** | **True** | captured in the previous run |
+
+**A7 also corrected an earlier claim of mine.** The A4 (b) segment reported "no affordable BUY
+button at RP 6,139". That was wrong: the live controls on `ScreenId.GeneralShop` are
+`PullX1Button` / `PullX10Button` / `RulesButton` — the Rewards Center opens on its **GACHA
+tab**, and `CtaGoldButton` does not exist until the STORE tab is showing. The failure was a tab
+that was never opened, not a balance. The probe switches tabs now; the A4 note is left as it
+was recorded and corrected here rather than quietly rewritten.
+
+### A8 · Staggers — a mid-stagger frame and a per-site verdict line
+
+`evidence_05_a8_midstagger_ModeSelection.png` beside `evidence_06_a8_settled_ModeSelection.png` is the
+clearest: two frames after arrival only the FIRST card is faintly visible, mid-rise, and the
+remaining four are still at alpha 0; the settled frame has all five. Mid-stagger and settled
+frames captured for ModeSelection, HoleSelection, MissionSelection, GeneralShop and
+TournamentSelection.
+
+The per-site log lines are the verdict A8 asks for, and they show the fetch/cache distinction
+working:
+
+```
+[16.64] [ModeSelectScreen]  modes          paint(local) n=5  — staggered (front door, every entry)
+[20.20] [HoleSelection]     holes          paint(local) n=18 — staggered (first this entry)
+[23.77] [MissionSelection]  missions.cards paint(local) n=10 — staggered (first this entry)
+[27.37] [GeneralShop]       shop.catalog   paint(local) n=8  — staggered (first this entry)
+[30.87] [TournamentSelectionScreen] tournaments paint(cache) n=3 — instant
+```
+
+The last line is the one that matters: a CACHE paint reports `instant` and does not stagger,
+which is the distinction §D6 is built on.
+
 ## What is NOT done
 
 Nothing below has been started; none of it is claimed anywhere above.
@@ -380,9 +491,9 @@ Nothing below has been started; none of it is claimed anywhere above.
 |---|---|
 | **§D3** modal-local numbers: level-up stat bars `Tween`, level `Pop`, `MissionCard` counters | not started |
 | **A1** — mid-pop frames, timing and the per-modal table are DONE (`modals_invariants.json`, 14 captures). What is NOT done is driving each modal through its **real player trigger**: the probe opens them itself and records `realWidget: false` with a per-modal reason (a finished 1v1, a resolved tournament, holing out, a paid gacha pull). | partial |
-| **A3** rest parity 0 px | not measured as a pixel diff. What IS established: all 6 shimmer hosts are inactive at rest (`ShimmerHostTests` + the probe's shimmer mode), and every CanvasGroup this task adds is created at RUNTIME so no prefab or scene object gains one. |
-| **A5** — the count-DOWN is proven (above). The full per-site table of every §D3 site with a before/after still is NOT built. | partial |
-| **A6** shimmer cold frames per site · **A7** one `…` frame per newly wired CTA · **A8** one mid-stagger frame per site | not captured. The mechanisms are gated by tests and the probe (hosts placed and inactive, paint verdicts logged); what is missing is a still sheet per site. |
+| **A5** — the count-DOWN is proven frame by frame and the level-up modal's own numbers are on clip (a). A per-site before/after still for every §D3 arm site is NOT built. | partial |
+| **A6** — the cold cycle is captured end to end for `missions.daily`, and the cache-skip for Rankings. Cold frames for the other five sites need a backend provider with an empty first response; not obtainable in this session. | partial |
+| **A7** — three CTAs captured. A `…` frame for every newly wired CTA is one CTA (the gacha pull), which IS the only one this task newly wired. | done for what was wired |
 | **A11** UI fidelity lint delta | not run, and arguably N/A: Rule 21's linter is driven by a per-element spec file generated from a Figma NODE, and this task references no node — it is motion over screens `design_consistency_audit` already signed off. Stated rather than skipped. |
 | **A13** perf | in-situ upper bound measured (above); the isolated ≤32 B/frame figure is still only pinned by the unit tests, not re-measured for `Pop(OutBack)`/`Tween` specifically |
 

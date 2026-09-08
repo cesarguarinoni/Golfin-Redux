@@ -242,6 +242,11 @@ namespace GolfinRedux.UI.Gacha
             if (_scrollContent == null)
             {
                 Debug.LogWarning("[GachaHistoryScreenController] _scrollContent not wired.");
+                // §D4 shape audit — an arm that ends the paint must end the WAIT too. Unwired
+                // content is never going to be filled, so a placeholder over it would stay for
+                // the life of the session.
+                _gate.Should(kind, 0);
+                Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.GachaHistory, cold: false);
                 return;
             }
 

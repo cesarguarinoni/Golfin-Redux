@@ -154,6 +154,19 @@ namespace GolfinRedux.UI.Tournaments
         /// </summary>
         private bool _rebuildDeferred;
 
+        /// <summary>
+        /// §D4 — this paint produced no cards. Spend it, and keep the placeholder ONLY while an
+        /// answer is genuinely still coming. A shimmer over a screen that will never be told
+        /// anything sits there for the life of the session.
+        /// </summary>
+        private void EndCardsWait(Golfin.Gps.UI.PaintKind kind, bool answerStillComing)
+        {
+            _gate.Should(kind, 0);
+            _nextPaint = Golfin.Gps.UI.PaintKind.Repaint;
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.TournamentCards,
+                                                 answerStillComing && _gate.IsCold);
+        }
+
         /// <summary>A language change repaints strings that are already on screen — never a
         /// fetch, so it must not stagger and must not gate a shimmer (§D4).</summary>
         private void HandleLanguageChanged()
@@ -205,22 +218,32 @@ namespace GolfinRedux.UI.Tournaments
 
         private void RebuildCards()
         {
+            // Read the pending kind ONCE, at the top: the guards below return before the normal
+            // consume point, and a guard that spends nothing leaves the next paint looking like
+            // the first (§D4 shape audit).
+            Golfin.Gps.UI.PaintKind kindEarly = _nextPaint;
+
             ClearCards();
 
             if (_cardPrefab == null)
             {
                 Debug.LogError("[TournamentSelectionScreen] _cardPrefab not wired.");
+                EndCardsWait(kindEarly, answerStillComing: false);
                 return;
             }
             if (_cardsContent == null)
             {
                 Debug.LogError("[TournamentSelectionScreen] _cardsContent not wired.");
+                EndCardsWait(kindEarly, answerStillComing: false);
                 return;
             }
 
             if (TournamentService.Instance == null)
             {
                 Debug.LogWarning("[TournamentSelectionScreen] TournamentService not yet ready; skipping rebuild.");
+                // Unlike the two above, this one IS still coming: OnScheduleChanged fires when the
+                // service comes up. The placeholder is honest here and dishonest there.
+                EndCardsWait(kindEarly, answerStillComing: true);
                 return;
             }
 

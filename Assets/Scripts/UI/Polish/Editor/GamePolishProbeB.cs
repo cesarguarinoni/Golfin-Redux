@@ -32,11 +32,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using TMPro;
 using Golfin.Diagnostics.Runtime;
 using Golfin.UI.Modals;
 using Golfin.UI.Polish;
+using GolfinRedux.UI;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Golfin.UI.Polish.EditorTools
 {
@@ -57,6 +60,12 @@ namespace Golfin.UI.Polish.EditorTools
 
         [MenuItem("GOLFIN/Game Polish/Probe B — perf (A13)", priority = 282)]
         public static void ArmPerf() => Arm("perf");
+
+        [MenuItem("GOLFIN/Game Polish/Probe B — rest parity (A3)", priority = 283)]
+        public static void ArmParity() => Arm("parity");
+
+        [MenuItem("GOLFIN/Game Polish/Probe B — A6/A7/A8 evidence", priority = 284)]
+        public static void ArmEvidence() => Arm("evidence");
 
         public static void Arm(string mode)
         {
@@ -119,11 +128,34 @@ namespace Golfin.UI.Polish.EditorTools
                 // comes back as whatever it drew last.
                 Application.runInBackground = true;
                 _mode = EditorPrefs.GetString(ModeKey, "modals");
+
+                // §A6's real evidence is the GATES' OWN VERDICTS — `paint(cache)` / `paint(fetch)`
+                // / `[Shimmer] site cold=…`. They are Debug.Logs inside the controllers, so they
+                // land in the Console and not in this probe's file unless it listens for them.
+                // Quoting the Console by hand is how a stale line ends up in a report; this puts
+                // them in the run's own artifact, in order, with nothing else.
+                Application.logMessageReceived += OnGameLog;
+
                 StartCoroutine(Run());
             }
 
+            void OnDestroy() => Application.logMessageReceived -= OnGameLog;
+
+            void OnGameLog(string message, string stack, LogType type)
+            {
+                if (message == null) return;
+                if (message.IndexOf("paint(", StringComparison.Ordinal) < 0 &&
+                    message.IndexOf("[Shimmer]", StringComparison.Ordinal) < 0) return;
+                if (message.StartsWith("[ProbeB]", StringComparison.Ordinal)) return;
+                _log.AppendLine($"[{Now:0.00}] GATE  {message}");
+            }
+
+            float _t0 = -1f;
+            float Now => _t0 < 0f ? Time.realtimeSinceStartup : Time.realtimeSinceStartup - _t0;
+
             IEnumerator Run()
             {
+                _t0 = Time.realtimeSinceStartup;
                 Line($"=== game_polish_b probe ({_mode}) {DateTime.UtcNow:u} ===");
                 yield return new WaitForSecondsRealtime(3f);   // boot + first frames
 
@@ -132,6 +164,8 @@ namespace Golfin.UI.Polish.EditorTools
                     case "modals":  yield return Modals();  break;
                     case "shimmer": yield return Shimmer(); break;
                     case "perf":    yield return Perf();    break;
+                    case "parity":  yield return Parity();  break;
+                    case "evidence":yield return Evidence(); break;
                     default:        Line("unknown mode " + _mode); break;
                 }
 
@@ -485,7 +519,227 @@ namespace Golfin.UI.Polish.EditorTools
                 if (gc.Valid) gc.Dispose();
             }
 
+            // ── A3 · rest parity ─────────────────────────────────────────────
+            //
+            // The claim §A3 makes is that this task moved no RESTING pixel. The honest way to
+            // test it is not to compare against a capture taken an hour ago — these screens
+            // render live data and a ticking countdown, so an hour-old baseline differs by a
+            // moved RP balance and a clock, in tens of thousands of pixels that have nothing to
+            // do with motion. Instead the same route is walked TWICE in ONE session: once with
+            // UiMotion.Enabled true and once false. Motion off means every helper settles its
+            // target instantly and starts no coroutine, so the two passes differ ONLY if
+            // something this task added leaves a mark on the settled screen. That is exactly the
+            // question A3 asks, and it is the method game_polish_a's A2 used.
+
+            static readonly ScreenId[] ParityScreens =
+            {
+                ScreenId.Home, ScreenId.Roster, ScreenId.Inventory, ScreenId.ModeSelection,
+                ScreenId.HoleSelection, ScreenId.MissionSelection, ScreenId.TournamentSelection,
+                ScreenId.TournamentLeaderboard, ScreenId.Leaderboard, ScreenId.GeneralShop,
+                ScreenId.GachaHistory,
+            };
+
+            IEnumerator Parity()
+            {
+                yield return Boot();
+
+                UiMotion.Enabled = true;
+                Line("--- pass 1: UiMotion.Enabled = TRUE (animated arrivals) ---");
+                yield return ParityPass("anim");
+
+                UiMotion.Enabled = false;
+                Line("--- pass 2: UiMotion.Enabled = FALSE (every helper settles instantly) ---");
+                yield return ParityPass("instant");
+
+                UiMotion.Enabled = true;
+                Line("compare with: python3 Docs/Scripts/parity_diff.py game_polish_b");
+            }
+
+            IEnumerator ParityPass(string tag)
+            {
+                foreach (ScreenId id in ParityScreens)
+                {
+                    if (ScreenManager.Instance == null) yield break;
+                    ScreenManager.Instance.ShowScreen(id);
+                    yield return Until(() => ScreenManager.Instance!.CurrentScreen == id, 12f, id.ToString());
+
+                    // SETTLE HARD before the shutter. A parity capture taken mid-arrival compares
+                    // an animation frame against a settled one and reports a difference that is
+                    // the whole point of the feature rather than a defect in it.
+                    yield return new WaitForSecondsRealtime(2.5f);
+                    yield return ShotNamed($"parity_{tag}_{id}");
+                }
+            }
+
+            // ── A6 / A7 / A8 · the still sheets ──────────────────────────────
+
+            IEnumerator Evidence()
+            {
+                yield return Boot();
+
+                // ── A6: a COLD Rankings paint. The cache is genuinely invalidated through the
+                // manager's own seam and the screen re-entered, so the shimmer that appears is
+                // the one a first-ever open shows — not a host switched on by hand.
+                Line("--- A6: cold Rankings ---");
+                var lm = Golfin.UI.Rankings.LeaderboardManager.Instance;
+                if (lm != null) lm.InvalidateAllCache();
+                ScreenManager.Instance?.ShowScreen(ScreenId.Home);
+                yield return new WaitForSecondsRealtime(1.2f);
+                ScreenManager.Instance?.ShowScreen(ScreenId.Leaderboard);
+                yield return null;                      // ONE frame in: the cold frame
+                yield return ShotNamed("a6_rankings_cold_frame1");
+                yield return new WaitForSecondsRealtime(0.25f);
+                yield return ShotNamed("a6_rankings_cold_frame2");
+                yield return new WaitForSecondsRealtime(3f);
+                yield return ShotNamed("a6_rankings_settled");
+
+                // and the CACHE path: re-enter with the cache warm. The log line is the evidence.
+                Line("--- A6: warm re-entry (the paint(cache) line is the proof) ---");
+                ScreenManager.Instance?.ShowScreen(ScreenId.Home);
+                yield return new WaitForSecondsRealtime(1.0f);
+                ScreenManager.Instance?.ShowScreen(ScreenId.Leaderboard);
+                yield return new WaitForSecondsRealtime(1.5f);
+                yield return ShotNamed("a6_rankings_warm");
+
+                // ── A8: mid-stagger frames. One frame after arrival is where a stagger lives.
+                Line("--- A8: mid-stagger frames ---");
+                foreach (ScreenId id in new[] { ScreenId.ModeSelection, ScreenId.HoleSelection,
+                                                ScreenId.MissionSelection, ScreenId.GeneralShop,
+                                                ScreenId.TournamentSelection })
+                {
+                    ScreenManager.Instance?.ShowScreen(ScreenId.Home);
+                    yield return new WaitForSecondsRealtime(0.9f);
+                    ScreenManager.Instance?.ShowScreen(id);
+                    yield return Until(() => ScreenManager.Instance!.CurrentScreen == id, 12f, id.ToString());
+                    yield return null; yield return null;      // two frames in: mid-stagger
+                    yield return ShotNamed($"a8_midstagger_{id}");
+                    yield return new WaitForSecondsRealtime(2.0f);
+                    yield return ShotNamed($"a8_settled_{id}");
+                }
+
+                // ── A7: the pending `…`. PendingSpend is begun on the REAL button through the
+                // production class — that is the affordance itself, not a mock of it — and the
+                // frame is taken while the scope is open, which is what a player sees during the
+                // round trip. Labelled as harness-begun in the log.
+                Line("--- A7: the pending state, begun on the real controls ---");
+                // THE SHOP CATALOG IS A TAB, not the screen. ScreenId.GeneralShop opens the
+                // Rewards Center on its GACHA tab — the live controls there are PullX1/PullX10 and
+                // RULES, and CtaGoldButton does not exist until the STORE tab is showing. The
+                // first run read that as "no affordable BUY button", which was a claim about a
+                // balance for a control that was not on screen at all.
+                yield return PendingShot(ScreenId.GeneralShop, "CtaGoldButton", "a7_shop_buy",
+                                         tabButton: "WeeklyTab");
+                // TournamentSelectionCard carries both CTAs; this schedule's cards are all
+                // ENDED, so the live one is the silver LEADERBOARD action.
+                yield return PendingShot(ScreenId.TournamentSelection, "CtaSilverButton", "a7_tournament_cta");
+                yield return PendingShot(ScreenId.GeneralShop, "PullX10Button", "a7_gacha_pull");
+            }
+
+            /// <summary>Open a PendingSpend scope on a real control, photograph it, restore.</summary>
+            IEnumerator PendingShot(ScreenId screen, string buttonName, string label,
+                                    string? tabButton = null)
+            {
+                ScreenManager.Instance?.ShowScreen(screen);
+                yield return Until(() => ScreenManager.Instance!.CurrentScreen == screen, 12f, screen.ToString());
+
+                if (tabButton != null)
+                {
+                    yield return new WaitForSecondsRealtime(1.5f);
+                    foreach (Button b in UnityEngine.Object.FindObjectsByType<Button>(
+                                 FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                    {
+                        if (!b.gameObject.activeInHierarchy || !b.interactable) continue;
+                        if (!string.Equals(b.name, tabButton, StringComparison.Ordinal)) continue;
+                        Line($"  A7 {label}: switching to the '{tabButton}' tab first");
+                        b.onClick.Invoke();
+                        break;
+                    }
+                }
+                // 4.5 s, not 2.2: the first attempt found neither the shop CTA nor the tournament
+                // CTA because their cards had not been instantiated yet — both screens paint on a
+                // deferred rebuild, and a control that does not exist cannot be photographed.
+                yield return new WaitForSecondsRealtime(4.5f);
+
+                Button? target = null;
+                foreach (Button b in UnityEngine.Object.FindObjectsByType<Button>(
+                             FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                {
+                    if (!b.gameObject.activeInHierarchy) continue;
+                    if (!string.Equals(b.name, buttonName, StringComparison.Ordinal)) continue;
+                    target = b; break;
+                }
+                if (target == null)
+                {
+                    int live = 0;
+                    var names = new List<string>();
+                    foreach (Button b in UnityEngine.Object.FindObjectsByType<Button>(
+                                 FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                    {
+                        if (!b.gameObject.activeInHierarchy) continue;
+                        live++;
+                        if (names.Count < 12) names.Add(b.name);
+                    }
+                    Line($"  A7 {label}: no '{buttonName}' on {screen} — skipped. " +
+                         $"{live} live buttons, first few: {string.Join(", ", names)}");
+                    yield break;
+                }
+
+                TMP_Text? label2 = target.GetComponentInChildren<TMP_Text>(true);
+                using (PendingSpend.Begin(target, label2))
+                {
+                    yield return null;
+                    Line($"  A7 {label}: PendingSpend open on real '{target.name}' " +
+                         $"(interactable now {target.interactable})");
+                    yield return ShotNamed(label);
+                }
+                yield return null;
+                Line($"  A7 {label}: restored (interactable {target.interactable})");
+                yield return ShotNamed(label + "_restored");
+            }
+
+            IEnumerator ShotNamed(string label) => Shot(label, null);
+
             // ── plumbing ─────────────────────────────────────────────────────
+
+            /// <summary>
+            /// Through the title gate to Home. The app boots to a Title/PLAY screen ScreenManager
+            /// does NOT manage, so ShowScreen(target) swaps screens BEHIND the gate and every
+            /// capture comes back as the title frame — CurrentScreen == target is a false
+            /// positive there (project memory: playmode_capture_runinbackground).
+            /// </summary>
+            IEnumerator Boot()
+            {
+                yield return Until(() => ScreenManager.Instance != null, 30f, "ScreenManager");
+
+                float deadline = Time.realtimeSinceStartup + 90f;
+                bool tapped = false;
+                while (!tapped && Time.realtimeSinceStartup < deadline)
+                {
+                    foreach (Button b in UnityEngine.Object.FindObjectsByType<Button>(
+                                 FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                    {
+                        if (b.name != "StartButton" || !b.gameObject.activeInHierarchy) continue;
+                        Line("tap the real StartButton");
+                        b.onClick.Invoke();
+                        tapped = true;
+                        break;
+                    }
+                    if (!tapped) yield return new WaitForSecondsRealtime(0.5f);
+                }
+                yield return new WaitForSecondsRealtime(2f);
+
+                if (ScreenManager.Instance!.CurrentScreen != ScreenId.Home)
+                    ScreenManager.Instance.ShowScreen(ScreenId.Home);
+                yield return Until(() => ScreenManager.Instance!.CurrentScreen == ScreenId.Home, 25f, "Home");
+                yield return new WaitForSecondsRealtime(1.5f);
+            }
+
+            IEnumerator Until(Func<bool> done, float seconds, string what)
+            {
+                float deadline = Time.realtimeSinceStartup + seconds;
+                while (!done() && Time.realtimeSinceStartup < deadline) yield return null;
+                if (!done()) Line("TIMEOUT waiting for " + what);
+            }
 
             IEnumerator Shot(string label, ModalRecord? r)
             {

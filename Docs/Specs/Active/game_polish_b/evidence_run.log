@@ -1,0 +1,56 @@
+=== game_polish_b probe (evidence) 2026-09-08 05:13:47Z ===
+tap the real StartButton
+--- A6: cold Rankings ---
+  SHOT a6_rankings_cold_frame1 -> Docs/Specs/Active/game_polish_b/screenshots/evidence_01_a6_rankings_cold_frame1.png (3206 KB)
+[9.28] GATE  [Rankings] rankings paint(cache) n=39 — instant
+[9.28] GATE  [Shimmer] rankings.top3 cold=False hidden -> hidden
+[9.28] GATE  [Shimmer] rankings.list cold=False hidden -> hidden
+[9.44] GATE  [Rankings] rankings paint(fetch) n=39 — instant (cache hit)
+[9.44] GATE  [Shimmer] rankings.top3 cold=False hidden -> hidden
+[9.44] GATE  [Shimmer] rankings.list cold=False hidden -> hidden
+  SHOT a6_rankings_cold_frame2 -> Docs/Specs/Active/game_polish_b/screenshots/evidence_02_a6_rankings_cold_frame2.png (2816 KB)
+  SHOT a6_rankings_settled -> Docs/Specs/Active/game_polish_b/screenshots/evidence_03_a6_rankings_settled.png (2828 KB)
+--- A6: warm re-entry (the paint(cache) line is the proof) ---
+[14.08] GATE  [Rankings] rankings paint(cache) n=39 — instant
+[14.08] GATE  [Shimmer] rankings.top3 cold=False hidden -> hidden
+[14.08] GATE  [Shimmer] rankings.list cold=False hidden -> hidden
+[14.19] GATE  [Rankings] rankings paint(fetch) n=39 — instant (cache hit)
+[14.19] GATE  [Shimmer] rankings.top3 cold=False hidden -> hidden
+[14.19] GATE  [Shimmer] rankings.list cold=False hidden -> hidden
+  SHOT a6_rankings_warm -> Docs/Specs/Active/game_polish_b/screenshots/evidence_04_a6_rankings_warm.png (2829 KB)
+--- A8: mid-stagger frames ---
+[16.67] GATE  [ModeSelectScreen] modes paint(local) n=5 — staggered (front door, every entry)
+  SHOT a8_midstagger_ModeSelection -> Docs/Specs/Active/game_polish_b/screenshots/evidence_05_a8_midstagger_ModeSelection.png (2018 KB)
+  SHOT a8_settled_ModeSelection -> Docs/Specs/Active/game_polish_b/screenshots/evidence_06_a8_settled_ModeSelection.png (2761 KB)
+[20.20] GATE  [HoleSelection] holes paint(local) n=18 — staggered (first this entry)
+  SHOT a8_midstagger_HoleSelection -> Docs/Specs/Active/game_polish_b/screenshots/evidence_07_a8_midstagger_HoleSelection.png (2525 KB)
+  SHOT a8_settled_HoleSelection -> Docs/Specs/Active/game_polish_b/screenshots/evidence_08_a8_settled_HoleSelection.png (2622 KB)
+[23.78] GATE  [MissionSelection] missions.cards paint(local) n=10 — staggered (first this entry)
+[23.78] GATE  [MissionSelection] missions.daily paint(cache) n=0 — instant (cache empty)
+[23.78] GATE  [Shimmer] missions.daily cold=True hidden -> shown
+  SHOT a8_midstagger_MissionSelection -> Docs/Specs/Active/game_polish_b/screenshots/evidence_09_a8_midstagger_MissionSelection.png (2344 KB)
+[23.97] GATE  [MissionSelection] missions.daily paint(fetch) n=1 — first paint
+[23.97] GATE  [Shimmer] missions.daily cold=False shown -> hidden
+  SHOT a8_settled_MissionSelection -> Docs/Specs/Active/game_polish_b/screenshots/evidence_10_a8_settled_MissionSelection.png (2551 KB)
+[27.36] GATE  [GeneralShop] shop.catalog paint(local) n=8 — staggered (first this entry)
+  SHOT a8_midstagger_GeneralShop -> Docs/Specs/Active/game_polish_b/screenshots/evidence_11_a8_midstagger_GeneralShop.png (3097 KB)
+  SHOT a8_settled_GeneralShop -> Docs/Specs/Active/game_polish_b/screenshots/evidence_12_a8_settled_GeneralShop.png (3312 KB)
+[30.87] GATE  [TournamentSelectionScreen] tournaments paint(cache) n=3 — instant
+[30.87] GATE  [Shimmer] tournament.cards cold=False hidden -> hidden
+  SHOT a8_midstagger_TournamentSelection -> Docs/Specs/Active/game_polish_b/screenshots/evidence_13_a8_midstagger_TournamentSelection.png (2318 KB)
+  SHOT a8_settled_TournamentSelection -> Docs/Specs/Active/game_polish_b/screenshots/evidence_14_a8_settled_TournamentSelection.png (2725 KB)
+--- A7: the pending state, begun on the real controls ---
+[33.32] GATE  [GeneralShop] shop.catalog paint(local) n=8 — staggered (first this entry)
+  A7 a7_shop_buy: switching to the 'WeeklyTab' tab first
+  A7 a7_shop_buy: PendingSpend open on real 'CtaGoldButton' (interactable now False)
+  SHOT a7_shop_buy -> Docs/Specs/Active/game_polish_b/screenshots/evidence_15_a7_shop_buy.png (2786 KB)
+  A7 a7_shop_buy: restored (interactable False)
+  SHOT a7_shop_buy_restored -> Docs/Specs/Active/game_polish_b/screenshots/evidence_16_a7_shop_buy_restored.png (2788 KB)
+[39.71] GATE  [TournamentSelectionScreen] tournaments paint(cache) n=3 — instant
+[39.71] GATE  [Shimmer] tournament.cards cold=False hidden -> hidden
+  A7 a7_tournament_cta: PendingSpend open on real 'CtaSilverButton' (interactable now False)
+  SHOT a7_tournament_cta -> Docs/Specs/Active/game_polish_b/screenshots/evidence_17_a7_tournament_cta.png (2723 KB)
+  A7 a7_tournament_cta: restored (interactable True)
+  SHOT a7_tournament_cta_restored -> Docs/Specs/Active/game_polish_b/screenshots/evidence_18_a7_tournament_cta_restored.png (2725 KB)
+[44.63] GATE  [GeneralShop] shop.catalog paint(local) n=8 — staggered (first this entry)
+  A7 a7_gacha_pull: no 'PullX10Button' on GeneralShop — skipped. 29 live buttons, first few: ALLChip, NavInventoryButton, NavHomeButton, CtaGoldButton, CHARACTERSChip, NavCharactersButton, TICKETSChip, CtaGoldButton, CtaGoldButton, ALLChip, NavGachaButton, DailyTab

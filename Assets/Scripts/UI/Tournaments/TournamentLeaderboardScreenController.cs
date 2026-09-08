@@ -180,13 +180,24 @@ namespace GolfinRedux.UI.Tournaments
         }
 
         /// <summary>
-        /// §D4 — the board could not be read at all. Spend the paint (so the NEXT one is not
-        /// treated as the first) and show the placeholder if this is genuinely a cold open.
+        /// §D4 — this paint produced no board. Spend it (so the NEXT one is not treated as the
+        /// first) and decide whether the player is actually WAITING for something.
+        ///
+        /// <para>A placeholder is only honest while an answer is still coming. On the local path
+        /// <c>TournamentService.Remote</c> is null and <see cref="RefreshRemoteBoard"/> returns
+        /// without asking anyone, so nothing will ever arrive to replace it — a shimmer there
+        /// would sit over the screen's authored rows forever. This is the same rule
+        /// MissionSelection's daily follows, and the reason A3 caught it here is that every arm
+        /// which ENDS a wait has to say so, not just the successful one.</para>
         /// </summary>
-        private void ShowColdPlaceholder(Golfin.Gps.UI.PaintKind kind)
+        private void EndBoardWait(Golfin.Gps.UI.PaintKind kind, int count)
         {
-            _gate.Should(kind, 0);
-            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.TournamentLeaderboard, _gate.IsCold);
+            _gate.Should(kind, count);
+            bool answerStillComing = count == 0
+                                     && _gate.IsCold
+                                     && TournamentService.Instance?.Remote != null;
+            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.TournamentLeaderboard,
+                                                 answerStillComing);
         }
 
         // ── Live data fill ────────────────────────────────────────────────────
@@ -199,7 +210,7 @@ namespace GolfinRedux.UI.Tournaments
             if (TournamentService.Instance == null)
             {
                 Debug.LogWarning("[TournamentLeaderboard] TournamentService not ready; falling back to empty board.");
-                ShowColdPlaceholder(kind);
+                EndBoardWait(kind, 0);
                 return;
             }
 
@@ -207,7 +218,7 @@ namespace GolfinRedux.UI.Tournaments
             if (string.IsNullOrEmpty(id))
             {
                 Debug.LogWarning("[TournamentLeaderboard] SelectedTournamentId is null/empty — normal nav always sets it.");
-                ShowColdPlaceholder(kind);
+                EndBoardWait(kind, 0);
                 return;
             }
 
@@ -241,6 +252,10 @@ namespace GolfinRedux.UI.Tournaments
             {
                 Debug.Log(string.Format("[TournamentLeaderboard] GetLeaderboard({0}) returned empty board.", id));
                 ApplyBoardChrome(modal, rankedCount: 0, hasSticky: false);
+                // The answer ARRIVED and it is empty. That ends the wait as surely as a full
+                // board does, and leaving a placeholder over an answered request is the defect
+                // this arm used to have.
+                EndBoardWait(kind, 0);
                 return;
             }
 
