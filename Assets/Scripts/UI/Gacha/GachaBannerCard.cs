@@ -15,6 +15,7 @@
 // draw unconditionally instead of guarding every slot with a fallback that would show a broken card.
 #nullable enable
 using Golfin.UI.Polish;
+using Golfin.UI.Toast;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -66,6 +67,10 @@ namespace GolfinRedux.UI.Gacha
 
         private GachaBannerEntry? _entry;
 
+        /// <summary>The ticket ledger this card is currently subscribed to, so the unsubscribe in
+        /// OnDisable cannot miss a singleton that was replaced in between.</summary>
+        private GachaTicketManager? _ticketSource;
+
         /// <summary>The catalog entry this card is bound to (read by GachaCarouselController).</summary>
         public GachaBannerEntry? Entry => _entry;
 
@@ -76,8 +81,19 @@ namespace GolfinRedux.UI.Gacha
         // in the Settings OVERLAY, which leaves this screen enabled, so OnEnable never re-runs and
         // the card would keep the old language until the Rewards Center was re-entered. Same scar,
         // same fix, as GachaPrizesScreenController.RefreshLocalizedText.
-        private void OnEnable()  => LocalizationManager.OnLanguageChanged += ReBind;
-        private void OnDisable() => LocalizationManager.OnLanguageChanged -= ReBind;
+        private void OnEnable()
+        {
+            LocalizationManager.OnLanguageChanged += ReBind;
+            EnsureTicketSubscription();
+            RefreshAffordability();
+        }
+
+        private void OnDisable()
+        {
+            LocalizationManager.OnLanguageChanged -= ReBind;
+            if (_ticketSource != null) _ticketSource.OnTicketsChanged -= OnTicketsChanged;
+            _ticketSource = null;
+        }
 
         private void ReBind()
         {
@@ -101,6 +117,9 @@ namespace GolfinRedux.UI.Gacha
             BindTicketIcon(entry);
             BindGuaranteeLines(entry);
             WireButtons(entry);
+
+            EnsureTicketSubscription();
+            RefreshAffordability();
         }
 
         /// <summary>Called each frame by GachaCarouselController to update the countdown display.</summary>
@@ -317,6 +336,20 @@ namespace GolfinRedux.UI.Gacha
         private void BeginPull(int count)
         {
             if (_entry == null) return;
+
+            // The button is already dead when the balance says no (RefreshAffordability), so
+            // reaching here with too few tickets is the RACE: a price that moved under the card, or
+            // a spend that landed between the last refresh and the tap. Answering locally costs
+            // nothing; asking the server costs the player a reveal that opens, shakes and closes.
+            if (!GachaPullFlow.CanAfford(_entry, count))
+            {
+                Debug.Log($"[GachaBannerCard] Pull x{count} on {_entry.BannerId} refused locally — " +
+                          $"the balance does not cover {(count == 1 ? _entry.CostX1 : _entry.CostX10)}.");
+                ToastController.Instance?.Show(LocalizationManager.Get("GACHA_INSUFFICIENT_TICKETS"));
+                RefreshAffordability();
+                return;
+            }
+
             Debug.Log($"[GachaBannerCard] Pull x{count} tapped on {_entry.BannerId}.");
 
             Button? primary = count == 1 ? _pullX1Button : _pullX10Button;
@@ -334,6 +367,55 @@ namespace GolfinRedux.UI.Gacha
         }
 
 
+
+        // ── Affordability (polish_regressions_0909 R1) ─────────────────────────
+
+        /// <summary>
+        /// Both PULL buttons go dead when the player cannot pay for them.
+        ///
+        /// <para>
+        /// A pull the balance cannot cover used to be indistinguishable from one it could: the tap
+        /// opened the reveal modal, shook the bag for the length of a round trip, and then closed
+        /// it again on the server's <c>insufficient</c> verdict. What the player saw was the reveal
+        /// being CUT OFF a second in (Cesar, 2026-09-09) — the toast that followed was reading as
+        /// the reason the ANIMATION broke rather than the reason the pull did not happen.
+        /// </para>
+        /// <para>
+        /// The two buttons are priced SEPARATELY, and that is the point: a balance that covers x1
+        /// but not x10 leaves x1 live, which is exactly the pull the player can still make.
+        /// </para>
+        /// </summary>
+        private void RefreshAffordability()
+        {
+            if (_entry == null) return;
+
+            if (_pullX1Button  != null) _pullX1Button.interactable  = GachaPullFlow.CanAfford(_entry, 1);
+            if (_pullX10Button != null) _pullX10Button.interactable = GachaPullFlow.CanAfford(_entry, 10);
+        }
+
+        /// <summary>
+        /// Subscribe to the ticket ledger the first time it is reachable.
+        ///
+        /// <para>OnEnable alone is not a reliable place: the singleton is created at boot, but a
+        /// card that is bound before that Awake has run would otherwise never hear a balance
+        /// change and would keep whatever affordance it was authored with. Called from both
+        /// OnEnable and <see cref="Bind"/>, and idempotent so the pair cannot double-subscribe.</para>
+        /// </summary>
+        private void EnsureTicketSubscription()
+        {
+            var tickets = GachaTicketManager.Instance;
+            if (tickets == null || ReferenceEquals(tickets, _ticketSource)) return;
+
+            if (_ticketSource != null) _ticketSource.OnTicketsChanged -= OnTicketsChanged;
+            _ticketSource = tickets;
+            _ticketSource.OnTicketsChanged += OnTicketsChanged;
+        }
+
+        // A pull, a grant, or a background refresh moved the balance — re-price both buttons.
+        // This is also what re-disables them AFTER the pull that emptied the wallet: PendingSpend
+        // restores the interactable state it captured (true, because they could afford it then),
+        // and GachaPullFlow disposes it before ApplyOk writes the server's new balance.
+        private void OnTicketsChanged(TicketType kind, int balance) => RefreshAffordability();
 
         /// <summary>
         /// RULES &amp; RATES opens the in-app modal (gacha_ops_polish §2), never the browser. The

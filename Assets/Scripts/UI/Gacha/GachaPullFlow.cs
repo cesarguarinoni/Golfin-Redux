@@ -184,6 +184,46 @@ namespace GolfinRedux.UI.Gacha
             }
         }
 
+        // ── Affordability (polish_regressions_0909 R1) ─────────────────────────
+
+        /// <summary>
+        /// Can the player pay for <paramref name="count"/> pulls on <paramref name="entry"/>?
+        ///
+        /// <para>
+        /// THE ONE PLACE THAT ANSWERS THAT QUESTION, because there are two PULL surfaces — the
+        /// banner card's x1/x10 and the Prizes screen's "again" — and a second copy of this
+        /// arithmetic is how they end up disagreeing about the same balance.
+        /// </para>
+        /// <para>
+        /// It is an AFFORDANCE, NOT AN AUTHORITY. The ticket ledger here is the client's copy of
+        /// the server's; <see cref="Pull"/> still asks and the server still prices and refuses.
+        /// What this stops is the tap that was always going to be refused: before it, an empty
+        /// balance opened the reveal modal, shook the bag for the length of a round trip and then
+        /// closed it again on <c>insufficient</c> — which reads as the reveal being CUT OFF, not
+        /// as a price the player cannot meet (Cesar, 2026-09-09).
+        /// </para>
+        /// <para>
+        /// With no ledger in the scene it answers TRUE: a missing singleton must not lock a player
+        /// out of a pull they can afford, and the server is still there to say no.
+        /// </para>
+        /// </summary>
+        public static bool CanAfford(GachaBannerEntry? entry, int count)
+        {
+            if (entry == null) return false;
+
+            var tickets = GachaTicketManager.Instance;
+            if (tickets == null) return true;
+
+            int cost = count == 1 ? entry.CostX1 : entry.CostX10;
+            return tickets.CanAfford((TicketType)entry.TicketType, cost);
+        }
+
+        /// <summary>
+        /// Whether <see cref="PullAgain"/> has a pull to repeat AND the player can pay for it.
+        /// False with no previous pull, which is what the Prizes screen's PULL button disables on.
+        /// </summary>
+        public static bool CanPullAgain() => _lastEntry != null && CanAfford(_lastEntry, _lastCount);
+
         /// <summary>
         /// "Pull again" on the Prizes screen — the same banner, the same count. Falls back to a
         /// toast when there is no last pull to repeat, which can only happen if the screen was

@@ -67,6 +67,9 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Gacha/Reveal — FX Debug Pass")]
         public static void LaunchFx() => Launch("fx");
 
+        [MenuItem("GOLFIN/Gacha/Reveal — Affordability Pass")]
+        public static void LaunchAfford() => Launch("afford");
+
         static void Launch(string mode)
         {
             if (EditorApplication.isPlaying)
@@ -358,6 +361,7 @@ namespace Golfin.EditorTools
             if (_mode == "stills")      yield return StillsPass();
             else if (_mode == "timing")  yield return TimingPass();
             else if (_mode == "fx")      yield return FxPass();
+            else if (_mode == "afford")  yield return AffordPass();
             else                         yield return VideoPass();
 
             // Nav-bar pixel sample is written by the stills pass; dump the trace either way.
@@ -504,6 +508,89 @@ namespace Golfin.EditorTools
             float z = pivot != null ? pivot.localEulerAngles.z : 0f;
             if (z > 180f) z -= 360f;
             return $"card={(card == null ? "none" : card.name)} liveEmitters=[{emitters}] bagRotZ={z:F2}";
+        }
+
+        // polish_regressions_0909 R1 — the two PULL buttons must go DEAD when the wallet cannot pay
+        // for them, on every card in the carousel and not just the one in front.
+        //
+        // The balance is moved through GachaTicketManager.SetFromServer — the SERVER'S own entry
+        // point, the one a pull answer calls — so what is proven here is the production event
+        // chain (OnTicketsChanged → GachaBannerCard.RefreshAffordability → Button.interactable),
+        // not a test-only poke at the buttons.
+        IEnumerator AffordPass()
+        {
+            var tickets = GachaTicketManager.Instance;
+            if (tickets == null) { Debug.LogError("[GachaReveal] No GachaTicketManager in the scene."); yield break; }
+
+            var x1  = FindButton("PullX1Button");
+            var x10 = FindButton("PullX10Button");
+            if (x1 == null || x10 == null) { Debug.LogError("[GachaReveal] PULL buttons not found."); yield break; }
+
+            var card    = x1.GetComponentInParent<GachaBannerCard>();
+            int costX1  = card != null && card.Entry != null ? card.Entry.CostX1  : 50;
+            int costX10 = card != null && card.Entry != null ? card.Entry.CostX10 : 450;
+            int restore = tickets.GetTickets(TicketType.Standard);
+            Mark($"banner={(card != null && card.Entry != null ? card.Entry.BannerId : "?")} " +
+                 $"costX1={costX1} costX10={costX10} startingBalance={restore}");
+
+            // Every card in the carousel, not just the front one — each subscribes for itself.
+            string AllCards()
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var c in Resources.FindObjectsOfTypeAll<GachaBannerCard>())
+                {
+                    if (string.IsNullOrEmpty(c.gameObject.scene.name) || !c.gameObject.activeInHierarchy) continue;
+                    var b1 = c.transform.GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == "PullX1Button");
+                    var b2 = c.transform.GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == "PullX10Button");
+                    sb.Append($"[{(c.Entry != null ? c.Entry.BannerId : c.name)} x1={(b1 != null ? b1.interactable.ToString() : "-")} " +
+                              $"x10={(b2 != null ? b2.interactable.ToString() : "-")}] ");
+                }
+                return sb.ToString();
+            }
+
+            void Check(string label, bool wantX1, bool wantX10)
+            {
+                bool ok = x1.interactable == wantX1 && x10.interactable == wantX10;
+                Mark($"{(ok ? "PASS" : "FAIL")} {label}: x1={x1.interactable} (want {wantX1}) " +
+                     $"x10={x10.interactable} (want {wantX10}) | all cards: {AllCards()}");
+                if (!ok) Debug.LogError($"[GachaReveal] AFFORDABILITY FAIL — {label}");
+            }
+
+            // (1) Rich — both live.
+            tickets.SetFromServer((int)TicketType.Standard, costX10 + 100);
+            yield return Wait(0.4f);
+            Check("balance covers both", true, true);
+            yield return Snap("gacha_afford_00_both_live");
+
+            // (2) Exactly the x1 price — x1 stays live, x10 goes dead. The case that must NOT
+            // gate both buttons on the larger price.
+            tickets.SetFromServer((int)TicketType.Standard, costX1);
+            yield return Wait(0.4f);
+            Check("balance covers x1 only", true, false);
+            yield return Snap("gacha_afford_01_x1_only");
+
+            // (3) Empty — both dead. This is the tap that used to open the reveal, shake the bag
+            // for a round trip and close it again on `insufficient`.
+            tickets.SetFromServer((int)TicketType.Standard, 0);
+            yield return Wait(0.4f);
+            Check("empty wallet", false, false);
+            yield return Snap("gacha_afford_02_both_dead");
+
+            // (4) Tapping a dead button must do nothing at all — no modal, no round trip.
+            bool modalVisible = Modal != null && Modal.IsVisible();
+            x1.onClick.Invoke();
+            yield return Wait(1.5f);
+            bool modalAfter = Modal != null && Modal.IsVisible();
+            Mark($"{(!modalAfter ? "PASS" : "FAIL")} tap on a dead PULL x1 opened no reveal " +
+                 $"(modal visible before={modalVisible} after={modalAfter}, phase={PhaseName()})");
+            if (modalAfter) Debug.LogError("[GachaReveal] AFFORDABILITY FAIL — a dead PULL still opened the reveal.");
+            yield return Snap("gacha_afford_03_after_dead_tap");
+
+            // (5) The balance comes back — the buttons must come back with it.
+            tickets.SetFromServer((int)TicketType.Standard, restore);
+            yield return Wait(0.4f);
+            Check("balance restored", true, true);
+            yield return Snap("gacha_afford_04_restored");
         }
 
         // Short loop for iterating on the emitters: pull x1 (Legendary), dump every emitter's

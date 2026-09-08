@@ -132,11 +132,17 @@ namespace GolfinRedux.UI.Gacha
             // OVERLAY, which leaves this screen enabled, so OnEnable never re-ran and the label
             // kept the old language until the screen was re-entered.
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+
+            EnsureTicketSubscription();
+            RefreshAffordability();
         }
 
         private void OnDisable()
         {
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+
+            if (_ticketSource != null) _ticketSource.OnTicketsChanged -= OnTicketsChanged;
+            _ticketSource = null;
 
             // Leaving mid-entrance would strand cards at scale 0 / alpha 0; ApplyMode resets
             // them on the next open, but stop the routine so it cannot fight that reset.
@@ -430,12 +436,57 @@ namespace GolfinRedux.UI.Gacha
         // this screen re-binds to the new result — and it now costs real tickets.
         private void OnPull()
         {
+            // Same race the banner card guards: the button is already dead when the balance cannot
+            // cover the repeat, so this only fires if the balance moved since the last refresh.
+            if (!GachaPullFlow.CanPullAgain())
+            {
+                Debug.Log("[GachaPrizesScreenController] Pull again refused locally — no pull to " +
+                          "repeat, or the balance no longer covers it.");
+                Golfin.UI.Toast.ToastController.Instance?.Show(
+                    LocalizationManager.Get("GACHA_INSUFFICIENT_TICKETS"));
+                RefreshAffordability();
+                return;
+            }
+
             Debug.Log($"[GachaPrizesScreenController] Pull again tapped (x{_pullCount}).");
             // The banner and the count both come from the last pull — the screen deliberately does
             // not know what a banner is, and re-deriving one here is how the "again" would end up
             // rolling a different one than the player just pulled.
             GachaPullFlow.PullAgain();
         }
+
+        // ── Affordability (polish_regressions_0909 R1) ─────────────────────────
+
+        /// <summary>The ticket ledger this screen is subscribed to, so the unsubscribe in OnDisable
+        /// cannot miss a singleton that was replaced in between.</summary>
+        private GachaTicketManager? _ticketSource;
+
+        /// <summary>
+        /// PULL AGAIN goes dead when the player cannot pay for the repeat — the same affordance the
+        /// banner card grew, at the second of the game's two PULL surfaces.
+        ///
+        /// <para>The screen deliberately does not know what a banner is, so it cannot price the
+        /// repeat itself; <see cref="GachaPullFlow.CanPullAgain"/> owns both the last entry and the
+        /// arithmetic. It is also false when there is NO pull to repeat, which is the case the
+        /// handler used to answer with a toast after the tap.</para>
+        /// </summary>
+        private void RefreshAffordability()
+        {
+            if (_pullButton != null) _pullButton.interactable = GachaPullFlow.CanPullAgain();
+        }
+
+        /// <summary>Subscribe to the ticket ledger the first time it is reachable. Idempotent.</summary>
+        private void EnsureTicketSubscription()
+        {
+            var tickets = GachaTicketManager.Instance;
+            if (tickets == null || ReferenceEquals(tickets, _ticketSource)) return;
+
+            if (_ticketSource != null) _ticketSource.OnTicketsChanged -= OnTicketsChanged;
+            _ticketSource = tickets;
+            _ticketSource.OnTicketsChanged += OnTicketsChanged;
+        }
+
+        private void OnTicketsChanged(TicketType kind, int balance) => RefreshAffordability();
 
         // ── Helpers ────────────────────────────────────────────────────────────
 
