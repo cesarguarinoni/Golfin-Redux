@@ -4,11 +4,13 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## 2026-09-08 — game_polish_b: **modals pop, three tween loops become UiMotion, and the top bar counts down** (IN PROGRESS)
+## 2026-09-08 — game_polish_b: **modals pop, three tween loops become UiMotion, and the top bar counts down** — DONE, approved by Cesar
 
 Slice b of `game_polish` (Notion 2111). Cesar's call mid-task: **code complete first, evidence
-second**, so this is an implementation pass with §D1.4, §D4, most of §D6 and all of §D7 still to
-come. `Docs/Specs/Active/game_polish_b/IMPLEMENTER_REPORT.md` § What is NOT done is the list.
+second**. Every design section §D0–§D7 shipped, all seven A4 clips recorded.
+`Docs/Specs/Completed/game_polish_b/IMPLEMENTER_REPORT.md` § What is NOT done carries the one
+remaining gap: cold frames for five of the six shimmer sites, which need a backend provider with
+an empty first response and were not obtainable in this session.
 
 **Done and verified**
 - **§D0** — `GpsPaintMotion` → `Polish/PaintMotion.cs`, `ShimmerHost` → `Polish/`,
@@ -56,6 +58,31 @@ every launch and could never open.** The scene override is gone (36-line diff).
    play mode). **The trigger is not known** — do not quote either explanation. The reliable
    workaround is the one both scene commits used: isolate your hunks out of the churned save and
    apply them to HEAD's copy, then reload the scene from disk. It deserves its own bisect task.
+
+**A11 — the lint, and one wrong fix worth remembering.** The eight modal prefabs lint FAIL 0 /
+WARN 79 before and after `animateShow`, per-prefab identical: the flag is a serialized bool and
+that is how it stops being an assertion. The six shimmer hosts did NOT lint clean —
+`ShimmerBlock` is authored at 900x120 with `S_PillStadium` 9-sliced at pixelsPerUnitMultiplier
+3.667, and §D4 stretches it to six shapes, so `9slice-cap-kink` fired on the three tall sites.
+**Pinning the multiplier to 1 fixed those and collapsed the other three into 18 FAILs** — 88+88
+does not fit a 100 px row. It is computed per image now from the sprite's own border, aiming the
+effective corner at a third of the shorter side, mid-band between the linter's collapse and kink
+thresholds at every size. Six hosts 0 FAIL / 0 WARN; the seven GPS sites sharing the prefab were
+linted too and pass untouched.
+
+**All seven A4 clips exist, and the last two corrected their own bail reasons.** (b) had said
+"no interactable CTA at RP 6,139"; the shop opens the Rewards Center on its **GACHA** tab, where
+no BUY exists at all — a claim about a balance for a control that was not on screen. (e) had said
+a hole-complete "unloads ShellScene under the take"; `GameplaySceneLoader` loads both gameplay
+scenes ADDITIVELY and lives in ShellScene itself. Both are recorded now: a real 75 RP purchase
+with the top bar counting 6,123 → 6,048, and Hole 2 entered from its own card with the result
+screen raised by `GameSession.MarkHoleComplete`.
+
+**Reading the (e) frames found a wart in §D1.4 that no still would have caught.** The reward row
+read `x10 → x2 → x7 → x9 → x10`: `Show()` started the choreography BEFORE `BindCurrentHole`, so
+the labels showed their answer for the length of the pop and the glyph before the count reset
+them and climbed back to it. Bind runs first now and the routine zeroes the counted labels on its
+own first frame.
 
 Also, at Cesar's request and outside this SPEC: **the gacha banner carousel is a ring now**
 (`8901e8f92`) — swiping past the last banner reaches the first, by arithmetic rather than cloned

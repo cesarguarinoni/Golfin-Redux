@@ -3890,3 +3890,55 @@ a step that existed only because the threshold was a speed — and `FreeSwingBot
 flipped from "2x the duff speed" to "half the duff duration": same intent, the other way up. No
 sigma recalibration: the tempo RATIO the grader reads is unchanged, and the duff key is not one of
 the `bot_scheme_parity` §5 triggers.
+
+---
+## Lesson — `game_polish_b` (2026-09-08): a blocked Editor looks exactly like a broken MCP, and a harness that reports "the control never went live" is usually looking in the wrong place
+
+Four separate things went wrong this task in the same shape: **a symptom was attributed to the
+system under test when it belonged to the instrument.** They are worth reading together.
+
+**1. `Failed to invoke 'RequestCallTool' after 10 retries` means a BLOCKED MAIN THREAD first, a
+transport drop second.** I ran `git checkout -- Assets/Scenes/ShellScene.unity` while that scene
+was open in the Editor. Unity raised its "scene modified externally, reload?" dialog, which
+blocks the main thread — so every MCP call fails with the retry error until a human clicks it.
+I spent half an hour diagnosing the plugin (reading its `ConnectionManager` logs, probing the
+server over curl, checking `UserSettings/AI-Game-Developer-Config.json`) and published a
+confident, wrong cause: "the domain reload dropped the hub connection, auto-reconnect disabled".
+Cesar: *"mCP was probably down because as usual you reload a scene that needs me to click ignore
+and you don't tell me in advance."* Second time he has said it this session. **Before any action
+that can raise a Unity dialog, say so and name the button.** Better: do not raise it — see 2.
+
+**2. `git checkout` of a scene does NOT revert the scene Unity has open.** The file changed on
+disk; the Editor kept its in-memory copy, which still held the `pixelsPerUnitMultiplier = 1` pass
+I thought I had discarded. `git status` said clean, `scene.isDirty` said True, and saving at that
+point would have committed the state I believed I had thrown away. Reload from disk instead —
+`EditorSceneManager.ClearSceneDirtiness(scene)` then `ReloadScene(scene)`, both non-public, both
+reachable by reflection, and no dialog because the dirty flag is gone first. **Check
+`isDirty` before trusting `git status` about anything Unity has open.**
+
+**3. "The card's action button never went live" was a search in an inactive container.** The A4
+(e) segment polled `HoleCardController.actionButton` for 25 s and gave up, and its bail message
+said the hole was never entered. But `actionButton` lives inside `expandedContainer`, which
+`SetState` activates only for `HoleCardState.Expanded` — on a collapsed card it is not in the
+hierarchy at all, so eighteen collapsed cards are indistinguishable from a screen that never
+finished building. The player taps the card, it expands, and THEN taps PLAY. **A timeout on
+"control not found" should print what WAS found** (`18 cards, 0 locked, 0 expanded`) — the count
+alone would have shown the mistake in one run instead of three.
+
+**4. Two bail messages had already hardened into stated facts about the game.** (b) shipped in a
+report as "no interactable CTA at RP 6,139 — nothing on the catalog is affordable"; the shop
+opens the Rewards Center on its **GACHA** tab, where no BUY button exists at all. (e) shipped as
+"a hole-complete unloads ShellScene under the take"; `GameplaySceneLoader` loads both gameplay
+scenes `Additive` and lives in ShellScene itself, with a doc comment saying exactly that. Neither
+claim was checked against the code it was about. **A bail message is a hypothesis. It becomes a
+finding only when something other than the failing code path confirms it** — and when it lands in
+a report it is read as a finding by everyone after you.
+
+**And one real defect that only frame-by-frame reading could find.** §D1.4's HoleComplete reward
+count-up ran, but `Show()` started the choreography BEFORE `BindCurrentHole`, so Bind wrote each
+label its final value and the count then reset it: the row read `x10 → x2 → x7 → x9 → x10`. A
+count-up that displays its answer before counting to it is worse than none. **No still would have
+caught this, and neither would "does the count-up run?"** — it did. Bind runs first now and the
+routine zeroes the counted labels on its own first frame. The general form: when an animation and
+a data bind touch the same field, the ORDER between them is part of the animation's design, and
+the only instrument that shows it is consecutive frames.

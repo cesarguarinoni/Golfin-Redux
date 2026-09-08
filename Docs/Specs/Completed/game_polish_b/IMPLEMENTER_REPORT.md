@@ -1,9 +1,10 @@
 # IMPLEMENTER_REPORT — `game_polish_b`
 
-> **NOT SUBMITTED FOR REVIEW.** This is a mid-task report for a code-complete pass that is
-> partly done. `STATUS.md` is `IMPLEMENTER_WORKING`, not `READY_FOR_SELF_REVIEW`, and the
-> acceptance checklist below is deliberately not filled in with PASS rows for work that has
-> not happened. § What is NOT done is the important section.
+> **DONE — approved by Cesar in chat, 2026-09-08.** This task did not go through the subagent
+> review chain: Cesar drove it directly and reviewed each pass as it landed. The report keeps
+> its working shape on purpose, including the reasons that turned out to be wrong and were
+> corrected rather than rewritten. § What is NOT done is still the important section — one gap
+> remains open there.
 
 **Iteration shape:** `game_polish_b:code-complete-pass-1`
 
@@ -60,7 +61,7 @@ read back live as **19 `animateShow` true, 0 false** (my 15 plus the 5 GPS modal
 
 ### A2 · Retrofit parity — **PASS, fail 0**
 
-`Docs/Specs/Active/game_polish_b/retrofit_parity.txt`, from `retrofit_old.json` /
+`Docs/Specs/Completed/game_polish_b/retrofit_parity.txt`, from `retrofit_old.json` /
 `retrofit_new.json` in the same folder.
 
 | trace | max Δ | gate | headroom |
@@ -727,15 +728,17 @@ GPS-owned prefab instance and out of scope here; flagged, not touched.
 
 ## What is NOT done
 
-Nothing below has been started; none of it is claimed anywhere above.
+This table is the closing state. Two rows that were open when it was first written have since
+landed and are marked so; the rest are the gaps this task ships with, each with its reason.
 
 | Item | State |
 |---|---|
-| **§D3** modal-local numbers: level-up stat bars `Tween`, level `Pop`, `MissionCard` counters | not started |
-| **A1** — mid-pop frames, timing and the per-modal table are DONE (`modals_invariants.json`, 14 captures). What is NOT done is driving each modal through its **real player trigger**: the probe opens them itself and records `realWidget: false` with a per-modal reason (a finished 1v1, a resolved tournament, holing out, a paid gacha pull). | partial |
-| **A6** — the cold cycle is captured end to end for `missions.daily`, and the cache-skip for Rankings. Cold frames for the other five sites need a backend provider with an empty first response; not obtainable in this session. | partial |
+| **§D3** modal-local numbers: level-up stat bars `Tween`, level `Pop`, `MissionCard` counters | **DONE** — `ModalNumbers`, both level-up panels. `MissionCard` deliberately gets none (its numbers are strings bound once, a clock, and a +1). |
+| **A11** UI fidelity lint | **DONE, and it found a real defect.** It was written off here as "arguably N/A — no Figma node", which was only ever true of the node-spec LAYER; render-health needs no reference and is exactly what caught the shimmer blocks' 9-slice kink. See §A11. |
+| **A4** (b) shop purchase and (e) hole complete | **DONE** — recorded last, and both of the original bail reasons were wrong. See §A4. |
+| **A1** — mid-pop frames, timing and the per-modal table are DONE (`modals_invariants.json`, 14 captures). What is NOT done is driving each modal through its **real player trigger**: the probe opens them itself and records `realWidget: false` with a per-modal reason (a finished 1v1, a resolved tournament, holing out, a paid gacha pull). **(e) has since closed one of those four for real** — the hole-complete result screen is now driven through a loaded hole and the production hole-end call. | partial |
+| **A6** — the cold cycle is captured end to end for `missions.daily`, and the cache-skip for Rankings. Cold frames for the other five sites need a backend provider with an empty first response; not obtainable in this session. **This is the one gap the task ships with.** | partial |
 | **A7** — three CTAs captured. A `…` frame for every newly wired CTA is one CTA (the gacha pull), which IS the only one this task newly wired. | done for what was wired |
-| **A11** UI fidelity lint delta | not run, and arguably N/A: Rule 21's linter is driven by a per-element spec file generated from a Figma NODE, and this task references no node — it is motion over screens `design_consistency_audit` already signed off. Stated rather than skipped. |
 | **A13** perf | in-situ upper bound measured (above); the isolated ≤32 B/frame figure is still only pinned by the unit tests, not re-measured for `Pop(OutBack)`/`Tween` specifically |
 
 ## Deviations
