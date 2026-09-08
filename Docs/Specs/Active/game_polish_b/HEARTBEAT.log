@@ -25,3 +25,17 @@ the .ips (RaiseStackOverflowException), fixed, and the recorder hardened so it c
 longer leave Time.captureDeltaTime set or run real Awake/OnEnable in a live session.
 Cesar stopped the concurrent scheme_freeswing session; the tree and Editor are ours.
 NEXT: code-complete D1/D3-D6, evidence second (Cesar's call).
+
+[2026-09-08 15:45 JST] A11 lint closed.
+  - MCP transport dropped ~15:05 (Editor alive; plugin logged "auto-reconnect disabled for
+    endpoint: /hub/mcp-server" right after the domain reload my own .cs edit triggered).
+    Recovered on its own ~30 min later. Nothing was edited blind.
+  - ShellScene was git-clean on disk but DIRTY in memory, still holding the discarded
+    pixelsPerUnitMultiplier=1 pass — `git checkout` of a scene does not revert the open scene.
+    Reloaded from disk (ClearSceneDirtiness + ReloadScene by reflection, no save dialog) and
+    confirmed 3.667 back on all six sites before touching anything.
+  - FixCornerScale rewritten per image; predicted every value offline first, then applied via
+    the real ApplyShimmer and matched all 12 predictions exactly.
+  - 6 hosts 0 FAIL/0 WARN/0 INFO, all restoredInactive, lint left the scene undirtied.
+    7 GPS hosts linted and left alone. 8 modal prefabs FAIL 0 / WARN 79, delta zero.
+  - Commit 46567abf8. Scene saved; diff is 30 m_PixelsPerUnitMultiplier overrides only.
