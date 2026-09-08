@@ -1,0 +1,31 @@
+=== game_polish_b probe (modals) 2026-09-08 03:54:39Z ===
+found 19 ModalController instances
+  NOT PRESENT AT RUNTIME: InGameSettingsModalController — prefab-only; it is spawned into the GAMEPLAY scene, and has no ShellScene instance (§D1.1)
+  SHOT modals_LevelUpModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_01_modals_LevelUpModalController.png (2889 KB)
+  LevelUpModalController                     animateShow=True activated=True midPopScale=0.9425 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: harness-driven Show(); a real trigger exists but is not wired into this probe]
+  SHOT modals_BagSelectionModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_02_modals_BagSelectionModalController.png (2658 KB)
+  BagSelectionModalController                animateShow=True activated=True midPopScale=0.9423 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: harness-driven Show(); a real trigger exists but is not wired into this probe]
+  SHOT modals_ItemUseModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_03_modals_ItemUseModalController.png (2375 KB)
+  ItemUseModalController                     animateShow=True activated=True midPopScale=0.9424 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: harness-driven Show(); a real trigger exists but is not wired into this probe]
+  SHOT modals_BagClubModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_04_modals_BagClubModalController.png (2545 KB)
+  BagClubModalController                     animateShow=True activated=True midPopScale=0.9424 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: harness-driven Show(); a real trigger exists but is not wired into this probe]
+  SHOT modals_HoleCompleteModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_05_modals_HoleCompleteModalController.png (3236 KB)
+  HoleCompleteModalController                animateShow=True activated=False showIsNoOp=TRUE midPopScale=1.0000 visibleOnShow=False openCount=0->0->0 fails=0   [harness-driven: Show() is a no-op by design; HoleCompleteWidget owns visibility via _root.SetActive (§D1.3)]
+  SHOT modals_VersusResultModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_06_modals_VersusResultModalController.png (3236 KB)
+  VersusResultModalController                animateShow=True activated=False showIsNoOp=TRUE midPopScale=1.0000 visibleOnShow=False openCount=0->0->0 fails=0   [harness-driven: Show() is a no-op by design; callers must use ShowResult() so live data is bound first]
+  SHOT modals_GachaRevealModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_07_modals_GachaRevealModalController.png (3213 KB)
+  GachaRevealModalController                 animateShow=True activated=False midPopScale=0.9406 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: opens only from a PULL, which spends real currency]
+  SHOT modals_MatchmakingModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_08_modals_MatchmakingModalController.png (3115 KB)
+  MatchmakingModalController                 animateShow=True activated=True midPopScale=0.9375 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: opens a live queue against the matchmaking service]
+  SHOT modals_TournamentSignupModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_09_modals_TournamentSignupModalController.png (3074 KB)
+  TournamentSignupModalController            animateShow=True activated=False midPopScale=0.9400 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: harness-driven Show(); a real trigger exists but is not wired into this probe]
+  SHOT modals_ClubLevelUpModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_10_modals_ClubLevelUpModalController.png (2438 KB)
+  ClubLevelUpModalController                 animateShow=True activated=True midPopScale=0.9424 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: harness-driven Show(); a real trigger exists but is not wired into this probe]
+  SHOT modals_SchemeConfirmModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_11_modals_SchemeConfirmModalController.png (3073 KB)
+  SchemeConfirmModalController               animateShow=True activated=False midPopScale=0.9420 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: opens from the in-gameplay scheme picker]
+  SHOT modals_StartingCharacterConfirmModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_12_modals_StartingCharacterConfirmModalController.png (3031 KB)
+  StartingCharacterConfirmModalController    animateShow=True activated=True midPopScale=0.9421 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: starter flow only; reachable once per save]
+  SHOT modals_TournamentResultModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_13_modals_TournamentResultModalController.png (2938 KB)
+  TournamentResultModalController            animateShow=True activated=False midPopScale=0.9418 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: opens only after a tournament resolves server-side]
+  SHOT modals_GachaRatesModalController -> Docs/Specs/Active/game_polish_b/screenshots/modals_14_modals_GachaRatesModalController.png (2941 KB)
+  GachaRatesModalController                  animateShow=True activated=False midPopScale=0.9422 visibleOnShow=True openCount=0->1->0 fails=0   [harness-driven: harness-driven Show(); a real trigger exists but is not wired into this probe]

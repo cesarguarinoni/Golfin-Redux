@@ -108209,47 +108209,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 7318936919323513355, guid: 08bcfc9e5603e4fe6bcb5342b2287386, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1616292628}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 08bcfc9e5603e4fe6bcb5342b2287386, type: 3}
 --- !u!224 &1616292625 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6718582116489664758, guid: 08bcfc9e5603e4fe6bcb5342b2287386, type: 3}
   m_PrefabInstance: {fileID: 1616292624}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1616292626 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7318936919323513355, guid: 08bcfc9e5603e4fe6bcb5342b2287386, type: 3}
-  m_PrefabInstance: {fileID: 1616292624}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1616292627 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4563940444943290259, guid: 08bcfc9e5603e4fe6bcb5342b2287386, type: 3}
-  m_PrefabInstance: {fileID: 1616292624}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1616292626}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 23ad9ac4f52bd4ba08daad291a41dca1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Tournaments.TournamentResultModalController
---- !u!114 &1616292628
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1616292626}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3e1d128d7285a4ecbafd584aa9724c50, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Tournaments.TournamentResultPresenter
-  _resultModal: {fileID: 1616292627}
-  _settleDelay: 1
-  _safetyTickInterval: 30
 --- !u!1 &1620330505
 GameObject:
   m_ObjectHideFlags: 0

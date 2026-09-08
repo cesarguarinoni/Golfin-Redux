@@ -12,6 +12,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Tournaments;
 using Golfin.UI.Modals;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using Golfin.UI.Toast;
 
@@ -62,7 +63,12 @@ namespace GolfinRedux.UI.Tournaments
         {
             base.Awake();
             if (_claimButton != null)
+            {
+                // §D1.4 — skip first, act second. Idempotent and a no-op when nothing is running,
+                // so CLAIM never has to ask whether a sequence is in flight.
+                _claimButton.onClick.AddListener(() => _choreo?.CompleteNow());
                 _claimButton.onClick.AddListener(OnClaim);
+            }
         }
 
         // ── Public API ────────────────────────────────────────────────────────
@@ -202,6 +208,46 @@ namespace GolfinRedux.UI.Tournaments
                     ? $"{result.PrizeRP:N0} + Trophy"
                     : $"{result.PrizeRP:N0}";
             }
+
+            PlayChoreography(result);
+        }
+
+        // ── game_polish_b §D1.4 — the post-pop choreography ──────────────────────
+        //
+        // The modal pops through ModalController (§D1.1); this is what lands after it. Two
+        // beats, because this modal has two things worth reading: the rank you finished at, and
+        // the prize it paid. The prize COUNTS rather than appearing, which is the whole point of
+        // §D3's count-ups applied to the biggest number the tournament pillar shows.
+
+        private ResultChoreography? _choreo;
+        private int _prizeRp;
+        private bool _hasTrophy;
+
+        private void PlayChoreography(TournamentResult result)
+        {
+            _choreo ??= new ResultChoreography(this);
+            _prizeRp = (int)result.PrizeRP;
+            _hasTrophy = !string.IsNullOrEmpty(result.ItemRewardId);
+            _choreo.Play(ChoreoSteps(), SettleChoreo);
+        }
+
+        private System.Collections.IEnumerator ChoreoSteps()
+        {
+            // 1 · the rank badge lands.
+            _choreo!.Pop(_rankText);
+            yield return ResultChoreography.Wait(UiMotion.StaggerDelay * 3f);
+
+            // 2 · the prize counts up from zero. The trophy suffix rides in the wrap so the
+            //     surrounding words are never dropped mid-count (" + Trophy" would otherwise
+            //     vanish for 0.4 s and come back).
+            _choreo.Count(_rewardText, _prizeRp, wrap: _hasTrophy ? "{0} + Trophy" : "{0}");
+        }
+
+        private void SettleChoreo()
+        {
+            ResultChoreography.SettlePop(_rankText);
+            if (_rewardText != null)
+                _rewardText.text = _hasTrophy ? $"{_prizeRp:N0} + Trophy" : $"{_prizeRp:N0}";
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────

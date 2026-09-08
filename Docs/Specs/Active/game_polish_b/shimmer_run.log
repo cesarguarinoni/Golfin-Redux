@@ -1,0 +1,7 @@
+=== game_polish_b probe (shimmer) 2026-09-08 03:49:45Z ===
+  rankings.list              host=Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/Shimmer_rankings_list blocks=3 activeAtRest=False
+  rankings.top3              host=Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Top3/Shimmer_rankings_top3 blocks=3 activeAtRest=False
+  tournament.cards           host=Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Shimmer_tournament_cards blocks=2 activeAtRest=False
+  tournament.leaderboard     host=Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Shimmer_tournament_leaderboard blocks=3 activeAtRest=False
+  gacha.history              host=Canvas/ScreensRoot/GachaHistoryScreen/GameScreenContent/ContentContainer/MainPanel/CardsContainer/Shimmer_gacha_history blocks=3 activeAtRest=False
+  missions.daily             host=Canvas/ScreensRoot/MissionSelectionScreen/Content/Shimmer_missions_daily blocks=1 activeAtRest=False

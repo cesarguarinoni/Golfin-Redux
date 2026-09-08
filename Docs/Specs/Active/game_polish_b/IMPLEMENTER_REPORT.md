@@ -229,20 +229,85 @@ the guards in each handler, not inside the success path. A card that expands ans
 itself; a LOCKED card, a second tap that collapses, and the chip's toast-only arm all look
 identical to no response at all.
 
+### §D1.4 · Result-modal choreography — done, and one thing the SPEC asks for does not exist
+
+`ResultChoreography` (shared, Assembly-CSharp) runs each modal's post-pop sequence and — the
+part that matters — makes it **skippable at any frame**. §D1.4: "Buttons stay interactable from
+the first frame ... a tap during the choreography completes it instantly." A result screen is
+one the player is trying to LEAVE, and half a second of un-skippable celebration is the most
+irritating thing a polish task can add. So nothing disables a control, and every control that
+leaves the modal calls `CompleteNow()` first — idempotent, so no button has to ask whether a
+sequence is running.
+
+**It tracks its children**, and that is not incidental: `UiMotion`'s interruption story is
+per-handle, so stopping the SEQUENCE would leave a staggered group's N tweens running. A tap
+would snap the sequence to its end and then watch the rows animate over the top of it.
+
+| Modal | Sequence |
+|---|---|
+| Versus | outcome word (BOTH labels — one says LOSER and the player reads that just as hard) `Pop`; reward rows `Stagger`-rise; amounts `CountUp` from 0 into `x{0}`, a beat AFTER the rise so a row is on screen before its number moves |
+| TournamentResult | rank badge `Pop`; prize `CountUp` from 0, with `+ Trophy` carried in the wrap so the suffix is never dropped mid-count |
+| HoleComplete | verdict glyph `Pop`; the three reward amounts count together (in sequence they would outlast the player's patience). Local implementation — `Golfin.Gameplay.UI` cannot reference Assembly-CSharp, the same wall §D1.3 documents |
+
+**THE MISSION-COMPLETE BANNER §D1.4 NAMES DOES NOT EXIST.** No banner object, no
+`MISSION_COMPLETE` key, no field for one — grepped across `Assets/Scripts/Gameplay/UI/ShotUI/`
+and `Assets/Scripts/UI/Modals/Result/`. Rather than invent one, it is reported for Cesar to rule
+on: either it was never built, or it lives somewhere the SPEC's author expected and I have not
+found.
+
+### §D7 · Probe — done, and it found a real bug
+
+`GamePolishProbeB` with three modes. **Deviation D-8:** it is a SIBLING of `GamePolishProbe`,
+not modes inside it — that probe is `game_polish_a`'s gate, a completed and approved task, and
+adding b's modes to it means editing a's evidence machinery to serve this task.
+
+**`modals` — 14 modals, fail 0.** Every one pops (mid-pop scale 0.938–0.967 one frame in),
+`IsVisible()` true on the Show frame and false on the Hide frame, `OpenModalCount` +1 then back.
+14 mid-pop captures, `realPlay: true` in every sidecar. `modals_invariants.json`.
+
+**It took four runs, and each failure was the PROBE, not the code** — which is the argument for
+having built it:
+
+| Run | Reading | Actual cause |
+|---|---|---|
+| 1 | 13 fails | 8 modals live under INACTIVE screen roots; `UiMotion.Run` settles instantly when the host is not `isActiveAndEnabled`, so they read as "did not pop" |
+| 2 | 1 fail | the first modal on a freshly-activated branch pays that screen's `OnEnable` rebuild — a frame longer than `PopDur`, so the tween correctly completes in one step |
+| 3 | 1 fail | a fixed 0.5 s settle just moved the failure to the next modal, because `FindObjectsByType` order is not stable between runs. Replaced with a wait for five consecutive SHORT frames |
+| 4 | **0 fails** | — |
+
+**AND A REAL, PRE-EXISTING BUG.** The probe reported `TournamentResultModalController` NOT
+PRESENT AT RUNTIME. It is in the scene at author time. Cause:
+`TournamentResultPresenter.Awake` is a singleton guard — `if (Instance != null && Instance !=
+this) Destroy(gameObject)` — and the component was on that object **twice**: once from the
+prefab, once as a scene `m_AddedComponents` override. The second copy's Awake destroyed its own
+GameObject at boot, so **the tournament result modal deleted itself on every launch and could
+never open.** Not caused by this task, but it made §D1.1's flag and §D1.4's choreography inert
+for that modal, so it is fixed here: the scene override is removed (both copies were identically
+wired), 36-line diff, and the modal now appears in the probe and pops at 0.967.
+
+**`shimmer`** — all six hosts resolve, correct block counts, `activeAtRest=False` on every one.
+
+**`perf`** — baseline median whole-frame GC 205,629 B; each modal's pop adds a uniform
+164–191 KB. **That number is NOT a test of A13's ≤32 B/frame** and is not offered as one: A13's
+budget is the ISOLATED per-tween figure pinned by `UiMotionTests`, and "GC Allocated In Frame"
+is the whole frame — Editor, shell, every `Update`. The uniformity across fourteen different
+modals is the tell that it is the shared cost of activating a panel and rebuilding its canvas,
+not the tween. The first version of this mode took a MAX over a window containing a ~7 MB boot
+spike and reported every modal as seven megabytes BETTER than baseline; medians replaced it.
+
 ## What is NOT done
 
 Nothing below has been started; none of it is claimed anywhere above.
 
 | Item | State |
 |---|---|
-| **§D1.4** result-modal inner choreography (reward rows stagger, RP/score `CountUp`, rank `Pop`, mission banner `Rise`+`Pulse`, `CompleteNow()` on tap) | not started |
-| **§D7** probe modes `modals` / `shimmer` / `perf` (the `retrofit` mode exists as `RetrofitParityRecorder`) | not started |
 | **§D3** modal-local numbers: level-up stat bars `Tween`, level `Pop`, `MissionCard` counters | not started |
-| **A1** modal table with real triggers, mid-pop frames, `IsVisible`/`OpenModalCount` timing | not started |
+| **A1** — mid-pop frames, timing and the per-modal table are DONE (`modals_invariants.json`, 14 captures). What is NOT done is driving each modal through its **real player trigger**: the probe opens them itself and records `realWidget: false` with a per-modal reason (a finished 1v1, a resolved tournament, holing out, a paid gacha pull). | partial |
 | **A3** rest parity 0 px | not measured |
 | **A4** videos (a)–(g) | not recorded |
 | **A5** count-up table + stills · **A6** shimmer frames · **A7** `…` frames · **A8** mid-stagger frames | not captured |
-| **A11** lint delta · **A13** perf · **A14** `check_report_counts.py` / `check_report_citations.py` | not run |
+| **A11** lint delta · **A14** `check_report_counts.py` | not run (`check_report_citations.py` IS run: 30 cited, 0 unresolved) |
+| **A13** perf | in-situ upper bound measured (above); the isolated ≤32 B/frame figure is still only pinned by the unit tests, not re-measured for `Pop(OutBack)`/`Tween` specifically |
 
 ## Deviations
 
@@ -266,6 +331,12 @@ Nothing below has been started; none of it is claimed anywhere above.
   which is the discrimination the one-shot arm exists to make.
 - **D-5 · A10 is a 2-line diff.** See A10 caveat 1.
 - **D-6 · The modal count is 15.** See § 0.
+- **D-8 · The §D7 probe is a sibling, not modes on `GamePolishProbe`.** That probe is
+  `game_polish_a`'s gate — a completed, approved task — and its Driver's route and output paths
+  are a-specific. A sibling reuses the same arming pattern and cannot regress a's evidence.
+- **D-9 · A duplicate `TournamentResultPresenter` was removed from ShellScene.** Out of this
+  task's scope, but it destroyed the tournament result modal at boot and therefore made two of
+  this task's own deliverables inert for that modal. See §D7.
 - **D-7 · Gacha PULL uses `BeginOn`, not `Begin`.** Those buttons have no separate label; the
   only `TMP_Text` under each is its COST, and swapping a price for an ellipsis would read as
   the price having changed.
@@ -289,3 +360,4 @@ ARE the loop. Not part of this SPEC and reported separately.
 | `648b46603` | §D4 site table, §D5, §D6 Rankings |
 | `3d81c5112` | status / report / AI_CONTEXT |
 | `afae3e1b5` | §D4 hosts + wiring, §D6 everywhere else, selection bumps |
+| `2101bc019` | §D4 invariant tests + the churn correction |

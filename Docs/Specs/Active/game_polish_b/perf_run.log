@@ -1,0 +1,19 @@
+=== game_polish_b probe (perf) 2026-09-08 03:53:39Z ===
+  BASELINE (nothing animating): median whole-frame GC 205629 B, max 342389 B, over 119 frames
+  Rows are MEDIAN whole-frame GC during the pop and the delta over that baseline.
+  A13's <= 32 B/frame is the ISOLATED per-tween budget, pinned by UiMotionTests —
+  a whole-frame figure can neither prove nor disprove it, and is not offered as doing so.
+  VersusResultModalController                medianFrameGC=273989 B  delta=+68360 B  max=383741 B  (19 frames)
+  StartingCharacterConfirmModalController    medianFrameGC=383365 B  delta=+177736 B  max=397037 B  (19 frames)
+  MatchmakingModalController                 medianFrameGC=373389 B  delta=+167760 B  max=495242 B  (19 frames)
+  GachaRatesModalController                  medianFrameGC=397037 B  delta=+191408 B  max=432298 B  (19 frames)
+  HoleCompleteModalController                medianFrameGC=383365 B  delta=+177736 B  max=430646 B  (19 frames)
+  BagClubModalController                     medianFrameGC=383365 B  delta=+177736 B  max=418048 B  (19 frames)
+  ItemUseModalController                     medianFrameGC=369693 B  delta=+164064 B  max=383429 B  (19 frames)
+  TournamentSignupModalController            medianFrameGC=383653 B  delta=+178024 B  max=410709 B  (19 frames)
+  TournamentResultModalController            medianFrameGC=383365 B  delta=+177736 B  max=456452 B  (19 frames)
+  LevelUpModalController                     medianFrameGC=370069 B  delta=+164440 B  max=397037 B  (19 frames)
+  BagSelectionModalController                medianFrameGC=383365 B  delta=+177736 B  max=397037 B  (19 frames)
+  GachaRevealModalController                 medianFrameGC=377130 B  delta=+171501 B  max=397037 B  (19 frames)
+  SchemeConfirmModalController               medianFrameGC=383461 B  delta=+177832 B  max=775267 B  (19 frames)
+  ClubLevelUpModalController                 medianFrameGC=383365 B  delta=+177736 B  max=404758 B  (19 frames)

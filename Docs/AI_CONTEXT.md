@@ -32,6 +32,18 @@ come. `Docs/Specs/Active/game_polish_b/IMPLEMENTER_REPORT.md` § What is NOT don
 - EditMode **2860 / 0 failed**; the new suites were *proven* to run with a tripwire rather than
   assumed, because `tests-run` ignores filters and reports only failures.
 
+**D1.4 + D7 landed too.** All three result modals get a post-pop sequence that is skippable at
+any frame (`ResultChoreography`; every exit calls `CompleteNow()` first — a result screen is one
+the player is trying to LEAVE). `GamePolishProbeB` gates it: **modals 14 / fail 0**, six shimmer
+hosts all inactive at rest, perf baseline + per-modal delta. The mission-complete banner §D1.4
+names **does not exist** anywhere on the HoleComplete surface — reported, not invented.
+
+**The probe found a real bug and this task fixed it.** `TournamentResultPresenter.Awake` is a
+singleton guard that calls `Destroy(gameObject)`, and the component was on
+`Canvas/TournamentResultModal` TWICE — once from the prefab, once as a scene override. The second
+copy destroyed its own GameObject at boot, so **the tournament result modal deleted itself on
+every launch and could never open.** The scene override is gone (36-line diff).
+
 **Two things worth carrying forward**
 1. **A self-re-arming `UiMotion.Then` tail is unbounded.** `Then` runs its tail both at the end
    of the routine and inside the finalizer it registers, so `Then(x, RestartMe)` recurses until

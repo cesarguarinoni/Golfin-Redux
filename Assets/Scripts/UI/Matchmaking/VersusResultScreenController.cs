@@ -19,6 +19,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -26,6 +27,7 @@ using UnityEngine.UI;
 using Golfin.Roster;
 using Golfin.Gameplay.Session;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.UI.Polish;
 using Golfin.UI.Rankings;
 using GolfinRedux.UI;
 
@@ -183,9 +185,68 @@ namespace Golfin.UI.Matchmaking
             if (_newMatchButton != null)
             {
                 _newMatchButton.onClick.RemoveAllListeners();
+                // §D1.4 — the skip. CompleteNow() FIRST and unconditionally: it is idempotent and
+                // a no-op when nothing is running, so the button does not have to know whether a
+                // sequence is in flight. A result screen is one the player is trying to LEAVE.
+                _newMatchButton.onClick.AddListener(() => _choreo?.CompleteNow());
                 if (onNewMatch != null)
                     _newMatchButton.onClick.AddListener(() => onNewMatch());
             }
+
+            PlayChoreography(rewardList, localWon, isDraw);
+        }
+
+        // ── game_polish_b §D1.4 — the post-pop choreography ──────────────────────
+        //
+        // The modal itself pops (ModalController, animateShow, §D1.1). This is what happens
+        // AFTER it lands: the outcome word pops, the reward rows rise in one after another, and
+        // the amounts count up from zero. Nothing here disables a control and every exit skips
+        // straight to the end — §D1.4's "no dead time".
+
+        private ResultChoreography? _choreo;
+
+        private void PlayChoreography(List<HoleReward>? rewards, bool localWon, bool isDraw)
+        {
+            _choreo ??= new ResultChoreography(this);
+
+            var rows = new GameObject?[] { _rewardRow1, _rewardRow2, _rewardRow3 };
+            var amounts = new[] { _reward1Amount, _reward2Amount, _reward3Amount };
+            int count = rewards?.Count ?? 0;
+
+            _choreo.Play(ChoreoSteps(rows, amounts, rewards, count, localWon, isDraw),
+                         () => SettleChoreo(rows, amounts, rewards, count));
+        }
+
+        private IEnumerator ChoreoSteps(GameObject?[] rows, TextMeshProUGUI[] amounts,
+                                        List<HoleReward>? rewards, int count,
+                                        bool localWon, bool isDraw)
+        {
+            // 1 · the verdict. Both labels, because one of them says LOSER and the player is
+            //     reading that one just as hard.
+            _choreo!.Pop(_leftOutcomeLabel);
+            _choreo.Pop(_rightOutcomeLabel);
+            yield return ResultChoreography.Wait(UiMotion.StaggerDelay * 2f);
+
+            // 2 · the rewards rise, then count. The count starts a beat after the rise so the row
+            //     is on screen before its number starts moving — counting a row that is still
+            //     fading in reads as a glitch rather than as a total being added up.
+            _choreo.StaggerRows(rows);
+            yield return ResultChoreography.Wait(UiMotion.StaggerDelay * 3f);
+
+            for (int i = 0; i < 3 && i < count; i++)
+                _choreo.Count(amounts[i], rewards![i].amount, wrap: "x{0}");
+        }
+
+        /// <summary>Every animated target at rest. Runs on completion AND on a skip, so the
+        /// screen a player skipped into is the screen they would have waited for.</summary>
+        private void SettleChoreo(GameObject?[] rows, TextMeshProUGUI[] amounts,
+                                  List<HoleReward>? rewards, int count)
+        {
+            ResultChoreography.SettlePop(_leftOutcomeLabel);
+            ResultChoreography.SettlePop(_rightOutcomeLabel);
+            ResultChoreography.SettleRows(rows);
+            for (int i = 0; i < 3 && i < count; i++)
+                if (amounts[i] != null) amounts[i].text = $"x{rewards![i].amount}";
         }
 
         // ─────────────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -63,6 +64,26 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] RectTransform _dividerBelowBody;      // Divider (1): hide when locked (§2d iter-12 Bug A fix).
 
         Action _onButtonTap;
+
+        // ── game_polish_b §D1.4 — seams for the widget's post-pop choreography ───
+        //
+        // The reward labels and the outcome glyph are private serialized fields, and they should
+        // stay private: HoleCompleteWidget drives the sequence but has no business reaching into
+        // this card's hierarchy to find them. These two methods hand out exactly what the
+        // choreography needs and nothing else.
+
+        /// <summary>The three reward labels and the values they will settle on, for the count-up.
+        /// A label with no value bound is skipped rather than counted to zero.</summary>
+        public void CollectRewardLabels(List<(TMP_Text, int)> into, HoleCompleteData data)
+        {
+            if (into == null) return;
+            if (_rewardCoinText   != null) into.Add((_rewardCoinText,   data.RewardCoinX));
+            if (_rewardRepairText != null) into.Add((_rewardRepairText, data.RewardRepairX));
+            if (_rewardBallText   != null) into.Add((_rewardBallText,   data.RewardBallX));
+        }
+
+        /// <summary>Whichever verdict header this card is showing — the thing that pops.</summary>
+        public GameObject OutcomeGlyph(bool failed) => failed ? _failedHeaderRoot : _successHeaderRoot;
 
         public void BindCurrentHole(HoleCompleteData data, Action onButtonTap)
         {

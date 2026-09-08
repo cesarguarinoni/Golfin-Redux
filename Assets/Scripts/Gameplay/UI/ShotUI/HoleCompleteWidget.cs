@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -91,6 +92,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             // is still growing reads as "on top of" rather than "instead of".
             StartPop();
 
+            // §D1.4 — and then the numbers arrive. Started here rather than inside the pop so a
+            // Show that could not animate (disabled, off-screen) still lands on the finished
+            // state instead of a half-played sequence.
+            StartChoreography(data);
+
             // Card 1 → current-hole variant
             if (_card1 != null)
                 _card1.BindCurrentHole(data, OnAnyButtonTap);
@@ -129,6 +135,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// <summary>Deactivate the root and the scrim. The end of every hide path.</summary>
         void HideNow()
         {
+            StopChoreography();
             StopMotion();
             if (_root != null) _root.SetActive(false);
             // §2d iter-8: deactivate DimBackground when hiding.
@@ -253,6 +260,117 @@ namespace Golfin.Gameplay.UI.ShotUI
             return t * t * t;
         }
 
+        // ── game_polish_b §D1.4 — the post-pop choreography ──────────────────────
+        //
+        // What lands after the pop: the SUCCESS/FAILED glyph pops, then the three reward
+        // amounts count up from zero. Same shape as the other two result modals, and — like the
+        // pop above — written locally because Golfin.Gameplay.UI cannot reference the
+        // Assembly-CSharp that holds UiMotion and ResultChoreography.
+        //
+        // NO DEAD TIME (§D1.4). Nothing here disables a button, and OnAnyButtonTap completes the
+        // sequence instantly before acting. This is the screen a player is trying to LEAVE.
+        //
+        // THE MISSION-COMPLETE BANNER §D1.4 ASKS FOR DOES NOT EXIST. There is no banner object,
+        // no MISSION_COMPLETE key and no field for one anywhere on this surface — grepped across
+        // ShotUI and UI/Modals/Result. Rather than invent one, it is reported as a spec/code
+        // discrepancy for Cesar to rule on.
+
+        /// <summary>Counted reward labels and their final values, for the settle.</summary>
+        Coroutine _choreoRoutine;
+        readonly List<(TMP_Text label, int value)> _counted = new List<(TMP_Text, int)>();
+        GameObject _poppedGlyph;
+
+        void StartChoreography(HoleCompleteData data)
+        {
+            StopChoreography();
+
+            _counted.Clear();
+            if (_card1 != null)
+            {
+                _card1.CollectRewardLabels(_counted, data);
+                _poppedGlyph = _card1.OutcomeGlyph(data.IsFailed);
+            }
+
+            if (!isActiveAndEnabled) { SettleChoreography(); return; }
+            _choreoRoutine = StartCoroutine(ChoreoRoutine());
+        }
+
+        void StopChoreography()
+        {
+            if (_choreoRoutine != null) { StopCoroutine(_choreoRoutine); _choreoRoutine = null; }
+        }
+
+        /// <summary>End it NOW, on the exact final state. Called by every button before it acts.</summary>
+        public void CompleteChoreographyNow()
+        {
+            StopChoreography();
+            SettleChoreography();
+        }
+
+        void SettleChoreography()
+        {
+            if (_poppedGlyph != null) _poppedGlyph.transform.localScale = Vector3.one;
+            for (int i = 0; i < _counted.Count; i++)
+            {
+                var (label, value) = _counted[i];
+                if (label != null) label.text = "x" + value;
+            }
+        }
+
+        IEnumerator ChoreoRoutine()
+        {
+            // Wait out the pop — the sequence is what happens AFTER the cards land.
+            yield return WaitUnscaled(PopDur);
+
+            // 1 · the verdict glyph.
+            if (_poppedGlyph != null)
+            {
+                Transform t = _poppedGlyph.transform;
+                float e = 0f;
+                while (e < PopDur)
+                {
+                    e += Time.unscaledDeltaTime;
+                    if (_poppedGlyph == null) break;
+                    float k = Mathf.Lerp(PopFromScale, 1f, EaseOut(e / PopDur));
+                    t.localScale = new Vector3(k, k, 1f);
+                    yield return null;
+                }
+                if (_poppedGlyph != null) _poppedGlyph.transform.localScale = Vector3.one;
+            }
+
+            // 2 · the rewards count. All three together: they are one row, and counting them in
+            //     sequence would take longer than the player is willing to sit still for.
+            const float CountDur = 0.40f;      // UiMotion.CountDur
+            float elapsed = 0f;
+            var last = new int[_counted.Count];
+            for (int i = 0; i < last.Length; i++) last[i] = -1;
+            while (elapsed < CountDur)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float e = EaseOut(elapsed / CountDur);
+                for (int i = 0; i < _counted.Count; i++)
+                {
+                    var (label, value) = _counted[i];
+                    if (label == null) continue;
+                    int v = Mathf.RoundToInt(Mathf.Lerp(0f, value, e));
+                    // Only touch the mesh when the integer moved — a TMP assignment rebuilds it.
+                    if (v == last[i]) continue;
+                    last[i] = v;
+                    label.text = "x" + v;
+                }
+                yield return null;
+            }
+
+            SettleChoreography();
+            _choreoRoutine = null;
+        }
+
+        static IEnumerator WaitUnscaled(float seconds)
+        {
+            float waited = 0f;
+            while (waited < seconds) { waited += Time.unscaledDeltaTime; yield return null; }
+        }
+
         /// <summary>Both CanvasGroups, created on demand. Never authored — see the class header.</summary>
         void EnsureGroups()
         {
@@ -270,6 +388,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         void OnAnyButtonTap()
         {
+            // §D1.4 — skip first, act second. Idempotent, so no button needs to ask whether a
+            // sequence is running.
+            CompleteChoreographyNow();
             _closeCallback?.Invoke();
         }
 
