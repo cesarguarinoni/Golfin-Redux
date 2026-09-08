@@ -402,7 +402,7 @@ namespace Golfin.EditorTools.ShotUI
             string grade = v.Grade == FreeSwingGrade.None ? "" : "  ·  " + v.Grade.ToString().ToUpperInvariant();
             Note("swing", $"grade={v.Grade} impact={v.ImpactPx:F1}px window={v.ImpactWindowPx:F1} " +
                           $"path={v.PathDeg:F2}deg fadeDraw={v.FadeDraw01:F2} tempo={v.TempoRatio:F2} " +
-                          $"speed={v.UpSpeedPxPerSec:F0}px/s power={v.PowerNormalized:F2} mul={v.TimingMul:F2}");
+                          $"up={v.UpSeconds:F2}s power={v.PowerNormalized:F2} mul={v.TimingMul:F2}");
             // Two lines, each under 40 characters, and every percent escaped — the portrait caption
             // rules (a 79px default overflows 1170 wide, and a bare % renders NOTHING).
             return $"{action}{grade}\n" +

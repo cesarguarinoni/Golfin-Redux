@@ -251,11 +251,11 @@ namespace Golfin.Gameplay.Config
         public float FreeSwingPathFullDeg;
 
         // Tempo: the upswing:backswing seconds ratio the swing is graded against, its tolerance,
-        // and the upstroke speed below which the swing is a DUFF rather than a swing.
+        // and the upstroke DURATION above which the swing is a DUFF rather than a swing.
         public float FreeSwingIdealTempo;
         public float FreeSwingTempoWindowAtCC0;
         public float FreeSwingTempoWindowAtCC120;
-        public float FreeSwingDuffSpeedPxPerSec;
+        public float FreeSwingDuffSeconds;
 
         // Power shrinks BOTH windows, from the PEAK pull and on the DRAWN bar too. Free Swing has
         // no timing widget to speed up, so this is the ONLY cost a 120% pull carries.
@@ -451,7 +451,7 @@ namespace Golfin.Gameplay.Config
             FreeSwingIdealTempo             = 0.5f,  // an upswing half as long as the backswing
             FreeSwingTempoWindowAtCC0       = 0.25f,
             FreeSwingTempoWindowAtCC120     = 0.45f,
-            FreeSwingDuffSpeedPxPerSec      = 900f,
+            FreeSwingDuffSeconds            = 0.50f, // SECONDS, not px/s — see controls.csv
             FreeSwingWindowScaleAtZeroPower = 1.35f,
             FreeSwingWindowScaleAtMaxPower  = 0.55f,
             FreeSwingAnalyzerSeconds        = 1.5f,

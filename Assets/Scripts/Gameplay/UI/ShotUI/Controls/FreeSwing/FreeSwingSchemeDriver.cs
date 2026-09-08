@@ -465,7 +465,9 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             float ratio   = FreeSwingMath.TempoRatio(_backSeconds, _upSeconds);
             float speed   = FreeSwingMath.UpSpeed(_upLengthPx, _upSeconds);
 
-            var v = FreeSwingMath.Grade(impactPx, pathDeg, ratio, speed, _peakPower,
+            // SECONDS to the grader, speed only to the log: the duff is a duration now, and the
+            // px/s figure stays useful for reading a retune in the units the lane is drawn in.
+            var v = FreeSwingMath.Grade(impactPx, pathDeg, ratio, _upSeconds, _peakPower,
                                         acc, cc, halfCone, isPutt, _cfg);
 
             // Republish at the PEAK before committing. Everything downstream of the seam — the
@@ -515,8 +517,34 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
 
         // ── Buffers ──────────────────────────────────────────────────────────────
 
-        private void PushSample(Vector2 pos) => Push(_samples, pos);
+        /// <summary>
+        /// The trace buffer is kept in the CLUB HEAD's frame, not in the raw finger's.
+        ///
+        /// <para>TWO separate reasons, and the raw sample gets both wrong. The SPACE:
+        /// <see cref="ToLocal"/> projects into <c>_schemeRoot</c>, but the trace graphic hangs off
+        /// the <c>BallSpace</c> rect that <c>ShotLayoutController</c> slides down to the ball on
+        /// every layout — so a raw sample handed to the graphic is drawn the whole ball offset
+        /// (~300 px at this canvas) BELOW the finger that made it. The FRAME: the club head is
+        /// drawn at <c>_handleRest + (finger - _origin)</c>, a DELTA, so it sits where the player
+        /// is looking whatever point they happened to press; a trace at absolute finger positions
+        /// would drift away from it by however far the touch-down was from the head's rest.
+        /// Re-basing the samples exactly the way <see cref="MoveHandle"/> re-bases the head
+        /// answers both at once — the line comes out of the club head and its tip stays on it.
+        /// (Cesar, 2026-09-08: "the free swing trace is being drawn way lower than where the
+        /// handle is.")</para>
+        ///
+        /// <para>DELIBERATELY NOT CLAMPED the way the head is: past the deepest tick the head
+        /// stops at the end of its lane and the trace keeps going, which is the read the player
+        /// wants for an overpull. Only <c>_samples</c> is re-based — <c>_upSamples</c> is what
+        /// the PATH maths reads and it is measured against <c>_origin</c> and
+        /// <c>_reversalPos</c>, which are raw.</para>
+        /// </summary>
+        private void PushSample(Vector2 pos) => Push(_samples, TracePoint(pos));
         private void PushUpSample(Vector2 pos) => Push(_upSamples, pos);
+
+        /// <summary>A finger position in the scheme root's space, as the same gesture in the club
+        /// head's. See <see cref="PushSample"/>.</summary>
+        private Vector2 TracePoint(Vector2 local) => _handleRest + (local - _origin);
 
         /// <summary>Append, evicting the oldest past the configured window. A cap and not an
         /// unbounded list because a finger can rest on the glass for a minute, and an
@@ -639,7 +667,7 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         /// model would make low-level bots fail in a way no human ever fails on purpose.</para>
         /// </summary>
         public IEnumerator DriveBot(float power01, float impactOffsetPx, float tempoRatio,
-                                    float upSpeedPxPerSec)
+                                    float upSeconds)
         {
             if (_controller == null) yield break;
             if (_controller.State != ShotState.Idle)
@@ -653,13 +681,12 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
 
             Vector2 reversal = new Vector2(0f, -pullPx);
             Vector2 crossing = new Vector2(impactOffsetPx, ImpactCrossOffsetPx);
-            float   lengthPx = (crossing - reversal).magnitude;
 
-            // Solve the two durations from the two things the error model actually sampled: the
-            // up-speed fixes how long the upstroke takes, and the tempo ratio then fixes the
-            // backswing. Driving them the other way round would let a long pull silently turn
-            // into a duff.
-            float upSeconds   = lengthPx / Mathf.Max(upSpeedPxPerSec, 1f);
+            // The caller states the upstroke's DURATION and the tempo ratio then fixes the
+            // backswing. This used to take a px/s speed and divide the chord by it — one extra
+            // step that existed only because the duff threshold was a speed. Now that the duff is
+            // a duration, "stay under it" is something the caller can say directly, and a bot's
+            // swing no longer changes length when the lane is retuned.
             float backSeconds = upSeconds / Mathf.Max(tempoRatio, 1e-3f);
 
             BeginSwingLocal(Vector2.zero);
@@ -753,8 +780,8 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         public float TempoWindowForBot(float power01)
             => FreeSwingMath.TempoWindow(ClubControlNorm01, power01, _cfg);
 
-        /// <summary>The duff floor the bot doubles. See <see cref="DriveBot"/>.</summary>
-        public float DuffSpeedForBot => _cfg.FreeSwingDuffSpeedPxPerSec;
+        /// <summary>The duff CEILING the bot stays under. See <see cref="DriveBot"/>.</summary>
+        public float DuffSecondsForBot => _cfg.FreeSwingDuffSeconds;
 
         // ── Test / acceptance seams ──────────────────────────────────────────────
 
@@ -819,7 +846,7 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         public float Pull100Px         => _cfg.FreeSwingPull100Px;
         public float Pull120Px         => _cfg.FreeSwingPull120Px;
         public float FollowThroughPx   => _cfg.FreeSwingFollowThroughPx;
-        public float DuffSpeedPxPerSec => _cfg.FreeSwingDuffSpeedPxPerSec;
+        public float DuffSeconds       => _cfg.FreeSwingDuffSeconds;
         public float ImpactWindowPx => FreeSwingMath.ImpactWindowPx(
             _controller != null ? _controller.ClubAccuracyNorm01 : 0.5f, _peakPower, _cfg);
         public float TempoWindow => FreeSwingMath.TempoWindow(ClubControlNorm01, _peakPower, _cfg);

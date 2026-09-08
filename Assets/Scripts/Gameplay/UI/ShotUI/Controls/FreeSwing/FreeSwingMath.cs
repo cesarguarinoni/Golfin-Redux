@@ -383,8 +383,9 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         // ── Speed / the duff ────────────────────────────────────────────────────
 
         /// <summary>Upstroke speed in canvas px per second: the path's own length over its own
-        /// (dt-clamped) duration. Length along the PATH rather than the straight-line distance,
-        /// so a long bowed upswing is correctly not a duff.</summary>
+        /// (dt-clamped) duration. DIAGNOSTIC ONLY since 2026-09-08 — the duff is graded on the
+        /// duration alone (see <see cref="Grade"/>), and this is what the swing log prints so a
+        /// retune can still be read in the units the lane is drawn in.</summary>
         public static float UpSpeed(float upstrokeLengthPx, float upSeconds)
             => upstrokeLengthPx / Mathf.Max(upSeconds, 1e-3f);
 
@@ -417,13 +418,15 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             public readonly float TempoRatio;
             public readonly float TempoError;
             public readonly float TempoWindow;
-            public readonly float UpSpeedPxPerSec;
+            /// <summary>The upstroke's own dt-clamped duration in seconds — the quantity the
+            /// DUFF is graded against. Was a px/s SPEED until 2026-09-08; see Grade().</summary>
+            public readonly float UpSeconds;
 
             public Verdict(FreeSwingGrade grade, FreeSwingPath path, FreeSwingTempo tempo,
                            float errorYawRad, float timingMul, float timing01, float fadeDraw01,
                            float powerNormalized, float impactPx, float impactWindowPx,
                            float pathDeg, float tempoRatio, float tempoError, float tempoWindow,
-                           float upSpeedPxPerSec, bool isMiss = false)
+                           float upSeconds, bool isMiss = false)
             {
                 IsMiss = isMiss;
                 Grade = grade; Path = path; Tempo = tempo;
@@ -433,7 +436,7 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
                 ImpactPx = impactPx; ImpactWindowPx = impactWindowPx;
                 PathDeg = pathDeg;
                 TempoRatio = tempoRatio; TempoError = tempoError; TempoWindow = tempoWindow;
-                UpSpeedPxPerSec = upSpeedPxPerSec;
+                UpSeconds = upSeconds;
             }
 
             /// <summary>True when the club head crossed inside the drawn green window.</summary>
@@ -456,7 +459,7 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         /// throwing it somewhere no miss in this scheme can reach.</para>
         /// </summary>
         public static Verdict Grade(float impactPx, float pathDeg, float tempoRatio,
-                                    float upSpeedPxPerSec, float power,
+                                    float upSeconds, float power,
                                     float clubAccuracyNorm01, float clubControlNorm01,
                                     float halfConeRad, bool isPutt, in ControlsConfig cfg)
         {
@@ -467,7 +470,16 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
 
             // The DUFF exit. Checked before anything else is decided, because a duff overrides
             // the path (a swing that slow shaped nothing) and the tempo multiplier.
-            if (upSpeedPxPerSec < cfg.FreeSwingDuffSpeedPxPerSec)
+            //
+            // A DURATION, NOT A SPEED (2026-09-08). This was `upSpeed < 900px/s` — px/s over a
+            // path measured in canvas px, so the moment shot_view_layout lengthened the lane
+            // (100%: 380 -> 540) the same gesture read 42% faster and the duff quietly moved from
+            // "an upstroke slower than ~0.50s" to "~0.68s". Nobody chose that, and nothing in the
+            // code said the two keys were coupled. Seconds are what the rule was always ABOUT —
+            // "the player crept back up through the line instead of swinging" is a statement about
+            // time — and a duration cannot drift when the lane is retuned. The path length still
+            // reaches the chip and the logs as a diagnostic; it is no longer a threshold.
+            if (upSeconds > cfg.FreeSwingDuffSeconds)
             {
                 float cap = Mathf.Abs(halfConeRad * cfg.FreeSwingMissYawGain);
                 // miss_grade_duff §3.3: the DUFF pays the flat MissPowerMul (0.20) instead of the
@@ -480,7 +492,7 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
                                    Mathf.Clamp(2f * yaw, -cap, cap),
                                    isPutt ? cfg.PuttMissPowerMul : cfg.MissPowerMul, 0f, 0f,
                                    power, impactPx, window, pathDeg, tempoRatio, e, w,
-                                   upSpeedPxPerSec, isMiss: true);
+                                   upSeconds, isMiss: true);
             }
 
             var  path  = PathFor(pathDeg, clubControlNorm01, isPutt, cfg);
@@ -500,7 +512,7 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
                 grade = FreeSwingGrade.None;
 
             return new Verdict(grade, path, tempo, yaw, mul, t01, fd,
-                               power, impactPx, window, pathDeg, tempoRatio, e, w, upSpeedPxPerSec);
+                               power, impactPx, window, pathDeg, tempoRatio, e, w, upSeconds);
         }
     }
 }

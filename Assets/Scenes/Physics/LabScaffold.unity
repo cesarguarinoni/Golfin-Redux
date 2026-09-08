@@ -9602,7 +9602,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ActionButtonsRoot
   _shotController: {fileID: 0}
   _group: {fileID: 768028006}
-  _fadeDrawButton: {fileID: 0}
+  _fadeDrawButton: {fileID: 1467166249}
 --- !u!225 &768028006
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -24483,7 +24483,7 @@ MonoBehaviour:
   _traceView: {fileID: 623646411}
   _analyzerChip: {fileID: 1883978374}
   _gradePop: {fileID: 1123222000}
-  _actionButtons: {fileID: 0}
+  _actionButtons: {fileID: 768028005}
   _handleLateralClampPx: 70
   _handleReturnSeconds: 0.15
   _logSwings: 0

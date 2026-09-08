@@ -3788,3 +3788,105 @@ again by the next save, which is correct — it is that task's change to make, i
 commit). Sister rule: never stage a shared doc like `Docs/AI_CONTEXT.md` whole when another
 session has an uncommitted entry in it — stage your own content via `hash-object` +
 `update-index --cacheinfo`, the same discipline as `project_k10_commit_swept_k11_edits`.
+
+---
+
+## Lesson — free-swing trace (2026-09-08): a rect that the layout MOVES is a coordinate space, and a point count is not a position
+
+Cesar, off one screenshot: *"the free swing trace is being drawn way lower than where the handle
+is."* Two independent bugs stacked into one symptom, and both are shapes worth recognising.
+
+**1. `ScreenPointToLocalPointInRectangle(A, …)` gives you a point in A's space, and nothing else.**
+`FreeSwingSchemeDriver` projected into `_schemeRoot`, then handed the raw result to a graphic
+parented under `BallSpace` — the child rect `ShotLayoutController` slides down to the ball on every
+apply (`SetY(b.rect, ballY)`). So every sample was drawn a full ball-offset (~300 px at 1170×2532)
+below the finger that made it. **A rect that some controller repositions at runtime is a
+coordinate space, not a grouping convenience.** Anything crossing into it has to be converted.
+
+**2. Absolute where its neighbour is relative.** The club head is written as
+`_handleRest + (finger − _origin)` — a delta, so it lands where the player is looking whatever
+point they pressed. The trace used absolute finger positions, so it *also* drifted by however far
+the touch-down was from the head's rest. Fixing only the space would still have left a line
+disconnected from the club on any touch that did not start on it. **When two views render the same
+gesture, check they render it in the same frame, not just the same units.**
+
+**3. The gate that let it ship asserted a count.** `pull.trace_is_drawing` in
+`FreeSwingSchemeVerify` checked `PointCount > 5` — true the whole time the line was 300 px off
+target. `PIPELINE_HARDENING` §3 says a world→screen feature is gated by an invariant JSON, and it
+was; the invariant was just measuring the wrong noun. **For anything positional, at least one
+assertion must be a coordinate compared against another live object's coordinate.** The fix pins
+the trace's tip to the handle's drawn centre, in canvas space, from live rects.
+
+---
+
+## Lesson — FADE/DRAW hide (2026-09-08): a builder that DELETES objects owns every reference to them
+
+Free Swing's STRAIGHT toggle had been sitting on screen, visible and tappable, through every swing
+since `flick_shot_view`. `HideFadeDrawToggle()` ran on schedule and did nothing:
+`ActionButtonsBuilder` deletes and rebuilds the cluster, and two serialized references to the
+rebuilt objects — `ActionButtonsRoot._fadeDrawButton` and `FreeSwingSchemeDriver._actionButtons` —
+were left at `fileID: 0`. `IsFadeDrawVisible` then cheerfully reported the flag it had been told to
+set while the button it pointed at was null.
+
+This is the SAME defect as `8978a1ad0` §1 (`ShotInProgressUiGate` at five nulls after
+`selector_carousel`), in a third consumer. The builder already carries two `Wire*` helpers written
+for exactly this reason, each with a comment saying so. **A builder that destroys a scene object is
+the only place that can re-wire it; every `Wire*` helper it has is evidence that the NEXT consumer
+will be missed too.** The fix adds the third helper. The scan that would have caught all three at
+once: grep every `[SerializeField]` whose type is a component this builder creates.
+
+**Two guardrails while fixing it.** `ActionButtonsRoot._shotController` is also `fileID: 0` — and
+was so long before the regression. Wiring it would look like tidying up and would in fact give the
+cluster's CanvasGroup a second owner (`Handle` re-opens `interactable`/`blocksRaycasts` on every
+non-Idle state) racing `ShotInProgressUiGate`, which is precisely the "buttons visible over the
+chase cam" defect. **A null reference next to the one you are fixing is not automatically also a
+bug.** And the acceptance run now asserts the row is hidden AND non-blocking mid-flight, so the
+question is answered by the gate rather than by reasoning about it.
+
+---
+
+## Lesson — the last two Free Swing gate failures (2026-09-08): an acceptance run that COPIES a constant expires when the constant moves
+
+Both remaining failures looked like product regressions and neither was. Both were the acceptance
+run holding a number the product had since changed, and both had the same tell: **the assertion
+re-derived something the code already computes, instead of reading it.**
+
+**`geom.lane_contains_the_club_at_full_pull`** asserted `ballY - (rest + Pull120 + 50)`. That `50`
+was a literal copy of `FreeSwingSchemeBuilder.ClubHalfHeight`, which became `150` when the club
+head went to Flick parity at 3x (`392539899`). It also predated `shot_view_layout_followup` §1,
+which caps the drawn pill at the shared bottom baseline. So the assertion was demanding the pill
+swallow a club head three times bigger, using the old club's size, against a pill the layout had
+since decided may not hang that far. It now reads `_lane.ClubHalfHeight` / `LaneTailPx` live and
+asserts the two things the geometry actually promises: the pill reaches past the deepest tick, and
+its bottom IS `ShotLayoutController.LastBaselineY`. The uncapped ideal (-1191.8) vs the drawn
+bottom (-1096.0) is now a NOTE — visible, not asserted.
+
+**`duff.grade`** is the more interesting one, because the bot could not express the gesture at all.
+The driver clamps every inter-sample dt to `FreeSwingMath.MaxStepSeconds` (1/30 s) — correct
+hitch-protection — which means the slowest upswing a bot can MEASURE is `upFrames x 1/30`, a hard
+ceiling no amount of waiting can raise. 18 samples buys 0.60 s. Over the 450px upstroke this was
+written against that read 751 px/s and duffed; `shot_view_layout` then seeded the Free Swing pulls
+equal to Pendulum's (100%: 380 -> 540) and the same 18 samples over the now-610px path read
+1018 px/s, sailing over the 900 px/s threshold. **The bot's gesture was specified in samples while
+the thing it had to traverse was specified in pixels.** Now the sample count is derived from the
+live path and the live threshold, and the hold is in SECONDS (a frame-count hold buys different
+measured time on a fast Editor than a slow one, and none at all past ~200 fps).
+
+**The shape:** when an acceptance assertion hardcodes a number that also exists in the code, it is
+not testing the code, it is testing whether anyone has changed the code — and it fails LOUDLY for
+the wrong reason a release later, which is how two hours went into "regressions" that were the
+gate's own arithmetic. Read the live field; assert the invariant, not the arithmetic.
+
+**And the drift underneath it, fixed the same day on Cesar's call:** `FreeSwingDuffSpeedPxPerSec`
+was an absolute 900 px/s while the pull path grew 42%, so the duff had silently moved from "an
+upstroke slower than ~0.50 s" to "~0.68 s". It is now `FreeSwingDuffSeconds = 0.50` — a DURATION,
+which is what the rule was always about ("the player crept back up through the line instead of
+swinging" is a statement about time) and which cannot drift when the lane is retuned. **A threshold
+whose units are borrowed from a different subsystem's tuning is a coupling nobody wrote down:**
+px/s couples the grader to the lane's LENGTH, and neither key mentioned the other. The verdict now
+carries `UpSeconds` (graded) and the px/s figure survives only in the swing log, as a diagnostic.
+`DriveBot` takes the duration directly — it used to divide the chord by a speed as its first act,
+a step that existed only because the threshold was a speed — and `FreeSwingBotExecutor`'s clearance
+flipped from "2x the duff speed" to "half the duff duration": same intent, the other way up. No
+sigma recalibration: the tempo RATIO the grader reads is unchanged, and the duff key is not one of
+the `bot_scheme_parity` §5 triggers.

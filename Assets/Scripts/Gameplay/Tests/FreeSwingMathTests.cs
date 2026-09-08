@@ -24,6 +24,14 @@ namespace Golfin.Gameplay.Tests
         /// the yaw tables readable.</summary>
         private const float HalfCone = 0.20f;
 
+        /// <summary>An upstroke a real swing takes — comfortably UNDER the duff duration. Was the
+        /// literal FastUpSeconds when the threshold was a px/s speed (2026-09-08).</summary>
+        private const float FastUpSeconds = 0.20f;
+
+        /// <summary>An upstroke a duff takes: just PAST the threshold. Derived from the live key
+        /// so a retune moves the fixture with it rather than silently un-duffing it.</summary>
+        private float SlowUpSeconds => _cfg.FreeSwingDuffSeconds + 0.01f;
+
         [SetUp]
         public void SetUp() => _cfg = ControlsConfig.Default;
 
@@ -372,7 +380,7 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Duff_ASlowUpstrokeIsRedAndShapeless_HoweverGoodTheImpact()
         {
-            float slow = _cfg.FreeSwingDuffSpeedPxPerSec - 1f;
+            float slow = SlowUpSeconds;
             var v = FreeSwingMath.Grade(0f, _cfg.FreeSwingPathFullDeg, _cfg.FreeSwingIdealTempo,
                                         slow, 1f, 0.5f, 0.5f, HalfCone, false, _cfg);
 
@@ -388,7 +396,7 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Duff_OnAPuttPaysThePuttDuffMultiplier()
         {
-            float slow = _cfg.FreeSwingDuffSpeedPxPerSec - 1f;
+            float slow = SlowUpSeconds;
             var v = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo, slow, 1f,
                                         0.5f, 0.5f, HalfCone, true, _cfg);
             Assert.AreEqual(FreeSwingGrade.Duff, v.Grade);
@@ -402,7 +410,7 @@ namespace Golfin.Gameplay.Tests
             // D2: a big HOOK/SLICE still made real contact. It pays the TEMPO multiplier it
             // always did — here a perfect tempo, so 1.0 — and never the duff.
             var slice = FreeSwingMath.Grade(_cfg.FreeSwingImpactMissPx + 1f, 0f,
-                                            _cfg.FreeSwingIdealTempo, 3000f, 1f,
+                                            _cfg.FreeSwingIdealTempo, FastUpSeconds, 1f,
                                             0.5f, 0.5f, HalfCone, false, _cfg);
             Assert.AreEqual(FreeSwingGrade.Slice, slice.Grade);
             Assert.AreEqual(1f, slice.TimingMul, 1e-5f);
@@ -423,7 +431,7 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Duff_DoublesTheImpactYawButClampsAtTheMissCeiling()
         {
-            float slow = _cfg.FreeSwingDuffSpeedPxPerSec - 1f;
+            float slow = SlowUpSeconds;
             float xI   = _cfg.FreeSwingImpactMissPx * 0.4f;
 
             float clean = FreeSwingMath.ImpactYawRad(xI, 0.5f, 1f, HalfCone, _cfg);
@@ -439,10 +447,10 @@ namespace Golfin.Gameplay.Tests
         }
 
         [Test]
-        public void Duff_AtOrAboveTheThreshold_IsNotADuff()
+        public void Duff_AtOrUnderTheThreshold_IsNotADuff()
         {
             var v = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo,
-                                        _cfg.FreeSwingDuffSpeedPxPerSec, 1f,
+                                        _cfg.FreeSwingDuffSeconds, 1f,
                                         0.5f, 0.5f, HalfCone, false, _cfg);
             Assert.AreNotEqual(FreeSwingGrade.Duff, v.Grade);
         }
@@ -452,7 +460,7 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Grade_CleanImpactAndGoodTempo_IsPURE()
         {
-            var v = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo, 3000f, 1f,
+            var v = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo, FastUpSeconds, 1f,
                                         0.5f, 0.5f, HalfCone, false, _cfg);
             Assert.AreEqual(FreeSwingGrade.Pure, v.Grade);
             Assert.AreEqual(0f, v.ErrorYawRad, 1e-6f);
@@ -464,7 +472,7 @@ namespace Golfin.Gameplay.Tests
         public void Grade_CleanImpactButOffTempo_IsNoPopAtAll()
         {
             float w = FreeSwingMath.TempoWindow(0.5f, 1f, _cfg);
-            var v = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo + w * 1.5f, 3000f, 1f,
+            var v = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo + w * 1.5f, FastUpSeconds, 1f,
                                         0.5f, 0.5f, HalfCone, false, _cfg);
             Assert.AreEqual(FreeSwingGrade.None, v.Grade,
                 "an ordinary swing gets the chip and no banner");
@@ -475,10 +483,10 @@ namespace Golfin.Gameplay.Tests
         public void Grade_ABigMissPopsHOOKorSLICE_AndOutranksPURE()
         {
             var hook = FreeSwingMath.Grade(-_cfg.FreeSwingImpactMissPx - 1f, 0f,
-                                           _cfg.FreeSwingIdealTempo, 3000f, 1f,
+                                           _cfg.FreeSwingIdealTempo, FastUpSeconds, 1f,
                                            0.5f, 0.5f, HalfCone, false, _cfg);
             var slice = FreeSwingMath.Grade(_cfg.FreeSwingImpactMissPx + 1f, 0f,
-                                            _cfg.FreeSwingIdealTempo, 3000f, 1f,
+                                            _cfg.FreeSwingIdealTempo, FastUpSeconds, 1f,
                                             0.5f, 0.5f, HalfCone, false, _cfg);
 
             Assert.AreEqual(FreeSwingGrade.Hook,  hook.Grade);
@@ -492,7 +500,7 @@ namespace Golfin.Gameplay.Tests
         public void Grade_ASmallMissIsNoPop_ButStillBendsTheShot()
         {
             float w = FreeSwingMath.ImpactWindowPx(0.5f, 1f, _cfg);
-            var v = FreeSwingMath.Grade(w + 5f, 0f, _cfg.FreeSwingIdealTempo, 3000f, 1f,
+            var v = FreeSwingMath.Grade(w + 5f, 0f, _cfg.FreeSwingIdealTempo, FastUpSeconds, 1f,
                                         0.5f, 0.5f, HalfCone, false, _cfg);
             Assert.AreEqual(FreeSwingGrade.None, v.Grade);
             Assert.Greater(v.ErrorYawRad, 0f);
@@ -506,7 +514,7 @@ namespace Golfin.Gameplay.Tests
             // that never happened has nothing else worth reading about it.
             var v = FreeSwingMath.Grade(_cfg.FreeSwingImpactMissPx * 3f, 0f,
                                         _cfg.FreeSwingIdealTempo,
-                                        _cfg.FreeSwingDuffSpeedPxPerSec - 1f, 1f,
+                                        SlowUpSeconds, 1f,
                                         0.5f, 0.5f, HalfCone, false, _cfg);
             Assert.AreEqual(FreeSwingGrade.Duff, v.Grade);
         }
@@ -516,9 +524,9 @@ namespace Golfin.Gameplay.Tests
         {
             // Carry-over 2 is only honest if the number the chip reads is the number the swing was
             // judged against, at the power it fired at.
-            var soft = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo, 3000f, 0f,
+            var soft = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo, FastUpSeconds, 0f,
                                            0.5f, 0.5f, HalfCone, false, _cfg);
-            var hard = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo, 3000f, 1.2f,
+            var hard = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo, FastUpSeconds, 1.2f,
                                            0.5f, 0.5f, HalfCone, false, _cfg);
             Assert.Greater(soft.ImpactWindowPx, hard.ImpactWindowPx);
             Assert.AreEqual(FreeSwingMath.ImpactWindowPx(0.5f, 1.2f, _cfg), hard.ImpactWindowPx, 1e-4f);
@@ -528,7 +536,7 @@ namespace Golfin.Gameplay.Tests
         public void Grade_APuttNeverCurves_EvenOnAFullyBowedUpstroke()
         {
             var v = FreeSwingMath.Grade(0f, _cfg.FreeSwingPathFullDeg, _cfg.FreeSwingIdealTempo,
-                                        3000f, 1f, 0.5f, 0.5f, HalfCone, true, _cfg);
+                                        FastUpSeconds, 1f, 0.5f, 0.5f, HalfCone, true, _cfg);
             Assert.AreEqual(0f, v.FadeDraw01, 1e-6f);
             Assert.AreEqual(FreeSwingPath.Straight, v.Path);
         }

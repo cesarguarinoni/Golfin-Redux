@@ -123,7 +123,7 @@ namespace Golfin.Gameplay.Config
                     case "FreeSwingIdealTempo":             cfg.FreeSwingIdealTempo             = val; break;
                     case "FreeSwingTempoWindowAtCC0":       cfg.FreeSwingTempoWindowAtCC0       = val; break;
                     case "FreeSwingTempoWindowAtCC120":     cfg.FreeSwingTempoWindowAtCC120     = val; break;
-                    case "FreeSwingDuffSpeedPxPerSec":      cfg.FreeSwingDuffSpeedPxPerSec      = val; break;
+                    case "FreeSwingDuffSeconds":            cfg.FreeSwingDuffSeconds            = val; break;
                     case "FreeSwingWindowScaleAtZeroPower": cfg.FreeSwingWindowScaleAtZeroPower = val; break;
                     case "FreeSwingWindowScaleAtMaxPower":  cfg.FreeSwingWindowScaleAtMaxPower  = val; break;
                     case "FreeSwingAnalyzerSeconds":        cfg.FreeSwingAnalyzerSeconds        = val; break;

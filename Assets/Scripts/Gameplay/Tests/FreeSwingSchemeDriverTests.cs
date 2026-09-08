@@ -471,7 +471,7 @@ namespace Golfin.Gameplay.Tests
             // miss_grade_duff §3.3: the DUFF exit pays MissPowerMul, not TimingPowerMulRed.
             Assert.AreEqual(_cfg.MissPowerMul, _driver.LastVerdict.TimingMul, 1e-4f);
             Assert.IsTrue(_driver.LastVerdict.IsMiss);
-            Assert.Less(_driver.LastVerdict.UpSpeedPxPerSec, _cfg.FreeSwingDuffSpeedPxPerSec);
+            Assert.Greater(_driver.LastVerdict.UpSeconds, _cfg.FreeSwingDuffSeconds);
         }
 
         // ── 3. The two cancel paths ──────────────────────────────────────────────
@@ -713,6 +713,31 @@ namespace Golfin.Gameplay.Tests
             SwingUp(_cfg.FreeSwingPull100Px);
             SettleToIdle();
             Assert.AreEqual(0, _trace.PointCount, "and is cleared when the ball settles");
+        }
+
+        [Test]
+        public void TheTraceIsDrawnInTheClubHeadsFrame_NotAtTheRawFingerPosition()
+        {
+            // The harness presses at (500, 900) — nowhere near the club head's rest at
+            // (0, -70) — which is exactly the case the shipped build got wrong twice over: the
+            // samples were in the SCHEME ROOT's space while the trace graphic hangs off the
+            // BallSpace rect the layout slides down to the ball, and they were absolute where
+            // the club head is a delta. Both showed up as one symptom (Cesar, 2026-09-08: "the
+            // free swing trace is being drawn way lower than where the handle is"), so both are
+            // pinned here by the same two assertions.
+            var handle = (RectTransform)_handleGo.transform;
+
+            Down();
+            Assert.AreEqual(new Vector2(0f, -HandleRest), _driver.Samples[0],
+                            "the trace opens at the club head's rest, not at the touch point");
+
+            PullDown(_cfg.FreeSwingPull100Px, lateral: 40f);
+
+            Vector2 tip = _driver.Samples[_driver.Samples.Count - 1];
+            Assert.AreEqual(handle.anchoredPosition.x, tip.x, 0.5f,
+                            "and its leading tip stays ON the club head, laterally");
+            Assert.AreEqual(handle.anchoredPosition.y, tip.y, 0.5f,
+                            "and vertically — the trace is the club head's path");
         }
 
         [Test]

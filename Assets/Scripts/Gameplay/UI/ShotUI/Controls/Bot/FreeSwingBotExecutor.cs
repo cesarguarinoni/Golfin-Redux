@@ -23,7 +23,10 @@ namespace Golfin.Gameplay.UI.Controls.Bot
     public sealed class FreeSwingBotExecutor : IBotSchemeExecutor
     {
         /// <summary>Multiple of the duff threshold the bot swings at. See the class remarks.</summary>
-        private const float DuffClearance = 2f;
+        /// <summary>Fraction of the duff duration a bot's upstroke takes — half, so a bot is
+        /// never near the line. Was a 2x multiple of the duff SPEED until the threshold
+        /// became a duration (2026-09-08); same intent, the other way up.</summary>
+        private const float DuffClearance = 0.5f;
 
         private readonly FreeSwingSchemeDriver _driver;
 
@@ -91,7 +94,7 @@ namespace Golfin.Gameplay.UI.Controls.Bot
             if (shot.State != ShotState.Idle) yield break;
 
             yield return _driver.DriveBot(power, impactPx, tempo,
-                                          _driver.DuffSpeedForBot * DuffClearance);
+                                          _driver.DuffSecondsForBot * DuffClearance);
 
             var v = _driver.LastVerdict;
             Debug.Log($"{ctx.LogTag} TakeShot: shot fired — club={club} power={power:F2} " +

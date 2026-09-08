@@ -119,6 +119,20 @@ namespace Golfin.EditorTools.ShotUI
             b.onClick.Invoke();
         }
 
+        /// <summary>Tap <paramref name="n"/> every second until <paramref name="until"/> shows up.
+        /// See the Splash note in <c>Sequence</c> — one tap is not enough on a guarded button.</summary>
+        IEnumerator TapUntilPast(string n, string until, float timeout)
+        {
+            for (float t = 0f; t < timeout; t += 1f)
+            {
+                if (FindButton(until) != null) yield break;
+                var b = FindButton(n);
+                if (b != null) ClickReal(b);
+                yield return new WaitForSecondsRealtime(1f);
+            }
+            if (FindButton(until) == null) Note("TIMEOUT", $"tapping {n} never produced {until}");
+        }
+
         IEnumerator ClickWhenPresent(string n, float timeout = 90f)
         {
             for (float t = 0f; t < timeout; t += 0.25f)
@@ -293,7 +307,7 @@ namespace Golfin.EditorTools.ShotUI
         /// this loop, on the crossing, with the pointer still down.
         /// </summary>
         IEnumerator Swing(float pullPx, int backFrames = 36, int upFrames = 18,
-                          float crossX = 0f, float bowPx = 0f, float upHoldFrames = 0f)
+                          float crossX = 0f, float bowPx = 0f, float upHoldSeconds = 0f)
         {
             Down(Origin);
             yield return null;
@@ -315,7 +329,12 @@ namespace Golfin.EditorTools.ShotUI
                 Drag(At(dx, dy));
                 // A deliberately slow upswing is made slow by WAITING, not by moving less — the
                 // duff threshold is px/second and only a real stall can trip it honestly.
-                for (int h = 0; h < upHoldFrames; h++) yield return null;
+                // SECONDS, NOT FRAMES. The driver clamps every inter-sample dt to
+                // FreeSwingMath.MaxStepSeconds, so a hold counted in FRAMES buys a different
+                // amount of measured time on a fast Editor than on a slow one — and buys none at
+                // all past ~200fps. A realtime wait longer than the clamp makes every step land
+                // on it exactly, whatever the frame rate.
+                if (upHoldSeconds > 0f) yield return new WaitForSecondsRealtime(upHoldSeconds);
                 yield return null;
             }
             Up();
@@ -367,6 +386,59 @@ namespace Golfin.EditorTools.ShotUI
                        "a real player-facing Button", "FALLBACK ControlSchemeService.Set");
             }
             yield return new WaitForSecondsRealtime(0.5f);
+
+            // THE SEGMENT ONLY ARMS THE CHOICE. `SchemeConfirmModalController.OnConfirm` is the
+            // only thing that commits it (its Hide() deliberately DISARMS), so a bot that tapped
+            // the segment and walked away stayed on whatever scheme was already live — which is
+            // exactly what this run did: entry.scheme_picked_through_the_real_widget PASSED while
+            // every scheme.* assertion read Flick. The confirm button is as much a part of the
+            // real player's path as the segment is.
+            yield return ConfirmSchemeIfPrompted();
+        }
+
+        /// <summary>
+        /// Press CONFIRM on the scheme pop-up, through the controller's own serialized button.
+        ///
+        /// <para>GATED ON THE ARMED STATE, NOT ON <c>activeInHierarchy</c>. The first version of
+        /// this waited for the confirm button to be active and gave up after six seconds; one run
+        /// it caught the pop-up and the next it did not, and the run that missed then closed the
+        /// settings modal on top of a VISIBLE pop-up — <c>[Modal] SchemeConfirmModal
+        /// force-disabled while visible</c>, which <c>Hide()</c> treats as a disarm, so the whole
+        /// sequence measured Flick while reporting it had clicked Free Swing.
+        /// <c>PendingScheme</c> is the controller's own answer to "is a choice waiting for
+        /// confirmation", so it cannot race the pop-up's activation.</para>
+        /// </summary>
+        IEnumerator ConfirmSchemeIfPrompted()
+        {
+            for (float t = 0f; t < 15f; t += 0.25f)
+            {
+                if (ControlSchemeService.Current == ControlScheme.FreeSwing)
+                {
+                    Note("scheme_confirm", "committed without a pop-up (already the live scheme)");
+                    yield break;
+                }
+
+                // INACTIVE INCLUDED: ModalController keeps the root active and toggles the child
+                // panel, but the root itself can sit under a screen that is off.
+                var modal = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
+                                FindObjectsInactive.Include, FindObjectsSortMode.None)
+                            .FirstOrDefault(m => m != null && m.GetType().Name == "SchemeConfirmModalController");
+                if (modal != null)
+                {
+                    var pending = modal.GetType().GetProperty("PendingScheme")?.GetValue(modal);
+                    bool armed  = pending is ControlScheme ps && ps == ControlScheme.FreeSwing;
+                    if (armed &&
+                        modal.GetType().GetField("confirmButton", ANY)?.GetValue(modal) is Button c && c != null)
+                    {
+                        ClickReal(c);
+                        Note("scheme_confirm", "SchemeConfirmModalController.confirmButton.onClick (" + c.name + ")");
+                        yield return new WaitForSecondsRealtime(1f);
+                        yield break;
+                    }
+                }
+                yield return new WaitForSecondsRealtime(0.25f);
+            }
+            Note("scheme_confirm", "TIMEOUT — no armed scheme pop-up in 15s");
         }
 
         /// <summary>The pop shows a LOCALISED KEY, never a literal — asserted as the key's own
@@ -387,7 +459,13 @@ namespace Golfin.EditorTools.ShotUI
         {
             // ── 1. boot through the real entry path ────────────────────────────
             yield return new WaitForSecondsRealtime(5f);
-            yield return ClickWhenPresent("StartButton", 25f);
+            // TAP UNTIL SPLASH LETS GO, not once. OnStartClicked is guarded by a `_busy` flag it
+            // holds across the session refresh and the starter gate, and DevAutoSignIn taps the
+            // same button on its own — so a single tap lands inside that window often enough that
+            // this run sat on Splash for the whole sequence and every later assertion measured a
+            // screen the game never reached. Gate on the NEXT screen's widget, which is the rule
+            // reference_editor_login_devautosignin already states for capture bots.
+            yield return TapUntilPast("StartButton", "PlayButton", 45f);
             yield return new WaitForSecondsRealtime(2.5f);
             yield return ClickWhenPresent("PlayButton");
             yield return new WaitForSecondsRealtime(2.5f);
@@ -546,8 +624,32 @@ namespace Golfin.EditorTools.ShotUI
             Near("geom.lane_height_is_derived", _lane.LaneHeight, laneR.height, 1f);
             Near("geom.lane_top_is_the_followthrough_above_the_ball",
                  _ballY + _driver.FollowThroughPx, laneR.y + laneR.height, 1.5f);
-            Near("geom.lane_contains_the_club_at_full_pull",
-                 _ballY - (rest + Pull120 + 50f), laneR.y + 20f, 2f);
+            // THE PILL'S BOTTOM IS THE BASELINE, AND THAT IS THE POINT.
+            //
+            // This used to assert `_ballY - (rest + Pull120 + 50)` — where the 50 was a COPY of
+            // FreeSwingSchemeBuilder.ClubHalfHeight, which became 150 when the club head went to
+            // Flick parity at 3x. Worse, it predated shot_view_layout_followup §1, which caps the
+            // drawn pill at the shared bottom baseline so it cannot hang past the button row. The
+            // uncapped derivation now asks for 1048px of lane and the cap grants 952 — so the
+            // club head at 120% DOES overhang the pill, deliberately, and an assertion that the
+            // pill swallows it is asserting something the layout stopped promising.
+            //
+            // What the geometry actually guarantees, and what is checked instead: the pill always
+            // reaches past the deepest tick (ShotLayoutMath.MinTailBelowDeepestTickPx is the floor
+            // the cap may not cross), and its bottom edge IS the baseline whenever the cap binds.
+            var layout = UnityEngine.Object.FindObjectsByType<ShotLayoutController>(
+                             FindObjectsInactive.Exclude, FindObjectsSortMode.None).FirstOrDefault();
+            float deepestTickY = _ballY - (rest + Pull120);
+            float uncappedEnd  = _ballY - (rest + Pull120 + _lane.ClubHalfHeight + _lane.LaneTailPx);
+            Note("lane_end", $"deepest tick {deepestTickY:F1} | uncapped ideal {uncappedEnd:F1} | " +
+                             $"drawn {laneR.y:F1} | baseline " +
+                             (layout != null ? layout.LastBaselineY.ToString("F1") : "no controller"));
+            Assert("geom.lane_reaches_past_the_deepest_tick",
+                   laneR.y <= deepestTickY - ShotLayoutMath.MinTailBelowDeepestTickPx + 0.5f,
+                   $"<= {deepestTickY - ShotLayoutMath.MinTailBelowDeepestTickPx:F1}",
+                   laneR.y.ToString("F1"));
+            Near("geom.lane_bottom_is_the_shared_baseline",
+                 layout != null ? layout.LastBaselineY : laneR.y, laneR.y, 1.5f);
 
             // A TICK MARKS WHERE THE CLUB HEAD LANDS. Config on one side, the live rect on the other.
             Near("geom.tick100_is_where_the_club_lands", _ballY - (rest + Pull100), Of("FreeSwingTick100").center.y, 1.5f);
@@ -617,6 +719,16 @@ namespace Golfin.EditorTools.ShotUI
             Assert("pull.lane_visible", laneGroup.alpha > 0.5f, ">0.5", laneGroup.alpha.ToString("F2"));
             Assert("pull.trace_is_drawing", traceView.PointCount > 5, ">5 samples",
                    traceView.PointCount.ToString());
+            // WHERE, not just how many. A point COUNT was the whole of this gate and it passed
+            // while the line was drawn a full ball-offset (~300px) below the club head — the
+            // samples were measured in the scheme root's space and drawn under BallSpace, which
+            // the layout slides down to the ball (Cesar, 2026-09-08). The tip of the trace is the
+            // club head, so that is what gets asserted: the graphic's rect centre plus its last
+            // local point, against the handle's own drawn centre, both in canvas space.
+            Vector2 traceTip = Of("FreeSwingTrace").center +
+                               _driver.Samples[_driver.Samples.Count - 1];
+            Near("pull.trace_tip_sits_on_the_club_head_x", Of("FreeSwingHandle").center.x, traceTip.x, 2f);
+            Near("pull.trace_tip_sits_on_the_club_head_y", Of("FreeSwingHandle").center.y, traceTip.y, 2f);
             Near("pull.club_head_is_on_the_100_tick",
                  Of("FreeSwingTick100").center.y, Of("FreeSwingHandle").center.y, 6f);
             yield return SnapAtEndOfFrame("freeswing_backswing_100");
@@ -652,7 +764,7 @@ namespace Golfin.EditorTools.ShotUI
             Assert("swing.exactly_one_commit_per_touch", _driver.CommitCount >= 1, ">=1", _driver.CommitCount);
             var v = _driver.LastVerdict;
             Note("pure_verdict", $"impact={v.ImpactPx:F1}px window={v.ImpactWindowPx:F1} " +
-                                 $"path={v.PathDeg:F2}deg tempo={v.TempoRatio:F2} speed={v.UpSpeedPxPerSec:F0}px/s " +
+                                 $"path={v.PathDeg:F2}deg tempo={v.TempoRatio:F2} up={v.UpSeconds:F2}s " +
                                  $"grade={v.Grade} mul={v.TimingMul:F2} timing01={v.Timing01:F2}");
             Assert("swing.pure_grade", v.Grade == FreeSwingGrade.Pure, FreeSwingGrade.Pure, v.Grade);
             AssertPopKey("swing.pure_pop_is_a_localised_key", FreeSwingGrade.Pure);
@@ -672,6 +784,20 @@ namespace Golfin.EditorTools.ShotUI
             Assert("result.club_head_hidden_in_flight",
                    FindAny("FreeSwingHandle").GetComponent<CanvasGroup>().alpha < 0.01f, "alpha 0",
                    FindAny("FreeSwingHandle").GetComponent<CanvasGroup>().alpha.ToString("F2"));
+
+            // THE ACTION BUTTONS ARE GONE AND UNTAPPABLE FOR THE WHOLE FLIGHT. Nothing in this
+            // scheme owns that — ShotInProgressUiGate does — but the FADE/DRAW hide reaches into
+            // the same row, so this is the assertion that says re-wiring it did not put the
+            // buttons back over the chase cam. That defect shipped in build 2758 and Cesar found
+            // it by playing; a gate that only measured the toggle would not have seen it.
+            var clusterGo = FindAny("ActionButtons_Cluster");
+            var clusterCg = clusterGo != null ? clusterGo.GetComponent<CanvasGroup>() : null;
+            Assert("inflight.action_buttons_hidden",
+                   clusterCg != null && clusterCg.alpha < 0.01f, "alpha 0",
+                   clusterCg != null ? clusterCg.alpha.ToString("F2") : "no CanvasGroup");
+            Assert("inflight.action_buttons_untappable",
+                   clusterCg != null && !clusterCg.blocksRaycasts, false,
+                   clusterCg != null ? clusterCg.blocksRaycasts.ToString() : "no CanvasGroup");
             yield return SnapAtEndOfFrame("freeswing_result_pure");
 
             // CARRY-OVER 7: still fully visible half a second into the flight, i.e. well past the
@@ -728,9 +854,24 @@ namespace Golfin.EditorTools.ShotUI
 
             // ── 12. a slow upstroke is a DUFF ──────────────────────────────────
             // Slow by WAITING between samples — a real stall, not a shortened path.
-            yield return Swing(Pull100, backFrames: 24, upFrames: 18, upHoldFrames: 8);
+            // THE SAMPLE COUNT IS DERIVED FROM THE LIVE THRESHOLD, not fixed at 18.
+            //
+            // Every inter-sample dt is clamped to FreeSwingMath.MaxStepSeconds, so the SLOWEST
+            // upswing this bot can express is upFrames x that clamp — a hard ceiling on measured
+            // slowness that no amount of waiting can raise, and 18 frames buys only 0.60s. Now
+            // that the duff is a DURATION the count falls straight out of it: enough samples to
+            // sit 25% past the threshold. Nothing here knows the lane's length any more, which is
+            // the point — a pull retune cannot un-duff this swing.
+            float duffTargetSec = _driver.DuffSeconds * 1.25f;
+            int   duffUpFrames  = Mathf.Max(18, Mathf.CeilToInt(duffTargetSec / FreeSwingMath.MaxStepSeconds));
+            Note("duff_gesture", $"threshold={_driver.DuffSeconds:F2}s -> {duffUpFrames} samples x " +
+                                 $"{FreeSwingMath.MaxStepSeconds:F3}s = " +
+                                 $"{duffUpFrames * FreeSwingMath.MaxStepSeconds:F2}s upswing");
+            yield return Swing(Pull100, backFrames: 24, upFrames: duffUpFrames,
+                               upHoldSeconds: FreeSwingMath.MaxStepSeconds * 1.5f);
             var duff = _driver.LastVerdict;
-            Note("duff_verdict", $"speed={duff.UpSpeedPxPerSec:F0}px/s grade={duff.Grade} mul={duff.TimingMul:F2}");
+            Note("duff_verdict", $"up={duff.UpSeconds:F2}s (threshold {_driver.DuffSeconds:F2}s) " +
+                                 $"grade={duff.Grade} mul={duff.TimingMul:F2}");
             Assert("duff.grade", duff.Grade == FreeSwingGrade.Duff, FreeSwingGrade.Duff, duff.Grade);
             AssertPopKey("duff.pop_is_a_localised_key", FreeSwingGrade.Duff);
             Assert("duff.pays_the_red_multiplier", duff.TimingMul < 0.8f, "< 0.8 (TimingPowerMulRed)",

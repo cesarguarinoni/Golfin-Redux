@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 using TMPro;
 using Golfin.Gameplay.UI.ShotUI;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.UI.Controls.FreeSwing;
 
 /// <summary>
 /// Builds the 2x2 action button cluster in LabScaffold.unity under ShotUI_Canvas,
@@ -723,6 +724,9 @@ public static class ActionButtonsBuilder
         // ── Re-wire ShotInProgressUiGate (same reason as the controller above) ────
         WireShotInProgressUiGate(canvasGo, clusterCg, fader, overlayWidget, overlayWidgetBall, spinPanelWidget);
 
+        // ── Re-wire the FADE/DRAW hide (third consumer of the rebuilt cluster) ────
+        WireFadeDrawHide(abRoot, fadeWidget);
+
         // ── Mark scene dirty and save ──────────────────────────────────────────
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
@@ -847,6 +851,60 @@ public static class ActionButtonsBuilder
 
         Debug.Log("[ActionButtonsBuilder] ShotInProgressUiGate re-wired (cluster CanvasGroup, both " +
                   "selectors, spin panel, fader) — the shot UI hides again while the ball is in flight.");
+    }
+
+    /// <summary>
+    /// Restore the two references that make Free Swing's FADE/DRAW hide work, both of which point
+    /// at objects this builder DELETES and rebuilds.
+    ///
+    /// <para>THE THIRD ONE. <c>WireShotLayoutController</c> and <c>WireShotInProgressUiGate</c>
+    /// already exist for exactly this reason and both carry the same warning; this pair was
+    /// simply missed. <c>flick_shot_view</c> re-ran the builder and left
+    /// <c>ActionButtonsRoot._fadeDrawButton</c> and
+    /// <c>FreeSwingSchemeDriver._actionButtons</c> at <c>fileID: 0</c> — after which
+    /// <c>HideFadeDrawToggle()</c> was a silent no-op and the STRAIGHT toggle sat on screen,
+    /// visible and tappable, through every Free Swing shot. <c>FreeSwingSchemeBuilder</c> wires
+    /// the same pair and says so in a comment; that only holds until the next run of THIS
+    /// builder, which is why the repair belongs here too.</para>
+    ///
+    /// <para>DELIBERATELY DOES NOT TOUCH <c>ActionButtonsRoot._shotController</c>, which has been
+    /// <c>fileID: 0</c> since long before the regression. Wiring it would give the cluster's
+    /// CanvasGroup a SECOND owner — <c>ActionButtonsRoot.Handle</c> re-opens
+    /// <c>interactable</c>/<c>blocksRaycasts</c> on every non-Idle state — racing
+    /// <c>ShotInProgressUiGate</c>, which is the component that actually hides the row while the
+    /// ball is in flight. That race is the "action buttons stayed visible and tappable for the
+    /// whole flight" defect from build 2758; it is not being re-opened here.</para>
+    /// </summary>
+    static void WireFadeDrawHide(ActionButtonsRoot abRoot, FadeDrawButtonWidget fadeWidget)
+    {
+        if (abRoot == null || fadeWidget == null)
+        {
+            Debug.LogWarning("[ActionButtonsBuilder] No ActionButtonsRoot or FadeDrawButtonWidget — " +
+                             "Free Swing will NOT be able to hide the FADE/DRAW toggle.");
+            return;
+        }
+
+        var rootSo = new SerializedObject(abRoot);
+        rootSo.FindProperty("_fadeDrawButton").objectReferenceValue = fadeWidget;
+        rootSo.ApplyModifiedProperties();
+
+        // Inactive INCLUDED: the scheme roots ship switched off, so the driver that owns the hide
+        // is not in the active set until the player picks Free Swing.
+        var driver = Object.FindFirstObjectByType<FreeSwingSchemeDriver>(FindObjectsInactive.Include);
+        if (driver == null)
+        {
+            Debug.LogWarning("[ActionButtonsBuilder] ActionButtonsRoot._fadeDrawButton re-wired, but no " +
+                             "FreeSwingSchemeDriver in the scene — run GOLFIN/Build/Build Free Swing " +
+                             "Scheme, or the toggle will stay on screen under Free Swing.");
+            return;
+        }
+
+        var driverSo = new SerializedObject(driver);
+        driverSo.FindProperty("_actionButtons").objectReferenceValue = abRoot;
+        driverSo.ApplyModifiedProperties();
+
+        Debug.Log("[ActionButtonsBuilder] FADE/DRAW hide re-wired (ActionButtonsRoot._fadeDrawButton + " +
+                  "FreeSwingSchemeDriver._actionButtons) — the toggle hides again under Free Swing.");
     }
 
     /// <summary>Depth-first find by name, inactive included — the scheme roots ship inactive and
