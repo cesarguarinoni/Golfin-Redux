@@ -100,6 +100,9 @@ namespace Golfin.UI.Polish.EditorTools
         [MenuItem("GOLFIN/Game Polish/Probe C — press feedback seen (A2)", priority = 304)]
         public static void ArmPress() => Arm("press", "after");
 
+        [MenuItem("GOLFIN/Game Polish/Probe C — toast fade curve (A6)", priority = 308)]
+        public static void ArmToast() => Arm("toast", "after");
+
         public static void Arm(string mode, string tag)
         {
             Directory.CreateDirectory(OutDir);
@@ -304,6 +307,7 @@ namespace Golfin.UI.Polish.EditorTools
                 {
                     case "restgeom": yield return RestGeom();          break;
                     case "press":    yield return Press();             break;
+                    case "toast":    yield return ToastFade();         break;
                     default:         yield return Sweep();             break;
                 }
                 Line($"=== done: {_mode}/{_tag} ===");
@@ -910,6 +914,101 @@ namespace Golfin.UI.Polish.EditorTools
 
                                 File.WriteAllText($"{OutDir}/game_polish_c_press.txt", string.Join("\n", _pressLog) + "\n");
                 Line("A2 -> " + OutDir + "/game_polish_c_press.txt");
+            }
+
+            // ═════════════════════════════════════════════════════════════════
+            // §A6 — the toast fade, sampled off the RUNNING coroutine
+            // ═════════════════════════════════════════════════════════════════
+
+            /// <summary>
+            /// Drive the real <c>ToastController.Show()</c> — the public API every caller uses —
+            /// and read <c>_canvasGroup.alpha</c> every frame.
+            ///
+            /// <para>WHY THIS EXISTS ALONGSIDE THE UNIT TEST. <c>ToastFadeParityTests</c>
+            /// transcribes <c>UiMotion.FadeRoutine</c>'s arithmetic; it proves the CURVE is
+            /// ease-out but it never touches <c>ToastController</c>'s coroutine, so it would keep
+            /// passing if the call site were wired to something else entirely. This samples the
+            /// alpha a player would actually see and fits it against
+            /// <c>Lerp(from, to, EaseOut(t))</c> — evidence from the shipped path rather than a
+            /// restatement of the primitive.</para>
+            ///
+            /// <para>The clock is NOT fixed here, so <c>t</c> is reconstructed from accumulated
+            /// unscaled time rather than from the frame index; an Editor hitch mid-fade would
+            /// otherwise read as a curve error.</para>
+            /// </summary>
+            /// <remarks>Named <c>ToastFade</c>, not <c>Toast</c>: from inside
+            /// <c>Golfin.UI.Polish.EditorTools</c> the bare identifier <c>Toast</c> binds to the
+            /// <c>Golfin.UI.Toast</c> NAMESPACE and the call site will not compile.</remarks>
+            IEnumerator ToastFade()
+            {
+                var toast = Golfin.UI.Toast.ToastController.Instance;
+                if (toast == null) { Line("FAIL: no ToastController.Instance in the running shell"); yield break; }
+
+                Type tc = typeof(Golfin.UI.Toast.ToastController);
+                var cg = tc.GetField("_canvasGroup", BindingFlags.Instance | BindingFlags.NonPublic)
+                           ?.GetValue(toast) as CanvasGroup;
+                var inField = tc.GetField("_fadeIn", BindingFlags.Instance | BindingFlags.NonPublic);
+                float dur = inField != null ? (float)inField.GetValue(toast)! : 0.3f;
+                if (cg == null) { Line("FAIL: ToastController has no CanvasGroup wired"); yield break; }
+
+                Line($"toast fade-in: duration {dur:0.###}s, sampling alpha every frame");
+                toast.Show("GAME POLISH C - TOAST FADE", 2.5f);
+
+                var samples = new List<(float T, float Alpha)>();
+                float t0 = Time.unscaledTime;
+                while (Time.unscaledTime - t0 <= dur + 0.05f)
+                {
+                    samples.Add((Time.unscaledTime - t0, cg.alpha));
+                    yield return null;
+                }
+
+                // THE SAMPLER'S t0 IS NOT THE FADE'S t0, and assuming it was made the first run of
+                // this probe report FAIL on a fade that is demonstrably eased. `Show()` starts a
+                // coroutine that runs its first step within the same frame, so by the time this
+                // loop takes its first reading the alpha has already moved — it read 0.1886 at
+                // what it called t = 0. Fitting against a fixed offset then measures the
+                // interleaving of two coroutines, not the curve.
+                //
+                // So the offset is FITTED: for each candidate shift the worst residual is computed
+                // against both curves, and each curve keeps its best. Whichever fits better is the
+                // curve the app is running, and the shift that achieved it is reported so a reader
+                // can see it is about one frame rather than something suspicious.
+                float worstEase = float.MaxValue, worstLinear = float.MaxValue, bestShift = 0f;
+                for (float shift = 0f; shift <= 0.05f; shift += 0.001f)
+                {
+                    float e = 0f, l = 0f;
+                    foreach ((float t, float a) in samples)
+                    {
+                        float u = Mathf.Clamp01((t + shift) / dur);
+                        e = Mathf.Max(e, Mathf.Abs(a - UiMotion.EaseOut(u)));
+                        l = Mathf.Max(l, Mathf.Abs(a - u));
+                    }
+                    if (e < worstEase) { worstEase = e; bestShift = shift; }
+                    if (l < worstLinear) worstLinear = l;
+                }
+                bool eased = worstEase < worstLinear && worstEase < 0.06f;
+
+                var sb = new StringBuilder();
+                sb.AppendLine("# game_polish_c A6 - toast fade sampled off the running ToastController");
+                sb.AppendLine($"# duration {dur:0.###}s, {samples.Count} frames, unfixed clock");
+                sb.AppendLine($"# best-fit start offset       = {bestShift:0.####}s " +
+                              $"(~{bestShift * 60f:0.#} frames at 60 fps; the sampler cannot see the " +
+                              "coroutine's own t0)");
+                sb.AppendLine($"# worst |alpha - easeOut(t)| = {worstEase:0.####}   <- best fit");
+                sb.AppendLine($"# worst |alpha - linear(t)|  = {worstLinear:0.####}");
+                sb.AppendLine($"# verdict: the shipped fade is {(eased ? "EASE-OUT" : "NOT ease-out")} " +
+                              $"-> {(eased ? "PASS" : "FAIL")}");
+                sb.AppendLine("t\talpha\teaseOut(t+shift)\tlinear(t+shift)");
+                foreach ((float t, float a) in samples)
+                {
+                    float u = Mathf.Clamp01((t + bestShift) / dur);
+                    sb.AppendLine($"{t:0.####}\t{a:0.####}\t{UiMotion.EaseOut(u):0.####}\t{u:0.####}");
+                }
+                File.WriteAllText($"{OutDir}/game_polish_c_toast_fade.txt", sb.ToString());
+                Line($"A6 -> {OutDir}/game_polish_c_toast_fade.txt  worstEase={worstEase:0.####} " +
+                     $"worstLinear={worstLinear:0.####}  {(eased ? "PASS (eased)" : "FAIL")}");
+
+                yield return Shot("toast_midfade", null);
             }
 
             /// <summary>

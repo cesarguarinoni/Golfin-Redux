@@ -266,14 +266,52 @@ ModeSelection: …/TournamentTempEntry/Label  -> …/SafeArea/TournamentTempEntr
 new container …/ModeSelectionScreen/SafeArea corners [0, 0, 1170, 2532]
 ```
 
-### A6 · Toast parity — **PASS**
+### A6 · Toast fade — **PASS** (the eased version; see D-1)
 
-`ToastFadeParityTests`, 5 tests. Worst per-frame alpha delta over both real durations
-(`_fadeIn 0.3`, `_fadeOut 0.5`) on a fixed 1/60 clock: **0.000000**, against §A6's tolerance of 0.01.
-Not merely within tolerance — the same floats in the same order.
+`ToastFadeParityTests` (7 tests) and `Docs/Diagnostics/_capture/game_polish_c_toast_fade.txt`.
 
-**Deviation D-1 lives here.** §C4 names `UiMotion.Fade` and also demands ≤ 0.01 and "zero visible
-change"; those cannot both be satisfied. See § Deviations.
+**Cesar's call, 2026-09-08: ship `UiMotion.Fade`.** The toast now eases the way every other fade in
+the app eases (cubic ease-out) instead of running at a constant rate. §A6's written tolerance of
+0.01 was framed as "zero visible change" and is superseded by that decision — this change is
+**38× it**, deliberately.
+
+**Measured off the running coroutine, not off the primitive.** `GamePolishProbeC`'s `toast` mode
+calls the real `ToastController.Show()` — the public API every caller uses — and samples
+`_canvasGroup.alpha` every frame:
+
+```
+# duration 0.3s, 21 frames, unfixed clock
+# best-fit start offset       = 0.017s (~1 frame at 60 fps)
+# worst |alpha - easeOut(t)| = 0.0024   <- best fit
+# worst |alpha - linear(t)|  = 0.2726
+# verdict: the shipped fade is EASE-OUT -> PASS
+```
+
+Still frame: `screenshots/after_01_toast_midfade__Home.png`.
+
+**The start offset is fitted, not assumed, and the first run got that wrong.** `Show()` starts a
+coroutine that runs its first step inside the same frame, so the sampler's first reading already
+had alpha at 0.159 — at what it called t = 0. Scored against a fixed t0 the probe reported
+`NOT ease-out -> FAIL` on a fade that is demonstrably eased; it was measuring the interleaving of
+two coroutines. The offset is now searched, both curves keep their best fit, and the shift
+(0.017 s ≈ one frame) is printed so a reader can see it is timing rather than something suspicious.
+
+**What the unit tests pin,** since the arithmetic alone would keep passing if the call site were
+rewired:
+
+| test | pins |
+|---|---|
+| `FadeIn_RunsOnTheSharedEaseOut` / `FadeOut_…` | every frame equals `Lerp(from, to, EaseOut(t))` on both real durations |
+| `FirstFrame_IsTheStartValue` | `Fade` writes `from` on frame 0 — the old loop began one step in and never did |
+| `LastFrame_IsTheEndValue` | settles exactly on `to` |
+| `DurationAndFrameCount_AreUnchanged` | 0.3 s / 0.5 s and the step counts are what they were; only the shape between the endpoints moved |
+| `TheChangeIsTheEase_AndItIs0point385` | the divergence from the old linear loop is 0.385 at t = 0.423 — asserted, so the number this decision rests on cannot quietly stop being true |
+| `ToastController_RoutesThroughUiMotionFade` | the call site itself, read off the shipped source with comments stripped |
+
+**One behavioural improvement came free.** The old loop never wrote `from`; it began at
+`Lerp(from, to, dt/dur)`. `UiMotion.Fade` sets the start value on its first frame, so a toast
+re-`Show()`n mid-fade now starts from a defined alpha instead of wherever the interrupted fade had
+reached.
 
 ### A7 · Lint delta zero — **PASS**
 
@@ -406,17 +444,15 @@ See § Deviations below.
 
 ## 4 · Deviations
 
-- **D-1 · `ToastController` uses `UiMotion.Tween(…, Ease.Linear)`, not `UiMotion.Fade`.**
-  §C4 asks for three things at once: route it through `UiMotion`, keep the durations, and produce a
-  per-frame alpha log whose worst delta is ≤ 0.01 ("zero visible change"). `UiMotion.Fade` cannot
-  satisfy the third — it eases on cubic ease-out, the old loop was a straight `Mathf.Lerp`, and the
-  two curves are furthest apart at t = 0.423 where `1−(1−t)³ − t = 0.385`. That is **38× the stated
-  tolerance** and it is visible: over a 0.3 s fade-in the toast would appear to snap to most of its
-  opacity in the first third and then crawl. `Tween` on `Ease.Linear` is the same primitive family,
-  the same runner, the same interruption-safe settle, and `Curve(Linear, t) == Mathf.Clamp01(t)`, so
-  the parity log is exact rather than merely close. `ToastFadeParityTests.LinearIsNotEaseOut` pins
-  the 0.385 so the premise is checkable. **Switching to the eased fade is a one-token change and it
-  is Cesar's to make, not the sweep's.**
+- **D-1 · `ToastController` uses `UiMotion.Fade`, and the toast now eases — RESOLVED by Cesar,
+  2026-09-08.** §C4 asked for both `UiMotion.Fade` and a per-frame alpha log within 0.01 of the old
+  loop, and those are not compatible: `Fade` eases on cubic ease-out, the old loop was a straight
+  `Mathf.Lerp`, and the curves are furthest apart at t = 0.423 where `1−(1−t)³ − t = 0.385` — 38×
+  the stated tolerance. This shipped first on `UiMotion.Tween(…, Ease.Linear)` (exact parity, no
+  visible change) with the trade put to Cesar; he chose the eased version. Over the 0.3 s fade-in
+  the toast now reaches most of its opacity in the first third and settles gently rather than
+  ramping evenly. The durations, the frame count and the endpoints are unchanged; only the shape
+  between them moved, and `TheChangeIsTheEase_AndItIs0point385` asserts by how much.
 
 - **D-2 · The five carousels are in scope; the SPEC expected exclusions.** See A3. Checked, not
   assumed: none of the five implements a drag handler.

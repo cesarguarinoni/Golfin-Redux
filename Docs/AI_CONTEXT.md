@@ -16,7 +16,7 @@ surface rows, all generated from the probe JSON by `Docs/Scripts/game_polish_c_t
 | player-facing Buttons with no `ButtonPressFeedback` | 242 | **0** |
 | in-scope ScrollRects off the Elastic reference | 11 | **0** |
 | surfaces with content inside the iPhone 15 Pro Max safe-area bands | 4 | **0** |
-| Toast fade worst per-frame alpha delta | — | **0.000000** (tolerance 0.01) |
+| Toast fade, sampled off the running coroutine | — | **ease-out, residual 0.0024** (vs 0.2726 linear) |
 
 **Rule 11 had never been swept.** It has said "every new player-facing Button gets
 `ButtonPressFeedback`" since May and was honoured going forward and never backwards: a live audit of
@@ -48,10 +48,18 @@ nothing newer than the 12 Pro Max) and `Docs/Scripts/filter_scene_churn.py` (sav
 a play session re-serialises ~530 lines of LayoutGroup/TMP/Scrollbar-computed values; the filter
 keeps only authored hunks — the scene's final diff removes 13 lines).
 
-**Deviation to settle:** §C4 names `UiMotion.Fade` and also asks for ≤ 0.01 per-frame parity.
-`UiMotion.Fade` eases; the old toast loop was linear; the curves differ by 0.385 at t = 0.423 — 38×
-the tolerance. Shipped on `UiMotion.Tween(…, Ease.Linear)`, which is exact. Switching to the eased
-fade is a one-token change if Cesar wants the toast to ease.
+**Deviation D-1, settled the same day.** §C4 names `UiMotion.Fade` and also asks for ≤ 0.01
+per-frame parity with the old loop; `Fade` eases, the old loop was linear, and the curves differ by
+0.385 at t = 0.423 — 38× the tolerance. Shipped first on `UiMotion.Tween(…, Ease.Linear)` (exact
+parity) with the trade put to Cesar, who chose the eased version. **The toast eases now**: sampled
+off the real `ToastController.Show()` coroutine, worst residual against ease-out 0.0024 vs 0.2726
+against linear. The durations, frame count and endpoints are unchanged; `ToastFadeParityTests`
+asserts the 0.385 itself so the number the decision rested on cannot quietly stop being true.
+
+A third thing worth carrying: **the alpha sampler's t0 is not the coroutine's t0.** `Show()` starts
+a coroutine that runs its first step inside the same frame, so the first reading already had alpha
+at 0.159 at what the sampler called t = 0 — and the probe reported `NOT ease-out -> FAIL` on a fade
+that is demonstrably eased. Fit the offset; do not assume it.
 
 ---
 ## 2026-09-08 — game_polish_b: **modals pop, three tween loops become UiMotion, and the top bar counts down** — DONE, approved by Cesar

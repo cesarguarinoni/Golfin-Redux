@@ -61,26 +61,31 @@ namespace Golfin.UI.Toast
         /// <summary>
         /// game_polish_c §C4 — the last hand-rolled fade loop in the shell, retired.
         ///
-        /// <para><b>Why this is <see cref="UiMotion.Tween"/> on <see cref="Ease.Linear"/>
-        /// and not <c>UiMotion.Fade</c>, which is what §C4 names.</b> §C4 asks for three things at
-        /// once: route it through UiMotion, keep the durations, and produce a per-frame alpha log
-        /// whose worst difference from the old loop is <b>≤ 0.01</b> ("zero visible change").
-        /// <c>UiMotion.Fade</c> cannot satisfy the third: it eases on cubic ease-out, the old loop
-        /// here was a straight <c>Mathf.Lerp</c>, and the two curves are furthest apart at
-        /// t = 0.423, where <c>1-(1-t)³ - t = 0.385</c>. That is thirty-eight times the stated
-        /// tolerance and it is visible — over a 0.3 s fade-in the toast would appear to snap to
-        /// most of its opacity in the first third and then crawl.</para>
+        /// <para>The toast now fades on the shared primitive, so it eases the way every other fade
+        /// in the app eases (cubic ease-out) instead of running at a constant rate. Cesar's call,
+        /// 2026-09-08, taken with the number in front of him.</para>
         ///
-        /// <para><c>Tween</c> on <c>Ease.Linear</c> is the same UiMotion primitive family, the same
-        /// runner, the same interruption-safe settle, and <c>Curve(Linear, t)</c> is
-        /// <c>Mathf.Clamp01(t)</c> — so the alpha sequence is not merely close to the old loop's,
-        /// it is the same arithmetic in the same order and the parity log is exact to the float.
-        /// The choice is recorded as a deviation rather than made silently; switching to the eased
-        /// fade later is a one-token change, and it is Cesar's to make, not the sweep's.</para>
+        /// <para><b>This is a deliberate, visible change, and the number is 0.385.</b> §C4 asked
+        /// for both <c>UiMotion.Fade</c> and a per-frame alpha log within 0.01 of the old loop;
+        /// those are not compatible. The old loop was a straight <c>Mathf.Lerp</c>, <c>Fade</c>
+        /// eases, and the two curves are furthest apart at t = 0.423 where
+        /// <c>1-(1-t)³ - t = 0.385</c> — thirty-eight times that tolerance. Over the 0.3 s
+        /// fade-in the toast now reaches most of its opacity in the first third and settles
+        /// gently, rather than ramping evenly. That IS the intent; §A6's tolerance was written
+        /// against a "zero visible change" reading that the decision supersedes.</para>
+        ///
+        /// <para>What did NOT change: both durations (<c>_fadeIn</c> 0.3, <c>_fadeOut</c> 0.5),
+        /// the frame count, and the endpoints. <c>ToastFadeParityTests</c> pins all three, pins
+        /// the curve to <c>UiMotion.EaseOut</c> value-for-value, and pins the 0.385 itself — so
+        /// the divergence from the old loop stays a recorded decision rather than becoming an
+        /// unexplained difference somebody re-derives in a year.</para>
+        ///
+        /// <para><c>UiMotion.Fade</c> also settles the alpha to <paramref name="from"/> on its
+        /// first frame, which the old loop never did — it began at one step in. A toast that is
+        /// re-<c>Show()</c>n mid-fade therefore starts from a defined alpha instead of wherever
+        /// the interrupted fade had reached.</para>
         /// </summary>
         IEnumerator Fade(float from, float to, float dur)
-            => UiMotion.Tween(from, to, dur,
-                              a => { if (_canvasGroup != null) _canvasGroup.alpha = a; },
-                              Ease.Linear);
+            => UiMotion.Fade(_canvasGroup, from, to, dur);
     }
 }
