@@ -3942,3 +3942,29 @@ caught this, and neither would "does the count-up run?"** — it did. Bind runs 
 routine zeroes the counted labels on its own first frame. The general form: when an animation and
 a data bind touch the same field, the ORDER between them is part of the animation's design, and
 the only instrument that shows it is consecutive frames.
+
+---
+
+## Lesson — the lane end cap (2026-09-08): a setter that only takes effect if something else runs afterwards is not a setter
+
+`SetLaneEndCapY` was `=> _laneEndCapY = canvasY;`, and `ApplyGeometry` — called from the driver's
+`Activate` — was the only reader. So the cap worked exactly when it arrived FIRST, and was silently
+dropped when it arrived second. Both lane views had it; both shipped it.
+
+**The order that broke it is the ordinary one.** When the saved scheme is already the live one, the
+host activates its driver before `ShotLayoutController.ApplyLayout` pushes the cap in, and the pill
+draws ~96px past the action-button row for the rest of the session. Every acceptance run before
+this had switched scheme *mid-session*, which happens to produce the other order — so a defect on
+the plain boot path survived every gate the scheme has. **When a component's correctness depends on
+two other components calling it in sequence, the test that only exercises one sequence is testing
+the sequence, not the component.** `LaneEndCapTests` even said so in a comment ("the same order
+ShotLayoutController and ShotSchemeHost.Apply put them in") and nobody heard it as a gap.
+
+**The fix is ownership, not ordering.** The setter re-derives when the cap changes, so the lane owns
+"my drawn height respects the cap I was given" and no caller can get it wrong. Cheaper than making
+three components agree, and it cannot rot.
+
+**Tripwire, and it paid.** With the re-derive disabled the two new fixtures fail at 888 and
+-1191.84 — the second being the exact number the live run had reported hours earlier. That
+equality is what turns "the test passes" into "the test tests the thing": a new fixture that has
+never been seen red is a fixture whose subject is unproven. Cost: two edits and two test runs.
