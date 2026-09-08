@@ -4,20 +4,21 @@ IMPLEMENTER_WORKING
 
 **Current:** `IMPLEMENTER_WORKING` (2026-09-08). Notion 2111, slice b of three.
 
-Code-complete pass at Cesar's direction ("code complete first, evidence second", 2026-09-08).
-**Every design section — §D0 through §D7 — is implemented, compile-verified and covered by
-tests or a probe.** What remains is the CAPTURE evidence: the seven videos (A4), rest parity
-(A3), the count-up / shimmer / pending / stagger still sheets (A5–A8), the lint delta (A11) and
-`check_report_counts.py` (A14). A1 is partial — timing, mid-pop frames and the table are done,
-but the probe opens each modal itself and records `realWidget: false` rather than driving every
-real player trigger.
+**Every design section §D0–§D7 is implemented, compile-verified and gated by tests or the
+probe.** Evidence is substantially in: the §D2 parity gate (6 traces, fail 0), the §D1 modal
+gate (14 modals, fail 0), five captioned A4 clips, and the §D3 count-DOWN proven frame by frame.
 
-`IMPLEMENTER_REPORT.md` § What is NOT done is the list. This task has NOT been submitted for
-review and must not be treated as ready for one.
+Still outstanding, and listed per item in `IMPLEMENTER_REPORT.md` § What is NOT done: A3 as a
+pixel diff, the A5 per-site table, the A6/A7/A8 still sheets, A11 (arguably N/A — no Figma
+node), and two of A4's seven subjects that this session's data could not reach (a shop purchase
+at RP 6,139 with nothing affordable, and a real hole-complete).
+
+This task has NOT been submitted for review and must not be treated as ready for one.
 
 | Date | State | Note |
 |---|---|---|
 | 2026-09-05 | `SPEC_READY` | Written while the audit runs; 13 modals (SchemeConfirm added since the map). |
-| 2026-09-08 | `IMPLEMENTER_WORKING` | D0/D1.1/D1.3/D2/D3/D5 landed. Modal count measured at **15**, not 13. D2 parity gate closed (6 traces, fail 0). |
-| 2026-09-08 | `IMPLEMENTER_WORKING` | **D4 + the rest of D6.** 6 shimmer hosts, 0 active at rest. Two sites moved on evidence (shop has no cold state; missions' cold region is the DAILY). Staggers on 8 sites + Mode Select front door + 4 selection bumps. |
-| 2026-09-08 | `IMPLEMENTER_WORKING` | **D1.4 + D7.** Result choreography on all three result modals, skippable at any frame. `GamePolishProbeB`: modals **14 / fail 0**, shimmer 6/6 hosts inactive at rest, perf baseline + delta. The probe found and this task fixed a pre-existing bug — a duplicate `TournamentResultPresenter` was destroying the tournament result modal at boot. EditMode **2863 / 0 failed**. |
+| 2026-09-08 | `IMPLEMENTER_WORKING` | D0/D1.1/D1.3/D2/D3/D5. Modal count measured at **15**, not 13. D2 parity gate closed. |
+| 2026-09-08 | `IMPLEMENTER_WORKING` | D4 + the rest of D6. 6 shimmer hosts, 0 active at rest. Two sites moved on evidence. |
+| 2026-09-08 | `IMPLEMENTER_WORKING` | D1.4 + D7. Result choreography, skippable. Probe: modals **14 / fail 0**. Found and fixed a pre-existing bug — a duplicate presenter was destroying the tournament result modal at boot. |
+| 2026-09-08 | `IMPLEMENTER_WORKING` | **Evidence.** 5 captioned clips at 1170x2532; RP count-DOWN proven at 6.148→6.143→6.140→6.139. Three clips were discarded and re-taken because the caption did not match the frame. EditMode **2863 / 0 failed**. |

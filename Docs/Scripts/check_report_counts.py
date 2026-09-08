@@ -31,6 +31,15 @@ COUNT_CTX = (r"record|records|push|pushes|pair|pairs|frame|frames|starved|unstar
 
 
 def truth(js: dict) -> set[int]:
+    """Every integer the cited JSON can legitimately produce.
+
+    TWO SHAPES NOW. game_polish_a's invariants are a list of `pushes`; game_polish_b's modal
+    gate is a list of `records`. The dispatch is on the KEY the file actually has, not on a
+    task name, so a third shape fails loudly here instead of being silently mis-read as one
+    of the first two.
+    """
+    if "records" in js and "pushes" not in js:
+        return truth_records(js)
     R = js["pushes"]
     ok = [r for r in R if not r.get("frameStarved")]
     same = [r for r in R if r.get("sameBackground")]
@@ -44,6 +53,26 @@ def truth(js: dict) -> set[int]:
     }
     vals |= {r["frames"] for r in ok}                    # any legitimate frame count
     vals |= {min(r["frames"] for r in ok), max(r["frames"] for r in ok)}
+    return vals
+
+
+def truth_records(js: dict) -> set[int]:
+    """game_polish_b's modal gate. Same principle as truth(): derive EVERY count the file can
+    justify — totals, and the size of every subset a reader might reasonably quote — rather
+    than listing the numbers the report happens to use."""
+    R = js["records"]
+    vals = {len(R), js.get("modals", len(R)), js.get("fail", 0)}
+    for key in ("animateShow", "realWidget", "showIsNoOp", "activated", "visibleOnShowFrame",
+                "visibleOnHideFrame"):
+        on = [r for r in R if r.get(key)]
+        vals |= {len(on), len(R) - len(on)}
+    vals |= {sum(len(r.get("fails", [])) for r in R)}
+    # the open-count readings, which the report quotes as timing evidence
+    for r in R:
+        for key in ("openCountBefore", "openCountOnShow", "openCountAfterHide"):
+            v = r.get(key)
+            if isinstance(v, int):
+                vals.add(v)
     return vals
 
 

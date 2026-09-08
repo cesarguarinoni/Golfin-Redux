@@ -2,7 +2,10 @@
 """
 cut_game_polish_clips.py — slice the game_polish_a A4 take into its six captioned clips.
 
-    python3 Docs/Scripts/cut_game_polish_clips.py
+    python3 Docs/Scripts/cut_game_polish_clips.py [task_slug]
+
+The slug defaults to game_polish_a, so the original invocation is unchanged; game_polish_b
+passes its own and everything else about the cut is identical.
 
 WHY ONE TAKE AND NOT SIX RECORDINGS. Six play sessions is six chances for the
 Editor to come up on a different screen, and six RecorderControllers in one session
@@ -26,8 +29,9 @@ import textwrap
 import subprocess
 import sys
 
-VID = "Docs/Specs/Active/game_polish_a/videos"
-SHOTS = "Docs/Specs/Active/game_polish_a/screenshots"
+TASK = sys.argv[1] if len(sys.argv) > 1 else "game_polish_a"
+VID = f"Docs/Specs/Active/{TASK}/videos"
+SHOTS = f"Docs/Specs/Active/{TASK}/screenshots"
 SIDE = os.path.join(VID, "segments.json")
 RAW = os.path.join(VID, "raw.mp4")
 
@@ -37,6 +41,9 @@ FONT = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 # frame with the plate's border. Measured against the first cut rather than guessed.
 CAPTION_PX = 30
 CAPTION_COLS = 58
+
+# Longest clip we will cut. See the clamp in main().
+MAX_CLIP = 75.0
 
 
 def sh(cmd):
@@ -60,7 +67,19 @@ def main():
         sid, cap = seg["id"], seg["caption"]
         start, end = float(seg["start"]), float(seg["end"])
         dur = max(0.5, end - start)
-        out = os.path.join(VID, f"game_polish_a_{sid}.mp4")
+        # A segment that never reached its subject must not ship as a captioned clip claiming
+        # it did. The recorder writes `reached` per segment; honour it, and say what was skipped.
+        if seg.get("reached") is False:
+            print(f"  SKIP {sid:38s} not reached: {seg.get('note','')[:70]}")
+            continue
+
+        # Clamp: one segment in the b take ran 850 s because the shell stalled mid-route, and an
+        # 850 s "clip" is not a clip. The first MAX_CLIP seconds hold the thing being shown.
+        if dur > MAX_CLIP:
+            print(f"  clamp {sid:38s} {dur:.0f}s -> {MAX_CLIP}s (the rest is the shell stalling)")
+            dur = MAX_CLIP
+
+        out = os.path.join(VID, f"{TASK}_{sid}.mp4")
         capfile = os.path.join(VID, f"_{sid}.caption.txt")
 
         # The caption goes in a FILE. Inline drawtext breaks on the first ' or :
@@ -93,12 +112,14 @@ def main():
             continue
 
         size = os.path.getsize(out)
-        # One still per clip, taken a beat in so it is a settled frame rather than
-        # a mid-fade one — the stills are supporting evidence, the clip is the artifact.
+        # One still per clip, taken 60% of the way in rather than one second in. A fixed 1 s
+        # lands before the subject on any clip longer than a few seconds: the first cut of the
+        # level-up clip produced a still of the Roster screen with the modal not yet open, which
+        # is a picture of the thing that happens BEFORE the thing being demonstrated.
         still = os.path.join(SHOTS, f"a4_{sid}.png")
-        sh(["ffmpeg", "-y", "-ss", f"{min(1.0, dur/2):.3f}", "-i", out, "-frames:v", "1", still])
+        sh(["ffmpeg", "-y", "-ss", f"{dur * 0.6:.3f}", "-i", out, "-frames:v", "1", still])
         print(f"  {os.path.basename(out):44s} {dur:5.1f}s  {size/1024:7.0f} KB  "
-              f"flag={'ON' if seg.get('allowBackgroundCrossFade') else 'off'}  still={os.path.basename(still)}")
+              f"still={os.path.basename(still)}")
 
 
 if __name__ == "__main__":

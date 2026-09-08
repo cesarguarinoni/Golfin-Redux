@@ -1,0 +1,10 @@
+[0.00] === game_polish_b A4 demo 2026-09-08 04:47:06Z ===
+[5.08] tap the real StartButton
+[8.68] --- segment g_mode_select @ 8.68s ---
+[9.32] tap nav NavTeeButton -> ModeSelection
+[12.93] ShowScreen -> Home  (harness; no player path from here)
+[15.33] tap nav NavTeeButton -> ModeSelection
+[18.95] tap real 'CardTapButton'
+[21.38] --- segment g_mode_select ends @ 21.38s (12.7s) reached=True ---
+[21.38] sidecar -> Docs/Specs/Active/game_polish_b/videos/segments.json
+[21.39] === done — stopping play mode to flush the recording ===

@@ -312,6 +312,66 @@ modals is the tell that it is the shared cost of activating a panel and rebuildi
 not the tween. The first version of this mode took a MAX over a window containing a ~7 MB boot
 spike and reported every modal as seven megabytes BETTER than baseline; medians replaced it.
 
+### A4 · Videos — five clips, and two subjects that could not be reached
+
+`GamePolishDemoRecorderB` is `GamePolishDemoRecorder`'s shape pointed at this task: one play
+session, one recording at 1170x2532, a sidecar of segment boundaries on the same clock, cut and
+captioned by `cut_game_polish_clips.py game_polish_b`. No stills are taken while it records —
+the y-flip has two triggers and one of them is any RenderTexture read during a recording — so
+every still here is extracted from the MP4 afterwards.
+
+| Clip | Length | Shows |
+|---|---|---|
+| `game_polish_b_a_roster_levelup.mp4` | 11.8 s | the level-up modal pops, the level `Pop`s to Lv 14/39, pending SP shows `+2` on STRENGTH, and the top-bar RP counts DOWN |
+| `game_polish_b_c_rankings_cold.mp4` | 6.2 s | the board arrives — podium, then the rows. The still shows #1 full size against #2/#3 at 0.85, which is the hierarchy the reveal had to preserve |
+| `game_polish_b_d_gacha_reveal.mp4` | 13.1 s | the retrofitted reveal end to end: bag drop, shake, rays, card pop. Tickets 2,890 → 2,440 on a real x10 |
+| `game_polish_b_f_tournament_cards.mp4` | 12.6 s | the tournament cards staggering in on the schedule paint |
+| `game_polish_b_g_mode_select.mp4` | 12.7 s | Mode Select entered twice, staggering both times, then a card tap |
+
+**Two of A4's seven subjects were not reached, and neither is hidden:**
+
+- **(b) shop purchase.** No interactable CTA at **RP 6,139** — nothing on the catalog is
+  affordable or is already owned. The bail message carries the live balance so the claim is
+  checkable rather than asserted. **Its actual subject — RP counting DOWN in the top bar — is
+  proven instead by (a), frame by frame** (see A5).
+- **(e) hole complete.** A real hole-complete needs a hole played to the cup, which unloads
+  ShellScene under the take. Not attempted rather than faked.
+
+**THREE CLIPS WERE THROWN AWAY BECAUSE THE CAPTION DID NOT MATCH THE FRAME**, which is the
+whole reason for looking at every frame rather than trusting the log:
+
+| Take | Log said | The frame showed |
+|---|---|---|
+| 1 | `(a)` bailed "not enough RP" | the modal never got SP: my tap matched `ShopPlusButton` on another screen, so CONFIRM was correctly dark. Tap scoping fixed it |
+| 2 | `(f)` reached | **SELECT HOLE** — `CtaSilverButton` on an ENDED tournament navigates, it does not open signup. Re-cut with a caption describing what is actually there |
+| 2 | `(g)` reached | **PRIZES** — (g) ran straight after (d)'s real pull left the app there, which is also what caused an 850 s stall. Re-recorded alone |
+
+### A5 · Count-ups — the count-DOWN proven frame by frame
+
+`screenshots/a5_rp_countdown_frames236-257.png`, cropped from the level-up clip:
+
+| frames 204–232 | 236 | 239 | 242 | 245–257 |
+|---|---|---|---|---|
+| 6.153 (steady) | **6.148** | **6.143** | **6.140** | **6.139** (settled) |
+
+Intermediate values, decelerating, settling exactly on the final figure. That is
+`UiMotion.CountUp` running with `to < from` — the case `gps_polish`'s `points > from` guard
+would have snapped straight past, and the one §D3 exists to fix.
+
+### A14 · `check_report_counts.py` — run, with two adjudicated
+
+`truth()` only knew `game_polish_a`'s `pushes` shape, so it was extended with a `records` arm
+(dispatched on the key the file actually has, so a third shape fails loudly rather than being
+mis-read). Against `modals_invariants.json` it produces `[0, 1, 2, 7, 12, 14]` and flags two
+integers for a human verdict — which is the tool working as designed, not a defect:
+
+| Line | Number | Verdict |
+|---|---|---|
+| 277 | `D-8` | a deviation ID, not a count |
+| 308 | `164–191 KB` | a figure from `perf_run.log`, not from the modals JSON it was checked against |
+
+`check_report_citations.py`: **31 cited, 0 unresolved.**
+
 ## What is NOT done
 
 Nothing below has been started; none of it is claimed anywhere above.
@@ -320,10 +380,10 @@ Nothing below has been started; none of it is claimed anywhere above.
 |---|---|
 | **§D3** modal-local numbers: level-up stat bars `Tween`, level `Pop`, `MissionCard` counters | not started |
 | **A1** — mid-pop frames, timing and the per-modal table are DONE (`modals_invariants.json`, 14 captures). What is NOT done is driving each modal through its **real player trigger**: the probe opens them itself and records `realWidget: false` with a per-modal reason (a finished 1v1, a resolved tournament, holing out, a paid gacha pull). | partial |
-| **A3** rest parity 0 px | not measured |
-| **A4** videos (a)–(g) | not recorded |
-| **A5** count-up table + stills · **A6** shimmer frames · **A7** `…` frames · **A8** mid-stagger frames | not captured |
-| **A11** lint delta · **A14** `check_report_counts.py` | not run (`check_report_citations.py` IS run: 30 cited, 0 unresolved) |
+| **A3** rest parity 0 px | not measured as a pixel diff. What IS established: all 6 shimmer hosts are inactive at rest (`ShimmerHostTests` + the probe's shimmer mode), and every CanvasGroup this task adds is created at RUNTIME so no prefab or scene object gains one. |
+| **A5** — the count-DOWN is proven (above). The full per-site table of every §D3 site with a before/after still is NOT built. | partial |
+| **A6** shimmer cold frames per site · **A7** one `…` frame per newly wired CTA · **A8** one mid-stagger frame per site | not captured. The mechanisms are gated by tests and the probe (hosts placed and inactive, paint verdicts logged); what is missing is a still sheet per site. |
+| **A11** UI fidelity lint delta | not run, and arguably N/A: Rule 21's linter is driven by a per-element spec file generated from a Figma NODE, and this task references no node — it is motion over screens `design_consistency_audit` already signed off. Stated rather than skipped. |
 | **A13** perf | in-situ upper bound measured (above); the isolated ≤32 B/frame figure is still only pinned by the unit tests, not re-measured for `Pop(OutBack)`/`Tween` specifically |
 
 ## Deviations
