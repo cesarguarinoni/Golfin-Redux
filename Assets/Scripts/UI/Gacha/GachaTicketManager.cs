@@ -131,6 +131,11 @@ namespace GolfinRedux.UI.Gacha
             var entry = FindOrCreate(SaveDataHost.Instance!.Data, kind);
             entry.balance += amount;
             SaveDataHost.Instance.MarkDirty();
+            // game_polish_b §D3 — a grant is something the player earned or bought, so the top-bar
+            // pill counts up to it. SetFromServer is deliberately NOT armed here: it is also how a
+            // background refresh lands, and a balance that moved because another device pulled
+            // must not animate as though this player just did.
+            Golfin.UI.PersistentUIManager.Instance?.ArmTicketCountUp();
             OnTicketsChanged?.Invoke(kind, entry.balance);
             Debug.Log($"[GachaTicketManager] Added {amount} {kind} tickets → balance {entry.balance}");
         }

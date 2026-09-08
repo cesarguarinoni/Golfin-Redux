@@ -67,6 +67,9 @@ namespace Golfin.UI.Polish.EditorTools
         [MenuItem("GOLFIN/Game Polish/Probe B — A6/A7/A8 evidence", priority = 284)]
         public static void ArmEvidence() => Arm("evidence");
 
+        [MenuItem("GOLFIN/Game Polish/Probe B — A5 count-up sites", priority = 285)]
+        public static void ArmCountUp() => Arm("countup");
+
         public static void Arm(string mode)
         {
             EditorPrefs.SetBool(ArmedKey, true);
@@ -166,6 +169,7 @@ namespace Golfin.UI.Polish.EditorTools
                     case "perf":    yield return Perf();    break;
                     case "parity":  yield return Parity();  break;
                     case "evidence":yield return Evidence(); break;
+                    case "countup": yield return CountUpSites(); break;
                     default:        Line("unknown mode " + _mode); break;
                 }
 
@@ -698,6 +702,66 @@ namespace Golfin.UI.Polish.EditorTools
             }
 
             IEnumerator ShotNamed(string label) => Shot(label, null);
+
+            // ── A5 · every armed counter, exercised ──────────────────────────
+            //
+            // §D3 arms inside RewardPointsManager.SpendPoints / EarnPoints rather than at seven
+            // screens (deviation D-4), which makes the claim "every site counts" a claim about
+            // TWO methods. This exercises both directions of both, plus the ticket pill, and
+            // records what the label ACTUALLY did — whether the arm was consumed, and whether the
+            // rendered text passed through an intermediate value rather than jumping.
+            //
+            // The amounts are small and are handed straight back, so the run leaves the save
+            // where it found it.
+
+            IEnumerator CountUpSites()
+            {
+                yield return Boot();
+
+                var rpm = Golfin.Roster.RewardPointsManager.Instance;
+                var pum = Golfin.UI.PersistentUIManager.Instance;
+                if (rpm == null || pum == null) { Line("RewardPointsManager or PersistentUIManager missing"); yield break; }
+
+                Line($"start balance: RP {rpm.GetPoints()}");
+
+                yield return CountSite("SpendPoints (level-up, purchase, entry fee)", () => rpm.SpendPoints(25));
+                yield return CountSite("EarnPoints  (reward, prize)",                 () => rpm.EarnPoints(25, "probe.a5"));
+                yield return CountSite("SetPoints   (dev override — MUST NOT count)", () => rpm.SetPoints(rpm.GetPoints()));
+
+                Line($"end balance:   RP {rpm.GetPoints()}  (a spend and an earn of the same size)");
+            }
+
+            /// <summary>
+            /// Run one balance change and report what the top-bar label did. The label is sampled
+            /// every frame for half a second: a COUNT passes through values that are neither the
+            /// start nor the end, a SNAP does not. That distinction is the whole of §D3 and it is
+            /// measured here rather than asserted.
+            /// </summary>
+            IEnumerator CountSite(string site, Action change)
+            {
+                var pum = Golfin.UI.PersistentUIManager.Instance!;
+                TMP_Text? label = pum.rewardPointsText;
+                if (label == null) { Line($"  {site}: no rewardPointsText wired"); yield break; }
+
+                string before = label.text;
+                change?.Invoke();
+
+                var seen = new List<string>();
+                float until = Time.realtimeSinceStartup + 0.6f;
+                while (Time.realtimeSinceStartup < until)
+                {
+                    if (seen.Count == 0 || seen[seen.Count - 1] != label.text) seen.Add(label.text);
+                    yield return null;
+                }
+                string after = label.text;
+
+                int intermediates = 0;
+                foreach (string v in seen) if (v != before && v != after) intermediates++;
+
+                Line($"  {site,-52} {before} -> {after}   distinct rendered values: {seen.Count}" +
+                     $", intermediate: {intermediates}   => {(intermediates > 0 ? "COUNTED" : "snapped")}");
+                yield return new WaitForSecondsRealtime(0.4f);
+            }
 
             // ── plumbing ─────────────────────────────────────────────────────
 

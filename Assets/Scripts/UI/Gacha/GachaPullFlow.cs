@@ -341,6 +341,10 @@ namespace GolfinRedux.UI.Gacha
         {
             if (result == null) { done?.Invoke(); return; }
 
+            // §D3 — THIS is the ticket spend the player just made, as opposed to the same
+            // SetFromServer call arriving from a background refresh. Arming here rather than
+            // inside GachaTicketManager is what keeps those two apart.
+            Golfin.UI.PersistentUIManager.Instance?.ArmTicketCountUp();
             setTickets?.Invoke(result.TicketType, result.TicketBalance);
 
             if (result.Rp != null) foldRp?.Invoke(result.Rp);

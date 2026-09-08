@@ -143,8 +143,11 @@ there is a false alarm and passing is a lie. **Two are NOT mine and are still fr
 guard would fix them, and I have left them alone rather than widen this diff — flagged here so
 the next red run on them is recognised for what it is.
 
+**Re-run after A5: 2868 tests, 2865 passed, 0 failed, 3 skipped** — up from 2863, which is the
+5 new `RpArmingTests`.
+
 New suites: `UiMotionEaseTests` (13), `CountDownTests` (8), `ModalPopTests` (7),
-`ShimmerHostTests` (3), `GachaCarouselLoopTests` (13, the side-request).
+`ShimmerHostTests` (3), `RpArmingTests` (5), `GachaCarouselLoopTests` (13, the side-request).
 
 ### §D1.1 · Modals — done, scene diff 8 lines
 
@@ -346,17 +349,63 @@ whole reason for looking at every frame rather than trusting the log:
 | 2 | `(f)` reached | **SELECT HOLE** — `CtaSilverButton` on an ENDED tournament navigates, it does not open signup. Re-cut with a caption describing what is actually there |
 | 2 | `(g)` reached | **PRIZES** — (g) ran straight after (d)'s real pull left the app there, which is also what caused an 850 s stall. Re-recorded alone |
 
-### A5 · Count-ups — the count-DOWN proven frame by frame
+### A5 · Count-ups — the per-site table
 
-`screenshots/a5_rp_countdown_frames236-257.png`, cropped from the level-up clip:
+**§D3's sites are eight call sites, not seven screens** (deviation D-4: the arm lives on
+`RewardPointsManager.SpendPoints`/`EarnPoints`, because "the player caused it" is a property of
+that class and a list of screens goes stale on the ninth). Enumerated from source, mapped to
+the SPEC's names:
 
-| frames 204–232 | 236 | 239 | 242 | 245–257 |
+| §D3 names | Call site | Routes through | Counts? |
+|---|---|---|---|
+| level-up spend | `CharacterManager.cs:713` | `SpendPoints` | ✅ |
+| level-up spend (clubs) | `ClubLevelUpModalController.cs:578` | `SpendPoints` | ✅ |
+| shop purchase confirm | `ShopTransaction.cs:117` | `SpendPoints` | ✅ |
+| stamina purchase | `ShopTransaction.cs:377` | `SpendPoints` | ✅ |
+| gacha pull result (RP fold) | `ShopTransaction.cs:461` | `SpendPoints` | ✅ |
+| hole-complete rewards, mission claim | `RewardGranter.cs:57` | `EarnPoints` | ✅ |
+| tournament result (prize) | `RewardPointsServiceAdapter.cs:58` | `EarnPoints` | ✅ |
+| — (not in the SPEC's list) mode entry fee | `ModeCardController.cs:637` | `SpendPoints` | ✅ |
+| — server refresh | `ServerBalanceSync`, `ServerBalanceSyncBehaviour` | `ApplyServerBalance` | ❌ **by design** |
+| — dev tools | `RosterDebugTools`, `RewardPointsDebugPanel` | `EarnPointsLocalOnly` / `SetPoints` | ❌ **by design** |
+
+**BEFORE / AFTER, MEASURED IN ONE RUN** (`countup_run.log`). The probe changes the balance and
+samples the top-bar label every frame for 0.6 s. A COUNT passes through values that are neither
+the start nor the end; a SNAP does not — and the unarmed path in the same run is the "before":
+
+| path | change | distinct rendered values | intermediate | verdict |
 |---|---|---|---|---|
-| 6.153 (steady) | **6.148** | **6.143** | **6.140** | **6.139** (settled) |
+| `SpendPoints` (DOWN) | 6.139 → 6.114 | 15 | **14** | **COUNTED** |
+| `EarnPoints` (UP) | 6.114 → 6.139 | 15 | **14** | **COUNTED** |
+| `SetPoints` (dev override) | 6.139 → 6.139 | 1 | **0** | **snapped** — correctly unarmed |
 
-Intermediate values, decelerating, settling exactly on the final figure. That is
-`UiMotion.CountUp` running with `to < from` — the case `gps_polish`'s `points > from` guard
-would have snapped straight past, and the one §D3 exists to fix.
+The balance ends where it started. And the count-DOWN is also captured in real play, frame by
+frame, from the A4 level-up clip (`screenshots/a5_rp_countdown_frames236-257.png`): **6.153
+steady, then 6.148, 6.143, 6.140, settling on 6.139** — intermediate values, decelerating,
+landing exactly. That is `CountUp` with `to < from`, the case `gps_polish`'s `points > from`
+guard snapped straight past.
+
+**THE COMPLETENESS CLAIM IS NOW GATE-ENFORCED.** Arming on the manager is only sound while the
+set of mutators stays closed, so `RpArmingTests` pins it: five RP mutators, two that arm and
+three that deliberately do not. A sixth fails the suite — and the failure IS the question
+"should this one arm?" being asked when someone adds it, rather than a year later when a spend
+is noticed snapping.
+
+**A5 ALSO FOUND A MISSING §D3 SITE.** The SPEC asks for the top bar's ticket counter too
+("Ticket count in the top bar … same arm") and it was still snapping: `SetTickets` was a bare
+`.text` assignment. It counts now — but **not** by riding the RP arm, because the two do not
+have the same shape. RP has a clean seam (`SpendPoints`/`EarnPoints` are player-caused,
+`ApplyServerBalance` is a refresh), so arming inside the manager is exact. Tickets go DOWN only
+through `GachaTicketManager.SetFromServer`, which is ALSO how a background refresh lands —
+arming there would animate a balance that moved because another device pulled. So the ticket arm
+is set by the two paths that know a player acted: `AddTickets` (a grant) and `GachaPullFlow.ApplyOk`
+(the pull itself), immediately around the `SetFromServer` call. `RpArmingTests` pins that
+mutation surface too.
+
+**What is still NOT in this table:** §D3's modal-local numbers — the level-up modal's level
+`Pop`, its stat-bar `Tween`, and `MissionCard` counters. Those were never implemented and are
+listed in § What is NOT done. Clip (a)'s still shows the modal's *existing* `Lv 14/39` and the
+`+2` pending-SP marker, which are its own behaviour, not additions by this task.
 
 ### A14 · `check_report_counts.py` — run, with two adjudicated
 
@@ -491,7 +540,7 @@ Nothing below has been started; none of it is claimed anywhere above.
 |---|---|
 | **§D3** modal-local numbers: level-up stat bars `Tween`, level `Pop`, `MissionCard` counters | not started |
 | **A1** — mid-pop frames, timing and the per-modal table are DONE (`modals_invariants.json`, 14 captures). What is NOT done is driving each modal through its **real player trigger**: the probe opens them itself and records `realWidget: false` with a per-modal reason (a finished 1v1, a resolved tournament, holing out, a paid gacha pull). | partial |
-| **A5** — the count-DOWN is proven frame by frame and the level-up modal's own numbers are on clip (a). A per-site before/after still for every §D3 arm site is NOT built. | partial |
+| **A5** — the per-site table is built and measured (above). What remains is §D3's MODAL-LOCAL numbers: the level-up modal's level `Pop`, its stat-bar `Tween`, and `MissionCard` counters. Never implemented. | partial |
 | **A6** — the cold cycle is captured end to end for `missions.daily`, and the cache-skip for Rankings. Cold frames for the other five sites need a backend provider with an empty first response; not obtainable in this session. | partial |
 | **A7** — three CTAs captured. A `…` frame for every newly wired CTA is one CTA (the gacha pull), which IS the only one this task newly wired. | done for what was wired |
 | **A11** UI fidelity lint delta | not run, and arguably N/A: Rule 21's linter is driven by a per-element spec file generated from a Figma NODE, and this task references no node — it is motion over screens `design_consistency_audit` already signed off. Stated rather than skipped. |

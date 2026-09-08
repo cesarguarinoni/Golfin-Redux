@@ -579,10 +579,43 @@ namespace Golfin.UI
         /// <summary>
         /// Update the top-bar ticket counter. Subscribed to GachaTicketManager.OnTicketsChanged.
         /// </summary>
+        /// <summary>
+        /// game_polish_b §D3 — make the next ticket change COUNT rather than snap.
+        ///
+        /// <para>Tickets need their own arm rather than riding the RP one, and the reason is that
+        /// their mutation paths do not split the way RP's do. RP has a clean seam — SpendPoints
+        /// and EarnPoints are player-caused, ApplyServerBalance is a refresh — so arming inside
+        /// the manager is exact. Tickets go DOWN only through
+        /// <c>GachaTicketManager.SetFromServer</c>, which is ALSO how a background balance refresh
+        /// arrives; arming there would animate a number that moved because another device pulled.
+        /// So the arm is set by the two paths that know a player did something: the pull, and a
+        /// grant.</para>
+        /// </summary>
+        public void ArmTicketCountUp()
+        {
+            _ticketCountUpArmedUntil = Time.unscaledTime + RpCountUpArmSeconds;
+        }
+
+        private float _ticketCountUpArmedUntil = -1f;
+        private Coroutine _ticketCountUp;
+
         public void SetTickets(int count)
         {
-            if (ticketCountText != null)
-                ticketCountText.text = count.ToString("N0", TopBarNumberFormat);
+            if (ticketCountText == null) return;
+
+            bool armed = Time.unscaledTime <= _ticketCountUpArmedUntil;
+            if (armed &&
+                TryParseTopBarNumber(ticketCountText.text, out int from) &&
+                count != from)
+            {
+                _ticketCountUpArmedUntil = -1f;
+                Golfin.UI.Polish.UiMotion.Run(this, ref _ticketCountUp,
+                    Golfin.UI.Polish.UiMotion.CountUp(ticketCountText, from, count,
+                                                     culture: TopBarNumberFormat));
+                return;
+            }
+
+            ticketCountText.text = count.ToString("N0", TopBarNumberFormat);
         }
 
         /// <summary>

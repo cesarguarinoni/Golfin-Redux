@@ -1,0 +1,7 @@
+=== game_polish_b probe (countup) 2026-09-08 05:33:38Z ===
+tap the real StartButton
+start balance: RP 6139
+  SpendPoints (level-up, purchase, entry fee)          6.139 -> 6.114   distinct rendered values: 15, intermediate: 14   => COUNTED
+  EarnPoints  (reward, prize)                          6.114 -> 6.139   distinct rendered values: 15, intermediate: 14   => COUNTED
+  SetPoints   (dev override — MUST NOT count)          6.139 -> 6.139   distinct rendered values: 1, intermediate: 0   => snapped
+end balance:   RP 6139  (a spend and an earn of the same size)
