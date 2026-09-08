@@ -107,12 +107,20 @@ namespace Golfin.UI.Polish.EditorTools
             /// <summary>The quantity sampled, e.g. "localScale.x", "anchoredPosition.x", "glow.alpha".</summary>
             public string Quantity = "";
             public readonly List<float> Values = new List<float>();
+            /// <summary>Cumulative unscaled seconds at each sample — the SAME sum the routine
+            /// itself integrates, accumulated in the same frames. This is what makes two runs
+            /// comparable when the editor's frame clock is not bit-identical between them: the
+            /// comparison is "the same instant of the motion", not "the same frame index".</summary>
+            public readonly List<float> Times = new List<float>();
         }
 
         public sealed class Driver : MonoBehaviour
         {
             readonly List<Trace> _traces = new List<Trace>();
             string _side = "old";
+            /// <summary>Written into the JSON. compare_retrofit.py refuses a run where this is
+            /// false rather than reporting deltas that are really clock jitter.</summary>
+            bool _clockSettled;
 
             void Start()
             {
@@ -122,13 +130,69 @@ namespace Golfin.UI.Polish.EditorTools
                 StartCoroutine(Run());
             }
 
+            /// <summary>
+            /// THE CLOCK GOES BACK NO MATTER WHAT. Time.captureDeltaTime is global and survives
+            /// this component: a run that throws half way through — or is stopped by hand — used
+            /// to leave the Editor pinned to a synthetic 1/60 with nothing on screen saying so,
+            /// which presents as an Editor that has hung. OnDisable and OnDestroy both fire on a
+            /// play-mode exit however it happens, so this is the one place it can be guaranteed.
+            /// </summary>
+            void OnDisable() => Time.captureDeltaTime = 0f;
+            void OnDestroy() => Time.captureDeltaTime = 0f;
+
+            /// <summary>
+            /// A stand-in host, created INACTIVE so AddComponent runs no Awake and no OnEnable.
+            ///
+            /// <para>This matters more than it looks. These are real shipping controllers: the pill
+            /// starts a network fetch in OnEnable, the versus modal builds itself a Canvas and a
+            /// GraphicRaycaster in Awake, and the gacha modal is a ModalController whose Awake
+            /// reaches for a scrim. None of that is needed to step a private routine by reflection,
+            /// and all of it is running inside a live, booted session that belongs to the player —
+            /// so the recorder does none of it. Every routine here is driven by hand, never through
+            /// UiMotion.Run, so an inactive host costs nothing.</para>
+            /// </summary>
+            static T NewHost<T>(string name, out GameObject go) where T : Component
+            {
+                go = new GameObject(name);
+                go.SetActive(false);
+                return go.AddComponent<T>();
+            }
+
             IEnumerator Run()
             {
                 Debug.Log($"[RetrofitParity] side={_side} dt={Dt:F6} (captureDeltaTime)");
-                // One frame so captureDeltaTime is what unscaledDeltaTime reports before the
-                // first sample — the setter takes effect on the NEXT frame boundary.
-                yield return null;
-                Debug.Log($"[RetrofitParity] unscaledDeltaTime now {Time.unscaledDeltaTime:F6}");
+                // WARM UP UNTIL THE CLOCK IS ACTUALLY FIXED, and it is worth saying why rather
+                // than just yielding a round number of frames. The first recorded run yielded ONE
+                // frame here and the very first trace (versus.popin) came back with 7 samples for
+                // a 0.20 s tween — dt ≈ 0.029 — while every later trace came back on an exact
+                // 1/60. captureDeltaTime takes effect at a frame boundary and the frames right
+                // after play-mode entry are still catching up, so a fixed frame count is a race:
+                // it would silently shorten whichever trace happened to run first, and a parity
+                // gate that compares frame k of one run against frame k of another cannot afford
+                // that. So: wait for the clock to READ 1/60 five frames running.
+                //
+                // AND RE-ASSERTED EVERY FRAME, which the first NEW run proved is necessary. That
+                // run reported 0.016070 — the display's real frame time, not 1/60 — after 600
+                // warm-up frames, while the OLD run had settled immediately. The difference is how
+                // far the app had booted: something downstream of the login/Home path (frame
+                // pacing) puts captureDeltaTime back to 0, and a value set once in Start() does not
+                // survive it. Setting it every frame costs one float store and cannot be undone by
+                // anything that runs before the next sample.
+                int settled = 0, spun = 0;
+                while (settled < 5 && spun++ < 600)
+                {
+                    Time.captureDeltaTime = Dt;
+                    yield return null;
+                    // An ABSOLUTE epsilon, not Mathf.Approximately: Approximately' s relative
+                    // tolerance around 0.0167 is ~1e-8, which no measured frame clock will ever hit.
+                    settled = Mathf.Abs(Time.unscaledDeltaTime - Dt) <= 1e-5f ? settled + 1 : 0;
+                }
+                _clockSettled = settled >= 5;
+                if (!_clockSettled)
+                    Debug.LogError($"[RetrofitParity] clock never settled on {Dt:F6} " +
+                                   $"(last {Time.unscaledDeltaTime:F6}) — traces are NOT comparable");
+                else
+                    Debug.Log($"[RetrofitParity] clock settled at {Time.unscaledDeltaTime:F6} after {spun} frames");
 
                 yield return Versus();
                 yield return PillSlide();
@@ -152,15 +216,34 @@ namespace Golfin.UI.Polish.EditorTools
             {
                 _traces.Add(t);
                 int n = 0;
-                while (routine.MoveNext())
+                float elapsed = 0f;
+                var stack = new Stack<IEnumerator>();
+                stack.Push(routine);
+
+                // A MINI COROUTINE SCHEDULER, and it is not optional. The retrofitted steps are
+                // `yield return UiMotion.Tween(...)` — a coroutine yielding another IEnumerator,
+                // which Unity's scheduler drives to completion before resuming the outer one. A
+                // plain MoveNext() loop does not: it receives the inner enumerator as `Current`
+                // and walks straight past it. The first NEW run recorded gacha.enter and
+                // gacha.shake as TWO frames each for exactly this reason — a trace that would have
+                // compared as a catastrophic regression when nothing was wrong with the motion.
+                while (stack.Count > 0)
                 {
+                    IEnumerator top = stack.Peek();
+                    if (!top.MoveNext()) { stack.Pop(); continue; }
+                    if (top.Current is IEnumerator nested) { stack.Push(nested); continue; }
+
+                    elapsed += Time.unscaledDeltaTime;
+                    t.Times.Add(elapsed);
                     t.Values.Add(read());
                     if (++n > cap) { Debug.LogError($"[RetrofitParity] {t.Name} did not terminate"); break; }
+                    Time.captureDeltaTime = Dt;
                     yield return null;
                 }
+                t.Times.Add(elapsed);
                 t.Values.Add(read());   // the settle
                 Debug.Log($"[RetrofitParity] {t.Name} ({t.Source}) frames={t.Values.Count} " +
-                          $"first={t.Values[0]:F5} last={t.Values[t.Values.Count - 1]:F5}");
+                          $"span={elapsed:F4}s first={t.Values[0]:F5} last={t.Values[t.Values.Count - 1]:F5}");
             }
 
             static GameObject Temp(string name, out RectTransform rt)
@@ -183,8 +266,7 @@ namespace Golfin.UI.Polish.EditorTools
                 var t = new Trace { Name = "versus.popin", Quantity = "localScale.x" };
                 GameObject panel = Temp("VersusPanelStandIn", out RectTransform rect);
 
-                var hostGo = new GameObject("VersusStandIn");
-                var host   = hostGo.AddComponent<Golfin.UI.Matchmaking.VersusResultModalController>();
+                var host = NewHost<Golfin.UI.Matchmaking.VersusResultModalController>("VersusStandIn", out GameObject hostGo);
                 host.modalPanel = panel;
 
                 IEnumerator? legacy = Legacy(host.GetType(), host, "PopInScaleRoutine");
@@ -208,8 +290,7 @@ namespace Golfin.UI.Polish.EditorTools
                 GameObject pill = Temp("PillStandIn", out RectTransform rect);
                 rect.sizeDelta = new Vector2(549f, 76f);
 
-                var hostGo = new GameObject("PillStandIn.Host");
-                var host   = hostGo.AddComponent<Golfin.UI.Home.DailyMissionPillController>();
+                var host = NewHost<Golfin.UI.Home.DailyMissionPillController>("PillStandIn.Host", out GameObject hostGo);
                 Type ht = host.GetType();
                 ht.GetField("pillRect", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(host, rect);
 
@@ -239,8 +320,7 @@ namespace Golfin.UI.Polish.EditorTools
                 var go = new GameObject("GlowStandIn", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
                 var img = go.GetComponent<Image>();
 
-                var hostGo = new GameObject("GlowStandIn.Host");
-                var host   = hostGo.AddComponent<Golfin.UI.Home.DailyMissionPillController>();
+                var host = NewHost<Golfin.UI.Home.DailyMissionPillController>("GlowStandIn.Host", out GameObject hostGo);
                 Type ht = host.GetType();
                 FieldInfo? glowF = ht.GetField("glowImage", BindingFlags.Instance | BindingFlags.NonPublic);
                 FieldInfo? stateF = ht.GetField("_state", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -254,14 +334,23 @@ namespace Golfin.UI.Polish.EditorTools
                                   && ht.GetField("_glowPhase", BindingFlags.Instance | BindingFlags.NonPublic) != null;
                 if (legacyGlow)
                 {
+                    // The host is INACTIVE (see NewHost), so Unity never calls Update on it and
+                    // the only advance is this branch's own reflected call. The first recorded OLD
+                    // trace was taken with an ACTIVE host and therefore advanced the phase twice a
+                    // frame — the glow ran at double speed and the comparison reported a 0.4 alpha
+                    // regression in a retrofit that had not touched the curve.
                     glowF!.SetValue(host, img);
                     stateF!.SetValue(host, Enum.ToObject(ht.GetNestedType("PillState", BindingFlags.NonPublic)!, 2));
                     t.Source = "legacy:DailyMissionPillController.Update() sine";
                     _traces.Add(t);
+                    float el2 = 0f;
                     for (int i = 0; i < frames; i++)
                     {
                         update!.Invoke(host, null);
+                        el2 += Time.unscaledDeltaTime;
+                        t.Times.Add(el2);
                         t.Values.Add(img.color.a);
+                        Time.captureDeltaTime = Dt;
                         yield return null;
                     }
                     Debug.Log($"[RetrofitParity] {t.Name} ({t.Source}) frames={t.Values.Count}");
@@ -270,7 +359,7 @@ namespace Golfin.UI.Polish.EditorTools
                 {
                     var cg = go.AddComponent<CanvasGroup>();
                     t.Source = "uimotion:Pulse(glowGroup,glowMin,glowMax,1,glowPeriod)";
-                    yield return Sample(t, UiMotion.Pulse(cg, min, max, 1, period), () => cg.alpha, frames + 10);
+                    yield return Sample(t, UiMotion.Pulse(cg, min, max, 1, period), () => cg.alpha, frames + 40);
                 }
                 Destroy(hostGo); Destroy(go);
             }
@@ -279,27 +368,21 @@ namespace Golfin.UI.Polish.EditorTools
             IEnumerator GachaEnter()
             {
                 var t = new Trace { Name = "gacha.enter", Quantity = "bagScale.x" };
-                var hostGo = new GameObject("GachaStandIn");
-                var host   = hostGo.AddComponent<GolfinRedux.UI.Gacha.GachaRevealModalController>();
+                var host = NewHost<GolfinRedux.UI.Gacha.GachaRevealModalController>("GachaStandIn", out GameObject hostGo);
                 Type ht = host.GetType();
 
                 GameObject bag = Temp("BagStandIn", out RectTransform bagRect);
                 ht.GetField("_bag", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(host, bagRect);
                 float dur = (float)ht.GetField("_enterDuration", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(host)!;
 
-                IEnumerator? legacy = Legacy(ht, host, "StepEnter");
-                if (legacy != null)
-                {
-                    t.Source = "legacy:GachaRevealModalController.StepEnter";
-                    yield return Sample(t, legacy, () => bagRect.localScale.x);
-                }
-                else
-                {
-                    t.Source = "uimotion:Tween(0.6,1,_enterDuration,SetBagScale,Ease.OutBack)";
-                    yield return Sample(t, UiMotion.Tween(0.6f, 1f, dur,
-                                        s => bagRect.localScale = new Vector3(s, s, 1f), Ease.OutBack),
-                                        () => bagRect.localScale.x);
-                }
+                // BOTH sides drive the REAL StepEnter — the retrofit changed the routine's body,
+                // not its name, so there is no need to stand in for it and every reason not to:
+                // one call path measured twice is a strictly better parity trace than two paths
+                // measured once each. `side` in the JSON is what tells the runs apart.
+                _ = dur;
+                IEnumerator step = Legacy(ht, host, "StepEnter")!;
+                t.Source = "real:GachaRevealModalController.StepEnter";
+                yield return Sample(t, step, () => bagRect.localScale.x);
                 Destroy(bag); Destroy(hostGo);
             }
 
@@ -312,8 +395,7 @@ namespace Golfin.UI.Polish.EditorTools
             IEnumerator GachaPop()
             {
                 var t = new Trace { Name = "gacha.pop.curve", Quantity = "easeOutBack(k)" };
-                var hostGo = new GameObject("GachaCurveStandIn");
-                var host   = hostGo.AddComponent<GolfinRedux.UI.Gacha.GachaRevealModalController>();
+                var host = NewHost<GolfinRedux.UI.Gacha.GachaRevealModalController>("GachaCurveStandIn", out GameObject hostGo);
                 Type ht = host.GetType();
                 float dur = (float)ht.GetField("_popDuration", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(host)!;
 
@@ -327,9 +409,12 @@ namespace Golfin.UI.Polish.EditorTools
                 while (el < dur)
                 {
                     el += Time.unscaledDeltaTime;
+                    t.Times.Add(el);
                     t.Values.Add(ease(Mathf.Clamp01(el / dur)));
+                    Time.captureDeltaTime = Dt;
                     yield return null;
                 }
+                t.Times.Add(el);
                 t.Values.Add(ease(1f));
                 Debug.Log($"[RetrofitParity] {t.Name} ({t.Source}) frames={t.Values.Count}");
                 Destroy(hostGo);
@@ -339,8 +424,7 @@ namespace Golfin.UI.Polish.EditorTools
             IEnumerator GachaShake()
             {
                 var t = new Trace { Name = "gacha.shake", Quantity = "bagPivot.localEulerAngles.z" };
-                var hostGo = new GameObject("GachaShakeStandIn");
-                var host   = hostGo.AddComponent<GolfinRedux.UI.Gacha.GachaRevealModalController>();
+                var host = NewHost<GolfinRedux.UI.Gacha.GachaRevealModalController>("GachaShakeStandIn", out GameObject hostGo);
                 Type ht = host.GetType();
 
                 GameObject pivot = Temp("PivotStandIn", out RectTransform pivotRect);
@@ -356,19 +440,9 @@ namespace Golfin.UI.Polish.EditorTools
                 // RarityFxTier is a top-level class in GolfinRedux.UI.Gacha, not a nested type.
                 object tier = Activator.CreateInstance(typeof(GolfinRedux.UI.Gacha.RarityFxTier))!;
 
-                IEnumerator? legacy = Legacy(ht, host, "StepShake", tier, duration, Color.white);
-                if (legacy != null)
-                {
-                    t.Source = "legacy:GachaRevealModalController.StepShake";
-                    yield return Sample(t, legacy, read);
-                }
-                else
-                {
-                    t.Source = "uimotion-driven:GachaRevealModalController.StepShake";
-                    MethodInfo m = ht.GetMethod("StepShakeFor", BindingFlags.Instance | BindingFlags.NonPublic)
-                                   ?? ht.GetMethod("StepShake", BindingFlags.Instance | BindingFlags.NonPublic)!;
-                    yield return Sample(t, (IEnumerator)m.Invoke(host, new object[] { tier, duration, Color.white })!, read);
-                }
+                // As gacha.enter: the real StepShake, both sides.
+                t.Source = "real:GachaRevealModalController.StepShake";
+                yield return Sample(t, Legacy(ht, host, "StepShake", tier, duration, Color.white)!, read);
                 Destroy(pivot); Destroy(hostGo);
             }
 
@@ -383,6 +457,7 @@ namespace Golfin.UI.Polish.EditorTools
                 sb.Append($"  \"recordedUtc\": \"{DateTime.UtcNow:u}\",\n");
                 sb.Append($"  \"headSha\": \"{Head()}\",\n");
                 sb.Append($"  \"dt\": {Dt.ToString("R", CultureInfo.InvariantCulture)},\n");
+                sb.Append($"  \"clockSettled\": {(_clockSettled ? "true" : "false")},\n");
                 sb.Append("  \"traces\": [\n");
                 for (int i = 0; i < _traces.Count; i++)
                 {
@@ -394,6 +469,12 @@ namespace Golfin.UI.Polish.EditorTools
                     {
                         if (k > 0) sb.Append(", ");
                         sb.Append(t.Values[k].ToString("F6", CultureInfo.InvariantCulture));
+                    }
+                    sb.Append("], \"times\": [");
+                    for (int k = 0; k < t.Times.Count; k++)
+                    {
+                        if (k > 0) sb.Append(", ");
+                        sb.Append(t.Times[k].ToString("F6", CultureInfo.InvariantCulture));
                     }
                     sb.Append("] }").Append(i < _traces.Count - 1 ? ",\n" : "\n");
                 }

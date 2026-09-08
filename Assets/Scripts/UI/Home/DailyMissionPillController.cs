@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using Golfin.Gameplay.Missions;
 using Golfin.UI.Common;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -74,7 +75,18 @@ namespace Golfin.UI.Home
         private Coroutine _motion;
         private Coroutine _fetch;
         private float _rolloverTimer;
-        private float _glowPhase;
+
+        // ── game_polish_b §D2 — the glow's CanvasGroup ───────────────────────────
+        //
+        // Added at RUNTIME, never authored, for the reason every group in this track is:
+        // a prefab that gains a component is a prefab whose rest state has to be re-proven,
+        // and an alpha-1 CanvasGroup cannot move a pixel either way (A3).
+        //
+        // The glow's own Image.color.a is pinned to 1 when the group is created and the group
+        // carries the [glowMin, glowMax] sweep instead, so the EFFECTIVE alpha the player sees
+        // is the same product it always was — see SetGlowAlpha.
+        private CanvasGroup _glowGroup;
+        private Coroutine _glowMotion;
 
         /// <summary>
         /// The UTC date whose pill has ALREADY slid in once, this session.
@@ -283,7 +295,7 @@ namespace Golfin.UI.Home
             StopMotion();
             _state = PillState.Hidden;
             if (pillRect != null) pillRect.anchoredPosition = new Vector2(OffscreenX, ComputeTargetY());
-            SetGlowAlpha(0f);
+            StopGlow();
         }
 
         private void Enter(bool animate)
@@ -295,73 +307,70 @@ namespace Golfin.UI.Home
             {
                 if (pillRect != null) pillRect.anchoredPosition = new Vector2(restX, ComputeTargetY());
                 _state = PillState.Shown;
-                _glowPhase = 0f;
+                StartGlow();
                 return;
             }
-            _motion = StartCoroutine(SlideRoutine(OffscreenX, restX, enterDuration, easeOut: true, PillState.Shown));
+            Slide(OffscreenX, restX, enterDuration, easeOut: true, PillState.Shown);
         }
 
         private void Leave(bool animate)
         {
             StopMotion();
             _state = PillState.Leaving;
-            SetGlowAlpha(0f);   // the glow stops the moment the pill starts leaving
+            StopGlow();         // the glow stops the moment the pill starts leaving
             if (!animate || !isActiveAndEnabled)
             {
                 SetHiddenInstant();
                 return;
             }
             float from = pillRect != null ? pillRect.anchoredPosition.x : restX;
-            _motion = StartCoroutine(SlideRoutine(from, OffscreenX, leaveDuration, easeOut: false, PillState.Hidden));
+            Slide(from, OffscreenX, leaveDuration, easeOut: false, PillState.Hidden);
         }
 
         /// <summary>
-        /// The eased slide, in the shape <c>ModeCarouselController.LerpToTargetLayout</c> uses —
-        /// unscaled time, cubic ease, settle exactly on target. No tween library in this project,
-        /// and no per-frame allocation: <c>yield return null</c> and a struct assignment.
+        /// The eased slide. game_polish_b §D2 RETROFIT — the hand-rolled loop that used to live
+        /// here is now <see cref="UiMotion.Slide"/>, which runs the identical curve from the
+        /// identical inputs: unscaled time, `1 - (1-t)^3` out / `t^3` in selected by the same
+        /// <paramref name="easeOut"/> flag, settling exactly on <paramref name="toX"/>.
+        ///
+        /// <para>The one behavioural difference, and it is deliberate: <see cref="UiMotion.Slide"/>
+        /// captures Y ONCE at the start, where the old loop re-read <see cref="ComputeTargetY"/>
+        /// every frame. Y is a function of the maintenance-notice panel's rect, which does not
+        /// move during a 0.45 s slide — the notice appearing is what CAUSES a re-place, and
+        /// <see cref="RefreshPlacement"/> already runs immediately before this. Re-reading it per
+        /// frame was defensive, not load-bearing; the parity trace (pill.slide.enter) is identical
+        /// to 0.5 px either way. Flagged as deviation D-3.</para>
         /// </summary>
-        private IEnumerator SlideRoutine(float fromX, float toX, float duration, bool easeOut, PillState settleAs)
+        private void Slide(float fromX, float toX, float duration, bool easeOut, PillState settleAs)
         {
-            if (pillRect == null) yield break;
+            if (pillRect == null) return;
 
-            _glowPhase = 0f;
             pillRect.anchoredPosition = new Vector2(fromX, ComputeTargetY());
 
-            float elapsed = 0f;
-            while (elapsed < duration)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                float t = Mathf.Clamp01(duration <= 0f ? 1f : elapsed / duration);
-                float e = easeOut
-                    ? 1f - (1f - t) * (1f - t) * (1f - t)   // cubic ease-out
-                    : t * t * t;                            // cubic ease-in
-                pillRect.anchoredPosition = new Vector2(Mathf.Lerp(fromX, toX, e), ComputeTargetY());
-                yield return null;
-            }
-
-            pillRect.anchoredPosition = new Vector2(toX, ComputeTargetY());
-            _state = settleAs;
-            _motion = null;
-            if (settleAs != PillState.Shown) SetGlowAlpha(0f);
+            UiMotion.Run(this, ref _motion, UiMotion.Then(
+                UiMotion.Slide(pillRect, fromX, toX, duration, easeOut),
+                () =>
+                {
+                    _state  = settleAs;
+                    _motion = null;
+                    if (settleAs == PillState.Shown) StartGlow();
+                    else                             StopGlow();
+                }));
         }
 
         private void StopMotion()
         {
-            if (_motion != null) { StopCoroutine(_motion); _motion = null; }
+            UiMotion.Stop(this, ref _motion);
         }
 
         // ── Per-frame: the glow, and the midnight check ─────────────────────────
 
         private void Update()
         {
-            // Glow — only while settled, so the slide is never fighting a pulse. Sin + a struct
-            // assignment: nothing here allocates, which is what FramePacingBootstrap needs.
-            if (_state == PillState.Shown && glowPeriod > 0f)
-            {
-                _glowPhase += Time.unscaledDeltaTime;
-                float s = 0.5f + 0.5f * Mathf.Sin(_glowPhase * (2f * Mathf.PI / glowPeriod) - Mathf.PI * 0.5f);
-                SetGlowAlpha(Mathf.Lerp(glowMin, glowMax, s));
-            }
+            // §D2 — the glow is UiMotion.Pulse now, armed on settle (see StartGlow), so this
+            // Update no longer runs a tween at all. The curve is unchanged: Pulse's weight is
+            // `0.5 - 0.5*cos(2*pi*phase)`, and the sine this replaced was
+            // `0.5 + 0.5*sin(x - pi/2)` — the same function written the other way round.
 
             // Rollover — one comparison a second, not one a frame. `Date` is the seam a test
             // writes to simulate midnight without touching the device clock.
@@ -404,6 +413,75 @@ namespace Golfin.UI.Home
             _fetch = StartCoroutine(FetchThenPresent(withEnterDelay: false));
         }
 
+        /// <summary>
+        /// §D2 — arm the glow: an endless sequence of <see cref="UiMotion.Pulse"/> sweeps for as
+        /// long as the pill is shown.
+        ///
+        /// <para>WHY A LOOPING ROUTINE AND NOT A RE-ARM FROM Pulse's TAIL. The first version of
+        /// this was <c>UiMotion.Then(Pulse(...), StartGlow)</c> — re-arm yourself when the sweep
+        /// ends — and it took the Editor down twice with
+        /// <c>Scripting::RaiseStackOverflowException</c>. The recursion is not obvious, so it is
+        /// worth spelling out:</para>
+        ///
+        /// <para><c>Then(inner, after)</c> runs <c>after</c> in TWO places — at the tail of the
+        /// routine, and again inside the finalizer it registers, because an interrupted sequence
+        /// still owes its tail. Re-arming from <c>after</c> therefore leaves a fresh entry on the
+        /// handle whose OWN finalizer also re-arms. The next <see cref="UiMotion.Run"/> on that
+        /// handle settles the previous entry, the settle invokes that finalizer, the finalizer
+        /// re-arms, the re-arm settles the one before it — and the chain never reaches a tween that
+        /// does not re-arm. A self-re-arming <c>Then</c> tail is unbounded by construction.</para>
+        ///
+        /// <para>Yielding fresh sweeps from ONE long-lived coroutine has no finalizer that restarts
+        /// anything, so there is no chain to run away — and it keeps the property that made
+        /// re-arming attractive in the first place (below).</para>
+        ///
+        /// <para>Float precision: every sweep starts its own <c>elapsed</c> at zero, so the phase
+        /// cannot drift the way a single <c>elapsed % period</c> running for hours would.</para>
+        /// </summary>
+        private void StartGlow()
+        {
+            if (glowImage == null || glowPeriod <= 0f) return;
+            EnsureGlowGroup();
+            if (_glowGroup == null) return;
+            UiMotion.Run(this, ref _glowMotion, GlowLoop());
+        }
+
+        /// <summary>One sweep after another, forever. Stopped by <see cref="StopGlow"/>, and by
+        /// UiMotionRunner's disable hook when the screen goes away.</summary>
+        private IEnumerator GlowLoop()
+        {
+            while (true)
+            {
+                IEnumerator sweep = UiMotion.Pulse(_glowGroup, glowMin, glowMax, 1, glowPeriod);
+                while (sweep.MoveNext()) yield return sweep.Current;
+            }
+        }
+
+        private void StopGlow()
+        {
+            UiMotion.Stop(this, ref _glowMotion);
+            if (_glowGroup != null) _glowGroup.alpha = 0f;
+            else                    SetGlowAlpha(0f);
+        }
+
+        /// <summary>
+        /// The glow's CanvasGroup, created on first use. Creating it PINS the Image's own alpha
+        /// to 1 and hands the sweep to the group, so the product the player sees — colour alpha
+        /// times group alpha — is the same [glowMin, glowMax] it always was, and the prefab is
+        /// untouched (A3).
+        /// </summary>
+        private void EnsureGlowGroup()
+        {
+            if (_glowGroup != null || glowImage == null) return;
+            _glowGroup = glowImage.GetComponent<CanvasGroup>();
+            if (_glowGroup == null) _glowGroup = glowImage.gameObject.AddComponent<CanvasGroup>();
+            _glowGroup.alpha = 0f;
+            SetGlowAlpha(1f);
+        }
+
+        /// <summary>Writes the Image's own colour alpha. After <see cref="EnsureGlowGroup"/> this
+        /// is pinned at 1 and the group carries the sweep; before it — and on the hide paths that
+        /// run before the pill has ever been shown — it is still the only alpha there is.</summary>
         private void SetGlowAlpha(float a)
         {
             if (glowImage == null) return;

@@ -11,9 +11,21 @@
 // D4 pattern  : modal is a ModalController subclass, not a ScreenManager screen
 //
 // Stage 2: receives List<HoleReward> from VersusResultHandler and passes to screen controller.
-// Stage 3: scale+fade pop-in on ShowResult() — subtle 0.9→1.0 scale over 0.2s ease-out,
-//          layered on ModalController's existing CanvasGroup fade. Implemented via coroutine
-//          (project standard — no DOTween dependency in this project).
+// Stage 3: scale+fade pop-in on ShowResult() — subtle 0.9→1.0 scale over 0.2s ease-out.
+//
+// game_polish_b §D2 RETROFIT. That pop is no longer this file's: `animateShow` is set on
+// the scene object and ModalController.Show() runs UiMotion.Pop, which is the SAME curve —
+// 0.9 → 1.0 over 0.20 s on `1 - (1-t)^3` — from the same constants (UiMotion.PopDur 0.20,
+// fromScale 0.9). Proven frame by frame rather than asserted: RetrofitParityRecorder logs
+// modalPanel.localScale.x on a fixed 1/60 clock before and after, and the two logs agree to
+// within the §D2 gate of 0.005 per frame. See Docs/Diagnostics/_capture/game_polish_b_retrofit_*.json.
+//
+// What DID change, and it is the one thing to look at: the alpha. The old pop ran the scale
+// coroutine ALONGSIDE ModalController's legacy FadeIn, which was a LINEAR alpha over 0.2 s;
+// UiMotion.Pop drives the alpha on the same ease-out cubic as the scale. The panel therefore
+// reaches full opacity slightly sooner. The §D2 gate is on scale, this is inside a 0.2 s
+// window, and one curve for both properties is the point of the retrofit — flagged in the
+// report as deviation D-2 rather than left for a reviewer to find.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System.Collections;
@@ -41,11 +53,6 @@ namespace Golfin.UI.Matchmaking
         [Header("Matchmaking modal reference (for NEW MATCH / D3 re-queue)")]
         [SerializeField] private MatchmakingModalController _matchmakingModal = null!;
 
-        // ── Stage 3: pop-in tween state ───────────────────────────────────────
-        private Coroutine? _popInCoroutine;
-        private const float PopInDuration   = 0.20f;  // seconds — within 0.15–0.25 spec
-        private const float PopInStartScale = 0.9f;   // 90% → 100%
-
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         protected override void Awake()
@@ -68,7 +75,7 @@ namespace Golfin.UI.Matchmaking
         /// Populate the result screen from live MatchContext + LeaderboardManager, then show.
         /// Called by VersusResultHandler after the banner delay.
         /// Stage 2: rewardList comes from modes.csv via ModesDatabaseCSV.
-        /// Stage 3: triggers the scale+fade pop-in on modalPanel after base.Show().
+        /// Stage 3 / §D2: base.Show() pops the panel in — this method no longer owns any tween.
         /// </summary>
         public void ShowResult(
             GameSession.MatchOutcome outcome,
@@ -93,23 +100,11 @@ namespace Golfin.UI.Matchmaking
             if (PersistentUIManager.Instance != null)
                 PersistentUIManager.Instance.ShowBars();
 
+            // §D2 — the pop lives in ModalController now, behind `animateShow`, and it is
+            // interruption-safe there in a way this file's coroutine never was: a re-open
+            // during the previous tween SETTLES the old one on Vector3.one instead of merely
+            // stopping it, so the panel can no longer be stranded at 0.94.
             base.Show();
-
-            // Stage 3: kick off scale pop-in on the modalPanel RectTransform.
-            // base.Show() already starts the CanvasGroup fade-in; we add a complementary
-            // scale 0.9→1.0 that is independent (different property) so they don't fight.
-            // Kill any prior coroutine (e.g. re-open before previous tween completes).
-            if (modalPanel != null)
-            {
-                if (_popInCoroutine != null)
-                {
-                    StopCoroutine(_popInCoroutine);
-                    _popInCoroutine = null;
-                    // Ensure panel is at final scale even if interrupted
-                    modalPanel.transform.localScale = Vector3.one;
-                }
-                _popInCoroutine = StartCoroutine(PopInScaleRoutine());
-            }
         }
 
         public override void Show()
@@ -117,52 +112,8 @@ namespace Golfin.UI.Matchmaking
             // No-op: callers must use ShowResult() so live data is bound first.
         }
 
-        public override void Hide()
-        {
-            // Kill any running pop-in before hiding so the next open starts fresh.
-            if (_popInCoroutine != null)
-            {
-                StopCoroutine(_popInCoroutine);
-                _popInCoroutine = null;
-                // Ensure modalPanel is at final scale even if hidden mid-tween.
-                if (modalPanel != null)
-                    modalPanel.transform.localScale = Vector3.one;
-            }
-            base.Hide();
-        }
-
-        // ── Stage 3: Pop-in scale coroutine ──────────────────────────────────
-
-        /// <summary>
-        /// Animate modalPanel.localScale from PopInStartScale (0.9) → 1.0 over PopInDuration (0.2s)
-        /// using an ease-out cubic curve. Runs concurrently with ModalController's CanvasGroup fade-in.
-        /// Sets final scale to Vector3.one on completion so re-open is always clean.
-        /// </summary>
-        private IEnumerator PopInScaleRoutine()
-        {
-            if (modalPanel == null) yield break;
-
-            var rt = modalPanel.transform;
-            // Start at 90% scale
-            rt.localScale = new Vector3(PopInStartScale, PopInStartScale, 1f);
-
-            float elapsed = 0f;
-            while (elapsed < PopInDuration)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                float t = Mathf.Clamp01(elapsed / PopInDuration);
-                // Ease-out cubic: t' = 1 - (1-t)^3
-                float tEased = 1f - Mathf.Pow(1f - t, 3f);
-                float s = Mathf.Lerp(PopInStartScale, 1f, tEased);
-                rt.localScale = new Vector3(s, s, 1f);
-                yield return null;
-            }
-
-            // Guarantee final state even if a frame slipped
-            rt.localScale = Vector3.one;
-            _popInCoroutine = null;
-            Debug.Log("[VersusResultModalController] Pop-in scale complete.");
-        }
+        // Hide() is not overridden any more: §D2 removed the pop-in coroutine this override
+        // existed to stop, and ModalController.Hide already settles the Unpop on Vector3.one.
 
         // ── NEW MATCH (D3) ────────────────────────────────────────────────────
 

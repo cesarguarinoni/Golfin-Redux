@@ -21,6 +21,7 @@ using Golfin.Gameplay.UI.Quality;
 using Golfin.Inventory;
 using Golfin.Roster;
 using Golfin.UI.Modals;
+using Golfin.UI.Polish;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -479,14 +480,12 @@ namespace GolfinRedux.UI.Gacha
             _bagHasEntered = true;
             SfxBus.Play(SfxId.GachaBagDrop);
 
-            float t = 0f;
-            while (t < _enterDuration)
-            {
-                t += Time.unscaledDeltaTime;
-                float s = Mathf.LerpUnclamped(0.6f, 1f, EaseOutBack(Mathf.Clamp01(t / _enterDuration)));
-                SetBagScale(s, s);
-                yield return null;
-            }
+            // game_polish_b §D2 RETROFIT — the loop is UiMotion.Tween now, on the new
+            // Ease.OutBack. Identical arithmetic: Tween lerps UNCLAMPED (so the overshoot
+            // survives) through UiMotion.Curve(Ease.OutBack, t), which is this file's own
+            // EaseOutBack expression with this file's own c1 = 1.70158f. Proven per frame by
+            // RetrofitParityRecorder's `gacha.enter` trace, not asserted.
+            yield return UiMotion.Tween(0.6f, 1f, _enterDuration, s => SetBagScale(s, s), Ease.OutBack);
             SetBagScale(1f, 1f);
         }
 
@@ -503,14 +502,29 @@ namespace GolfinRedux.UI.Gacha
             if (!glow && _bagGlow != null) SetGraphicColor(_bagGlow, tint, 0f);
             if (!rays && _bagRays != null) SetGraphicColor(_bagRays, tint, 0f);
 
-            float t = 0f;
+            // game_polish_b §D2 RETROFIT — driven by UiMotion.Tween, but the CURVE stays here.
+            //
+            // §D2's own words: "the shake is a signal, not an ease". Its angle is a sine whose
+            // frequency ramps, so the phase has to be INTEGRATED — feeding a ramping frequency
+            // straight into sin(2*pi*f*t) sweeps the argument backwards and the bag jumps. There
+            // is no ease that produces that, and inventing an Ease member for it would be a curve
+            // only one call site could ever use. So the tween supplies the clock on Ease.Linear
+            // and this block keeps its own maths, which is the retrofit §D2 asked for: one tween
+            // loop in the project instead of a fourth hand-rolled one.
+            //
+            // dt is RECOVERED from the clock rather than read from Time, and that is what makes
+            // the integration frame-identical to the loop it replaces: Tween hands back
+            // LerpUnclamped(0, duration, Clamp01(elapsed/duration)) each frame, i.e. the same
+            // running t, so `now - last` is the same dt the old `Time.unscaledDeltaTime` gave —
+            // with one exception, on the final partial frame, where the clamp shortens it. The
+            // step ends by writing identity either way.
+            float last  = 0f;
             float phase = 0f;   // integrate the phase — ramping f directly would jump the angle
-
-            while (t < duration)
+            yield return UiMotion.Tween(0f, duration, duration, now =>
             {
-                float dt = Time.unscaledDeltaTime;
-                t += dt;
-                float k = duration > 0f ? Mathf.Clamp01(t / duration) : 1f;
+                float dt = now - last;
+                last = now;
+                float k = duration > 0f ? Mathf.Clamp01(now / duration) : 1f;
 
                 float amp  = Mathf.Lerp(2f, 7f, k);
                 float freq = Mathf.Lerp(6f, 14f, k);
@@ -525,11 +539,9 @@ namespace GolfinRedux.UI.Gacha
                 if (rays && _bagRays != null)
                 {
                     SetGraphicColor(_bagRays, tint, k * 0.35f);
-                    _bagRays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -14f * t);
+                    _bagRays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -14f * now);
                 }
-
-                yield return null;
-            }
+            }, Ease.Linear);
 
             if (_bagPivot != null) _bagPivot.localRotation = Quaternion.identity;
         }
@@ -547,15 +559,26 @@ namespace GolfinRedux.UI.Gacha
             float arcX     = (index % 2 == 0) ? _popArcX : -_popArcX;
             var   cardRt   = _liveCard != null ? _liveCard.transform as RectTransform : null;
 
-            float t = 0f;
-            while (t < duration)
+            // game_polish_b §D2 RETROFIT — one UiMotion.Tween supplies the clock; the four
+            // quantities are computed from it exactly as before.
+            //
+            // WHY Ease.Linear AND AN EXPLICIT Curve() CALL rather than Ease.OutBack on the tween
+            // itself: this step drives four things off one clock, and they do NOT share a curve.
+            // The position lerps on a CLAMPED ease-out-back (the card must not fly past its
+            // slot), the scale on the UNCLAMPED one (it must overshoot — that is the pop), the
+            // arc offset on a sine of the RAW k, and the alpha linearly over the first 0.3 of the
+            // step. Easing the tween itself would double-ease three of the four.
+            //
+            // UiMotion.Curve(Ease.OutBack, k) is UiMotion's copy of this file's own EaseOutBack —
+            // same c1 = 1.70158f, same expression — which is why `gacha.pop.curve` is recorded as
+            // a parity trace in its own right.
+            yield return UiMotion.Tween(0f, duration, duration, t =>
             {
-                t += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(t / duration);
 
                 if (cardRt != null)
                 {
-                    float eased = EaseOutBack(k);
+                    float eased = UiMotion.Curve(Ease.OutBack, k);
                     Vector2 pos = Vector2.LerpUnclamped(_cardSpawnOffset, Vector2.zero, Mathf.Clamp01(eased));
                     pos.x += Mathf.Sin(k * Mathf.PI) * arcX;
                     cardRt.anchoredPosition = pos;
@@ -570,9 +593,7 @@ namespace GolfinRedux.UI.Gacha
                 // Bag recoil — squashes on the launch, back to rest over the first 0.15 s.
                 float recoil = t < 0.15f ? Mathf.Lerp(0.94f, 1f, t / 0.15f) : 1f;
                 SetBagScale(1f, recoil);
-
-                yield return null;
-            }
+            }, Ease.Linear);
 
             if (cardRt != null)
             {
@@ -918,14 +939,9 @@ namespace GolfinRedux.UI.Gacha
             return new RarityFxTier();
         }
 
-        /// <summary>Ease-out-back — overshoots past 1 and settles. SPEC §2 steps A and C.</summary>
-        private static float EaseOutBack(float t)
-        {
-            const float c1 = 1.70158f;
-            const float c3 = c1 + 1f;
-            float p = t - 1f;
-            return 1f + c3 * p * p * p + c1 * p * p;
-        }
+        // EaseOutBack MOVED, game_polish_b §D2 — it is UiMotion.EaseOutBack now, reachable as
+        // UiMotion.Curve(Ease.OutBack, t), with the same c1 = 1.70158f quoted from this file.
+        // Deleted rather than left as a wrapper so there is exactly one copy of the curve.
 
         // The SPEC §4 table, as the field initializer so a component added via script/Inspector
         // starts correct instead of six Common-shaped blanks.
