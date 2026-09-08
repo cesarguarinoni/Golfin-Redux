@@ -379,12 +379,10 @@ namespace Golfin.UI.Polish.EditorTools
                             "ContentArea/BarsArea/RankingsArea/Modal", 3, 978f, 100f, 20f),
             new ShimmerSite(ScreenId.GachaHistory, GameShimmerSites.GachaHistory,
                             "GameScreenContent/ContentContainer/MainPanel/CardsContainer", 3, 978f, 100f, 20f),
-            // The DAILY card's slot, not the mission list: the list is local and never cold, the
-            // daily is fetched and hidden until the server answers. Sibling index 1 puts the
-            // placeholder exactly where the card it stands in for will appear, under Content's
-            // VerticalLayoutGroup.
-            new ShimmerSite(ScreenId.MissionSelection, GameShimmerSites.MissionsDaily,
-                            "Content", 1, 978f, 374f, 0f, siblingIndex: 1),
+            // The MissionSelection daily site was REMOVED (polish_regressions_0909 R2). Its host —
+            // Shimmer_missions_daily, sibling index 1 under Content — was deleted from the scene in
+            // the same commit, so re-running this builder does not put it back. Why, in
+            // GameShimmerSites where the constant used to be.
         };
 
         private const string ShimmerBlockPrefab = "Assets/Prefabs/UI/Common/ShimmerBlock.prefab";

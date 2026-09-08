@@ -44,16 +44,26 @@ namespace Golfin.UI.Polish
         // constant nobody may use is a trap, so the decision is recorded here rather than as a
         // dangling site. The shop still gets §D6's stagger on its first paint per entry.
 
-        /// <summary>
-        /// Mission selection — the DAILY card, and only it.
-        ///
-        /// <para>§D4 names "MissionSelection cards", but the cards are not the cold thing:
-        /// <c>MissionCatalog.EnsureLoaded()</c> is local and synchronous, so the mission list is
-        /// never waiting on anything. The DAILY is genuinely fetched — the controller's own words
-        /// are "hidden, fetch, and shown only if the server answers" — which makes it the one
-        /// region on this screen where a player waits in front of a blank space.</para>
-        /// </summary>
-        public const string MissionsDaily = "missions.daily";
+        // THERE IS NO MISSIONS-DAILY SITE ANY MORE, and this is the second decision of the same
+        // shape as the shop one above — recorded here rather than left as a dangling constant.
+        //
+        // game_polish_b §D4 put one here on reasoning that was locally correct: the daily IS
+        // fetched and IS hidden until the server answers, so it is the one region on that screen
+        // where a player waits in front of a blank space. What that reasoning left out is HOW
+        // LONG. The wait is a single request that lands in roughly 200 ms, and the daily is cold
+        // on EVERY visit (the gate is re-armed in OnEnable), so the placeholder ran on every
+        // single entry to the screen — a highlight band sweeping left-to-right across a 978x374
+        // block for a fifth of a second, with the real card popping in over it.
+        //
+        // Cesar, 2026-09-09, on the post-polish build: the daily card "visibly arrives as a
+        // bubble from the left". A placeholder is worth what it saves the player from looking at;
+        // over 200 ms it is not worth its own animation. The card now simply FADES IN when it
+        // arrives (MissionSelectionScreenController.EndDailyWait -> GpsPaintMotion.FadeInPanel),
+        // which is the same treatment every other §D4 panel gets and is invisible at that
+        // duration in the way a sweeping band is not.
+        //
+        // The rule this leaves behind for the next site: a shimmer is for a wait the player can
+        // SEE. Measure the wait before placing one.
 
         /// <summary>Every site, for the builder and for the tests that check the builder placed
         /// one host per site. A list that has to be maintained by hand is a list that drifts, so
@@ -61,7 +71,7 @@ namespace Golfin.UI.Polish
         public static readonly string[] All =
         {
             RankingsList, RankingsTop3, TournamentCards, TournamentLeaderboard,
-            GachaHistory, MissionsDaily,
+            GachaHistory,
         };
     }
 }

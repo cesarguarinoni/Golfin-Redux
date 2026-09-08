@@ -576,25 +576,36 @@ namespace GolfinRedux.UI.MissionSelection
             if (dailyCard == null) return;
             dailyCard.gameObject.SetActive(false);
 
-            // §D4 — the card is hidden from here until the server answers, and THAT is the gap the
-            // placeholder fills. Asked before the request rather than after, because the whole
-            // point is to occupy the space during the wait.
-            _dailyGate.Cache(0);
-            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.MissionsDaily, _dailyGate.IsCold);
-
+            // NO PLACEHOLDER HERE ANY MORE (polish_regressions_0909 R2). §D4 filled this gap with
+            // a shimmer block; the gap is one request, ~200 ms, and the daily is cold on every
+            // visit — so what the player actually saw was a highlight band sweeping across a
+            // 978x374 space on every single entry, with the card popping in over it. The card
+            // fades in when it arrives instead; see EndDailyWait. The gate stays because it is
+            // what tells that fade whether this is the first paint of the entry or a repaint.
             StartCoroutine(FetchDailyRoutine());
         }
 
         /// <summary>
-        /// §D4 — the daily fetch answered, however it answered. EVERY arm calls this, including
-        /// the two failures: a placeholder left standing over a card that is never coming is
-        /// worse than no placeholder at all, and the failure arms are exactly the ones a shimmer
-        /// gets stranded on.
+        /// §D4 — the daily fetch answered, however it answered. EVERY arm still calls this, and
+        /// the reason survives the placeholder's removal: the gate's log is the one record that
+        /// the fetch landed at all, and the two FAILURE arms are exactly the ones that would
+        /// otherwise leave the screen's paint unaccounted for.
         /// </summary>
-        private void EndDailyWait(int count)
+        /// <returns>
+        /// True when the card should FADE in — the first paint of this screen entry that actually
+        /// produced a card. False on a repaint (the streak/claimed refresh at the bottom of this
+        /// file), where re-fading a card the player is already reading would be the very effect R2
+        /// removed, and on both failure arms, where there is no card to fade.
+        ///
+        /// <para>IsCold is read BEFORE <c>Fetch</c> because Fetch spends the gate. Fetch's own
+        /// return value cannot be used: this gate is built with <c>staggers: false</c> — correctly,
+        /// nothing here staggers — so it always answers false.</para>
+        /// </returns>
+        private bool EndDailyWait(int count)
         {
+            bool firstPaint = _dailyGate.IsCold && count > 0;
             _dailyGate.Fetch(count);
-            Golfin.Gps.UI.GpsPaintMotion.Shimmer(gameObject, GameShimmerSites.MissionsDaily, cold: false);
+            return firstPaint;
         }
 
         private IEnumerator FetchDailyRoutine()
@@ -626,7 +637,7 @@ namespace GolfinRedux.UI.MissionSelection
                     return;
                 }
 
-                EndDailyWait(1);
+                bool fadeIn = EndDailyWait(1);
                 dailyCard!.gameObject.SetActive(true);
 
                 // The daily card is a SERIALIZED SCENE OBJECT, not one of the rows RebuildCards
@@ -643,6 +654,12 @@ namespace GolfinRedux.UI.MissionSelection
                 dailyCard.OnActionButtonClicked += HandleActionClicked;
 
                 dailyCard.Bind(def, MissionCardMode.Daily, MissionCardState.Collapsed);
+
+                // R2 — the arrival, AFTER Bind: fading an unbound card would fade in the previous
+                // day's content. FadeInPanel is UiMotion.Fade 0->1 over FadeDur on the card's own
+                // CanvasGroup — no slide, no stagger, the same treatment every other §D4 panel
+                // gets. `animate: false` sets alpha to 1 outright, so a repaint is instant.
+                Golfin.Gps.UI.GpsPaintMotion.FadeInPanel(this, dailyCard.gameObject, fadeIn);
 
                 // Bank the collapsed column budget now, while it is still readable.
                 if (isActiveAndEnabled) StartCoroutine(RebalanceNextFrame());
