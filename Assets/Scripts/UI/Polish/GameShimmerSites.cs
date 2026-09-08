@@ -37,8 +37,12 @@ namespace Golfin.UI.Polish
         /// <summary>Gacha history — page 1 of the pull log.</summary>
         public const string GachaHistory = "gacha.history";
 
-        /// <summary>General shop — the catalog cards.</summary>
-        public const string ShopCatalog = "shop.catalog";
+        // THERE IS NO SHOP SITE, deliberately. §D4 lists the General Shop's catalog cards, but
+        // GeneralShopCatalog reads a BUNDLED Resources/Data/shop_catalog.csv plus a content
+        // overlay, synchronously, on first access — the player never waits on a network for it,
+        // so a placeholder there would be a loading animation over data that never left. A named
+        // constant nobody may use is a trap, so the decision is recorded here rather than as a
+        // dangling site. The shop still gets §D6's stagger on its first paint per entry.
 
         /// <summary>
         /// Mission selection — the DAILY card, and only it.
@@ -57,7 +61,7 @@ namespace Golfin.UI.Polish
         public static readonly string[] All =
         {
             RankingsList, RankingsTop3, TournamentCards, TournamentLeaderboard,
-            GachaHistory, ShopCatalog, MissionsDaily,
+            GachaHistory, MissionsDaily,
         };
     }
 }

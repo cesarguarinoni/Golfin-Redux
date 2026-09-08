@@ -123,31 +123,36 @@ silently did not run looks identical to one that passed. A deliberate failing te
 `UiMotionEaseTests` took the total to **2861 with exactly 1 failure** carrying its marker,
 then was removed. That is the proof; the count is not taken on trust.
 
+**Re-run after §D4/§D6: 2863 tests, 2860 passed, 0 failed, 3 skipped** — up from 2860, which
+is the 3 new `ShimmerHostTests` arriving and passing, a self-verifying increment.
+
 New suites: `UiMotionEaseTests` (13), `CountDownTests` (8), `ModalPopTests` (7),
-`GachaCarouselLoopTests` (13, the side-request).
+`ShimmerHostTests` (3), `GachaCarouselLoopTests` (13, the side-request).
 
 ### §D1.1 · Modals — done, scene diff 8 lines
 
 All 15 set, read back live as 19 on / 0 off. Builder is idempotent (second run: 8 "already").
 
-**On the scene diff, and on a conclusion I got wrong and then corrected.** Saving ShellScene
-rewrote ~1300 lines — 154 RectTransforms whose anchors flipped (0,1)→(0,0) with position and
-sizeDelta zeroed. The project's guidance says run a builder on a freshly opened scene, so I
-reverted and did that; it churned identically. I then ran what I called a control — open,
-mark dirty, save, change nothing — got 1297 lines, and concluded the churn was **inherent to
-saving this scene** and nothing to do with a builder. **That conclusion was wrong.** The
-control was run in an Editor instance that had already been through several play sessions, so
-it carried the same contamination as the run it was supposed to be a control for. When §D4's
-`ApplyShimmer` was later run in a FRESH Editor with no play session — open the scene, build,
-save — the diff was 2012 insertions / 139 deletions with **4** anchor lines instead of 154,
-and those 4 were a block removed and re-added byte-identically (a YAML reordering).
+**On the scene diff, and on being wrong about it twice.** Saving ShellScene usually rewrites
+~1296 lines — 154 RectTransforms whose anchors flip (0,1)→(0,0) with position and sizeDelta
+zeroed. I published a cause for this twice and both were falsified by the next experiment:
 
-So the project's existing rule stands and my correction of it did not: the churn IS
-play-mode contamination (project memory: `scene_save_bakes_layout_churn`), and "run the
-builder on a freshly opened scene" means a freshly opened scene **in an Editor that has not
-been in play mode**. The §D1.1 result is unaffected — those 8 lines were hunk-isolated and
-are correct — but the reasoning published alongside them was not, and is corrected here
-rather than left to mislead the next person who hits this.
+| # | Claim | Falsified by |
+|---|---|---|
+| 1 | "Inherent to saving this scene; nothing to do with a builder" — from a control (open, mark dirty, save, change nothing → 1297 lines) | §D4's `ApplyShimmer` run produced **4** anchor lines, not 154, and those 4 were a block removed and re-added byte-identically |
+| 2 | "Play-mode contamination; the control was run in a contaminated Editor" | The same open+dirty+save control, re-run in an Editor that has **never entered play mode this session**, churned identically (1296 lines, 616 anchor lines) |
+
+**So I do not know the trigger, and I am not going to guess a third time.** What is established:
+one save out of several was clean and the rest were not, the clean one was `ApplyShimmer`'s,
+and nothing I varied deliberately (fresh open, no play mode, save in the same call as the open)
+reproduced it. Whatever the state is, it accumulates across an Editor session.
+
+What IS reliable, and what both scene commits in this task actually used, is the workaround:
+isolate the builder's hunks out of the churned save and apply them to HEAD's copy
+(project memory: `isolate_scene_save_drift_partial_stage`), then reload the scene from disk.
+§D1.1 landed 8 lines that way and §D4 landed its six hosts with 4 incidental anchor lines.
+**The churn is worth a task of its own with someone who can bisect it; it is not this one's,
+and the two conclusions above should not be quoted as findings.**
 
 ### §D1.3 · HoleComplete — done
 
@@ -181,7 +186,7 @@ NOT done.
 | Mission CLAIM | **no CTA** — `ClaimMissionRoutine` is started by hole-complete, not a tap | N/A, stated |
 | Rankings / Tournament refresh | **no CTA** — no `refreshButton`/`_refreshButton`/`RefreshButton` anywhere in the shell | N/A, stated |
 
-### §D6 · Rankings — done (the rest of §D6 is not)
+### §D6 · Rankings
 
 `RebuildList` knows which paint it is: OnEnable = Cache, refresh callback = Fetch, tab tap =
 Repaint. Rows stagger on the first cold fetch only.
@@ -192,6 +197,38 @@ podium hierarchy. Popping them would have flattened all three to the same size a
 polish. Each card tweens from 0.9 × its OWN rest scale back to that rest scale, `StaggerDelay
 × 3` apart, winner last.
 
+### §D4 · Shimmer — done, six hosts, and two sites moved
+
+`ApplyShimmer` places six INACTIVE hosts (15 `ShimmerBlock` instances). Verified by reading the
+live scene, not the builder's log: **13 `ShimmerHost` in ShellScene (my 6 + GPS's 7), 0 active
+at rest**, and `ShimmerHost.Find` resolves every name in `GameShimmerSites.All`.
+
+**Two sites are not where §D4 put them, and both moved because the code disagreed with the spec:**
+
+| Site | §D4 says | Shipped | Why |
+|---|---|---|---|
+| GeneralShop cards | shimmer ×4 | **no shimmer** | `GeneralShopCatalog` reads a BUNDLED `Resources/Data/shop_catalog.csv` + a content overlay, synchronously, on first access. The player never waits on a network for it, so a shimmer would be a loading animation over data that never left — the exact thing GPS §D8's cold-only rule prevents. Gets §D6's stagger instead. The site constant was REMOVED rather than left dangling: a name nobody may use is a trap. |
+| MissionSelection cards | shimmer ×2 | **shimmer on the DAILY card** | `MissionCatalog.EnsureLoaded` is local and synchronous. The daily is genuinely fetched and hidden until the server answers, which makes it the one region on that screen where a player waits in front of a blank space. Every arm that ends the wait clears it, **including the two failure arms** — a placeholder over a card that is never coming is worse than none, and failure arms are where shimmers get stranded. |
+
+### §D6 · Staggers — done, split by what the data actually is
+
+| Site | Gate | Why |
+|---|---|---|
+| Rankings rows, tournament cards, tournament leaderboard rows, gacha history page 1 | `PaintGate` — first COLD fetch only | Server-backed. Cache paints instant; repaints (tab, language, filter) never stagger. |
+| Hole cards, mission cards, shop cards | first paint per screen entry | No fetch to gate on. A filter/tier change repaints the same data and must not re-flow a list under the player's finger. |
+| **Mode Select** | **EVERY entry paint** | Cesar's front-door exception. Not the rule bending: this screen has no fetch at all, so a fetch gate would say "cache, instant" forever and the cards would never move. Logged as `paint(local)` so it cannot later be read as a mislabelled fetch. |
+| Gacha prizes grid | **untouched** | It ALREADY staggers — `PlayEntrance`, `gacha_reveal_animation §3`, its own 0.045 s beat. Retrofitting it would be a fourth §D2 retrofit of a loved animation and would need its own parity gate; §D2 named three. |
+
+GachaHistory takes its verdict from the RECORD count, not the rendered count: `FillTo` spawns
+rows over several frames, so a gate asked "how many rows are on screen" here would hear zero
+and call every paint cold. It staggers once at the end of the fill rather than per row, which
+would otherwise fight `FillTo`'s own frame budget.
+
+**Selection bumps** on mode card, hole card, mission card and the HistoryChip — placed ABOVE
+the guards in each handler, not inside the success path. A card that expands answers for
+itself; a LOCKED card, a second tap that collapses, and the chip's toast-only arm all look
+identical to no response at all.
+
 ## What is NOT done
 
 Nothing below has been started; none of it is claimed anywhere above.
@@ -199,8 +236,6 @@ Nothing below has been started; none of it is claimed anywhere above.
 | Item | State |
 |---|---|
 | **§D1.4** result-modal inner choreography (reward rows stagger, RP/score `CountUp`, rank `Pop`, mission banner `Rise`+`Pulse`, `CompleteNow()` on tap) | not started |
-| **§D4** shimmer — `GamePolishBuilder.ApplyShimmer()` host placement, and wiring for all 7 sites | not started. `GameShimmerSites` (the names) exists; **no hosts are placed and no controller calls `Shimmer`**. The Rankings `Shimmer` calls were deliberately removed again rather than shipped ahead of their hosts — `GpsPaintMotion.Shimmer` warns loudly by design for a missing host, which would have been 3 warnings per screen entry describing an unfinished feature. |
-| **§D6** staggers on the other 8 sites (hole cards, mission cards, tournament cards, tournament leaderboard, shop cards, gacha history, gacha prizes grid), Mode Select every-paint stagger, selection bumps | not started |
 | **§D7** probe modes `modals` / `shimmer` / `perf` (the `retrofit` mode exists as `RetrofitParityRecorder`) | not started |
 | **§D3** modal-local numbers: level-up stat bars `Tween`, level `Pop`, `MissionCard` counters | not started |
 | **A1** modal table with real triggers, mid-pop frames, `IsVisible`/`OpenModalCount` timing | not started |
@@ -252,3 +287,5 @@ ARE the loop. Not part of this SPEC and reported separately.
 | `9575baaa2` | §D1.1 all 15 modals pop |
 | `684e14350` | §D1.3 + §D3 + three test suites |
 | `648b46603` | §D4 site table, §D5, §D6 Rankings |
+| `3d81c5112` | status / report / AI_CONTEXT |
+| `afae3e1b5` | §D4 hosts + wiring, §D6 everywhere else, selection bumps |
