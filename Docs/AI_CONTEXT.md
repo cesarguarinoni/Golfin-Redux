@@ -4,6 +4,47 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-08 — game_polish_b: **modals pop, three tween loops become UiMotion, and the top bar counts down** (IN PROGRESS)
+
+Slice b of `game_polish` (Notion 2111). Cesar's call mid-task: **code complete first, evidence
+second**, so this is an implementation pass with §D1.4, §D4, most of §D6 and all of §D7 still to
+come. `Docs/Specs/Active/game_polish_b/IMPLEMENTER_REPORT.md` § What is NOT done is the list.
+
+**Done and verified**
+- **§D0** — `GpsPaintMotion` → `Polish/PaintMotion.cs`, `ShimmerHost` → `Polish/`,
+  `ShimmerBlock.prefab` → `Prefabs/UI/Common/`. GUIDs kept, namespaces deliberately unchanged.
+  One 2-line touch under `Gps/` (the prefab path + the doc comment naming it).
+- **§D2 retrofits, parity gate CLOSED (6 traces, fail 0).** Versus pop-in, the Home pill's
+  slide + glow, and the gacha reveal's three steps all run on `UiMotion` now, measured
+  frame-by-frame before and after: worst deviation 0.066 px on a 0.5 px gate.
+  `Docs/Specs/Active/game_polish_b/retrofit_parity.txt`.
+- **`UiMotion.Ease`** — `{ OutCubic, OutBack, Linear }`, optional, default = today's curve.
+  Proven equal to `EaseOut` *by value at every point*, not by reading the diff.
+- **§D1.1** — all **15** game modals pop (the SPEC says 13; its own table lists 15, and a sweep
+  finds 15 — `InGameSettingsModal` has no scene instance). Scene diff 8 lines.
+- **§D1.3** — `HoleCompleteWidget` pops itself; its controller's `Show()` is a no-op so the flag
+  alone could never have reached it.
+- **§D3** — the top-bar count-up runs in both directions, armed inside
+  `RewardPointsManager.SpendPoints`/`EarnPoints` rather than at seven named screens.
+- **§D5** — audit complete; gacha PULL wired, the other four are N/A with stated reasons
+  (synchronous calls or no CTA at all).
+- **§D6 Rankings** — paint-kind gate, row stagger on the first cold fetch, podium reveal 3→2→1.
+- EditMode **2860 / 0 failed**; the new suites were *proven* to run with a tripwire rather than
+  assumed, because `tests-run` ignores filters and reports only failures.
+
+**Two things worth carrying forward**
+1. **A self-re-arming `UiMotion.Then` tail is unbounded.** `Then` runs its tail both at the end
+   of the routine and inside the finalizer it registers, so `Then(x, RestartMe)` recurses until
+   the stack dies. It crashed the Editor twice before it was root-caused from the `.ips`. Use a
+   long-lived coroutine that yields fresh routines instead.
+2. **Saving `ShellScene` churns ~1300 lines on its own.** Open it, mark it dirty, save it,
+   change nothing: 1297 lines of anchor/sizeDelta rewrites. Not caused by any builder — proven
+   by control experiment. Isolate your hunks; do not go looking for a cleaner moment to save.
+
+Also, at Cesar's request and outside this SPEC: **the gacha banner carousel is a ring now**
+(`8901e8f92`) — swiping past the last banner reaches the first, by arithmetic rather than cloned
+cards, with 13 EditMode tests over the wrap and the positive modulo.
+
 ## 2026-09-07 — flick_pull_mapping: **Flick's power is measured from the club, not from the cone's floor**
 
 `flick_shot_view` gave Flick the 0.38 framing and a 792 px cone, and paid for it in the one place
