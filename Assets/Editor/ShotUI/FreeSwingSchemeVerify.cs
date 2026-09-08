@@ -401,7 +401,7 @@ namespace Golfin.EditorTools.ShotUI
             // exactly what this run did: entry.scheme_picked_through_the_real_widget PASSED while
             // every scheme.* assertion read Flick. The confirm button is as much a part of the
             // real player's path as the segment is.
-            yield return ConfirmSchemeIfPrompted();
+            yield return ConfirmSchemeIfPrompted(6f);
         }
 
         /// <summary>
@@ -416,9 +416,9 @@ namespace Golfin.EditorTools.ShotUI
         /// <c>PendingScheme</c> is the controller's own answer to "is a choice waiting for
         /// confirmation", so it cannot race the pop-up's activation.</para>
         /// </summary>
-        IEnumerator ConfirmSchemeIfPrompted()
+        IEnumerator ConfirmSchemeIfPrompted(float timeout)
         {
-            for (float t = 0f; t < 15f; t += 0.25f)
+            for (float t = 0f; t < timeout; t += 0.25f)
             {
                 if (ControlSchemeService.Current == ControlScheme.FreeSwing)
                 {
@@ -435,9 +435,16 @@ namespace Golfin.EditorTools.ShotUI
                 {
                     var pending = modal.GetType().GetProperty("PendingScheme")?.GetValue(modal);
                     bool armed  = pending is ControlScheme ps && ps == ControlScheme.FreeSwing;
-                    if (armed &&
-                        modal.GetType().GetField("confirmButton", ANY)?.GetValue(modal) is Button c && c != null)
+                    var button  = modal.GetType().GetField("confirmButton", ANY)?.GetValue(modal) as Button;
+                    // EITHER SIGNAL. Gating on the armed state alone fixed the activeInHierarchy
+                    // race and then missed a pop-up that WAS on screen — the run aborted and the
+                    // log showed "SchemeConfirmModal force-disabled while visible" at play-mode
+                    // exit, i.e. the thing this was waiting for was up the whole time. The two
+                    // signals fail independently, so accept whichever arrives.
+                    bool shown  = button != null && button.gameObject.activeInHierarchy;
+                    if ((armed || shown) && button != null)
                     {
+                        Button c = button;
                         ClickReal(c);
                         Note("scheme_confirm", "SchemeConfirmModalController.confirmButton.onClick (" + c.name + ")");
                         yield return new WaitForSecondsRealtime(1f);
@@ -446,7 +453,7 @@ namespace Golfin.EditorTools.ShotUI
                 }
                 yield return new WaitForSecondsRealtime(0.25f);
             }
-            Note("scheme_confirm", "TIMEOUT — no armed scheme pop-up in 15s");
+            Note("scheme_confirm_attempt", $"no scheme pop-up (armed or shown) within {timeout:F0}s");
         }
 
         /// <summary>The pop shows a LOCALISED KEY, never a literal — asserted as the key's own
@@ -521,6 +528,15 @@ namespace Golfin.EditorTools.ShotUI
             var close = FindButton("CloseButton") ?? FindButton("ResumeButton") ?? FindButton("BackButton");
             if (close != null) ClickReal(close);
             yield return new WaitForSecondsRealtime(2f);
+
+            // AND AGAIN AFTER THE SETTINGS MODAL CLOSES. The confirm pop-up does not always come
+            // up while the settings modal is still on screen — on a fresh Editor session it waits
+            // for that modal to go away first, which is why the attempt inside
+            // SelectFreeSwingThroughTheRealWidget timed out for 30s and the pop-up was then found
+            // "force-disabled while visible" at play-mode exit. Both orders happen; try both.
+            yield return ConfirmSchemeIfPrompted(30f);
+            if (ControlSchemeService.Current != ControlScheme.FreeSwing)
+                yield return new WaitForSecondsRealtime(1.5f);
 
             var host = UnityEngine.Object.FindObjectsByType<ShotSchemeHost>(
                            FindObjectsInactive.Exclude, FindObjectsSortMode.None).FirstOrDefault();

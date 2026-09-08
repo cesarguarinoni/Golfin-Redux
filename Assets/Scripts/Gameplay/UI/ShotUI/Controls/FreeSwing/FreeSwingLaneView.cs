@@ -86,9 +86,38 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         /// (shot_view_layout_followup §1).</summary>
         private float _laneEndCapY = float.NegativeInfinity;
 
-        /// <summary>See <see cref="ShotLayoutMath.CappedLaneHeight"/>. Cap the PILL, never the
-        /// pull: the driver clamps on <c>FreeSwingPull120Px</c> and is not consulted here.</summary>
-        public void SetLaneEndCapY(float canvasY) => _laneEndCapY = canvasY;
+        /// <summary>
+        /// Set the bottom cap — AND re-derive if the geometry has already been laid out.
+        ///
+        /// <para>THE ORDER USED TO MATTER, AND IT MUST NOT. This was a bare field write, and
+        /// <see cref="ApplyGeometry"/> is the only thing that reads it, so a cap arriving AFTER
+        /// the lane had been laid out was silently discarded and the pill kept its uncapped
+        /// height for the rest of the session. That is not hypothetical: on a boot where this
+        /// scheme is ALREADY the saved one, the host activates its driver before
+        /// <c>ShotLayoutController.ApplyLayout</c> runs, so the pill drew ~96px past the row the
+        /// action buttons sit on — exactly what shot_view_layout_followup §1 exists to prevent.
+        /// Every earlier acceptance run switched scheme MID-SESSION, which happens to produce the
+        /// other order, so the gate never saw it.</para>
+        ///
+        /// <para>Re-deriving here is what makes the lane own its own invariant ("my drawn height
+        /// respects the cap I have been given") instead of depending on two other components
+        /// calling it in the right sequence. The controller's ordering comment is still true; it
+        /// is simply no longer load-bearing. Guarded on an actual CHANGE so the repeated applies
+        /// ShotLayoutController does on every scheme switch cost nothing.</para>
+        /// </summary>
+        public void SetLaneEndCapY(float canvasY)
+        {
+            if (_laneEndCapY == canvasY) return;          // exact: these are assigned, not accumulated
+            _laneEndCapY = canvasY;
+            if (_hasGeometry) ApplyGeometry(_lastCfg, _lastIsPutt);
+        }
+
+        // The last inputs ApplyGeometry was called with, so a cap that arrives late can re-run it
+        // with them. A copy of the struct, not a reference — the caller's `in` parameter is gone
+        // by the time this is needed.
+        private ControlsConfig _lastCfg;
+        private bool           _lastIsPutt;
+        private bool           _hasGeometry;
 
         /// <summary>
         /// How far ABOVE its touch origin the finger must travel for the club head to reach the
@@ -124,6 +153,8 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         /// </summary>
         public void ApplyGeometry(in ControlsConfig cfg, bool isPutt)
         {
+            _lastCfg = cfg; _lastIsPutt = isPutt; _hasGeometry = true;
+
             Tick100BelowBall = _handleRestBelowBall + cfg.FreeSwingPull100Px;
             Tick120BelowBall = _handleRestBelowBall + cfg.FreeSwingPull120Px;
 

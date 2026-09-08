@@ -190,7 +190,10 @@ namespace Golfin.Gameplay.Tests
             try
             {
                 // The cap arrives BEFORE Activate, which is where ApplyGeometry derives the height —
-                // the same order ShotLayoutController and ShotSchemeHost.Apply put them in.
+                // the same order ShotLayoutController and ShotSchemeHost.Apply put them in ON A
+                // SCHEME SWITCH. It is NOT the order a boot already in this scheme produces; that
+                // case is TheCapIsHonouredWhenItArrivesAfterTheGeometry below, and it shipped
+                // broken because this fixture only ever tested the happy sequence.
                 lane.SetLaneEndCapY(BaselineY(H_2532));
                 driver.Bind(sc);
                 driver.Activate();
@@ -225,6 +228,143 @@ namespace Golfin.Gameplay.Tests
                 Object.DestroyImmediate(scGo);
                 Object.DestroyImmediate(canvasGo);
             }
+        }
+
+        // ── The order the boot path actually produces ───────────────────────────
+
+        /// <summary>
+        /// THE CAP ARRIVES SECOND, and the pill must still end on the baseline.
+        ///
+        /// <para>On a boot where the saved scheme is already the live one, the host activates its
+        /// driver — which is where <c>ApplyGeometry</c> derives the height — before
+        /// <c>ShotLayoutController.ApplyLayout</c> gets to push the cap in. The setter used to be
+        /// a bare field write, so that cap was discarded and the pill kept its uncapped height,
+        /// drawing ~96px past the action-button row for the whole session. Found by the Free Swing
+        /// acceptance run on the first boot that started in Free Swing (2026-09-08): the drawn
+        /// bottom read -1191.84, exactly the uncapped ideal, against a controller baseline of
+        /// -1096.</para>
+        /// </summary>
+        [Test]
+        public void TheCapIsHonouredWhenItArrivesAfterTheGeometry_Pendulum()
+        {
+            var canvasRt = MakeCanvas(out var canvasGo);
+            try
+            {
+                var lane = MakePendulumLane(canvasRt, out var pillRt);
+
+                lane.ApplyGeometry(_cfg, isPutt: false);        // geometry FIRST, no cap yet
+                float uncapped = lane.LaneHeight;
+                Assert.AreEqual(HandleRest + _cfg.PendulumPull120Px + ClubHalfHeight + LaneTail,
+                                uncapped, 0.5f, "precondition: uncapped, because no cap has arrived");
+
+                lane.SetLaneEndCapY(BaselineY(H_2532));         // ...and the cap SECOND
+
+                Assert.AreEqual(792f, lane.LaneHeight, 0.5f, "the late cap re-derives the pill");
+                Assert.AreEqual(792f, pillRt.sizeDelta.y, 0.5f, "and the rect carries it");
+                Assert.Less(lane.LaneHeight, uncapped, "the cap actually bit");
+            }
+            finally { Object.DestroyImmediate(canvasGo); }
+        }
+
+        [Test]
+        public void TheCapIsHonouredWhenItArrivesAfterTheGeometry_FreeSwing()
+        {
+            var canvasRt = MakeCanvas(out var canvasGo);
+            try
+            {
+                var lane = MakeFreeSwingLane(canvasRt, out var pillRt);
+
+                lane.ApplyGeometry(_cfg, isPutt: false);
+                float uncapped = lane.LaneHeight;
+                Assert.AreEqual(FollowThrough + HandleRest + _cfg.FreeSwingPull120Px
+                                + ClubHalfHeight + LaneTail, uncapped, 0.5f, "precondition: uncapped");
+
+                lane.SetLaneEndCapY(BaselineY(H_2532));
+
+                float laneTop = BallY(H_2532) + FollowThrough;
+                Assert.AreEqual(BaselineY(H_2532), laneTop - lane.LaneHeight, 0.5f,
+                                "the pill ends on the shared baseline, whichever order it was told in");
+                Assert.AreEqual(lane.LaneHeight, pillRt.sizeDelta.y, 0.5f);
+                Assert.Less(lane.LaneHeight, uncapped, "the cap actually bit");
+            }
+            finally { Object.DestroyImmediate(canvasGo); }
+        }
+
+        [Test]
+        public void ReSettingTheSameCap_DoesNotReDeriveGeometry()
+        {
+            var canvasRt = MakeCanvas(out var canvasGo);
+            try
+            {
+                var lane = MakeFreeSwingLane(canvasRt, out var pillRt);
+                lane.SetLaneEndCapY(BaselineY(H_2532));
+                lane.ApplyGeometry(_cfg, isPutt: false);
+
+                // ShotLayoutController pushes the cap into BOTH lanes on every apply, so the
+                // no-change path is the common one and has to be free.
+                pillRt.sizeDelta = new Vector2(pillRt.sizeDelta.x, 1f);   // a value only a re-derive would fix
+                lane.SetLaneEndCapY(BaselineY(H_2532));
+                Assert.AreEqual(1f, pillRt.sizeDelta.y, 1e-3f, "an unchanged cap re-derives nothing");
+            }
+            finally { Object.DestroyImmediate(canvasGo); }
+        }
+
+        // ── Fixture builders ────────────────────────────────────────────────────
+
+        private static RectTransform MakeCanvas(out GameObject canvasGo)
+        {
+            canvasGo = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas));
+            canvasGo.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+            var rt = (RectTransform)canvasGo.transform;
+            rt.sizeDelta = new Vector2(1170f, H_2532);
+            return rt;
+        }
+
+        private PendulumLaneView MakePendulumLane(RectTransform canvasRt, out RectTransform pillRt)
+        {
+            var rootRt = MakeLaneRoot(canvasRt, "PendulumLaneRoot", BallY(H_2532), out pillRt);
+            var lane = rootRt.gameObject.AddComponent<PendulumLaneView>();
+            WireLane(lane, pillRt);
+            return lane;
+        }
+
+        private FreeSwingLaneView MakeFreeSwingLane(RectTransform canvasRt, out RectTransform pillRt)
+        {
+            // Free Swing's pill hangs off the BALL too; ApplyGeometry parks its top edge
+            // FollowThroughPx above, so the root sits on the ball exactly as Pendulum's does.
+            var rootRt = MakeLaneRoot(canvasRt, "FreeSwingLaneRoot", BallY(H_2532), out pillRt);
+            var lane = rootRt.gameObject.AddComponent<FreeSwingLaneView>();
+            WireLane(lane, pillRt);
+            return lane;
+        }
+
+        private static RectTransform MakeLaneRoot(RectTransform canvasRt, string name, float ballY,
+                                                  out RectTransform pillRt)
+        {
+            var rootGo = new GameObject(name, typeof(RectTransform));
+            var rootRt = (RectTransform)rootGo.transform;
+            rootRt.SetParent(canvasRt, false);
+            Centre(rootRt);
+            rootRt.anchoredPosition = new Vector2(0f, ballY);
+
+            var pillGo = new GameObject("Lane", typeof(RectTransform));
+            pillRt = (RectTransform)pillGo.transform;
+            pillRt.SetParent(rootRt, false);
+            Centre(pillRt);
+            pillRt.pivot = new Vector2(0.5f, 1f);
+            pillRt.anchoredPosition = Vector2.zero;
+            pillRt.sizeDelta = new Vector2(140f, 0f);
+            return rootRt;
+        }
+
+        private static void WireLane(Object lane, RectTransform pillRt)
+        {
+            var so = new SerializedObject(lane);
+            so.FindProperty("_lane").objectReferenceValue = pillRt;
+            so.FindProperty("_handleRestBelowBall").floatValue = HandleRest;
+            so.FindProperty("_clubHalfHeight").floatValue      = ClubHalfHeight;
+            so.FindProperty("_laneTailPx").floatValue          = LaneTail;
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void Centre(RectTransform rt)
