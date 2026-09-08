@@ -51,6 +51,32 @@ namespace Golfin.UI.Polish.Tests
             return n;
         }
 
+        /// <summary>
+        /// Refuse to assert on an INTERMEDIATE frame when the editor's clock is too coarse to
+        /// produce one.
+        ///
+        /// <para>These routines integrate Time.unscaledDeltaTime, and in EditMode that is whatever
+        /// the editor's last frame took — normally ~1.1 s on this machine, but it spikes far
+        /// higher after a long operation such as a scene reload or a two-minute test run. When
+        /// dt exceeds the duration the tween correctly completes in ONE step, and a test that
+        /// wanted to see it half-done fails while nothing is wrong. That is exactly what happened
+        /// on 2026-09-08: five tests across three suites failed together, every one of them
+        /// reporting a tween that had already finished, and all five passed on an immediate
+        /// re-run with no code change.</para>
+        ///
+        /// <para>Ignoring is the honest outcome — the property is not observable here — where
+        /// failing would be a false alarm and passing would be a lie. The two suites next door
+        /// (UiMotionAllocationTests, UiMotionNewPrimitiveTests) have the same fragility and are
+        /// flagged in the report; they are not this task's to change.</para>
+        /// </summary>
+        static void RequireAFrameWithin(float dur)
+        {
+            float dt = Time.unscaledDeltaTime;
+            if (dt >= dur * 0.5f)
+                Assert.Ignore($"editor frame clock is {dt:F3}s against a {dur:F3}s tween — " +
+                              "no intermediate frame exists to assert on (see RequireAFrameWithin)");
+        }
+
         // ═════════════════════════════════════════════════════════════════════
         // The promise: OutCubic is today's curve
         // ═════════════════════════════════════════════════════════════════════
@@ -181,9 +207,13 @@ namespace Golfin.UI.Polish.Tests
         {
             // Guards the one substantive change §D2 made inside the primitives. With a clamped
             // lerp this peak would be exactly 1 and the reveal would be flat.
+            // 30 s, not 0.3: the overshoot lives in the MIDDLE of the curve, so this test needs a
+            // frame that is not the last one. A long duration buys that on all but the worst clock,
+            // and RequireAFrameWithin refuses rather than lies on those.
+            RequireAFrameWithin(30f);
             float peak = 0f;
             var tw = (IEnumerator)T.GetMethod("Tween")!.Invoke(null,
-                new object[] { 0f, 1f, 0.3f, (Action<float>)(v => peak = Mathf.Max(peak, v)),
+                new object[] { 0f, 1f, 30f, (Action<float>)(v => peak = Mathf.Max(peak, v)),
                                Ease("OutBack") })!;
             Drain(tw);
             Assert.Greater(peak, 1.0f, "Tween must lerp unclamped for OutBack to overshoot");
@@ -194,6 +224,7 @@ namespace Golfin.UI.Polish.Tests
         {
             // Unpop's OutCubic means "the ease-IN half of the cubic pair" — a panel leaving should
             // accelerate away. Documented in the API and pinned here so it cannot quietly flip.
+            RequireAFrameWithin(10f);
             GameObject go = NewGo(out RectTransform rt, out CanvasGroup cg);
             var un = (IEnumerator)T.GetMethod("Unpop")!.Invoke(null,
                 new object[] { rt, cg, 10f, Ease("OutCubic") })!;
@@ -208,6 +239,7 @@ namespace Golfin.UI.Polish.Tests
         [Test]
         public void Slide_DefaultCurve_StillDefersToItsEaseOutBool()
         {
+            RequireAFrameWithin(10f);
             foreach (bool easeOut in new[] { true, false })
             {
                 var go = new GameObject("SlideTarget", typeof(RectTransform));

@@ -124,7 +124,24 @@ silently did not run looks identical to one that passed. A deliberate failing te
 then was removed. That is the proof; the count is not taken on trust.
 
 **Re-run after §D4/§D6: 2863 tests, 2860 passed, 0 failed, 3 skipped** — up from 2860, which
-is the 3 new `ShimmerHostTests` arriving and passing, a self-verifying increment.
+is the 3 new `ShimmerHostTests` arriving and passing, a self-verifying increment. Green again
+after §D1.4/§D7.
+
+**A FLAKINESS FOUND ALONG THE WAY, AND NOT PAPERED OVER.** One run failed 5 tests across three
+suites. They all reported the same thing — a tween that had already finished — and all five
+passed on an immediate re-run with no code change. Cause: these tests integrate
+`Time.unscaledDeltaTime`, which in EditMode is whatever the editor's last frame took (~1.1 s
+normally on this machine, far more after a scene reload or a two-minute test run). When dt
+exceeds the duration the tween correctly completes in ONE step and a test that wanted to see it
+half-done fails while nothing is wrong.
+
+Three of the five are mine and are fixed: `RequireAFrameWithin` now `Assert.Ignore`s when the
+clock is too coarse to produce an intermediate frame, which is the honest outcome — failing
+there is a false alarm and passing is a lie. **Two are NOT mine and are still fragile:**
+`UiMotionAllocationTests.CountUp_AllocatesOnlyWhenTheDrawnNumberChanges` and
+`UiMotionNewPrimitiveTests.Bump_OvershootsBeforeItComesBack`. They pre-date this task, the same
+guard would fix them, and I have left them alone rather than widen this diff — flagged here so
+the next red run on them is recognised for what it is.
 
 New suites: `UiMotionEaseTests` (13), `CountDownTests` (8), `ModalPopTests` (7),
 `ShimmerHostTests` (3), `GachaCarouselLoopTests` (13, the side-request).
