@@ -1,0 +1,40 @@
+rest geometry, view 1170x2532   (before -> after)
+
+screen                           rects  maxDelta px  worst path
+--------------------------------------------------------------------------------------------------------------------
+GachaHistory                        99        0.000  Canvas/ScreensRoot/GachaHistoryScreen
+GachaPrizes                         21        0.000  Canvas/ScreensRoot/GachaPrizesScreen
+GeneralShop                        109        0.000  Canvas/ScreensRoot/GeneralShopScreen
+HoleSelection                       85        0.140  Canvas/ScreensRoot/HoleSelectionScreen/Content/Filters/FilterRow2/Pill_BACK_0_18/Inner/Label
+Home                                42        0.704  Canvas/ScreensRoot/HomeScreen/DailyMissionPill
+Inventory                          128        0.000  Canvas/ScreensRoot/InventoryScreen
+Leaderboard                        103        3.789  Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/RankingsCards(Clone)/RankingsCard/Name+Level/Rarity+Level/LevelLabel 
+MissionSelection                    99        0.572  Canvas/ScreensRoot/MissionSelectionScreen/Content/CardsContainer/CardsScrollView/Viewport/Content/MissionCard(Clone)/ExpandedContainer
+ModeSelection                       56        0.000  Canvas/ScreensRoot/ModeSelectionScreen
+Roster                              83        0.000  Canvas/ScreensRoot/RosterScreen
+TournamentHoleSelection             18        0.000  Canvas/ScreensRoot/TournamentHoleSelectionScreen
+TournamentLeaderboard              232        6.864  Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Shimmer_tournament_leaderboard/Block0/Band
+TournamentSelection                 48        0.000  Canvas/ScreensRoot/TournamentSelectionScreen
+--------------------------------------------------------------------------------------------------------------------
+
+declared re-parents (§C3's SafeArea wrappers) — compared old path to new:
+  ModeSelection: Canvas/ScreensRoot/ModeSelectionScreen/TournamentTempEntry
+      -> Canvas/ScreensRoot/ModeSelectionScreen/SafeArea/TournamentTempEntry   delta 0.0000 px
+  ModeSelection: Canvas/ScreensRoot/ModeSelectionScreen/TournamentTempEntry/Label
+      -> Canvas/ScreensRoot/ModeSelectionScreen/SafeArea/TournamentTempEntry/Label   delta 0.0000 px
+
+new container ModeSelection:Canvas/ScreensRoot/ModeSelectionScreen/SafeArea corners [0, 0, 1170, 2532] (a full-screen stretch cannot move a child at this resolution)
+
+pair                                rects  moved    worst     p99     p95
+--------------------------------------------------------------------------------------------------------------------
+SIGNAL  before -> after              1122     98    6.864   3.859   0.571
+control after -> after2              1120    111    7.316   3.859   0.598
+control after -> after3              1123    117    3.859   3.789   0.520
+control after2 -> after3             1122    135    5.441   1.670   0.792
+--------------------------------------------------------------------------------------------------------------------
+
+Every control pair is the SAME BUILD measured in two different play sessions, so its 
+numbers are the instrument's floor: live rows, countdowns and auto-sized text. The 
+signal is inside that envelope on EVERY statistic (moved, worst, p99, p95).
+
+PASS — A5: no rest movement attributable to this task, and no undeclared rect appearing or disappearing.

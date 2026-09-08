@@ -4,6 +4,56 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-08 — game_polish_c: **the sweep** — READY_FOR_ARCHITECT_REVIEW
+
+Slice c of `game_polish` (Notion 2111): press feedback on every player-facing button, one scroll
+feel, safe area per surface, the Toast fade on `UiMotion`. Every item is a table with a verdict per
+site — `Docs/Specs/Active/game_polish_c/TABLES.md` carries 511 button rows, 24 scroll rows and 32
+surface rows, all generated from the probe JSON by `Docs/Scripts/game_polish_c_tables.py`.
+
+| gate | before | after |
+|---|---|---|
+| player-facing Buttons with no `ButtonPressFeedback` | 242 | **0** |
+| in-scope ScrollRects off the Elastic reference | 11 | **0** |
+| surfaces with content inside the iPhone 15 Pro Max safe-area bands | 4 | **0** |
+| Toast fade worst per-frame alpha delta | — | **0.000000** (tolerance 0.01) |
+
+**Rule 11 had never been swept.** It has said "every new player-facing Button gets
+`ButtonPressFeedback`" since May and was honoured going forward and never backwards: a live audit of
+a running shell found 354 player-facing buttons and 112 with the component. 254 were added — 119 on
+36 prefab assets (so runtime clones inherit them) and 135 on scene-authored objects.
+`PressFeedbackCoverageTests` is now the guard, and it is tripwired: a planted bare Button turns the
+suite red naming the prefab.
+
+**Three things worth carrying forward**
+
+1. **A safe-area probe that resolves the inset once is measuring a device that stops existing.**
+   The first three C3 runs reported 32/32 clear. The probe read the device inset at start-up and
+   then compared every surface against a live `Screen.height` that the Editor changed under it —
+   one run put the notch band at y 676 on a 2796-tall screen. Re-resolved per surface, and recording
+   the view each verdict was measured at, the same route found two real intrusions (20 px of
+   `BOOST STAMINA` behind the Dynamic Island; the TOURNAMENTS button grazing it by 0.6 px).
+2. **`SafeAreaFitter` is `[ExecuteAlways]`, so `AddComponent` runs `Apply()` immediately.** Stretch
+   the wrapper before adding it and the component bakes anchors computed against the Editor's
+   screen — `anchorMax (1.76, 1.64)` went into a shipped prefab and self-corrected at runtime, so
+   nothing looked wrong. Configure the fitter first, stretch last.
+3. **"0 px rest parity" is not a measurable claim; "inside the control envelope" is.** Three
+   control pairs of the *same* build, measured in three play sessions, move 111–135 of 1122 rects
+   with a worst corner delta of 3.9–7.3 px — live rows, countdowns, auto-sized text. The
+   before/after pair moves 98 rects, worst 6.9 px: fewer than any control, inside all of them on
+   every statistic. `Docs/Scripts/game_polish_c_restgeom.py` does the comparison.
+
+**Also new:** `Assets/Editor/DeviceSimulator/Apple iPhone 15 Pro Max.device` (the Editor ships
+nothing newer than the 12 Pro Max) and `Docs/Scripts/filter_scene_churn.py` (saving ShellScene after
+a play session re-serialises ~530 lines of LayoutGroup/TMP/Scrollbar-computed values; the filter
+keeps only authored hunks — the scene's final diff removes 13 lines).
+
+**Deviation to settle:** §C4 names `UiMotion.Fade` and also asks for ≤ 0.01 per-frame parity.
+`UiMotion.Fade` eases; the old toast loop was linear; the curves differ by 0.385 at t = 0.423 — 38×
+the tolerance. Shipped on `UiMotion.Tween(…, Ease.Linear)`, which is exact. Switching to the eased
+fade is a one-token change if Cesar wants the toast to ease.
+
+---
 ## 2026-09-08 — game_polish_b: **modals pop, three tween loops become UiMotion, and the top bar counts down** — DONE, approved by Cesar
 
 Slice b of `game_polish` (Notion 2111). Cesar's call mid-task: **code complete first, evidence

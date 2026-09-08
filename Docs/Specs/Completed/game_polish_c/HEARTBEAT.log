@@ -1,0 +1,40 @@
+=== iter-1 kickoff baseline 2026-09-08 ===
+HEAD 30c05a468d59e13b472a25cf60fab6438d716f6a  (lessons: a setter that needs something else to run afterwards is not a setter)
+DIRTY (git status --porcelain --untracked-files=all) at kickoff:
+ M Docs/AI_CONTEXT.md
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/POLISH_BACKLOG.md
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+?? Docs/Economy/GOLFIN_Rotation_Plan_2026-27.xlsx
+?? Docs/Economy/MONETIZATION_PLAN.md
+?? Docs/Specs/Active/game_polish_c/SPEC.md
+?? Docs/Specs/Active/game_polish_c/STATUS.md
+?? Docs/Specs/Active/weekly_rotation_admin/SPEC.md
+?? Docs/Specs/Active/weekly_rotation_admin/STATUS.md
+?? Docs/Specs/Active/weekly_rotation_admin/reference/rotations_seed.csv
+?? Docs/Specs/Active/weekly_rotation_client/SPEC.md
+?? Docs/Specs/Active/weekly_rotation_client/STATUS.md
+?? Docs/Specs/Active/weekly_rotation_client/reference/figma_badges_14163-105273.png
+?? Docs/Specs/Active/weekly_rotation_client/reference/figma_gacha_demo_14163-106259.png
+?? Docs/Specs/Active/weekly_rotation_client/reference/figma_store_demo_14163-105654.png
+Everything above pre-dates this task and is NOT introduced by it (weekly_rotation_* and
+Docs/Economy/* are other tracks; the five modified Docs are shared session files).
+=== end baseline ===
+
+=== iter-1 complete 2026-09-08 ===
+Instrument built (GamePolishProbeC, PressFeedbackScope, GamePolishDemoRecorderC), builder extended
+(ApplyPressFeedback / ApplyScrollFeel / ApplySafeArea), Toast retrofitted, three EditMode suites
+added and tripwired.
+
+Measured against the committed tree:
+  C1  511 buttons live, 354 player-facing, 242 defects -> 0, 157 exclusions each with a reason
+  C2  24 ScrollRects, 18 in scope, 11 off-reference -> 0
+  C3  32 surfaces on a real iPhone 15 Pro Max safe area, 4 hits -> 0
+  C4  toast fade worst per-frame delta 0.000000
+  A5  1122 rects; signal inside a three-pair control envelope on every statistic
+  A8  full EditMode 2884 pass / 0 fail / 3 pre-existing skips; §20 tripwire run and quoted
+
+Editor left clean: play mode off, Device Simulator closed, Game View restored at 1170x2532,
+ShellScene reloaded from disk and not dirty.
+=== end ===
