@@ -41,11 +41,12 @@ read back live as **19 `animateShow` true, 0 false** (my 15 plus the 5 GPS modal
 | `Assets/Scripts/UI/Polish/GameShimmerSites.cs` | **New.** The game's 7 cold-fetch site names, beside the moved GPS table. |
 | `Assets/Scripts/UI/Polish/Editor/GamePolishBuilder.cs` | **New methods** `ApplyModals()`, `ApplyShimmer()` (+ menu items) and `FixCornerScale`/`ChildBox`, which size each block's 9-slice corner to the box that block actually has — §A11. |
 | `Assets/Scripts/UI/Polish/Editor/RetrofitParityRecorder.cs` | **New.** The §D2 frame-by-frame gate. |
+| `Assets/Scripts/UI/Polish/Editor/GamePolishDemoRecorderB.cs` | The §A4 take. (b) walks the three shop rotation tabs and buys on the first live CTA; (e) enters a hole through its card (tap to expand, then PLAY) and raises the result screen with the production hole-end call. |
 | `Docs/Scripts/compare_retrofit.py` | **New.** Diffs the two trace JSONs. |
 | `Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs` | §D2: `PopInScaleRoutine` and the `Hide` override deleted. |
 | `Assets/Scripts/UI/Home/DailyMissionPillController.cs` | §D2: slide → `UiMotion.Slide`, glow → `UiMotion.Pulse` on a runtime CanvasGroup. |
 | `Assets/Scripts/UI/Gacha/GachaRevealModalController.cs` | §D2: StepEnter/StepPop/StepShake driven by `UiMotion.Tween`; local `EaseOutBack` deleted. |
-| `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteWidget.cs` | §D1.3: its own pop/unpop + scrim fade. |
+| `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteWidget.cs` | §D1.3: its own pop/unpop + scrim fade. §D1.4: the choreography starts AFTER the card binds and zeroes the counted labels on its first frame, so the rewards arrive instead of being corrected — see A4 (e). |
 | `Assets/Scripts/UI/PersistentUIManager.cs` | §D3: the count-up guard is `!=`, not `>`. |
 | `Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs` | §D3: arms the count-up inside `SpendPoints`/`EarnPoints`. |
 | `Assets/Scripts/UI/Gacha/GachaBannerCard.cs`, `GachaPullFlow.cs` | §D5: PendingSpend on both PULL buttons. |
@@ -268,7 +269,7 @@ would snap the sequence to its end and then watch the rows animate over the top 
 |---|---|
 | Versus | outcome word (BOTH labels — one says LOSER and the player reads that just as hard) `Pop`; reward rows `Stagger`-rise; amounts `CountUp` from 0 into `x{0}`, a beat AFTER the rise so a row is on screen before its number moves |
 | TournamentResult | rank badge `Pop`; prize `CountUp` from 0, with `+ Trophy` carried in the wrap so the suffix is never dropped mid-count |
-| HoleComplete | verdict glyph `Pop`; the three reward amounts count together (in sequence they would outlast the player's patience). Local implementation — `Golfin.Gameplay.UI` cannot reference Assembly-CSharp, the same wall §D1.3 documents |
+| HoleComplete | verdict glyph `Pop`; the three reward amounts count together (in sequence they would outlast the player's patience). Local implementation — `Golfin.Gameplay.UI` cannot reference Assembly-CSharp, the same wall §D1.3 documents. **Ordering corrected while recording A4 (e):** the sequence started before `BindCurrentHole`, so the labels showed their final value for the length of the pop and the glyph before the count reset them — `x10 → x2 → … → x10` in the frames. Bind runs first now and the routine zeroes them on its first frame |
 
 **THE MISSION-COMPLETE BANNER §D1.4 NAMES DOES NOT EXIST.** No banner object, no
 `MISSION_COMPLETE` key, no field for one — grepped across `Assets/Scripts/Gameplay/UI/ShotUI/`
@@ -316,7 +317,7 @@ modals is the tell that it is the shared cost of activating a panel and rebuildi
 not the tween. The first version of this mode took a MAX over a window containing a ~7 MB boot
 spike and reported every modal as seven megabytes BETTER than baseline; medians replaced it.
 
-### A4 · Videos — five clips, and two subjects that could not be reached
+### A4 · Videos — all seven clips
 
 `GamePolishDemoRecorderB` is `GamePolishDemoRecorder`'s shape pointed at this task: one play
 session, one recording at 1170x2532, a sidecar of segment boundaries on the same clock, cut and
@@ -327,19 +328,66 @@ every still here is extracted from the MP4 afterwards.
 | Clip | Length | Shows |
 |---|---|---|
 | `game_polish_b_a_roster_levelup.mp4` | 11.8 s | the level-up modal pops, the level `Pop`s to Lv 14/39, pending SP shows `+2` on STRENGTH, and the top-bar RP counts DOWN |
+| `game_polish_b_b_shop_purchase.mp4` | 17.8 s | the shop opens on GACHA (no BUY exists there), the STORE tab, a real 75 RP purchase, and the top bar counting down 6,123 → 6,048 |
 | `game_polish_b_c_rankings_cold.mp4` | 6.2 s | the board arrives — podium, then the rows. The still shows #1 full size against #2/#3 at 0.85, which is the hierarchy the reveal had to preserve |
 | `game_polish_b_d_gacha_reveal.mp4` | 13.1 s | the retrofitted reveal end to end: bag drop, shake, rays, card pop. Tickets 2,890 → 2,440 on a real x10 |
+| `game_polish_b_e_hole_complete.mp4` | 25.1 s | Hole 2 entered from its own card, then the result screen §D1.3 pops over the live hole and §D1.4 counts the three rewards up from zero |
 | `game_polish_b_f_tournament_cards.mp4` | 12.6 s | the tournament cards staggering in on the schedule paint |
 | `game_polish_b_g_mode_select.mp4` | 12.7 s | Mode Select entered twice, staggering both times, then a card tap |
 
-**Two of A4's seven subjects were not reached, and neither is hidden:**
+**(b) AND (e) WERE RECORDED AFTER THE FACT, AND BOTH ORIGINAL BAIL REASONS WERE WRONG.**
+Each is kept here rather than quietly replaced, because in both cases the harness reported a
+fact about the game when the truth was a fact about the harness.
 
-- **(b) shop purchase.** No interactable CTA at **RP 6,139** — nothing on the catalog is
-  affordable or is already owned. The bail message carries the live balance so the claim is
-  checkable rather than asserted. **Its actual subject — RP counting DOWN in the top bar — is
-  proven instead by (a), frame by frame** (see A5).
-- **(e) hole complete.** A real hole-complete needs a hole played to the cup, which unloads
-  ShellScene under the take. Not attempted rather than faked.
+- **(b) shop purchase — the bail said "no interactable CTA at RP 6,139 — nothing on the catalog
+  is affordable or is already owned".** That was a claim about a balance for a control that was
+  not on screen. `ScreenId.GeneralShop` opens the Rewards Center on its **GACHA** tab, whose
+  live controls are `PullX1Button` / `PullX10Button` / `RulesButton`; `CtaGoldButton` does not
+  exist until the STORE tab is showing. The segment walks all three rotation tabs now and
+  reports each one's tally, and the run says it plainly: `DailyTab: 0 BUY button(s) on screen,
+  0 live` then `WeeklyTab: 8 BUY button(s) on screen, 4 live`. The clip's own first frame is the
+  proof — it is the GACHA tab, and there is no BUY on it anywhere. **This is the same defect A7
+  had already diagnosed**; A4 was not re-run at the time and kept the superseded sentence.
+- **(e) hole complete — the bail said a real hole-complete "unloads ShellScene under the take".**
+  It does not. `GameplaySceneLoader` loads both LabScaffold and `Hole_NN_Geo` with
+  `LoadSceneMode.Additive`, ShellScene is never unloaded, and the loader itself lives in
+  ShellScene — its own doc comment says the work is hosted there "never on the caller: several
+  callers live in LabScaffold and are destroyed by the unload halfway through". The runner's host
+  is `DontDestroyOnLoad` on top of that. Nothing about the take was ever at risk.
+
+**What (e) drives, and what it does not.** Hole 2 is entered through the hole card's own action
+button and really loads (`'Hole_02_Geo' loaded`, then the loading screen comes down). The result
+screen is raised by `GameSession.MarkHoleComplete` — the production hole-end call, the one
+`HoleCompletionBridge` makes when the ball drops. **What is synthesised is the ball reaching the
+cup, and nothing after it:** the payload, `HoleCompleteModalController`, the data assembly, the
+widget, its pop and its count-ups are all the production path, and the segment leaves through
+`ExitToScreen(Home)`, the production MENU/quit teardown. `SkyRotationDemoRecorder`'s ACT 2 is
+the same recipe, borrowed rather than invented. The run asserts the screen is actually up
+(`HoleCompleteWidget.IsShowing true`) instead of assuming it.
+
+**A second bug in the (e) harness, and why it looked like the opposite.** The first attempt
+polled hole 1's `actionButton` and gave up after 25 s with "the card action button never went
+live". It never would: `actionButton` lives inside `expandedContainer`, which `SetState`
+activates only for `HoleCardState.Expanded`, so on a collapsed card it is not in the hierarchy
+at all — eighteen collapsed cards are indistinguishable from a screen that never finished
+building. A player taps the card, it expands, and THEN taps PLAY; the segment does that now, and
+takes whichever hole is playable rather than pinning hole 1, because which hole that is depends
+on save state.
+
+**AND THE (e) FRAMES FOUND A REAL WART IN §D1.4.** Read frame by frame, the first take's reward
+row went `x10 → x2 → x7 → x9 → x10`: the labels showed the **final** value for the length of the
+pop and the glyph before the count reset them and climbed back to it. `Show()` ran
+`StartChoreography` BEFORE `BindCurrentHole`, so the sequence captured the labels and then Bind
+wrote each its answer. A count-up that shows its result first is worse than no count-up. Bind
+now runs first and `ChoreoRoutine` zeroes the counted labels on its own first frame; the shipped
+clip reads `x0 x0 x0` through the pop, then `x4/x4/x2 → x7/x7/x3 → x9/x9/x4 → x10/x10/x5`. It
+was only ever visible one frame at a time — no still would have shown it.
+
+**The take was re-run because the clip under-sampled the motion, not because it was wrong.** The
+recorder captures the frames the app actually renders (`FrameRatePlayback.Variable`, so the
+sidecar and the video share one clock), and in the seconds after a hole loads the Editor renders
+the 1170x2532 gameplay scene slowly. Fired 2 s after the loading screen came down, the 0.20 s pop
+reached the clip as two distinct frames. The hold is 6 s now.
 
 **THREE CLIPS WERE THROWN AWAY BECAUSE THE CAPTION DID NOT MATCH THE FRAME**, which is the
 whole reason for looking at every frame rather than trusting the log:
@@ -438,23 +486,25 @@ static mission data; a daily countdown, which is a clock; and a streak, which mo
 once animates nothing, and counting a clock would be absurd. Reported for Cesar to overrule if
 he meant something I have not found.
 
-### A14 · `check_report_counts.py` — run, with five adjudicated
+### A14 · `check_report_counts.py` — run, with six adjudicated
 
 `truth()` only knew `game_polish_a`'s `pushes` shape, so it was extended with a `records` arm
 (dispatched on the key the file actually has, so a third shape fails loudly rather than being
-mis-read). Against `modals_invariants.json` it produces `[0, 1, 2, 7, 12, 14]` and flags five
+mis-read). Against `modals_invariants.json` it produces `[0, 1, 2, 7, 12, 14]` and flags six
 integers for a human verdict — which is the tool working as designed, not a defect:
 
 | Line | Number | Verdict |
 |---|---|---|
-| 281 | `D-8` | a deviation ID, not a count |
-| 312 | `164–191 KB` | a figure from `perf_run.log`, not from the modals JSON it was checked against |
-| 605 | `min(w,h)/4` | the lint's own cap-radius formula, quoted from `UIFidelityLinter.cs:202` |
-| 611 | `282×433` | a block size in px, read live off the scene in §A11 |
-| 649 | `120 lines` | the ShellScene diff size, from `git diff --stat` |
+| 282 | `D-8` | a deviation ID, not a count |
+| 313 | `164–191 KB` | a figure from `perf_run.log`, not from the modals JSON it was checked against |
+| 348 | `4 live` | BUY buttons on the shop's STORE tab, quoted verbatim from the A4 (e) run log |
+| 659 | `min(w,h)/4` | the lint's own cap-radius formula, quoted from `UIFidelityLinter.cs:202` |
+| 665 | `282×433` | a block size in px, read live off the scene in §A11 |
+| 703 | `120 lines` | the ShellScene diff size, from `git diff --stat` |
 
-The last three are §A11's and are checked against `modals_invariants.json`, which knows nothing
-about shimmer geometry; each is verified against its own source, named in the row.
+The last four are §A11's and §A4's and are checked against `modals_invariants.json`, which knows
+nothing about shimmer geometry or shop catalogs; each is verified against its own source, named
+in the row.
 
 `check_report_citations.py`: **42 cited, 0 unresolved.**
 

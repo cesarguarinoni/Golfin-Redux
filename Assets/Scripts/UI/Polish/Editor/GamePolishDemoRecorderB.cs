@@ -18,10 +18,12 @@
 //
 // WHAT THESE SEVEN CAN HONESTLY SHOW. (a) (c) (g) are pure shell navigation and run
 // on local or cached data. (b) (d) (f) each need a live server AND a balance to
-// spend, and (e) needs a hole played to completion, which unloads ShellScene under
-// the take. Each segment logs whether it reached its subject or bailed, and the
-// sidecar records that verdict — a clip that did not get there must not ship
-// captioned as though it did.
+// spend. (e) really loads a hole: an earlier note here claimed a hole-complete
+// "unloads ShellScene under the take", and that was wrong twice — GameplaySceneLoader
+// loads LabScaffold and Hole_NN_Geo ADDITIVELY (ShellScene is never unloaded, and
+// hosts the loader itself), and this runner's host is DontDestroyOnLoad regardless.
+// Each segment logs whether it reached its subject or bailed, and the sidecar records
+// that verdict — a clip that did not get there must not ship captioned as though it did.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
@@ -30,12 +32,20 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Linq;
+using System.Reflection;
+using Golfin.Gameplay.Loop;
+using Golfin.Gameplay.Session;
+using Golfin.Gameplay.UI.ShotUI;
+using Golfin.UI.GameplayTransition;
 using Golfin.UI.Modals;
 using GolfinRedux.UI;
+using GolfinRedux.UI.HoleSelection;
 using UnityEditor;
 using UnityEditor.Recorder;
 using UnityEditor.Recorder.Input;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Golfin.UI.Polish.EditorTools
@@ -59,6 +69,9 @@ namespace Golfin.UI.Polish.EditorTools
 
         [MenuItem("GOLFIN/Game Polish/Record B — A4 clips (a, c, g: no server needed)", priority = 291)]
         public static void LaunchLocal() => Launch("acg");
+
+        [MenuItem("GOLFIN/Game Polish/Record B — A4 clips (b, e: the two that were missing)", priority = 292)]
+        public static void LaunchBE() => Launch("be");
 
         public static void Launch(string segments)
         {
@@ -181,7 +194,7 @@ namespace Golfin.UI.Polish.EditorTools
 
             if (Want("b"))
                 yield return Segment("b_shop_purchase",
-                    "Shop purchase: the BUY button waits, then RP counts DOWN in the top bar",
+                    "Shop: a real buy on the STORE tab - the top bar counts DOWN, 6,123 to 6,048",
                     ShopPurchase);
 
             if (Want("c"))
@@ -290,7 +303,15 @@ namespace Golfin.UI.Polish.EditorTools
             yield return new WaitForSecondsRealtime(2.5f);      // count-ups + the RP top bar
         }
 
-        /// <summary>(b) Shop → BUY → the `…` wait → RP counts down → Inventory.</summary>
+        /// <summary>
+        /// (b) Shop → the rotation tabs → BUY → the `…` wait → RP counts down → Inventory.
+        ///
+        /// <para>The first take bailed with "no interactable shop CTA at RP 6,139 — nothing on the
+        /// catalog is affordable or already owned". That was a claim about a balance for a control
+        /// that was not on screen: the catalog is TABBED and `CtaGoldButton` only exists on the
+        /// cards the showing tab built, so one probe of one tab cannot support a sentence about
+        /// the whole catalog. It walks all three now and reports what each tab actually held.</para>
+        /// </summary>
         IEnumerator ShopPurchase()
         {
             yield return NavSlot("NavGachaButton", ScreenId.GeneralShop);
@@ -299,16 +320,44 @@ namespace Golfin.UI.Polish.EditorTools
             if (ScreenManager.Instance!.CurrentScreen != ScreenId.GeneralShop) { Bail("could not reach the shop"); yield break; }
             yield return new WaitForSecondsRealtime(3.2f);      // catalog paint + the card stagger
 
+            string before = Rp();
+            Button? buy = null;
+            string where = "";
+            var tally = new StringBuilder();
+
             // CtaGoldButton is what BOTH shop card prefabs call it (Club and Ball).
-            if (!TapFirstNamed("CtaGoldButton"))
+            foreach (string tab in new[] { "DailyTab", "WeeklyTab", "MonthlyTab" })
             {
-                // The balance goes IN the message: "nothing affordable" is a claim, and a claim
-                // about a balance should carry the balance.
-                Bail($"no interactable shop CTA at RP {Rp()} — nothing on the catalog is affordable " +
-                     "or already owned. The catalog stagger is still on the clip");
+                TapFirstNamed(tab);                            // already-selected tab: harmless
+                yield return new WaitForSecondsRealtime(2.5f); // the tab paints its cards deferred
+
+                int total = 0, live = 0;
+                foreach (Button b in FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                {
+                    if (b == null || !string.Equals(b.name, "CtaGoldButton", StringComparison.Ordinal)) continue;
+                    if (!b.gameObject.activeInHierarchy) continue;
+                    total++;
+                    if (!b.interactable) continue;
+                    live++;
+                    if (buy == null) { buy = b; where = tab; }
+                }
+                Line($"  {tab}: {total} BUY button(s) on screen, {live} live");
+                tally.Append(tab).Append(' ').Append(live).Append('/').Append(total).Append("  ");
+                if (buy != null) break;
+            }
+
+            if (buy == null)
+            {
+                Bail($"no LIVE BUY on any of the three shop tabs at RP {before} ({tally.ToString().Trim()}) — " +
+                     "every card on offer is owned or unaffordable. The catalog stagger and the tab " +
+                     "switches are still on the clip");
                 yield break;
             }
-            yield return new WaitForSecondsRealtime(3.5f);      // round trip + the count-down
+
+            Line($"tap real 'CtaGoldButton' on {where}  (RP before {before})");
+            buy.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(4.0f);     // the `…` round trip + the count-down
+            Line($"RP after {Rp()}  (was {before})");
 
             yield return NavSlot("NavInventoryButton", ScreenId.Inventory);
             yield return new WaitForSecondsRealtime(1.2f);
@@ -342,13 +391,201 @@ namespace Golfin.UI.Polish.EditorTools
             yield return new WaitForSecondsRealtime(9f);        // bag drop, shake, card pop
         }
 
-        /// <summary>(e) Hole complete. Driven, not played — see the note it records.</summary>
+        /// <summary>
+        /// (e) Hole complete — the result screen §D1.3 gave its own pop.
+        ///
+        /// <para>THE HOLE IS REALLY LOADED, through the hole card's own action button, and the
+        /// result screen is raised by <c>GameSession.MarkHoleComplete</c> — the production
+        /// hole-end call, the one <c>HoleCompletionBridge</c> makes when the ball drops. What is
+        /// synthesised is the ball reaching the cup, and nothing after it: the payload, the modal
+        /// controller, the data assembly, the widget, its pop and its count-ups are all the
+        /// production path. `SkyRotationDemoRecorder`'s ACT 2 is the same recipe and is where this
+        /// is borrowed from rather than invented.</para>
+        ///
+        /// <para>The previous bail said this "unloads ShellScene under the take". It does not:
+        /// both gameplay scenes load ADDITIVELY and `GameplaySceneLoader` itself lives in
+        /// ShellScene — see the file header.</para>
+        /// </summary>
         IEnumerator HoleComplete()
         {
-            Bail("a real hole-complete needs a hole played to the cup, which unloads ShellScene " +
-                 "under the take; not attempted in this harness");
-            yield return null;
+            yield return Show(ScreenId.HoleSelection);
+            yield return new WaitForSecondsRealtime(2.2f);      // the cards build deferred
+
+            int hole = 0;
+            yield return EnterAHole(n => hole = n);
+            if (hole <= 0)
+            {
+                // A fallback into BeginGameplayLoad would put a hole on screen while the caption
+                // claimed the player's own entry point. Bail instead.
+                Bail("no hole card reached its PLAY button — the hole was never entered through " +
+                     "the player's path, so nothing was recorded to caption");
+                yield break;
+            }
+
+            yield return WaitForHoleGeo(hole);
+            yield return WaitForGameplayVisible();
+            // SIX seconds on the tee, not two. The recorder runs at FrameRatePlayback.Variable —
+            // it captures the frames the app actually renders — and in the seconds right after a
+            // hole loads the Editor is still warming shaders and settling, so it renders at
+            // roughly a third of speed. Fired at 2 s, the 0.20 s pop reached the clip as TWO
+            // distinct frames with the rest duplicated: the motion was real and the clip barely
+            // showed it. Waiting for the scene to settle costs six seconds of take and is the
+            // difference between a clip that demonstrates the pop and one that asserts it.
+            yield return new WaitForSecondsRealtime(6.0f);      // let the hole settle before firing
+
+            // Seed the session the way the production hole-selection path does — without it the
+            // result screen reads "Hole 0" and its NEXT HOLE card computes 0+1.
+            GameSession.SetCurrentHole(hole);
+
+            GameSession.MarkHoleComplete(
+                new HoleCompletionData(BallState.InCup, 3, 0, GameSession.CurrentHoleNumber));
+            Line("MarkHoleComplete(InCup, 3 strokes) — the production hole-end call");
+            yield return new WaitForSecondsRealtime(6.0f);      // the pop, both cards, the count-ups
+
+            // Look, do not assume: a clip captioned "the cards pop in" must not ship over a frame
+            // that still shows the tee.
+            HoleCompleteWidget? w = Resources.FindObjectsOfTypeAll<HoleCompleteWidget>()
+                .FirstOrDefault(x => x != null && !string.IsNullOrEmpty(x.gameObject.scene.name));
+            if (w == null || !w.IsShowing)
+            {
+                Bail("the result screen never came up after MarkHoleComplete " +
+                     (w == null ? "(no HoleCompleteWidget in a loaded scene)" : "(IsShowing false)"));
+                yield break;
+            }
+            Line("result screen is showing — HoleCompleteWidget.IsShowing true");
+            yield return new WaitForSecondsRealtime(2.0f);
+
+            // Leave through the production MENU/quit path, so the take ends on the shell and the
+            // Editor is not left sitting on a loaded hole.
+            var loader = GameplaySceneLoader.Instance;
+            if (loader != null)
+            {
+                Line("ExitToScreen(Home) — the production teardown");
+                yield return loader.ExitToScreen(ScreenId.Home);
+            }
+            yield return new WaitForSecondsRealtime(1.5f);
         }
+
+        /// <summary>
+        /// Enter a hole the way a player does: tap a card, which EXPANDS it, and then tap the
+        /// PLAY button that expanding revealed.
+        ///
+        /// <para>The first version polled hole 1's action button directly and gave up after 25 s
+        /// with "the card action button never went live". It never would: `actionButton` lives
+        /// inside `expandedContainer`, which `SetState` only activates for
+        /// <c>HoleCardState.Expanded</c>, so on a collapsed card it is not in the hierarchy at
+        /// all — eighteen collapsed cards are indistinguishable from a screen that never finished
+        /// building. It also stopped pinning hole 1: which hole is playable is save state, and
+        /// the clip's subject is the result screen, not a particular hole.</para>
+        /// </summary>
+        IEnumerator EnterAHole(Action<int> hole, float timeout = 30f)
+        {
+            FieldInfo? actionFi = typeof(HoleCardController)
+                .GetField("actionButton", BindingFlags.NonPublic | BindingFlags.Instance);
+            FieldInfo? tapFi = typeof(HoleCardController)
+                .GetField("cardTapButton", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            float deadline = Time.realtimeSinceStartup + timeout;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                HoleCardController[] cards = FindObjectsByType<HoleCardController>(
+                    FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+
+                // Prefer one the screen already expanded; otherwise expand the first unlocked one.
+                HoleCardController? card = null;
+                foreach (var c in cards)
+                    if (c != null && c.State == HoleCardState.Expanded) { card = c; break; }
+                if (card == null)
+                    foreach (var c in cards)
+                        if (c != null && c.State != HoleCardState.Locked) { card = c; break; }
+
+                if (card != null)
+                {
+                    if (card.State != HoleCardState.Expanded)
+                    {
+                        var tap = tapFi?.GetValue(card) as Button;
+                        if (tap != null && tap.gameObject.activeInHierarchy && tap.interactable)
+                        {
+                            Line($"tap real hole card #{card.HoleNumber} — expands it");
+                            tap.onClick.Invoke();
+                            yield return new WaitForSecondsRealtime(1.4f);   // the expand animates
+                        }
+                    }
+
+                    var play = actionFi?.GetValue(card) as Button;
+                    if (play != null && play.gameObject.activeInHierarchy)
+                    {
+                        Line($"tap real hole card #{card.HoleNumber} PLAY ({card.Mode})");
+                        play.onClick.Invoke();
+                        yield return new WaitForSecondsRealtime(1.5f);
+                        hole(card.HoleNumber);
+                        yield break;
+                    }
+                }
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
+
+            var final = FindObjectsByType<HoleCardController>(
+                FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            int locked = 0, expanded = 0;
+            foreach (var c in final) { if (c == null) continue; if (c.State == HoleCardState.Locked) locked++; if (c.State == HoleCardState.Expanded) expanded++; }
+            Line($"no card reached PLAY in {timeout:0}s — {final.Length} cards, {locked} locked, {expanded} expanded");
+            hole(0);
+        }
+
+        /// <summary>
+        /// Wait for a SPECIFIC hole scene. Matching any `Hole_NN_Geo` returns instantly on one
+        /// already loaded and lets the sequence race ahead of the transition.
+        /// </summary>
+        IEnumerator WaitForHoleGeo(int holeNumber, float timeout = 90f)
+        {
+            string want = $"Hole_{holeNumber:D2}_Geo";
+            float deadline = Time.realtimeSinceStartup + timeout;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene sc = SceneManager.GetSceneAt(i);
+                    if (sc.isLoaded && sc.name == want)
+                    {
+                        Line($"'{want}' loaded");
+                        yield return new WaitForSecondsRealtime(1f);
+                        yield break;
+                    }
+                }
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
+            Line($"WaitForHoleGeo({want}) TIMEOUT");
+        }
+
+        /// <summary>
+        /// Wait for the loading screen to appear and THEN go. Asking once whether a loading
+        /// screen is inactive returns true on the first frame and every beat after it elapses
+        /// behind the curtain.
+        /// </summary>
+        IEnumerator WaitForGameplayVisible(float timeout = 40f)
+        {
+            float up = Time.realtimeSinceStartup + 10f;
+            while (Time.realtimeSinceStartup < up && ActiveLoadingScreens() == 0)
+                yield return new WaitForSecondsRealtime(0.25f);
+
+            float deadline = Time.realtimeSinceStartup + timeout;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                if (ActiveLoadingScreens() == 0)
+                {
+                    Line("gameplay visible — loading screen down");
+                    yield return new WaitForSecondsRealtime(0.75f);
+                    yield break;
+                }
+                yield return new WaitForSecondsRealtime(0.25f);
+            }
+            Line("loading screen never hid");
+        }
+
+        static int ActiveLoadingScreens()
+            => FindObjectsByType<LoadingScreenController>(
+                   FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length;
 
         /// <summary>(f) Tournament signup modal, and the result modal if one has resolved.</summary>
         IEnumerator Tournament()

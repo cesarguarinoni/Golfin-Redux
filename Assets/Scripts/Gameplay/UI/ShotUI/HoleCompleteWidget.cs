@@ -92,11 +92,6 @@ namespace Golfin.Gameplay.UI.ShotUI
             // is still growing reads as "on top of" rather than "instead of".
             StartPop();
 
-            // §D1.4 — and then the numbers arrive. Started here rather than inside the pop so a
-            // Show that could not animate (disabled, off-screen) still lands on the finished
-            // state instead of a half-played sequence.
-            StartChoreography(data);
-
             // Card 1 → current-hole variant
             if (_card1 != null)
                 _card1.BindCurrentHole(data, OnAnyButtonTap);
@@ -105,6 +100,18 @@ namespace Golfin.Gameplay.UI.ShotUI
             bool card2Locked = data.IsFailed && !data.HasPersonalBest;
             if (_card2 != null)
                 _card2.BindNextHole(data, card2Locked, OnAnyButtonTap);
+
+            // §D1.4 — and then the numbers arrive. AFTER the binds, not before, and this order
+            // is the whole point: Bind writes each reward its FINAL value, so starting the
+            // sequence first meant the labels sat on the answer for the length of the pop and
+            // the glyph before the count reset them and climbed back to it. Caught in the A4 (e)
+            // frames, which read x10 -> x2 -> x7 -> x9 -> x10; a count-up that shows its result
+            // first is worse than no count-up. Binding first also means OutcomeGlyph resolves
+            // against a header this data has already activated.
+            //
+            // Started here rather than inside the pop so a Show that could not animate (disabled,
+            // off-screen) still lands on the finished state instead of a half-played sequence.
+            StartChoreography(data);
 
             _closeCallback = onClose;
 
@@ -319,6 +326,15 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         IEnumerator ChoreoRoutine()
         {
+            // Zero the counted labels on the FIRST frame, before anything is waited on. Bind has
+            // just written their final values; without this the numbers are readable throughout
+            // the pop and the count is a correction rather than an arrival.
+            for (int i = 0; i < _counted.Count; i++)
+            {
+                var (label, _) = _counted[i];
+                if (label != null) label.text = "x0";
+            }
+
             // Wait out the pop — the sequence is what happens AFTER the cards land.
             yield return WaitUnscaled(PopDur);
 

@@ -39,3 +39,22 @@ NEXT: code-complete D1/D3-D6, evidence second (Cesar's call).
   - 6 hosts 0 FAIL/0 WARN/0 INFO, all restoredInactive, lint left the scene undirtied.
     7 GPS hosts linted and left alone. 8 modal prefabs FAIL 0 / WARN 79, delta zero.
   - Commit 46567abf8. Scene saved; diff is 30 m_PixelsPerUnitMultiplier overrides only.
+
+[2026-09-08 16:10 JST] A4 (b) and (e) recorded — all seven clips now exist.
+  - MCP outage earlier was NOT a plugin fault: `git checkout` of ShellScene while it was open in
+    the Editor raised the "modified externally, reload?" dialog, which blocks the main thread and
+    makes every tool call fail with "after 10 retries". Cesar's correction; saved to memory.
+  - (b): the old bail ("no interactable CTA at RP 6,139") was wrong — the shop opens on the GACHA
+    tab, where no BUY exists. Walks all three tabs now: Daily 0/0, Weekly 8 with 4 live. Real
+    purchase, repairkit_common, charged 75, RP 6123 -> 6048, count-down frame-verified
+    (6.123 / 6.106 / 6.068 / 6.049 / 6.048).
+  - (e): the old bail ("unloads ShellScene") was wrong — both gameplay scenes load ADDITIVELY and
+    GameplaySceneLoader lives in ShellScene. Hole 2 entered via its own card; result screen raised
+    by GameSession.MarkHoleComplete; exits via ExitToScreen(Home).
+  - Harness bug found: actionButton lives inside expandedContainer, so a collapsed card never has
+    it in the hierarchy. Tap to expand, then PLAY.
+  - REAL WART FOUND IN THE FRAMES: §D1.4's HoleComplete count-up ran AFTER BindCurrentHole wrote
+    the finals, so the row read x10 -> x2 -> x7 -> x9 -> x10. Bind now runs first and the routine
+    zeroes on frame 1. Re-recorded: x0 x0 x0 -> x4/x4/x2 -> x7/x7/x3 -> x9/x9/x4 -> x10/x10/x5.
+  - Three takes for (e): take 1 exposed the ordering wart, take 2 confirmed the settle time, take
+    3 is the shipped clip.
