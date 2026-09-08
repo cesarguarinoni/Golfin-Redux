@@ -143,11 +143,12 @@ there is a false alarm and passing is a lie. **Two are NOT mine and are still fr
 guard would fix them, and I have left them alone rather than widen this diff — flagged here so
 the next red run on them is recognised for what it is.
 
-**Re-run after A5: 2868 tests, 2865 passed, 0 failed, 3 skipped** — up from 2863, which is the
-5 new `RpArmingTests`.
+**Re-run after the modal-local numbers: 2874 tests, 2871 passed, 0 failed, 3 skipped** — up from
+2863 in two steps, which is the 5 new `RpArmingTests` and the 6 new `ModalNumbersTests`.
 
 New suites: `UiMotionEaseTests` (13), `CountDownTests` (8), `ModalPopTests` (7),
-`ShimmerHostTests` (3), `RpArmingTests` (5), `GachaCarouselLoopTests` (13, the side-request).
+`ShimmerHostTests` (3), `RpArmingTests` (5), `ModalNumbersTests` (6),
+`GachaCarouselLoopTests` (13, the side-request).
 
 ### §D1.1 · Modals — done, scene diff 8 lines
 
@@ -402,10 +403,40 @@ is set by the two paths that know a player acted: `AddTickets` (a grant) and `Ga
 (the pull itself), immediately around the `SetFromServer` call. `RpArmingTests` pins that
 mutation surface too.
 
-**What is still NOT in this table:** §D3's modal-local numbers — the level-up modal's level
-`Pop`, its stat-bar `Tween`, and `MissionCard` counters. Those were never implemented and are
-listed in § What is NOT done. Clip (a)'s still shows the modal's *existing* `Lv 14/39` and the
-`+2` pending-SP marker, which are its own behaviour, not additions by this task.
+#### The modal-local numbers (§D3's last row)
+
+Both level-up panels — character and club — are the same shape: a level readout, four stat rows
+with a confirmed bar, a pending bar and a value, all redrawn by one `RefreshDisplay` that runs
+on open AND on every `[+]` tap. They share one helper (`ModalNumbers`) so they cannot drift.
+
+| What | Before | Now |
+|---|---|---|
+| level readout | `levelText.text = …` | `Pop`, **only when the level actually changed** — the panel redraws on every `[+]` tap, and a level that popped when a stat point moved would describe the wrong event |
+| confirmed stat bar | `bar.fillAmount = …` | `Tween` old→new over `CountDur` |
+| pending stat bar | `barPending.fillAmount = …` | `Tween`, with `SetActive` **before** it — a tween on a disabled object never runs, and UiMotion settles it instantly, so the pending segment would appear at full length instead of growing into it |
+| stat readout | `.text = $"{v}"` | `CountUp` |
+
+**Two rules matter more than the animation**, and both are pinned by `ModalNumbersTests`:
+
+1. **The first paint of an open snaps.** `RefreshDisplay` runs on open; animating there would
+   fill every bar from zero on arrival — a loading animation over data that was already correct,
+   the same mistake the shimmer's cold-only rule exists to prevent.
+2. **Every tween settles on the exact value, including when interrupted.** A stat bar stranded
+   at 0.63 is a WRONG STAT, not a blemish — and interruption is the NORMAL case here, because
+   the panel redraws on every tap. The test interrupts a bar three times and asserts it still
+   lands on the last value asked for.
+
+**Evidence:** `screenshots/a5_statbar_tween_frames194-209.png` — six consecutive frames of the
+A4 (a) clip across two `[+]` taps. The orange pending segment is at a **different width in every
+frame**, growing rather than jumping, which is the `fillAmount` tween.
+
+**`MissionCard` gets no count-up, and that is a decision rather than an omission.** §D3 asks for
+"mission counters on `MissionCard` `CountUp`". Its numbers are: reward amounts, which are
+`List<(Sprite? icon, string amount)>` — **strings**, bound once when the card is built from
+static mission data; a daily countdown, which is a clock; and a streak, which moves by one.
+`CountUp` animates a DELTA, and none of these has one — counting a value that is only ever set
+once animates nothing, and counting a clock would be absurd. Reported for Cesar to overrule if
+he meant something I have not found.
 
 ### A14 · `check_report_counts.py` — run, with two adjudicated
 
@@ -540,7 +571,6 @@ Nothing below has been started; none of it is claimed anywhere above.
 |---|---|
 | **§D3** modal-local numbers: level-up stat bars `Tween`, level `Pop`, `MissionCard` counters | not started |
 | **A1** — mid-pop frames, timing and the per-modal table are DONE (`modals_invariants.json`, 14 captures). What is NOT done is driving each modal through its **real player trigger**: the probe opens them itself and records `realWidget: false` with a per-modal reason (a finished 1v1, a resolved tournament, holing out, a paid gacha pull). | partial |
-| **A5** — the per-site table is built and measured (above). What remains is §D3's MODAL-LOCAL numbers: the level-up modal's level `Pop`, its stat-bar `Tween`, and `MissionCard` counters. Never implemented. | partial |
 | **A6** — the cold cycle is captured end to end for `missions.daily`, and the cache-skip for Rankings. Cold frames for the other five sites need a backend provider with an empty first response; not obtainable in this session. | partial |
 | **A7** — three CTAs captured. A `…` frame for every newly wired CTA is one CTA (the gacha pull), which IS the only one this task newly wired. | done for what was wired |
 | **A11** UI fidelity lint delta | not run, and arguably N/A: Rule 21's linter is driven by a per-element spec file generated from a Figma NODE, and this task references no node — it is motion over screens `design_consistency_audit` already signed off. Stated rather than skipped. |

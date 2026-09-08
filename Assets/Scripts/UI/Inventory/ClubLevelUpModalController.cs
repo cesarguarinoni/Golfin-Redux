@@ -191,6 +191,11 @@ namespace Golfin.Inventory
 
             if (levelText != null) levelText.color = Color.white;
 
+            // §D3 — the next RefreshDisplay is this open's FIRST and must not animate: those
+            // values did not change, they arrived.
+            Numbers.BeginOpen();
+            _lastPreviewLevel = previewLevel;
+
             RefreshLocalizedText();
             Show();
         }
@@ -255,6 +260,10 @@ namespace Golfin.Inventory
             if (levelText != null)
             {
                 levelText.text = $"Lv {previewLevel}/{maxLevel}";
+                // §D3 — pop only when the LEVEL changed. This panel redraws on every [+] tap, and
+                // a level that pops when a stat point moved would be describing the wrong event.
+                if (previewLevel != _lastPreviewLevel) Numbers.Pop(levelText);
+                _lastPreviewLevel = previewLevel;
                 if (previewLevel > playerClub.currentLevel)
                     levelText.color = levelTextColor;
             }
@@ -335,6 +344,9 @@ namespace Golfin.Inventory
             if (loftValueMax     != null) loftValueMax.text     = $"/{STAT_MAX}";
 
             // ── Reset / Confirm states ───────────────────────────────────────
+            // Painted: everything after this pass is a change the player caused.
+            Numbers.Painted = true;
+
             bool hasPending     = totalPending > 0;
             bool allSPAllocated = availableSP == 0 && hasPending;
 
@@ -347,6 +359,17 @@ namespace Golfin.Inventory
         /// <summary>
         /// Updates a single allocatable stat row (blue bar + orange pending bar, value text, +N label, [+] button).
         /// </summary>
+        // ── game_polish_b §D3 — the modal's own numbers move ─────────────────────
+        //
+        // The club level-up panel is the character one twice over: a level readout, four stat
+        // rows with a confirmed bar, a pending bar and a value, redrawn by one RefreshDisplay on
+        // open AND on every [+] tap. It gets the same three behaviours from the same helper, so
+        // the two panels cannot drift apart — first paint snaps, every change animates, and every
+        // tween settles exactly even when the next tap interrupts it. See ModalNumbers.
+        private ModalNumbers? _numbers;
+        private ModalNumbers Numbers => _numbers ??= new ModalNumbers(this);
+        private int _lastPreviewLevel = -1;
+
         private void UpdateStatRow(
             Image bar, Image barPending,
             TextMeshProUGUI valueTextCurrent, TextMeshProUGUI valueTextMax,
@@ -355,17 +378,15 @@ namespace Golfin.Inventory
             int currentValue, int pendingAmount, int cap, int availableSP)
         {
             // Blue bar — confirmed value
-            if (bar != null)
-                bar.fillAmount = cap > 0 ? (float)currentValue / cap : 0f;
+            Numbers.Bar(bar, cap > 0 ? (float)currentValue / cap : 0f);
 
-            // Orange bar — current + pending
-            if (barPending != null)
-            {
-                barPending.fillAmount = cap > 0 ? (float)(currentValue + pendingAmount) / cap : 0f;
-                barPending.gameObject.SetActive(pendingAmount > 0);
-            }
+            // Orange bar — current + pending. SetActive BEFORE the tween: a tween on a disabled
+            // object never runs, and UiMotion settles it instantly, so the pending segment would
+            // appear at full length rather than growing into it.
+            if (barPending != null) barPending.gameObject.SetActive(pendingAmount > 0);
+            Numbers.Bar(barPending, cap > 0 ? (float)(currentValue + pendingAmount) / cap : 0f);
 
-            if (valueTextCurrent != null) valueTextCurrent.text = $"{currentValue + pendingAmount}";
+            Numbers.Number(valueTextCurrent, currentValue + pendingAmount);
             if (valueTextMax     != null) valueTextMax.text     = $"/{cap}";
 
             if (pendingText != null)

@@ -12,8 +12,11 @@ gate (14 modals, fail 0), five captioned A4 clips, and the §D3 count-DOWN prove
 TournamentLeaderboard that ended a paint without clearing the shimmer. That was the second
 defect of one shape, so every `Shimmer` call site was audited and two more were fixed.
 
-Still outstanding, per item in `IMPLEMENTER_REPORT.md` § What is NOT done: §D3's modal-local
-numbers (level `Pop`, stat-bar `Tween`, `MissionCard` counters — never implemented), cold frames for five of the six shimmer sites (they need a backend provider with an empty
+**§D3 is complete**: the modal-local numbers landed (level `Pop`, stat-bar `Tween`, readout
+`CountUp` on both level-up panels). `MissionCard` gets none, and that is a decision with a
+stated reason — its numbers are strings bound once, a clock, and a +1.
+
+Still outstanding, per item in `IMPLEMENTER_REPORT.md` § What is NOT done: cold frames for five of the six shimmer sites (they need a backend provider with an empty
 first response — not obtainable in this session), A11 (arguably N/A — no Figma node), and two of
 A4's seven subjects. NOTE: A4 (b)'s recorded reason was WRONG and is corrected in the report —
 the shop catalog is a TAB that was never opened, not a balance problem.
@@ -27,5 +30,6 @@ This task has NOT been submitted for review and must not be treated as ready for
 | 2026-09-08 | `IMPLEMENTER_WORKING` | D4 + the rest of D6. 6 shimmer hosts, 0 active at rest. Two sites moved on evidence. |
 | 2026-09-08 | `IMPLEMENTER_WORKING` | D1.4 + D7. Result choreography, skippable. Probe: modals **14 / fail 0**. Found and fixed a pre-existing bug — a duplicate presenter was destroying the tournament result modal at boot. |
 | 2026-09-08 | `IMPLEMENTER_WORKING` | **Evidence.** 5 captioned clips at 1170x2532; RP count-DOWN proven at 6.148→6.143→6.140→6.139. Three clips were discarded and re-taken because the caption did not match the frame. |
+| 2026-09-08 | `IMPLEMENTER_WORKING` | **Modal-local numbers — §D3 complete.** Both level-up panels share `ModalNumbers`: level `Pop` only when the level changed, stat bars `Tween`, readouts `CountUp`. First paint snaps; every tween settles exact even when the next `[+]` interrupts it. `MissionCard` deliberately gets none. EditMode **2874 / 0 failed**. |
 | 2026-09-08 | `IMPLEMENTER_WORKING` | **A5 per-site table.** 8 RP call sites mapped to the 2 armed methods; spend and earn COUNT (14 intermediate values each), the unarmed dev path snaps in the same run. Found a missing §D3 site — the ticket pill was still snapping — and wired it at the two player-caused paths. `RpArmingTests` makes the completeness claim gate-enforced. EditMode **2868 / 0 failed**. |
 | 2026-09-08 | `IMPLEMENTER_WORKING` | **A3/A6/A7/A8.** Rest parity measured over 11 screens with every difference opened and attributed. A3 found a real defect (an arm that ends a wait must clear the shimmer); the shape was audited across all 5 sites and 2 more fixed. A6's cold cycle captured end to end for `missions.daily`. EditMode **2863 / 0 failed**. |

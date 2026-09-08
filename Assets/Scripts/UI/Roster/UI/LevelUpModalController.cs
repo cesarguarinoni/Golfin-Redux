@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -203,6 +204,12 @@ namespace Golfin.Roster
             // inside RefreshDisplay() if a preview level-up has happened this session.
             if (levelText != null) levelText.color = Color.white;
 
+            // §D3 — the next RefreshDisplay is this open's FIRST, and it must not animate: the
+            // values it draws did not change, they arrived. Everything after it is a change the
+            // player made and does animate.
+            Numbers.BeginOpen();
+            _lastPreviewLevel = previewLevel;
+
             RefreshLocalizedText();
             Show();
         }
@@ -265,6 +272,12 @@ namespace Golfin.Roster
                 // Only tint blue once a preview level-up has happened; otherwise leave Editor colour
                 if (previewLevel > playerData.currentLevel)
                     levelText.color = levelTextColor; // #2775DD
+
+                // §D3 — the level POPS when it actually changes. Guarded on the value rather than
+                // run on every RefreshDisplay: this panel redraws on every [+] tap and a level
+                // that pops when only a stat point moved would be lying about what happened.
+                if (previewLevel != _lastPreviewLevel) Numbers.Pop(levelText);
+                _lastPreviewLevel = previewLevel;
             }
 
             // --- Next Level / Cost / Reward ---
@@ -336,6 +349,11 @@ namespace Golfin.Roster
                 staminaValueCurrent,     staminaValueMax,     staminaPending,     staminaPlusButton,
                 baseStam + playerData.spentStamina,     pendingStamina,     caps.staminaCap,     availableSP);
 
+            // From here on this open is PAINTED: the next RefreshDisplay is a change the player
+            // caused, and its bars, numbers and level are allowed to move. Set after the rows are
+            // drawn so the first pass through them snapped.
+            Numbers.Painted = true;
+
             // --- Reset / Confirm button states ---
             bool hasPending      = totalPending > 0;
             bool allSPAllocated  = availableSP == 0 && hasPending;
@@ -350,6 +368,19 @@ namespace Golfin.Roster
         /// The orange bar should sit BEHIND the blue bar in the Unity hierarchy so only
         /// the delta segment (beyond the blue fill) is visible.
         /// </summary>
+        // ── game_polish_b §D3 — the modal's own numbers move ─────────────────────
+        //
+        // The top bar counts its RP (§D3's arm). These are the numbers INSIDE the modal: the
+        // level, the four stat bars and their readouts. They changed by assignment, so a
+        // level-up redrew the whole panel in one frame and the player had to diff it themselves.
+        //
+        // The rules — first paint never animates, every tween settles exactly even when
+        // interrupted — live in ModalNumbers, because the club level-up modal is this same panel
+        // and wanted the same three things. See that file's header.
+        private ModalNumbers? _numbers;
+        private ModalNumbers Numbers => _numbers ??= new ModalNumbers(this);
+        private int _lastPreviewLevel = -1;
+
         private void UpdateStatRow(
             Image bar, Image barPending,
             TextMeshProUGUI valueTextCurrent, TextMeshProUGUI valueTextMax,
@@ -358,19 +389,16 @@ namespace Golfin.Roster
             int currentValue, int pendingAmount, int cap, int availableSP)
         {
             // Blue bar — confirmed stat value (colour left as-is on the Image)
-            if (bar != null)
-                bar.fillAmount = cap > 0 ? (float)currentValue / cap : 0f;
+            Numbers.Bar(bar, cap > 0 ? (float)currentValue / cap : 0f);
 
-            // Orange bar — current + pending, colour already on the Image
-            if (barPending != null)
-            {
-                barPending.fillAmount = cap > 0 ? (float)(currentValue + pendingAmount) / cap : 0f;
-                barPending.gameObject.SetActive(pendingAmount > 0);
-            }
+            // Orange bar — current + pending, colour already on the Image.
+            // SetActive BEFORE the tween: a tween on a disabled object never runs, and UiMotion
+            // would settle it instantly, so the pending segment would appear at full length.
+            if (barPending != null) barPending.gameObject.SetActive(pendingAmount > 0);
+            Numbers.Bar(barPending, cap > 0 ? (float)(currentValue + pendingAmount) / cap : 0f);
 
             // Value split: "10" (current font) + "/25" (smaller font)
-            if (valueTextCurrent != null)
-                valueTextCurrent.text = $"{currentValue + pendingAmount}";
+            Numbers.Number(valueTextCurrent, currentValue + pendingAmount);
             if (valueTextMax != null)
                 valueTextMax.text = $"/{cap}";
 
