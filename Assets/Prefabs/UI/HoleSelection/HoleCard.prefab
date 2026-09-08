@@ -5000,6 +5000,7 @@ GameObject:
   - component: {fileID: 276160623407665372}
   - component: {fileID: 2060342281201547811}
   - component: {fileID: 8051830010464241586}
+  - component: {fileID: 8244207431932150066}
   m_Layer: 0
   m_Name: CardTapButton
   m_TagString: Untagged
@@ -5128,6 +5129,20 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &8244207431932150066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8519528545397771011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &8580619105855437007
 GameObject:
   m_ObjectHideFlags: 0

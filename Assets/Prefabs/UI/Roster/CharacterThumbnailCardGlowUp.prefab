@@ -166,6 +166,7 @@ GameObject:
   - component: {fileID: 4927225164460103308}
   - component: {fileID: 7920633410902621838}
   - component: {fileID: 2196242931455588931}
+  - component: {fileID: 3782477359581432560}
   m_Layer: 0
   m_Name: CharacterThumbnailCardGlowUp
   m_TagString: Untagged
@@ -339,6 +340,20 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &3782477359581432560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1245704479376207732}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2317308793750057721
 GameObject:
   m_ObjectHideFlags: 0

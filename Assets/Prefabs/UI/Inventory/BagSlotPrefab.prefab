@@ -225,6 +225,7 @@ GameObject:
   - component: {fileID: 4219641278403171446}
   - component: {fileID: 6031462605112593660}
   - component: {fileID: 5074999440638349765}
+  - component: {fileID: 7502307375440359247}
   m_Layer: 0
   m_Name: BagSlotPrefab
   m_TagString: Untagged
@@ -339,6 +340,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7502307375440359247
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2423997766403935763}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &3666908364149955420
 GameObject:
   m_ObjectHideFlags: 0

@@ -76,6 +76,7 @@ GameObject:
   - component: {fileID: 6821694129619044057}
   - component: {fileID: 8583960335360500640}
   - component: {fileID: 8766534522682463249}
+  - component: {fileID: 141765407674537574}
   m_Layer: 0
   m_Name: POPULARChip
   m_TagString: Untagged
@@ -186,6 +187,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &141765407674537574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 129703654493000468}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &181095075844838822
 GameObject:
   m_ObjectHideFlags: 0
@@ -2879,6 +2894,7 @@ GameObject:
   - component: {fileID: 3798684663132769967}
   - component: {fileID: 1979112100811187856}
   - component: {fileID: 2364249362731141980}
+  - component: {fileID: 7180315792557160169}
   m_Layer: 0
   m_Name: HistoryChip
   m_TagString: Untagged
@@ -3008,6 +3024,20 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &7180315792557160169
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1830253286563610517}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &1940652803259986038
 GameObject:
   m_ObjectHideFlags: 0
@@ -3096,6 +3126,7 @@ GameObject:
   - component: {fileID: 8072868496240887166}
   - component: {fileID: 5237663943196421383}
   - component: {fileID: 1701533633149498091}
+  - component: {fileID: 4565865382578890165}
   m_Layer: 0
   m_Name: PullX1Button
   m_TagString: Untagged
@@ -3205,6 +3236,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4565865382578890165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1987456044310030598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2010298602543788774
 GameObject:
   m_ObjectHideFlags: 0
@@ -3945,6 +3990,7 @@ GameObject:
   - component: {fileID: 5151822443462025350}
   - component: {fileID: 2977304755893235655}
   - component: {fileID: 1967887048303472999}
+  - component: {fileID: 7313218058334999858}
   m_Layer: 0
   m_Name: DailyTab
   m_TagString: Untagged
@@ -4056,6 +4102,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7313218058334999858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2233087126748606988}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2271147136097060331
 GameObject:
   m_ObjectHideFlags: 0
@@ -4205,6 +4265,7 @@ GameObject:
   - component: {fileID: 4565506281629341839}
   - component: {fileID: 3649047392626200477}
   - component: {fileID: 5064633431738485155}
+  - component: {fileID: 3513872307270083831}
   m_Layer: 0
   m_Name: OFFERSChip
   m_TagString: Untagged
@@ -4315,6 +4376,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &3513872307270083831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2277996006057994266}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2319635223395305900
 GameObject:
   m_ObjectHideFlags: 0
@@ -5717,6 +5792,7 @@ GameObject:
   - component: {fileID: 2966664480756147941}
   - component: {fileID: 3476559620185691285}
   - component: {fileID: 7300517188534578677}
+  - component: {fileID: 1725506345236683893}
   m_Layer: 0
   m_Name: PullX10Button
   m_TagString: Untagged
@@ -5826,6 +5902,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1725506345236683893
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3575716119861925446}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &3700264495495219426
 GameObject:
   m_ObjectHideFlags: 0
@@ -6684,6 +6774,7 @@ GameObject:
   - component: {fileID: 4865747252126625001}
   - component: {fileID: 464617840079069820}
   - component: {fileID: 3860707723033915143}
+  - component: {fileID: 3736679566589374983}
   m_Layer: 0
   m_Name: RulesButton
   m_TagString: Untagged
@@ -6792,6 +6883,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3736679566589374983
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4027533363360351341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &4151606761932933929
 GameObject:
   m_ObjectHideFlags: 0
@@ -7172,6 +7277,7 @@ GameObject:
   - component: {fileID: 369126664814471064}
   - component: {fileID: 8249157753020643620}
   - component: {fileID: 4765022338459395497}
+  - component: {fileID: 4077475339072272741}
   m_Layer: 0
   m_Name: TICKETSChip
   m_TagString: Untagged
@@ -7282,6 +7388,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4077475339072272741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4268767017266950735}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &4383340272244539589
 GameObject:
   m_ObjectHideFlags: 0
@@ -8102,6 +8222,7 @@ GameObject:
   - component: {fileID: 8918165377328747443}
   - component: {fileID: 6564691946505169063}
   - component: {fileID: 3272528271679067786}
+  - component: {fileID: 2567625972289503235}
   m_Layer: 0
   m_Name: WeeklyTab
   m_TagString: Untagged
@@ -8213,6 +8334,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &2567625972289503235
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4830480006682284331}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &4853559525282986393
 GameObject:
   m_ObjectHideFlags: 0
@@ -10185,6 +10320,7 @@ GameObject:
   - component: {fileID: 1308873487019700256}
   - component: {fileID: 6677268305795735801}
   - component: {fileID: 4533335823449779812}
+  - component: {fileID: 2627424513265297199}
   m_Layer: 0
   m_Name: PullX10Button
   m_TagString: Untagged
@@ -10294,6 +10430,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2627424513265297199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5956753988927287919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &6019470914630919461
 GameObject:
   m_ObjectHideFlags: 0
@@ -11042,6 +11192,7 @@ GameObject:
   - component: {fileID: 8000261655975297325}
   - component: {fileID: 3841007139861324847}
   - component: {fileID: 9073760729705840822}
+  - component: {fileID: 3251905803789170537}
   m_Layer: 0
   m_Name: PullX10Button
   m_TagString: Untagged
@@ -11151,6 +11302,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3251905803789170537
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6202719778049608281}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &6222182832391312631
 GameObject:
   m_ObjectHideFlags: 0
@@ -12946,6 +13111,7 @@ GameObject:
   - component: {fileID: 449763484371669335}
   - component: {fileID: 8117317044248170577}
   - component: {fileID: 5690875156197969068}
+  - component: {fileID: 8852646091940863991}
   m_Layer: 0
   m_Name: ALLChip
   m_TagString: Untagged
@@ -13056,6 +13222,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8852646091940863991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6890039176044220270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &6894611807547633132
 GameObject:
   m_ObjectHideFlags: 0
@@ -14256,6 +14436,7 @@ GameObject:
   - component: {fileID: 3859055900183348485}
   - component: {fileID: 1632099565386582595}
   - component: {fileID: 1572758532136797663}
+  - component: {fileID: 6640593511287906348}
   m_Layer: 0
   m_Name: PullX1Button
   m_TagString: Untagged
@@ -14365,6 +14546,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6640593511287906348
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7484954602284665304}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7513035705395949927
 GameObject:
   m_ObjectHideFlags: 0
@@ -14514,6 +14709,7 @@ GameObject:
   - component: {fileID: 8496908076096671543}
   - component: {fileID: 2078496231917940657}
   - component: {fileID: 3428830358567473081}
+  - component: {fileID: 4267555377196172848}
   m_Layer: 0
   m_Name: PullX1Button
   m_TagString: Untagged
@@ -14623,6 +14819,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4267555377196172848
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7748791902126777406}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7753264078074731938
 GameObject:
   m_ObjectHideFlags: 0
@@ -14711,6 +14921,7 @@ GameObject:
   - component: {fileID: 4439115901102607172}
   - component: {fileID: 4613338582168811724}
   - component: {fileID: 1222065633353369353}
+  - component: {fileID: 4736679607461917185}
   m_Layer: 0
   m_Name: MonthlyTab
   m_TagString: Untagged
@@ -14822,6 +15033,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4736679607461917185
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7808609226632135440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7813201083946749544
 GameObject:
   m_ObjectHideFlags: 0
@@ -16340,6 +16565,7 @@ GameObject:
   - component: {fileID: 8440207943553359924}
   - component: {fileID: 960131137133222583}
   - component: {fileID: 6837846220110831360}
+  - component: {fileID: 287630937572233092}
   m_Layer: 0
   m_Name: RulesButton
   m_TagString: Untagged
@@ -16448,6 +16674,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &287630937572233092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8506619934702989914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &8588639334115245747
 GameObject:
   m_ObjectHideFlags: 0
@@ -16711,6 +16951,7 @@ GameObject:
   - component: {fileID: 1739235220150808037}
   - component: {fileID: 3206421325985986049}
   - component: {fileID: 2849408004052312234}
+  - component: {fileID: 6967675073888923306}
   m_Layer: 0
   m_Name: RulesButton
   m_TagString: Untagged
@@ -16819,6 +17060,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6967675073888923306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8603143711722880552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &8715820525449474722
 GameObject:
   m_ObjectHideFlags: 0

@@ -838,6 +838,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MATCH_HOLE
+  japaneseFontScale: 0
 --- !u!1 &1492503661281592875
 GameObject:
   m_ObjectHideFlags: 0
@@ -2923,6 +2924,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: RESULT_RESULTS
+  japaneseFontScale: 0
 --- !u!1 &6791593703352314945
 GameObject:
   m_ObjectHideFlags: 0
@@ -3369,6 +3371,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MATCH_VS
+  japaneseFontScale: 0
 --- !u!1 &7400015615279738786
 GameObject:
   m_ObjectHideFlags: 0
@@ -3872,6 +3875,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: RESULT_NEW_MATCH
+  japaneseFontScale: 0
 --- !u!1001 &5234690627348647123
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3967,7 +3971,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3776630394268781759}
   m_SourcePrefab: {fileID: 100100000, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
 --- !u!224 &421842392631496625 stripped
 RectTransform:
@@ -3979,12 +3986,31 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7920633410902621838, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
   m_PrefabInstance: {fileID: 5234690627348647123}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 6479829922582504359}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b61cddd34aee32f4c9482051c428e52f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Roster.CharacterThumbnailCard
+--- !u!1 &6479829922582504359 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+  m_PrefabInstance: {fileID: 5234690627348647123}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3776630394268781759
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6479829922582504359}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &7714685949965169418
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4080,14 +4106,17 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4668624276080036470}
   m_SourcePrefab: {fileID: 100100000, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
 --- !u!114 &503189161695382916 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7920633410902621838, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
   m_PrefabInstance: {fileID: 7714685949965169418}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 8816271675894668414}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b61cddd34aee32f4c9482051c428e52f, type: 3}
@@ -4098,3 +4127,22 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 5584450411784209250, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
   m_PrefabInstance: {fileID: 7714685949965169418}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8816271675894668414 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+  m_PrefabInstance: {fileID: 7714685949965169418}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4668624276080036470
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8816271675894668414}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12

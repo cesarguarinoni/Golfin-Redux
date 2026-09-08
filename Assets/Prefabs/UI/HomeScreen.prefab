@@ -62,11 +62,14 @@ MonoBehaviour:
   newsTitleText: {fileID: 5692405268115666803}
   newsBodyText: {fileID: 1819785335040275428}
   dotsContainer: {fileID: 1909492907017479254}
+  newsPanelRoot: {fileID: 0}
+  dailyMissionPill: {fileID: 0}
   totalNewsPages: 3
   newsAutoCycleInterval: 5
   promoBannerButton: {fileID: 0}
   promoBannerText: {fileID: 0}
   gpsIcon: {fileID: 0}
+  promoBannerImage: {fileID: 0}
   characterImage: {fileID: 6825722192094747676}
   nextHoleTitleText: {fileID: 7910933110486902552}
   courseNameText: {fileID: 1086008858731386894}
@@ -87,6 +90,7 @@ MonoBehaviour:
   currentHoleIndex: 0
   matchmakingModal: {fileID: 0}
   _leaderboardButton: {fileID: 0}
+  gpsPillButton: {fileID: 0}
 --- !u!1 &100009
 GameObject:
   m_ObjectHideFlags: 0
@@ -466,6 +470,7 @@ GameObject:
   - component: {fileID: 7704223096808370743}
   - component: {fileID: 470198154452837021}
   - component: {fileID: 5715965797828787596}
+  - component: {fileID: 8869964555607687898}
   m_Layer: 5
   m_Name: SettingsButton
   m_TagString: Untagged
@@ -574,6 +579,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8869964555607687898
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &100027
 GameObject:
   m_ObjectHideFlags: 0
@@ -1217,6 +1236,7 @@ GameObject:
   - component: {fileID: 5949810746726633419}
   - component: {fileID: 7490569048035673056}
   - component: {fileID: 1492293185290353396}
+  - component: {fileID: 5698011875008744049}
   m_Layer: 5
   m_Name: PlayButton
   m_TagString: Untagged
@@ -1326,6 +1346,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5698011875008744049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765015279149879705}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &1760247528863858649
 GameObject:
   m_ObjectHideFlags: 0
@@ -1552,6 +1586,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: HOME_MAINTENANCE_TITLE
+  japaneseFontScale: 0
 --- !u!1 &2335356284258645366
 GameObject:
   m_ObjectHideFlags: 0
@@ -1807,6 +1842,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: BTN_START
+  japaneseFontScale: 0
 --- !u!1 &2375496251545468297
 GameObject:
   m_ObjectHideFlags: 0
@@ -1894,6 +1930,7 @@ GameObject:
   - component: {fileID: 1929558551747142824}
   - component: {fileID: 4085881552635280415}
   - component: {fileID: 7537665885951869808}
+  - component: {fileID: 6878194134967813049}
   m_Layer: 5
   m_Name: NavHomeButton
   m_TagString: Untagged
@@ -2002,6 +2039,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6878194134967813049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3387837327387785024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &3984998122889679619
 GameObject:
   m_ObjectHideFlags: 0
@@ -2014,6 +2065,7 @@ GameObject:
   - component: {fileID: 7181273153311145631}
   - component: {fileID: 6117845193711922734}
   - component: {fileID: 1227827509615908389}
+  - component: {fileID: 301284660514113722}
   m_Layer: 5
   m_Name: NavTeeButton
   m_TagString: Untagged
@@ -2122,6 +2174,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &301284660514113722
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3984998122889679619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &4266135650876397931
 GameObject:
   m_ObjectHideFlags: 0
@@ -2336,6 +2402,7 @@ GameObject:
   - component: {fileID: 8052782767024139796}
   - component: {fileID: 1251478447810822356}
   - component: {fileID: 7147036718346604216}
+  - component: {fileID: 9089623719496032763}
   m_Layer: 5
   m_Name: NavCharactersButton
   m_TagString: Untagged
@@ -2444,6 +2511,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &9089623719496032763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4327024745577253837}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &4539635911464430047
 GameObject:
   m_ObjectHideFlags: 0
@@ -2456,6 +2537,7 @@ GameObject:
   - component: {fileID: 4931347677979200662}
   - component: {fileID: 9012511434328928545}
   - component: {fileID: 599065185970205308}
+  - component: {fileID: 937403769597719911}
   m_Layer: 5
   m_Name: NavInventoryButton
   m_TagString: Untagged
@@ -2564,6 +2646,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &937403769597719911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4539635911464430047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &4893567269587942992
 GameObject:
   m_ObjectHideFlags: 0
@@ -3080,6 +3176,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: HOME_NEXT_HOLE
+  japaneseFontScale: 0
 --- !u!1 &5635208575700123817
 GameObject:
   m_ObjectHideFlags: 0
@@ -3936,6 +4033,7 @@ GameObject:
   - component: {fileID: 5246977802073880944}
   - component: {fileID: 7285332638341435567}
   - component: {fileID: 3090395560650003702}
+  - component: {fileID: 5374263850490112606}
   m_Layer: 5
   m_Name: NavGachaButton
   m_TagString: Untagged
@@ -4044,6 +4142,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &5374263850490112606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8689088649892349534}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &8719247254961706101
 GameObject:
   m_ObjectHideFlags: 0

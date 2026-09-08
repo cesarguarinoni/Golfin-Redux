@@ -3968,3 +3968,46 @@ three components agree, and it cannot rot.
 -1191.84 — the second being the exact number the live run had reported hours earlier. That
 equality is what turns "the test passes" into "the test tests the thing": a new fixture that has
 never been seen red is a fixture whose subject is unproven. Cost: two edits and two test runs.
+
+## Lesson AH — an instrument that resolves its reference once is measuring something that stops existing (`game_polish_c`, 2026-09-08)
+
+`GamePolishProbeC` measured every surface against the iPhone 15 Pro Max safe area and reported
+**32/32 clear, three runs in a row**. All three were wrong. It read the device's inset once at
+start-up and then compared each surface's rects against a *live* `Screen.height` — and the Editor's
+play-mode view changed size under it mid-route. One run put the notch band at y 676 on a 2796-tall
+screen, which is only possible if the height had become 853. The green result was the instrument
+agreeing with itself.
+
+Re-resolved per surface, and recording the view every verdict was measured at, the same route found
+two real intrusions: 20 px of `BOOST STAMINA` behind the Dynamic Island, and the TOURNAMENTS entry
+button grazing it by 0.6 px.
+
+**The rule:** a measurement taken against ambient state (screen size, time, a selected device, a
+current scene) must re-read that state *at the moment of the measurement* and **record it alongside
+the verdict**. A row that says `clear` is worth nothing; a row that says `clear, measured at
+1290x2796, source=device` can be checked. And a probe whose reference silently degraded must say so
+loudly — `GamePolishProbeC` now writes a `*** FAIL ***` line when a `sim_` run finds a modelled
+safe area instead of a device one, because the alternative is a file named `sim_after.json` full of
+verdicts about no device at all.
+
+**Corollary — "clear" deserves more suspicion than "hit".** A defect list gets read. A clean sweep
+gets filed. Three clean sweeps in a row over a surface nobody had ever measured should have been the
+first thing to distrust, not the last.
+
+## Lesson AI — `[ExecuteAlways]` means `AddComponent` has already run your component (`game_polish_c`, 2026-09-08)
+
+`ApplySafeArea` stretched the new wrapper to `{0,0}-{1,1}` and *then* added `SafeAreaFitter`. The
+fitter is `[ExecuteAlways]`, so `AddComponent` ran its `Awake` → `Apply()` immediately, which wrote
+anchors computed against whatever `Screen` the Editor reported inside `LoadPrefabContents` — and
+`anchorMax (1.7598909, 1.6389236)` was serialised into a shipped prefab: a wrapper 76 % wider than
+its parent at rest. It self-corrected at runtime (Awake re-applies on load), so nothing looked
+wrong, no test failed, and no screenshot showed it.
+
+It was found by grepping the whole diff for *every property that can move a rendered pixel* —
+sprites, colours, 9-slice scaling, anchors, sizes, font sizes — and asking which of them changed on
+an object that already existed. The answer should have been "none". Two lines said otherwise.
+
+**The rule:** when authoring an `[ExecuteAlways]` component, configure it first and set the geometry
+**last**, so the serialised state is the one you meant. And run the visual-property diff scan on any
+change that claims "no rest movement" — a claim about pixels is checkable against the diff without
+looking at a single frame.

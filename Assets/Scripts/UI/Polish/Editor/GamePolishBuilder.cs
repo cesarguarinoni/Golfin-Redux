@@ -588,6 +588,575 @@ namespace Golfin.UI.Polish.EditorTools
             if (t is RectTransform rt) into.Add(rt);
         }
 
+
+
+        // ═════════════════════════════════════════════════════════════════════
+        // game_polish_c §C1 — ButtonPressFeedback on every player-facing Button
+        // ═════════════════════════════════════════════════════════════════════
+        //
+        // RULE 11 IS FIVE MONTHS OLD AND HAS NEVER BEEN SWEPT. It says "every new player-facing
+        // Button gets Golfin.UI.Polish.ButtonPressFeedback" and it has been honoured going forward
+        // — the nav bar, the mode cards, the auth screens are all covered — but nothing ever went
+        // back over what predates it. The LIVE audit (GamePolishProbeC) found 410 player-facing
+        // buttons in a running shell and 166 with the component.
+        //
+        // THE ORDER MATTERS AND IT IS NOT COSMETIC. Prefab ASSETS are fixed first, and the open
+        // scene's instances inherit the component the moment the asset is saved; the scene pass
+        // that follows therefore only touches objects that are genuinely scene-authored. Done the
+        // other way round, every one of those instances would gain an "added component" override
+        // and ShellScene.unity would carry hundreds of diff lines for a change that belongs in a
+        // prefab.
+        //
+        // RUNTIME CLONES ARE FIXED AT THEIR SOURCE, never in code — §C1.3. A GeneralShopCard or a
+        // rankings row gets the component because its PREFAB has it, so the hundredth row spawned
+        // next year has it too and no spawner has to remember.
+        //
+        // RE-RUNNABLE. Every step is add-if-missing; a second run reports "already" for every row.
+
+        [MenuItem("GOLFIN/Game Polish/Apply — press feedback (game_polish_c C1)", priority = 253)]
+        public static void ApplyPressFeedbackMenu() => Debug.Log(ApplyPressFeedback());
+
+        public static string ApplyPressFeedback()
+        {
+            var log = new StringBuilder();
+            log.AppendLine("[GamePolishBuilder.ApplyPressFeedback] " + System.DateTime.Now.ToString("u"));
+
+            var rows = new List<string>();
+            int addedPrefab = 0, alreadyPrefab = 0, excludedPrefab = 0, prefabsTouched = 0;
+
+            // ── prefab assets ────────────────────────────────────────────────
+            foreach (string root in PressFeedbackScope.Roots)
+            {
+                if (!System.IO.Directory.Exists(root)) continue;
+                foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { root }))
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (!PressFeedbackScope.PrefabInScope(path, out string skipWhy))
+                    { log.AppendLine($"  tree-skip {path} — {skipWhy}"); continue; }
+
+                    GameObject? contents = null;
+                    try
+                    {
+                        contents = PrefabUtility.LoadPrefabContents(path);
+                        if (contents == null) continue;
+                        int added = 0;
+                        foreach (Button b in contents.GetComponentsInChildren<Button>(true))
+                        {
+                            if (b == null) continue;
+                            string p = PressFeedbackScope.PathIn(contents.transform, b.transform);
+                            string excl = PressFeedbackScope.ExclusionFor(b, p, new Vector2(1170f, 2532f));
+                            if (excl != "")
+                            { excludedPrefab++; rows.Add($"excluded\t{path}\t{p}\t{excl}"); continue; }
+                            if (b.GetComponent<ButtonPressFeedback>() != null)
+                            { alreadyPrefab++; rows.Add($"already\t{path}\t{p}\t"); continue; }
+                            b.gameObject.AddComponent<ButtonPressFeedback>();
+                            added++; addedPrefab++;
+                            rows.Add($"added\t{path}\t{p}\t");
+                        }
+                        if (added > 0)
+                        {
+                            PrefabUtility.SaveAsPrefabAsset(contents, path);
+                            prefabsTouched++;
+                            log.AppendLine($"  +{added,-3} {path}");
+                        }
+                    }
+                    finally { if (contents != null) PrefabUtility.UnloadPrefabContents(contents); }
+                }
+            }
+
+            // ── the open scene ───────────────────────────────────────────────
+            //
+            // AFTER the assets, so an instance that just inherited the component reads as "already"
+            // here and gains no override. What is left is scene-authored: the Settings rows, the
+            // Roster detail panel, the Inventory tab bar, the two Splash buttons.
+            UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            Vector2 canvasSize = new Vector2(1170f, 2532f);
+            foreach (GameObject r in scene.GetRootGameObjects())
+            {
+                var c = r.GetComponentInChildren<Canvas>(true);
+                if (c != null && c.transform is RectTransform crt && crt.rect.width > 1f)
+                { canvasSize = crt.rect.size; break; }
+            }
+
+            int addedScene = 0, alreadyScene = 0, excludedScene = 0;
+            bool sceneDirty = false;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                foreach (Button b in root.GetComponentsInChildren<Button>(true))
+                {
+                    if (b == null) continue;
+                    string p = FullPath(b.transform);
+                    string excl = PressFeedbackScope.ExclusionFor(b, p, canvasSize);
+                    if (excl != "") { excludedScene++; rows.Add($"scene-excluded\t(scene)\t{p}\t{excl}"); continue; }
+                    if (b.GetComponent<ButtonPressFeedback>() != null)
+                    { alreadyScene++; rows.Add($"scene-already\t(scene)\t{p}\t"); continue; }
+
+                    // TRAP C1 — Undo.AddComponent so the write is recorded, then the prefab-instance
+                    // modification so it survives a reload when the object is inside an instance.
+                    var fb = Undo.AddComponent<ButtonPressFeedback>(b.gameObject);
+                    if (PrefabUtility.IsPartOfPrefabInstance(b))
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(fb);
+                    EditorUtility.SetDirty(b.gameObject);
+                    addedScene++; sceneDirty = true;
+                    rows.Add($"scene-added\t(scene)\t{p}\t");
+                }
+            }
+
+            if (sceneDirty)
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                log.AppendLine("  scene marked dirty — SAVE IT.");
+            }
+
+            log.AppendLine($"  == prefabs: added {addedPrefab} (in {prefabsTouched} prefab(s)), " +
+                           $"already {alreadyPrefab}, excluded {excludedPrefab}");
+            log.AppendLine($"  == scene:   added {addedScene}, already {alreadyScene}, excluded {excludedScene}");
+            WriteRows("game_polish_c_pressfeedback_authoring.tsv",
+                      "verdict\tsource\tpath\treason", rows, log);
+            return log.ToString();
+        }
+
+
+        // ═════════════════════════════════════════════════════════════════════
+        // game_polish_c §C2 — one scroll feel
+        // ═════════════════════════════════════════════════════════════════════
+        //
+        // THE REFERENCE IS gps_polish §D9's, applied to every GPS list and now to the game's:
+        // Elastic / 0.1 / inertia on / 0.135. `scrollSensitivity` is unified to 20 as well, and it
+        // is worth saying that this one is NOT what the player feels — it scales WHEEL and
+        // TRACKPAD deltas only, which no phone has. It is unified so two Editor sessions scroll
+        // the same list at the same speed, and it is called out as non-player-facing in the report
+        // rather than sold as part of the feel.
+        //
+        // WHERE THE VALUE IS WRITTEN, and the answer is "wherever it will stick": the ASSET when
+        // the object is a prefab instance, and then the instance's override on those five
+        // properties is REVERTED so the instance follows the asset again. Half of these rects
+        // already carried an override — RankingsScreen's list is Elastic in the scene and Clamped
+        // in its prefab, GachaRatesModal's is the other way round — so writing only the instance
+        // would leave the prefab wrong for every other user of it, and writing only the asset
+        // would be invisible under the override. Both, in that order, ends with one value in one
+        // place.
+        //
+        // THE CAROUSELS ARE IN SCOPE, and the SPEC expected them not to be. §C2 offers them as
+        // likely exclusions "if the controller drives position itself". All five —
+        // CarouselController, Bag/Club/Ball/ItemCarouselController — write
+        // horizontalNormalizedPosition only from an ARROW TAP or a programmatic selection, and
+        // none of them implements IBeginDragHandler / IEndDragHandler. A finger drag on any of them
+        // is handled entirely by the ScrollRect, so the movement type IS what the player feels and
+        // the SPEC's own test puts them in scope. ModeCarouselController, the one carousel that
+        // really does own its drag, has no ScrollRect at all — it lerps a layout — so it never
+        // appears in this table.
+
+        public const string ScrollMovementType = "Elastic";
+        public const float  ScrollElasticity   = 0.1f;
+        public const float  ScrollDeceleration = 0.135f;
+        public const float  ScrollSensitivity  = 20f;
+
+        [MenuItem("GOLFIN/Game Polish/Apply — one scroll feel (game_polish_c C2)", priority = 254)]
+        public static void ApplyScrollFeelMenu() => Debug.Log(ApplyScrollFeel());
+
+        public static string ApplyScrollFeel()
+        {
+            var log = new StringBuilder();
+            log.AppendLine("[GamePolishBuilder.ApplyScrollFeel] " + System.DateTime.Now.ToString("u"));
+            var rows = new List<string>();
+
+            UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+
+            // Pass 1 — the prefab ASSETS behind the scene's instances, plus any in-scope prefab
+            // that has a ScrollRect and no instance in this scene.
+            var assets = new SortedSet<string>(System.StringComparer.Ordinal);
+            foreach (string root in PressFeedbackScope.Roots)
+            {
+                if (!System.IO.Directory.Exists(root)) continue;
+                foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { root }))
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (!PressFeedbackScope.PrefabInScope(path, out _)) continue;
+                    if (ScrollExclusion(path) != "") continue;
+                    var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    if (go != null && go.GetComponentInChildren<ScrollRect>(true) != null) assets.Add(path);
+                }
+            }
+
+            int setAsset = 0, alreadyAsset = 0;
+            foreach (string path in assets)
+            {
+                GameObject? contents = null;
+                try
+                {
+                    contents = PrefabUtility.LoadPrefabContents(path);
+                    if (contents == null) continue;
+                    int changed = 0;
+                    foreach (ScrollRect sr in contents.GetComponentsInChildren<ScrollRect>(true))
+                    {
+                        string p = PressFeedbackScope.PathIn(contents.transform, sr.transform);
+                        if (ScrollExclusion(path + "/" + p) != "")
+                        { rows.Add($"asset-excluded\t{path}\t{p}\t{ScrollExclusion(path + "/" + p)}"); continue; }
+                        string before = Describe(sr);
+                        if (SetScrollFeel(sr)) { changed++; setAsset++; rows.Add($"asset-set\t{path}\t{p}\t{before} -> {Describe(sr)}"); }
+                        else { alreadyAsset++; rows.Add($"asset-already\t{path}\t{p}\t{before}"); }
+                    }
+                    if (changed > 0)
+                    {
+                        PrefabUtility.SaveAsPrefabAsset(contents, path);
+                        log.AppendLine($"  asset {changed} rect(s) -> {path}");
+                    }
+                }
+                finally { if (contents != null) PrefabUtility.UnloadPrefabContents(contents); }
+            }
+
+            // Pass 2 — the scene. An instance gets its five overrides REVERTED (the asset is now
+            // right, so reverting lands on the reference and removes a scene diff line); a
+            // scene-authored rect is written directly.
+            int setScene = 0, revertedScene = 0, alreadyScene = 0, excludedScene = 0;
+            bool dirty = false;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                foreach (ScrollRect sr in root.GetComponentsInChildren<ScrollRect>(true))
+                {
+                    if (sr == null) continue;
+                    string p = FullPath(sr.transform);
+                    string excl = ScrollExclusion(p);
+                    if (excl != "") { excludedScene++; rows.Add($"scene-excluded\t(scene)\t{p}\t{excl}"); continue; }
+
+                    string before = Describe(sr);
+                    if (PrefabUtility.IsPartOfPrefabInstance(sr) && RevertFeelOverrides(sr) && Conforms(sr))
+                    {
+                        revertedScene++; dirty = true;
+                        rows.Add($"scene-reverted\t(instance)\t{p}\t{before} -> {Describe(sr)} (follows its prefab again)");
+                        continue;
+                    }
+                    if (SetScrollFeel(sr))
+                    {
+                        if (PrefabUtility.IsPartOfPrefabInstance(sr))
+                            PrefabUtility.RecordPrefabInstancePropertyModifications(sr);
+                        EditorUtility.SetDirty(sr);
+                        setScene++; dirty = true;
+                        rows.Add($"scene-set\t(scene)\t{p}\t{before} -> {Describe(sr)}");
+                    }
+                    else { alreadyScene++; rows.Add($"scene-already\t(scene)\t{p}\t{before}"); }
+                }
+            }
+
+            if (dirty)
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                log.AppendLine("  scene marked dirty — SAVE IT.");
+            }
+            log.AppendLine($"  == assets: set {setAsset}, already {alreadyAsset}");
+            log.AppendLine($"  == scene:  set {setScene}, reverted-to-prefab {revertedScene}, " +
+                           $"already {alreadyScene}, excluded {excludedScene}");
+            WriteRows("game_polish_c_scrollfeel_authoring.tsv", "verdict\tsource\tpath\tdetail", rows, log);
+            return log.ToString();
+        }
+
+        /// <summary>The two exclusions §C2 names, decided from the path.</summary>
+        public static string ScrollExclusion(string path)
+        {
+            foreach (string g in PressFeedbackScope.GpsRoots)
+                if (path.Contains("/" + g) || path.Contains(g + "/")) return "Gps/ — SPEC § Untouched";
+            if (path.Contains("/Gps/")) return "Gps/ — SPEC § Untouched";
+            foreach (string a in AuthScreens)
+                if (path.Contains(a)) return "auth screen — Tier 2, not this track (SPEC §C2)";
+            return "";
+        }
+
+        static readonly string[] AuthScreens =
+        { "LoginScreen", "SignUpScreen", "CreateUsernameScreen", "ResetPasswordScreen", "EmailConfirmationScreen" };
+
+        public static bool Conforms(ScrollRect sr) =>
+            sr.movementType == ScrollRect.MovementType.Elastic &&
+            Mathf.Approximately(sr.elasticity, ScrollElasticity) && sr.inertia &&
+            Mathf.Approximately(sr.decelerationRate, ScrollDeceleration) &&
+            Mathf.Approximately(sr.scrollSensitivity, ScrollSensitivity);
+
+        static string Describe(ScrollRect sr) =>
+            $"{sr.movementType}/{sr.elasticity:0.###}/{(sr.inertia ? "inertia" : "NO-inertia")}/" +
+            $"{sr.decelerationRate:0.###}/sens {sr.scrollSensitivity:0.##}";
+
+        static readonly string[] FeelProps =
+        { "m_MovementType", "m_Elasticity", "m_Inertia", "m_DecelerationRate", "m_ScrollSensitivity" };
+
+        /// <summary>Write the five fields through SerializedObject (trap C1). Returns whether
+        /// anything changed.</summary>
+        static bool SetScrollFeel(ScrollRect sr)
+        {
+            if (Conforms(sr)) return false;
+            var so = new SerializedObject(sr);
+            so.FindProperty("m_MovementType").enumValueIndex   = (int)ScrollRect.MovementType.Elastic;
+            so.FindProperty("m_Elasticity").floatValue         = ScrollElasticity;
+            so.FindProperty("m_Inertia").boolValue             = true;
+            so.FindProperty("m_DecelerationRate").floatValue   = ScrollDeceleration;
+            so.FindProperty("m_ScrollSensitivity").floatValue  = ScrollSensitivity;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(sr);
+            return true;
+        }
+
+        /// <summary>Drop the instance's overrides on the five feel properties so it follows its
+        /// prefab. Returns whether any override was actually there to drop.</summary>
+        static bool RevertFeelOverrides(ScrollRect sr)
+        {
+            var so = new SerializedObject(sr);
+            bool any = false;
+            foreach (string name in FeelProps)
+            {
+                SerializedProperty p = so.FindProperty(name);
+                if (p == null || !p.prefabOverride) continue;
+                PrefabUtility.RevertPropertyOverride(p, InteractionMode.AutomatedAction);
+                any = true;
+            }
+            return any;
+        }
+
+
+        // ═════════════════════════════════════════════════════════════════════
+        // game_polish_c §C3 — safe area
+        // ═════════════════════════════════════════════════════════════════════
+        //
+        // TWO SURFACES OUT OF THIRTY-TWO, and finding them meant fixing the instrument first.
+        // GamePolishProbeC walks every surface on a real iPhone 15 Pro Max in the Device Simulator
+        // — Screen.safeArea (0, 102, 1290, 2517): 177 px of Dynamic Island at the top, 102 px of
+        // home indicator at the bottom. Two elements cross the top band:
+        //
+        //   StaminaShopSelectionScreen/TitleLabel    glyph top at y 2639 against a band starting
+        //                                            2619 — 20 px of "BOOST STAMINA" behind the
+        //                                            island.
+        //   ModeSelectionScreen/TournamentTempEntry  rect top 2620 against 2619 — 0.6 px. It is
+        //                                            authored to sit immediately below an iPhone
+        //                                            14 notch and rounds into a taller one.
+        //
+        // (An earlier run of the same probe reported 32/32 clear. It resolved the inset ONCE at
+        // start-up and the play-mode view then changed size under it, so every band was computed
+        // against a stale screen height. That run is discarded rather than quoted; the probe now
+        // re-resolves per surface and records the view each verdict was measured at.)
+        //
+        // BASELINE 141, NOT 0, AND THAT IS THE WHOLE DESIGN. SafeAreaFitter's baseline says how
+        // much inset the layout ALREADY clears; the shell's top bar uses 141 (safe_area_top_bar)
+        // because its chrome is authored to clear an iPhone 14's 47 pt notch. These two screens are
+        // authored against the same top edge — the title 154 px down, the button 176 px — so they
+        // clear 141 too, and only the EXCESS matters. At baseline 141 the fix moves them
+        // 177 - 141 = 36 px on a 15 Pro Max, nothing on an iPhone 14, and nothing at all at the
+        // 1170x2532 reference where the safe area IS the whole screen — which is what keeps A5 at
+        // 0 px. At baseline 0 the same fix would have shoved a 20 px problem 177 px down the
+        // screen: breaking the layout to satisfy the measurement.
+        //
+        // A STRETCHED WRAPPER, because the fitter re-anchors WHATEVER IT IS ON — put it on the
+        // label and the label becomes screen-sized. So the screen's non-background children move
+        // inside a full-screen `SafeArea` child, exactly as PersistentUI does it. The background
+        // stays where it is (the screen root's own Image for Stamina, a sibling for ModeSelection),
+        // so §C3's "backgrounds stay full-bleed" holds by construction.
+        //
+        // AND ModeSelection WRAPS ONLY THE ONE BUTTON. Its other child is `CardsContainer`, which
+        // LayeredPush.LayerMap resolves BY NAME under the screen root; re-parenting it would move
+        // the push's content layer out from under a table this task may not touch.
+        //
+        // THE BOTTOM NAV IS DELIBERATELY LEFT ALONE — it is the other measured intrusion (icons
+        // 19-36 px above the screen bottom, inside the 102 px home-indicator band). That is the
+        // shipped Game bar, and gps_polish already tried insetting its clone:
+        // EnsureNavBarSafeArea's header is the post-mortem — the bar floated 102 px up the screen
+        // with background showing underneath, and the fix was to take the fitter back off.
+        // Repeating it here would re-break something already fixed. It is a named, measured row in
+        // the report for Cesar, not a silent pass and not a silent change.
+        //
+        // RE-RUNNABLE, and it repairs: a second run finds the wrapper, finds the children already
+        // inside it, and writes nothing.
+
+        /// <summary>
+        /// The measured hits, and what moves inside the wrapper: (screen object name, the children
+        /// that go under `SafeArea`). A child not listed — a background — stays where it is.
+        /// </summary>
+        private static readonly (string Screen, string[] Children)[] SafeAreaSites =
+        {
+            ("StaminaShopSelectionScreen", new[] { "TitleLabel", "StaminaShopRegionPill",
+                                                   "StaminaShopPrefecturePill", "CardsPanel" }),
+            ("ModeSelectionScreen",        new[] { "TournamentTempEntry" }),
+        };
+
+        /// <summary>The inset these layouts already clear — an iPhone 14 notch at 47 pt. The same
+        /// number `safe_area_top_bar` uses on PersistentUI/SafeArea; see the header.</summary>
+        public const float SafeAreaBaselinePixels = 141f;
+
+        public const string SafeAreaWrapperName = "SafeArea";
+
+        [MenuItem("GOLFIN/Game Polish/Apply — safe area (game_polish_c C3)", priority = 255)]
+        public static void ApplySafeAreaMenu() => Debug.Log(ApplySafeArea());
+
+        public static string ApplySafeArea()
+        {
+            var log = new StringBuilder();
+            log.AppendLine("[GamePolishBuilder.ApplySafeArea] " + System.DateTime.Now.ToString("u"));
+
+            UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            int found = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+                foreach (GolfinRedux.UI.Core.SafeAreaFitter f in
+                         root.GetComponentsInChildren<GolfinRedux.UI.Core.SafeAreaFitter>(true))
+                {
+                    var so = new SerializedObject(f);
+                    SerializedProperty bp = so.FindProperty("_baselineInsetPixels");
+                    log.AppendLine($"  present: {FullPath(f.transform)}  baselineInsetPixels=" +
+                                   (bp != null ? bp.floatValue.ToString("0.#") : "?"));
+                    found++;
+                }
+            log.AppendLine($"  {found} SafeAreaFitter(s) in the open scene.");
+
+            bool dirty = false;
+            int made = 0, already = 0, moved = 0, missing = 0;
+            foreach ((string screenName, string[] children) in SafeAreaSites)
+            {
+                GameObject? screen = FindScreenRoot(scene, screenName);
+                if (screen == null) { log.AppendLine($"  MISSING screen {screenName}"); missing++; continue; }
+
+                // A SCREEN THAT IS A PREFAB INSTANCE IS FIXED ON ITS ASSET, exactly as §C1's
+                // press-feedback pass does. Doing it on the instance instead means Unity has to
+                // express "four existing children moved under a newly added GameObject" as a set
+                // of instance overrides — which it does, in a form that did not survive the
+                // round-trip through the scene file, leaving a wrapper with nothing in it. On the
+                // asset it is an ordinary re-parent, every instance inherits it, and ShellScene
+                // gains no override at all.
+                if (PrefabUtility.IsPartOfPrefabInstance(screen))
+                {
+                    string assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(screen);
+                    log.AppendLine($"  {screenName} is a prefab instance -> editing {assetPath}");
+                    GameObject? contents = null;
+                    try
+                    {
+                        contents = PrefabUtility.LoadPrefabContents(assetPath);
+                        if (contents == null) { log.AppendLine("  could not load " + assetPath); missing++; continue; }
+                        int m2 = 0, mv2 = 0;
+                        WrapChildren(contents, children, log, ref m2, ref mv2, ref missing);
+                        if (m2 > 0 || mv2 > 0)
+                        {
+                            PrefabUtility.SaveAsPrefabAsset(contents, assetPath);
+                            made += m2; moved += mv2;
+                        }
+                        else already++;
+                    }
+                    finally { if (contents != null) PrefabUtility.UnloadPrefabContents(contents); }
+                    continue;
+                }
+
+                int m1 = 0, mv1 = 0;
+                WrapChildren(screen, children, log, ref m1, ref mv1, ref missing);
+                if (m1 > 0 || mv1 > 0) { made += m1; moved += mv1; dirty = true; }
+                else already++;
+                EditorUtility.SetDirty(screen);
+            }
+
+            if (dirty)
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                log.AppendLine("  scene marked dirty — SAVE IT.");
+            }
+            log.AppendLine($"  == wrappers made {made}, already {already}, children moved {moved}, " +
+                           $"missing {missing}, sites {SafeAreaSites.Length}, baseline {SafeAreaBaselinePixels:0}px ==");
+            return log.ToString();
+        }
+
+        /// <summary>
+        /// Ensure `root/SafeArea` exists as a full-screen stretch carrying a
+        /// <see cref="GolfinRedux.UI.Core.SafeAreaFitter"/> at the shell's baseline, and move the
+        /// named children into it. Used for a scene object and for prefab contents alike; the only
+        /// difference is who saves afterwards.
+        /// </summary>
+        private static void WrapChildren(GameObject root, string[] children, StringBuilder log,
+                                         ref int made, ref int moved, ref int missing)
+        {
+            Transform? wrapper = root.transform.Find(SafeAreaWrapperName);
+            if (wrapper == null)
+            {
+                var go = new GameObject(SafeAreaWrapperName, typeof(RectTransform));
+                wrapper = go.transform;
+                wrapper.SetParent(root.transform, worldPositionStays: false);
+                made++;
+                log.AppendLine($"  + {root.name}/{SafeAreaWrapperName}");
+            }
+
+            var fitter = wrapper.GetComponent<GolfinRedux.UI.Core.SafeAreaFitter>();
+            if (fitter == null) fitter = wrapper.gameObject.AddComponent<GolfinRedux.UI.Core.SafeAreaFitter>();
+            var fso = new SerializedObject(fitter);
+            SerializedProperty bp = fso.FindProperty("_baselineInsetPixels");
+            if (bp != null && !Mathf.Approximately(bp.floatValue, SafeAreaBaselinePixels))
+            {
+                bp.floatValue = SafeAreaBaselinePixels;
+                fso.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(fitter);
+            }
+
+            // STRETCH LAST, AND THAT ORDER IS THE FIX FOR A REAL DEFECT. SafeAreaFitter is
+            // [ExecuteAlways]: AddComponent runs its Awake, which runs Apply(), which writes
+            // anchors computed against whatever "Screen" the Editor reports at that moment. Doing
+            // the stretch first and adding the component second baked
+            // anchorMax (1.76, 1.64) into StaminaShopSelectionScreen.prefab — a wrapper 76 %
+            // wider than its parent at rest. It self-corrected at runtime (Awake re-applies), so
+            // nothing looked wrong; it was found by grepping the diff for any property that can
+            // move a pixel. Stretching after the component exists leaves the neutral 0-1 stretch
+            // as the SERIALISED state, which is what it should be on every device.
+            Stretch((RectTransform)wrapper);
+            EditorUtility.SetDirty(wrapper);
+
+            // The wrapper takes the sibling slot of the FIRST child it swallows, and the children
+            // keep their order inside it, so draw order is unchanged — a title that drew over a
+            // panel still does.
+            int firstIndex = int.MaxValue;
+            var toMove = new List<Transform>();
+            foreach (string childName in children)
+            {
+                Transform? c = root.transform.Find(childName) ?? wrapper.Find(childName);
+                if (c == null) { log.AppendLine($"  MISSING {root.name}/{childName}"); missing++; continue; }
+                if (c.parent == wrapper) continue;
+                firstIndex = Mathf.Min(firstIndex, c.GetSiblingIndex());
+                toMove.Add(c);
+            }
+            if (firstIndex != int.MaxValue) wrapper.SetSiblingIndex(firstIndex);
+            foreach (Transform c in toMove)
+            {
+                c.SetParent(wrapper, worldPositionStays: false);
+                moved++;
+                log.AppendLine($"    -> {root.name}/{SafeAreaWrapperName}/{c.name}");
+            }
+            EditorUtility.SetDirty(root);
+        }
+
+        /// <summary>A screen root by object name, anywhere under the scene's roots.</summary>
+        private static GameObject? FindScreenRoot(UnityEngine.SceneManagement.Scene scene, string name)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.name == name) return root;
+                foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                    if (t.name == name) return t.gameObject;
+            }
+            return null;
+        }
+
+
+        // ── shared plumbing for the three C methods ──────────────────────────
+
+        public static string FullPath(Transform t)
+        {
+            var sb = new StringBuilder(t.name);
+            for (Transform p = t.parent; p != null; p = p.parent) sb.Insert(0, p.name + "/");
+            return sb.ToString();
+        }
+
+        /// <summary>The authoring-side table, TSV so the report generator can join it to the live
+        /// audit. Written next to the probe's JSON.</summary>
+        static void WriteRows(string file, string header, List<string> rows, StringBuilder log)
+        {
+            const string dir = "Docs/Diagnostics/_capture";
+            System.IO.Directory.CreateDirectory(dir);
+            string path = System.IO.Path.Combine(dir, file);
+            var sb = new StringBuilder();
+            sb.AppendLine(header);
+            rows.Sort(System.StringComparer.Ordinal);
+            foreach (string r in rows) sb.AppendLine(r);
+            System.IO.File.WriteAllText(path, sb.ToString());
+            log.AppendLine($"  {rows.Count} row(s) -> {path}");
+        }
+
         private static GameObject? ScreenObject(SerializedObject so, ScreenId id)
         {
             string? field = id switch

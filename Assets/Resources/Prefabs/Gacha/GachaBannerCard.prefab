@@ -1931,6 +1931,7 @@ GameObject:
   - component: {fileID: 821733253376888770}
   - component: {fileID: 6383434423009674435}
   - component: {fileID: 6825570499349008894}
+  - component: {fileID: 6530698982647825963}
   m_Layer: 0
   m_Name: RulesButton
   m_TagString: Untagged
@@ -2039,6 +2040,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6530698982647825963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5535544641113324568}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &5873888709237987702
 GameObject:
   m_ObjectHideFlags: 0
@@ -2051,6 +2066,7 @@ GameObject:
   - component: {fileID: 8361320811895100004}
   - component: {fileID: 295064209264911724}
   - component: {fileID: 8978773871188785926}
+  - component: {fileID: 2871255181225731112}
   m_Layer: 0
   m_Name: PullX1Button
   m_TagString: Untagged
@@ -2160,6 +2176,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2871255181225731112
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5873888709237987702}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &5881849838464329969
 GameObject:
   m_ObjectHideFlags: 0
@@ -3513,6 +3543,7 @@ GameObject:
   - component: {fileID: 8607385743410934310}
   - component: {fileID: 1639683288112577166}
   - component: {fileID: 3971503019516812339}
+  - component: {fileID: 2820369877051618916}
   m_Layer: 0
   m_Name: PullX10Button
   m_TagString: Untagged
@@ -3622,6 +3653,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2820369877051618916
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8797896520212405964}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &8923033641448188448
 GameObject:
   m_ObjectHideFlags: 0

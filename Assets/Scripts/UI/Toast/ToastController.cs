@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using Golfin.UI.Polish;
 
 namespace Golfin.UI.Toast
 {
@@ -57,17 +58,29 @@ namespace Golfin.UI.Toast
             gameObject.SetActive(false);
         }
 
+        /// <summary>
+        /// game_polish_c §C4 — the last hand-rolled fade loop in the shell, retired.
+        ///
+        /// <para><b>Why this is <see cref="UiMotion.Tween"/> on <see cref="Ease.Linear"/>
+        /// and not <c>UiMotion.Fade</c>, which is what §C4 names.</b> §C4 asks for three things at
+        /// once: route it through UiMotion, keep the durations, and produce a per-frame alpha log
+        /// whose worst difference from the old loop is <b>≤ 0.01</b> ("zero visible change").
+        /// <c>UiMotion.Fade</c> cannot satisfy the third: it eases on cubic ease-out, the old loop
+        /// here was a straight <c>Mathf.Lerp</c>, and the two curves are furthest apart at
+        /// t = 0.423, where <c>1-(1-t)³ - t = 0.385</c>. That is thirty-eight times the stated
+        /// tolerance and it is visible — over a 0.3 s fade-in the toast would appear to snap to
+        /// most of its opacity in the first third and then crawl.</para>
+        ///
+        /// <para><c>Tween</c> on <c>Ease.Linear</c> is the same UiMotion primitive family, the same
+        /// runner, the same interruption-safe settle, and <c>Curve(Linear, t)</c> is
+        /// <c>Mathf.Clamp01(t)</c> — so the alpha sequence is not merely close to the old loop's,
+        /// it is the same arithmetic in the same order and the parity log is exact to the float.
+        /// The choice is recorded as a deviation rather than made silently; switching to the eased
+        /// fade later is a one-token change, and it is Cesar's to make, not the sweep's.</para>
+        /// </summary>
         IEnumerator Fade(float from, float to, float dur)
-        {
-            float t = 0f;
-            while (t < dur)
-            {
-                t += Time.unscaledDeltaTime;
-                if (_canvasGroup != null)
-                    _canvasGroup.alpha = Mathf.Lerp(from, to, t / dur);
-                yield return null;
-            }
-            if (_canvasGroup != null) _canvasGroup.alpha = to;
-        }
+            => UiMotion.Tween(from, to, dur,
+                              a => { if (_canvasGroup != null) _canvasGroup.alpha = a; },
+                              Ease.Linear);
     }
 }

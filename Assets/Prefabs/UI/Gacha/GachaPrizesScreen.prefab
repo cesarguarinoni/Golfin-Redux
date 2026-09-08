@@ -1165,6 +1165,7 @@ GameObject:
   - component: {fileID: 709686284491483920}
   - component: {fileID: 5832508366487111922}
   - component: {fileID: 6201724665343434240}
+  - component: {fileID: 9018342135556859229}
   m_Layer: 0
   m_Name: SwapBtn
   m_TagString: Untagged
@@ -1294,6 +1295,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &9018342135556859229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1424441450347263491}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &1632057603843549279
 GameObject:
   m_ObjectHideFlags: 0
@@ -1391,6 +1406,7 @@ GameObject:
   - component: {fileID: 6111758202131073326}
   - component: {fileID: 64644399519818918}
   - component: {fileID: 8649830636728891956}
+  - component: {fileID: 7522770351041849194}
   m_Layer: 0
   m_Name: LevelUpBtn
   m_TagString: Untagged
@@ -1500,6 +1516,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7522770351041849194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2261548987323551760}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2495726271588816308
 GameObject:
   m_ObjectHideFlags: 0
@@ -2783,6 +2813,7 @@ GameObject:
   - component: {fileID: 4244116463719537219}
   - component: {fileID: 8369794421899867823}
   - component: {fileID: 830230876726489188}
+  - component: {fileID: 2580163440750761249}
   m_Layer: 0
   m_Name: RepairBtn
   m_TagString: Untagged
@@ -2892,6 +2923,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2580163440750761249
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4695774891234086606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &4743724077854900766
 GameObject:
   m_ObjectHideFlags: 0
@@ -6016,13 +6061,79 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5042257147857456604}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8576528281437225138}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2110165968198805404}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+--- !u!1 &3189597240218248399 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 129023332476116692}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2110165968198805404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3189597240218248399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &3540214913558962333 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 129023332476116692}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &6907263307046424021 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 129023332476116692}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5042257147857456604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6907263307046424021}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &7196325390414326867 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 129023332476116692}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8576528281437225138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7196325390414326867}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &763845101150656496
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6303,13 +6414,79 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5719179914195009373}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4877770501828422336}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3667900438855966610}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
 --- !u!224 &2410109608325456310 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 1268134200247033855}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &4328111618501125604 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 1268134200247033855}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3667900438855966610
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4328111618501125604}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &5731028705087704318 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 1268134200247033855}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5719179914195009373
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5731028705087704318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &8326391065246657912 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 1268134200247033855}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4877770501828422336
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8326391065246657912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &1499528166081670748
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6578,13 +6755,79 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8257838742825026850}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7768760760094966761}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1564489762455210727}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+--- !u!1 &204735637457116709 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 3413313150643151934}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1564489762455210727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 204735637457116709}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &2284937465003252343 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 3413313150643151934}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &5569439676965443257 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 3413313150643151934}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7768760760094966761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5569439676965443257}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &8164853853186914111 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 3413313150643151934}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8257838742825026850
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8164853853186914111}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &4246714087504738369
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6692,13 +6935,79 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6004331394161083352}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1995594006611999613}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5062229573371838890}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
 --- !u!224 &721815412586366472 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 4246714087504738369}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1686176077973701210 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 4246714087504738369}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5062229573371838890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1686176077973701210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &6411791266075445958 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 4246714087504738369}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1995594006611999613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6411791266075445958}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &7277463634919533376 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 4246714087504738369}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &6004331394161083352
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7277463634919533376}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &5167719472529478695
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6806,8 +7115,74 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4677347706829532802}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2801850536092469686}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3986721538572008843}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+--- !u!1 &1848314312864778022 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5167719472529478695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4677347706829532802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1848314312864778022}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &2712139640256718496 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5167719472529478695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2801850536092469686
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2712139640256718496}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &7655757321838177852 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5167719472529478695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3986721538572008843
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7655757321838177852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &8600839301199833710 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
@@ -6920,8 +7295,74 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1037931921364113177}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 277629910801846464}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7007724232646437281}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+--- !u!1 &1309932675718713137 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5493324727701888048}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1037931921364113177
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1309932675718713137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &3325957138101481143 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5493324727701888048}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &277629910801846464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3325957138101481143}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &7040795824958596651 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5493324727701888048}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7007724232646437281
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7040795824958596651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &8995668681976144505 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
@@ -7034,13 +7475,79 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8319826574124331150}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3831422508880417245}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 457248210219120086}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+--- !u!1 &1075833475817046285 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5836601003996271116}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8319826574124331150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1075833475817046285}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &3669268667618435211 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5836601003996271116}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3831422508880417245
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3669268667618435211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &6923432365534735429 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 5836601003996271116}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &9040446782988707863 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 5836601003996271116}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &457248210219120086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9040446782988707863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &6428297820681034353
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7148,13 +7655,79 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6039246525954281281}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8686652353902009653}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8068112661826049344}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+--- !u!1 &514540273514187120 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 6428297820681034353}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &6039246525954281281
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 514540273514187120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &4260967193163901174 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 6428297820681034353}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8686652353902009653
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4260967193163901174}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &7628775003128685624 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 6428297820681034353}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8411665329329266794 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 6428297820681034353}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8068112661826049344
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8411665329329266794}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &8123716758703536962
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7262,13 +7835,79 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8204278281311413429}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3976928756461053951}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 831360605322214040}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+--- !u!1 &1344646099517147589 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 8123716758703536962}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3976928756461053951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1344646099517147589}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &3363300730647029827 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 8123716758703536962}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8204278281311413429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3363300730647029827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &4635894948387374347 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 8123716758703536962}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &6716246494193041753 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 8123716758703536962}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &831360605322214040
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6716246494193041753}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &8448093897839306426
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7376,10 +8015,76 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 841133220007198626}
+    - targetCorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2856671887402249747}
+    - targetCorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2972549265702262123}
   m_SourcePrefab: {fileID: 100100000, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+--- !u!1 &1669060278721418301 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7067302135523504775, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 8448093897839306426}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2856671887402249747
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1669060278721418301}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!1 &3110946980112971195 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6778451149569544961, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 8448093897839306426}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &841133220007198626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3110946980112971195}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &5032372492704569587 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 8448093897839306426}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &6391860627398515873 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 8448093897839306426}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2972549265702262123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6391860627398515873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12

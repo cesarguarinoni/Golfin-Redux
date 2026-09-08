@@ -87,6 +87,7 @@ GameObject:
   - component: {fileID: 648211911101847266}
   - component: {fileID: 2644756622422598967}
   - component: {fileID: 5410879692595233263}
+  - component: {fileID: 8606402429518575212}
   m_Layer: 0
   m_Name: BagSlotLockedPrefab
   m_TagString: Untagged
@@ -198,6 +199,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8606402429518575212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3198209748708365106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &5200195238664631373
 GameObject:
   m_ObjectHideFlags: 0
@@ -424,3 +439,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: UI_LOCKED
+  japaneseFontScale: 0

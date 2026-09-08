@@ -172,6 +172,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: BAG_EMPTY
+  japaneseFontScale: 0
 --- !u!1 &2524854217955578279
 GameObject:
   m_ObjectHideFlags: 0
@@ -447,6 +448,7 @@ GameObject:
   - component: {fileID: 2902242449970706437}
   - component: {fileID: 5903876767233737339}
   - component: {fileID: 6543504929312766044}
+  - component: {fileID: 2248656096503622708}
   m_Layer: 0
   m_Name: EquipBtn
   m_TagString: Untagged
@@ -576,6 +578,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2248656096503622708
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6122732180389074586}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &6212730089708808319
 GameObject:
   m_ObjectHideFlags: 0
@@ -727,6 +743,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: BAG_EQUIP_CLUB
+  japaneseFontScale: 0
 --- !u!1 &6622647731325451158
 GameObject:
   m_ObjectHideFlags: 0

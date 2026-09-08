@@ -167,6 +167,8 @@ MonoBehaviour:
   _expandOnHide:
   - {fileID: 4033287033218655437}
   - {fileID: 5590415887656757285}
+  _shiftDownOnHide: []
+  _shiftDownTrim: 0
 --- !u!114 &8705941858315059940
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -803,6 +805,7 @@ GameObject:
   - component: {fileID: 5151822443462025350}
   - component: {fileID: 2977304755893235655}
   - component: {fileID: 1967887048303472999}
+  - component: {fileID: 7854341969239518137}
   m_Layer: 0
   m_Name: DailyTab
   m_TagString: Untagged
@@ -914,6 +917,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7854341969239518137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2233087126748606988}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2632956849168104677
 GameObject:
   m_ObjectHideFlags: 0
@@ -1235,6 +1252,7 @@ GameObject:
   - component: {fileID: 3329064052510049552}
   - component: {fileID: 4029644978632684271}
   - component: {fileID: 2693774340979600900}
+  - component: {fileID: 5974238853115113958}
   m_Layer: 0
   m_Name: League
   m_TagString: Untagged
@@ -1344,6 +1362,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &5974238853115113958
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3157998516975828445}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &3293688470815889289
 GameObject:
   m_ObjectHideFlags: 0
@@ -1769,6 +1801,7 @@ GameObject:
   - component: {fileID: 3026609872862576860}
   - component: {fileID: 4539376948252986812}
   - component: {fileID: 717683484197450833}
+  - component: {fileID: 4829870123195924300}
   m_Layer: 0
   m_Name: HistoryTab
   m_TagString: Untagged
@@ -1879,6 +1912,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4829870123195924300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3898365765916768585}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &3930717608817008379
 GameObject:
   m_ObjectHideFlags: 0
@@ -2404,6 +2451,7 @@ GameObject:
   - component: {fileID: 8918165377328747443}
   - component: {fileID: 6564691946505169063}
   - component: {fileID: 3272528271679067786}
+  - component: {fileID: 6700349284155971490}
   m_Layer: 0
   m_Name: WeeklyTab
   m_TagString: Untagged
@@ -2515,6 +2563,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &6700349284155971490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4830480006682284331}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &6176729352929945187
 GameObject:
   m_ObjectHideFlags: 0
@@ -3196,6 +3258,7 @@ GameObject:
   - component: {fileID: 4439115901102607172}
   - component: {fileID: 4613338582168811724}
   - component: {fileID: 1222065633353369353}
+  - component: {fileID: 7284413612266204141}
   m_Layer: 0
   m_Name: MonthlyTab
   m_TagString: Untagged
@@ -3307,6 +3370,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7284413612266204141
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7808609226632135440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7895096939035807476
 GameObject:
   m_ObjectHideFlags: 0
@@ -3620,6 +3697,7 @@ GameObject:
   - component: {fileID: 4464285976557873424}
   - component: {fileID: 1723119264094794373}
   - component: {fileID: 5028324407533565480}
+  - component: {fileID: 8724635394816378587}
   m_Layer: 0
   m_Name: Reset
   m_TagString: Untagged
@@ -3729,6 +3807,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8724635394816378587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8155093258631210545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &8400069355409000175
 GameObject:
   m_ObjectHideFlags: 0

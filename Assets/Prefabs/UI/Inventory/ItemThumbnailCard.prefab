@@ -315,6 +315,7 @@ GameObject:
   - component: {fileID: 3563500425415452135}
   - component: {fileID: 5041725850470508210}
   - component: {fileID: 7311266263998865278}
+  - component: {fileID: 2248818897973117032}
   m_Layer: 0
   m_Name: ItemThumbnailCard
   m_TagString: Untagged
@@ -469,6 +470,20 @@ MonoBehaviour:
   selectionHighlight: {fileID: 5466569931813526699}
   backgroundImage: {fileID: 1967324459792567248}
   cardButton: {fileID: 5578315565720009812}
+--- !u!114 &2248818897973117032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4539383018773378190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &5773709195805052530
 GameObject:
   m_ObjectHideFlags: 0

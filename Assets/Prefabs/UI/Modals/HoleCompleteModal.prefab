@@ -1667,6 +1667,7 @@ GameObject:
   - component: {fileID: 6771815391447404412}
   - component: {fileID: 8102229017276797742}
   - component: {fileID: 1171403677353201963}
+  - component: {fileID: 5719663112504048998}
   m_Layer: 0
   m_Name: MenuButton
   m_TagString: Untagged
@@ -1776,6 +1777,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5719663112504048998
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4925567157157444671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &5074846724508695762
 GameObject:
   m_ObjectHideFlags: 0
@@ -2521,6 +2536,7 @@ GameObject:
   - component: {fileID: 217788589031701187}
   - component: {fileID: 8681262804356703518}
   - component: {fileID: 6392708343432622284}
+  - component: {fileID: 8763351650414166962}
   m_Layer: 0
   m_Name: PlayNextButton
   m_TagString: Untagged
@@ -2630,6 +2646,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8763351650414166962
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7041689180996471413}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7068157709991266743
 GameObject:
   m_ObjectHideFlags: 0
@@ -2717,6 +2747,7 @@ GameObject:
   - component: {fileID: 965484465894862095}
   - component: {fileID: 8239987247884335153}
   - component: {fileID: 2524738011089516422}
+  - component: {fileID: 2570007596190466587}
   m_Layer: 0
   m_Name: RetryButton
   m_TagString: Untagged
@@ -2826,6 +2857,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2570007596190466587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7090990087635575620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7202008026269336820
 GameObject:
   m_ObjectHideFlags: 0
@@ -3065,6 +3110,7 @@ GameObject:
   - component: {fileID: 7661608548523944018}
   - component: {fileID: 4521825103411412644}
   - component: {fileID: 2769622986828999084}
+  - component: {fileID: 4943667492200328406}
   m_Layer: 0
   m_Name: PlayButton
   m_TagString: Untagged
@@ -3174,6 +3220,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4943667492200328406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7442147722700549931}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7593422239220691642
 GameObject:
   m_ObjectHideFlags: 0

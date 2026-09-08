@@ -74,11 +74,11 @@ MonoBehaviour:
   m_Content: {fileID: 4462240096728685175}
   m_Horizontal: 0
   m_Vertical: 1
-  m_MovementType: 2
+  m_MovementType: 1
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 50
+  m_ScrollSensitivity: 20
   m_Viewport: {fileID: 6536057408004751659}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 4555761965690205607}
@@ -5163,6 +5163,7 @@ GameObject:
   - component: {fileID: 3830571865890726939}
   - component: {fileID: 6058953089308550761}
   - component: {fileID: 6071371281684532204}
+  - component: {fileID: 5526147513354154671}
   m_Layer: 0
   m_Name: ITEMSChip
   m_TagString: Untagged
@@ -5273,6 +5274,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &5526147513354154671
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8557005959526637488}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &8608206435575087613
 GameObject:
   m_ObjectHideFlags: 0
@@ -5435,6 +5450,7 @@ GameObject:
   - component: {fileID: 4700944187800865413}
   - component: {fileID: 3444170107672589218}
   - component: {fileID: 3178876675114393242}
+  - component: {fileID: 1695037119193595467}
   m_Layer: 0
   m_Name: CHARACTERSChip
   m_TagString: Untagged
@@ -5545,6 +5561,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1695037119193595467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8880409114373041546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &9083413251346853553
 GameObject:
   m_ObjectHideFlags: 0
@@ -5557,6 +5587,7 @@ GameObject:
   - component: {fileID: 8755801218025544758}
   - component: {fileID: 8123612671858293791}
   - component: {fileID: 4738560055919895201}
+  - component: {fileID: 4197791057594583705}
   m_Layer: 0
   m_Name: TICKETSChip
   m_TagString: Untagged
@@ -5667,6 +5698,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4197791057594583705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9083413251346853553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &6346177202619662598
 PrefabInstance:
   m_ObjectHideFlags: 0

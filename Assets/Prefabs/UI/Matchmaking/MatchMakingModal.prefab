@@ -363,6 +363,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MATCH_DIAMOND_LEAGUE
+  japaneseFontScale: 0
 --- !u!1 &986848983557924206
 GameObject:
   m_ObjectHideFlags: 0
@@ -690,6 +691,7 @@ GameObject:
   - component: {fileID: 3732625256972291368}
   - component: {fileID: 3857130808358732114}
   - component: {fileID: 1188836929145393801}
+  - component: {fileID: 7996033047056151844}
   m_Layer: 0
   m_Name: CancelButton
   m_TagString: Untagged
@@ -799,6 +801,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7996033047056151844
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1881430552445911780}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2212518365432903318
 GameObject:
   m_ObjectHideFlags: 0
@@ -1929,6 +1945,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MATCH_HOLE
+  japaneseFontScale: 0
 --- !u!1 &5216149864858511520
 GameObject:
   m_ObjectHideFlags: 0
@@ -2270,6 +2287,7 @@ GameObject:
   - component: {fileID: 7822399084069718864}
   - component: {fileID: 8986161469377310042}
   - component: {fileID: 9073237954033353406}
+  - component: {fileID: 8293400806738247826}
   m_Layer: 0
   m_Name: League
   m_TagString: Untagged
@@ -2379,6 +2397,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8293400806738247826
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6949531660736893670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7375507210671355827
 GameObject:
   m_ObjectHideFlags: 0
@@ -2530,6 +2562,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_CANCEL
+  japaneseFontScale: 0
 --- !u!1 &7786930622416573825
 GameObject:
   m_ObjectHideFlags: 0
@@ -3450,6 +3483,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MATCH_VS
+  japaneseFontScale: 0
 --- !u!1 &9046803389399772183
 GameObject:
   m_ObjectHideFlags: 0
@@ -3724,13 +3758,35 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3176697421509469881}
   m_SourcePrefab: {fileID: 100100000, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
 --- !u!224 &1715581169768446893 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5584450411784209250, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
   m_PrefabInstance: {fileID: 6535008881524553935}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &5474303930049484731 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+  m_PrefabInstance: {fileID: 6535008881524553935}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3176697421509469881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5474303930049484731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1001 &8362493125014127026
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3826,10 +3882,32 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5876361266936607281}
   m_SourcePrefab: {fileID: 100100000, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
 --- !u!224 &4139510916288053968 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5584450411784209250, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
   m_PrefabInstance: {fileID: 8362493125014127026}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &7297004229054033606 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+  m_PrefabInstance: {fileID: 8362493125014127026}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5876361266936607281
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7297004229054033606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12

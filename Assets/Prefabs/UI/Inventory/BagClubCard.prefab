@@ -1381,6 +1381,7 @@ GameObject:
   - component: {fileID: 1418635889996537472}
   - component: {fileID: 6100491780254616625}
   - component: {fileID: 6803094966286962304}
+  - component: {fileID: 7439799586987096654}
   m_Layer: 0
   m_Name: SwapBtn
   m_TagString: Untagged
@@ -1510,6 +1511,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7439799586987096654
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3281395437910604315}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &3656856635730110545
 GameObject:
   m_ObjectHideFlags: 0
@@ -3051,6 +3066,7 @@ GameObject:
   - component: {fileID: 8231040423013856442}
   - component: {fileID: 6082109226589444381}
   - component: {fileID: 6475330716123937695}
+  - component: {fileID: 6647296812932875387}
   m_Layer: 0
   m_Name: LevelUpBtn
   m_TagString: Untagged
@@ -3160,6 +3176,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6647296812932875387
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6778451149569544961}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &6819042431344426629
 GameObject:
   m_ObjectHideFlags: 0
@@ -3502,6 +3532,7 @@ GameObject:
   - component: {fileID: 231596789082734118}
   - component: {fileID: 5907324769696193092}
   - component: {fileID: 6050696316927440105}
+  - component: {fileID: 6636759204108103113}
   m_Layer: 0
   m_Name: RepairBtn
   m_TagString: Untagged
@@ -3611,6 +3642,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6636759204108103113
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7067302135523504775}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &7157658690157797457
 GameObject:
   m_ObjectHideFlags: 0

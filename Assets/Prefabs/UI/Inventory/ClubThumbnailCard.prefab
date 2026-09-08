@@ -165,6 +165,7 @@ GameObject:
   - component: {fileID: 3877903501254079874}
   - component: {fileID: 4927225164460103308}
   - component: {fileID: 6352277433021154741}
+  - component: {fileID: 4396263586305680804}
   m_Layer: 0
   m_Name: ClubThumbnailCard
   m_TagString: Untagged
@@ -323,6 +324,20 @@ MonoBehaviour:
   cardButton: {fileID: 628117050149299212}
   equippedIcon: {fileID: 0}
   durabilityLowIcon: {fileID: 0}
+--- !u!114 &4396263586305680804
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1245704479376207732}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &3244215383205742500
 GameObject:
   m_ObjectHideFlags: 0

@@ -288,6 +288,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: ROSTER_LEVEL_UP
+  japaneseFontScale: 0
 --- !u!1 &1119039950981551526
 GameObject:
   m_ObjectHideFlags: 0
@@ -713,6 +714,7 @@ GameObject:
   - component: {fileID: 4343960150619328273}
   - component: {fileID: 2463740574398819390}
   - component: {fileID: 4698809996178325371}
+  - component: {fileID: 909185370248270221}
   m_Layer: 0
   m_Name: UseRepairKitBtn
   m_TagString: Untagged
@@ -842,6 +844,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &909185370248270221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1467982101287181703}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &1656306681111419339
 GameObject:
   m_ObjectHideFlags: 0
@@ -1151,6 +1167,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: CLUB_REPAIR
+  japaneseFontScale: 0
 --- !u!1 &2358655575669803615
 GameObject:
   m_ObjectHideFlags: 0
@@ -1566,6 +1583,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: CLUB_DIST
+  japaneseFontScale: 0
 --- !u!1 &3141081433631934451
 GameObject:
   m_ObjectHideFlags: 0
@@ -2243,6 +2261,7 @@ GameObject:
   - component: {fileID: 3019890719703505701}
   - component: {fileID: 2044905713614530444}
   - component: {fileID: 7807699530099331014}
+  - component: {fileID: 1341936511505527287}
   m_Layer: 0
   m_Name: RepairBtn
   m_TagString: Untagged
@@ -2352,6 +2371,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1341936511505527287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4513869699985433696}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &5385402698678700658
 GameObject:
   m_ObjectHideFlags: 0
@@ -3671,6 +3704,7 @@ GameObject:
   - component: {fileID: 1097028757507773075}
   - component: {fileID: 3086126734241967662}
   - component: {fileID: 3082628073529248039}
+  - component: {fileID: 4832107744375174220}
   m_Layer: 0
   m_Name: LevelUpBtn
   m_TagString: Untagged
@@ -3780,6 +3814,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4832107744375174220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8768877488165168255}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &9151824758727284613
 GameObject:
   m_ObjectHideFlags: 0
