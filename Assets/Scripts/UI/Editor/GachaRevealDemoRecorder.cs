@@ -70,6 +70,9 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Gacha/Reveal — Affordability Pass")]
         public static void LaunchAfford() => Launch("afford");
 
+        [MenuItem("GOLFIN/Gacha/Reveal — P1 Pass (pull again rebinds)")]
+        public static void LaunchP1() => Launch("p1");
+
         static void Launch(string mode)
         {
             if (EditorApplication.isPlaying)
@@ -362,6 +365,7 @@ namespace Golfin.EditorTools
             else if (_mode == "timing")  yield return TimingPass();
             else if (_mode == "fx")      yield return FxPass();
             else if (_mode == "afford")  yield return AffordPass();
+            else if (_mode == "p1")      yield return P1Pass();
             else                         yield return VideoPass();
 
             // Nav-bar pixel sample is written by the stills pass; dump the trace either way.
@@ -508,6 +512,79 @@ namespace Golfin.EditorTools
             float z = pivot != null ? pivot.localEulerAngles.z : 0f;
             if (z > 180f) z -= 360f;
             return $"card={(card == null ? "none" : card.name)} liveEmitters=[{emitters}] bagRotZ={z:F2}";
+        }
+
+        // push_arrival_hitch P1 — two REAL x10 pulls back to back, the second made FROM the Prizes
+        // screen. Three things have to show up in the trace, and the second is the one the bug was:
+        //
+        //   1. `[GachaPullFlow] Opening GachaPrizes instant (under the reveal scrim)` — the first
+        //      arrival is NOT a push. ShowPrizes' own comment always said the screen "binds and
+        //      activates UNDER the still-opaque scrim and is revealed by the modal's fade"; before
+        //      the fix it navigated normally, so the panel slid in while PlayEntrance popped the
+        //      cards in place, and the cards read as spawning after the panel.
+        //   2. `[GachaPrizesScreenController] Rebind xN first=<kind>:<id>` on the SECOND pull, with
+        //      a DIFFERENT first prize than the first pull. ShowScreen early-returns when it is
+        //      already on GachaPrizes, so OnEnable — the only place the result was bound — never
+        //      ran and the screen kept showing the OLD prizes.
+        //   3. No `Rebind` at all would mean the pull-again path is still going through ShowScreen.
+        IEnumerator P1Pass()
+        {
+            string FirstPrizeFromLog() => _lastRebindLine;
+
+            Mark("P1 — PULL x10 (first pull, real banner-card button)");
+            var pullX10 = FindButton("PullX10Button");
+            if (pullX10 == null) { Debug.LogError("[GachaReveal] PullX10Button not found."); yield break; }
+            pullX10.onClick.Invoke();
+
+            // Let the whole reveal run, then SKIP to the result.
+            yield return WaitForPhase("Hold", 40f);
+            yield return Wait(0.4f);
+            var skip = FindButton("SkipButton");
+            if (skip != null) skip.onClick.Invoke(); else Debug.LogWarning("[GachaReveal] SkipButton not found.");
+            yield return Wait(2.5f);
+            Mark("P1 — first pull landed on Prizes; " + PrizesReport());
+            yield return Snap("gacha_p1_00_first_pull_prizes");
+
+            // ── the bug: pull AGAIN from the Prizes screen ──
+            Mark("P1 — PULL again, FROM the Prizes screen (this is the path that used to show the OLD prizes)");
+            var again = FindButton("PullButton");
+            if (again == null) { Debug.LogError("[GachaReveal] Prizes PullButton not found."); yield break; }
+            again.onClick.Invoke();
+
+            yield return WaitForPhase("Hold", 40f);
+            yield return Wait(0.4f);
+            yield return Snap("gacha_p1_01_second_reveal_under_scrim");
+            skip = FindButton("SkipButton");
+            if (skip != null) skip.onClick.Invoke();
+            yield return Wait(2.5f);
+            Mark("P1 — second pull landed; " + PrizesReport());
+            yield return Snap("gacha_p1_02_second_pull_prizes");
+        }
+
+        static string _lastRebindLine = "";
+
+        /// <summary>What the Prizes screen is CURRENTLY bound to, read off the controller rather
+        /// than off the log — the log says what was bound, this says what is on screen.</summary>
+        string PrizesReport()
+        {
+            var t = Type.GetType("GolfinRedux.UI.Gacha.GachaPrizesScreenController, Assembly-CSharp");
+            if (t == null) return "<no GachaPrizesScreenController type>";
+            var f = t.GetField("s_result", BindingFlags.NonPublic | BindingFlags.Static);
+            var list = f?.GetValue(null) as System.Collections.IList;
+            if (list == null || list.Count == 0) return "s_result is EMPTY";
+            object first = list[0];
+            var ft = first.GetType();
+            string kind = ft.GetField("Kind")?.GetValue(first) as string ?? "?";
+            string refId = ft.GetField("RefId")?.GetValue(first) as string ?? "?";
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"s_result n={list.Count} first={kind}:{refId} all=[");
+            for (int i = 0; i < list.Count && i < 10; i++)
+            {
+                object p = list[i];
+                sb.Append((i > 0 ? " " : "") + (ft.GetField("RefId")?.GetValue(p) as string ?? "?"));
+            }
+            sb.Append("]");
+            return sb.ToString();
         }
 
         // polish_regressions_0909 R1 — the two PULL buttons must go DEAD when the wallet cannot pay
