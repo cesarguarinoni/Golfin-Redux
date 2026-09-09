@@ -171,6 +171,62 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
+
+- **`asset_loans` — SPEC_READY 2026-09-09 (Architect).** `Docs/Specs/Active/asset_loans/SPEC.md`. Character / club "scholarship" lending: LEND on both detail panels (Compare narrowed to 240, LendButton beside it), lend modal (followed players × 1/3/7 days), borrower can RETURN early, auto-expiry lazy on the server. Levels stay on the LENDER's `golfin_progress` row (loan-aware `golfin_level_up`, borrower pays), 20 % of the borrower's round RP goes to the lender via `loan_ids` on `/points/earn-game` + `golfin_loan_split`. New playlife `golfin_loans` table + `routers/loans.py`. Borrowed rows never enter the inventory blob. Figma frames designed 2026-09-09 (Characters Screen `14181:33450` / `14181:33672` / `14181:33894` / `14183:32758` / `14183:107541`; Clubs Screen `14183:107899` / `14183:108287` / `14183:108675` / `14185:34162`), nine renders + four icon PNGs in `reference/`, fidelity table in the spec. 29 strings via the importer. Decisions of record in the spec header; Notion 2210 (+ deferrals 2211–2218).
+
+  ```
+  Read Docs/Specs/Active/asset_loans/SPEC.md and implement it.
+
+  Context:
+  - Adds character/club lending ("scholarship"): server table + router in playlife
+    (backend/routers/loans.py, migration 2026_09_09_golfin_loans.sql — paste the SQL in
+    chat for Cesar, migration before fly deploy), loan-aware golfin_level_up, RP split in
+    /points/earn-game. Client: LoanService (Social asmdef), borrowed runtime instances in
+    CharacterManager/ClubManager, LEND/RETURN on CharacterDetailPanel + ClubDetailPanel,
+    ON LOAN / BORROWED icons on both thumbnail cards, LoanModalController.
+  - Minimal diff. Reuse existing systems: ModalController chrome, GiftService/UserService
+    DTO pattern, PendingPointsOp queue (add `loans`), InventoryCodec (skip borrowed),
+    CharacterLevelUpDatabase.GetSPReward for the lender's SP catch-up, ClubManager.SetLevel.
+  - Figma is the truth (fidelity table + reference/ renders): Compare+Lend row mirrors the
+    LevelUp/Boost row (235+16+235); LoanRibbon over the portrait; LoanBadge on cards;
+    lend modal + return popup to the nodes. Work FIGMA_SCREEN_BUILD_PLAYBOOK.md §7.
+  - Strings: 29 rows EN+JA in LocalizationText.csv → import_content.py plan → --apply →
+    publish texts → export --check clean. Zero hardcoded literals.
+  - Out of scope: lender recall, offer/accept, admin Loans panel, durability sync,
+    borrower SP allocation, non-followed recipients, illustrated icon art.
+
+  When done: list changed files with a 1-line summary each, run the acceptance
+  tests in the spec, flag which need manual on-device verification, update
+  STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+  Docs/AI_CONTEXT.md.
+  ```
+
+
+- ~~**`polish_regressions_0909`**~~ — **DONE 2026-09-09** (`Docs/Specs/Quick/Completed/polish_regressions_0909.md`; R1 `1de7de78f`, R2 `6b615123e`, R4 `fb1e4fc39`, R0 `b6ef935b6`, R3 `f7dc82f18`, console sweep `f7800caa8`, close-out `df000353f`). Architect-verified against HEAD: `GachaBannerArt.SpriteIsOwn` gates step 2, `ConventionName` is the one definition the fetcher/validator call, validator `masked` verdict + `export --check` convention/conflict rules, `GachaBannerArtLadderTests` ×5, `GachaTicketArt` replaces three copied dead ladders; EditMode 2911/2908/0. **Cesar's two production actions still open:** the on-device R3 proof (publish a third banner with art from the admin) and the importer → publish → export loop for the two `artSprite` cells now ahead of the catalog. Do NOT re-dispatch.
+- ~~**`push_arrival_hitch`**~~ — **DONE 2026-09-09** (`Docs/Specs/Quick/Completed/push_arrival_hitch.md` + `_audit.md`; code `98e2fd3d5`, evidence `52eb2f88c`…`ade94db61`, close-out `abc656981`). Verified: probe 87 pushes fail 0, `arriverOnTop` false on 0, `maxStepFrac` 0.1333 = (1/30)/0.25, parallax 1.0 on all 55 same-backdrop pushes; per-frame log dArriver == dLeaver every frame; P1 `Rebind x10` with a different first prize, `Opening GachaPrizes instant`. Small leftovers, not worth a kickoff: `paint(local) — instant (push)` runtime log lines, `arrivalFrameMs` before/after ×4 screens, rest parity vs b baselines. Do NOT re-dispatch.
+
+
+- **`store_history` — SPEC_READY 2026-09-08 (amended same day, before kickoff: §8 fixes the "+"-entry STORE grid gap — `PaintMotion.StaggerRise` must `ForceRebuildLayoutImmediate` the rows' parent before `Rise` captures rest positions; this kickoff is the current one).** `Docs/Specs/Active/store_history/SPEC.md`. The History chip on the Rewards Center STORE tab opens a Store History screen (Figma `13509:2978`) instead of the "coming soon" toast: the Gacha History shell cloned with STORE lit + `STORE HISTORY` title, purchase rows (BagClubCard tile via `GachaPrizeCardBinder` + NAME / AMOUNT / ACQUIRED / SOURCE: STORE / PRICE: n RP), category chips WIRED (client-side filter), scrollbar INSIDE the panel (Cesar — not the Figma's outside position), paged list + disk mirror + prepend-after-purchase copied from Gacha History, new playlife `GET /api/v1/shop/history` over `golfin_shop_purchases` (no migration). Six strings via the importer; `SHOP_HISTORY_COMING_SOON` retired (Cesar deactivates in admin). Decisions of record in the spec header.
+
+```
+Read Docs/Specs/Active/store_history/SPEC.md and implement it.
+
+Context:
+- Store History screen: GachaTabController.OnHistoryChipTapped STORE arm -> new ScreenId.StoreHistory (APPEND at the END of the enum - it is serialized). Prefab = duplicate of GachaHistoryScreen.prefab (title SHOP_HISTORY, GachaHistoryTabStrip._storeIsActive, controller swapped); row = duplicate of GachaHistoryRow.prefab bound by GachaPrizeCardBinder.Bind on the nested BagClubCard + 5 meta lines (line 6 + Col3 hidden). SCROLLBAR STAYS INSIDE MainPanel exactly where GachaHistoryScreen has it - not the Figma position.
+- Data: playlife shop.py GET /history = structural copy of gacha.py history() over golfin_shop_purchases (keyset `before`, next_before only on a full page, _missing_relation -> empty) + 6 tests; deploy + live curl. Client: Endpoints.ShopHistory, ShopHistoryPage/ShopPurchaseDto, ShopPurchaseService.FetchHistoryAsync (copy of GachaPullService.FetchHistoryRoutine), StoreHistoryRecord/StoreHistoryStore (copy of GachaHistoryStore shape, store_history.json), StoreHistoryStore.Prepend in ShopTransaction's Ok arm. GeneralShopModel.ParseCategory widened to internal.
+- Controller: copy GachaHistoryScreenController's paging (PageSize 12 / RowsPerFrame 3 / reference-identity PrependCount / PaintGate / FadeSwap) - COPY, DO NOT GENERALISE, GachaHistoryScreenController + its tests untouched. Chips wired the GeneralShopScreenController way (WireChip/RestyleChips, _activeCategory remembered), filter change = FadeSwap repaint, never shimmer.
+- Registration: ScreenManager (_storeHistoryScreen + the 4 GachaHistory sites), PersistentUIManager NAV_REWARDS_CENTER, LayeredPush, GameShimmerSites.StoreHistory + GamePolishBuilder site, ShellScene instance via a one-shot GOLFIN/ menu item (scene diff = instance + one ref; revert the stale MatchMakingModal overrides if they ride along).
+- Strings: SHOP_HISTORY, SHOP_HISTORY_AMOUNT/ACQUIRED/SOURCE/SOURCE_STORE/PRICE EN+JA in LocalizationText.csv -> import_content.py PLAN (STOP on CONFLICTS) -> --apply -> publish texts -> export --check clean. Zero new hardcoded .text literals.
+- BUG FIX (SPEC §8): entering the Rewards Center from the top-bar "+" leaves a card-sized gap under the first STORE card and the first card sits too high. Cause: GeneralShopScreenController.Rebuild instantiates cards under GridContent and staggers them the same frame; UiMotion.Rise captures restY on beat 0 BEFORE end-of-frame layout. Fix ONCE in PaintMotion.StaggerRise: LayoutRebuilder.ForceRebuildLayoutImmediate(rows[0].parent as RectTransform) before building rects/groups. No per-screen workaround, no delay frame. Verify via "+" from Home and from GachaHistory, and via bottom-nav Gacha -> STORE — all three identical.
+- Minimal diff. Reuse GachaPrizeCardBinder, LocalizedText, PaintGate, UiSelection.FadeSwap, GpsPaintMotion.StaggerRise, the existing Divider prefab.
+- Out of scope: non-store purchase sources (SOURCE fixed to STORE), `before` paging past 100 on the client, wiring the chips on Gacha History, sale marker, empty-state string, row tap, side arrows, generalising the gacha store/controller.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`weekly_rotation_admin` — SPEC_READY, AMENDED 2026-09-08 evening (§3.1 pin columns, §3.1a year plan, §4.1 step 0 pins-first, seed = 52 rows from `reference/rotations_seed.csv`). The kickoff below is the RE-ISSUED one; an earlier same-day kickoff without the pins is superseded.** `Docs/Specs/Active/weekly_rotation_admin/SPEC.md`. Weekly STORE lineup + weekly GACHA banner authored in the admin as one unit: new catalog #21 `rotations` (window, quotas, seed), additive `rotationId` on `shop_catalog` + `gacha_banners`, `pityGroup` on banners; Rotations panel with deterministic generator (PREVIEW / MATERIALIZE / PUBLISH ROTATION in five-catalog order / calendar / ARCHIVE), validator R1–R4, ball price ladder, one playlife migration keying pity by group. No Unity C#. Plan: `Docs/Economy/MONETIZATION_PLAN.md` §1.2.
 
 ```
@@ -641,9 +697,10 @@ Read Docs/Specs/Quick/da_q4_oval_pills_and_rims.md and implement.
 - ~~**`game_polish_a`**~~ — **DONE 2026-09-04**, approved by Cesar, folder in `Docs/Specs/Completed/game_polish_a/` (`b2496871d`). Do NOT re-dispatch. Option (b) push-with-cross-fade SHIPPED (Cesar's call mid-task); §D7 nav selected state live on both bars. Perf finding → `Docs/Specs/Quick/gacha_history_rebuild_stall.md` (kickoff below). Original pointer:
   **`game_polish_a`: SPEC_READY (2026-09-03, GAME polish track — Notion 2111, slice a of three).** `Docs/Specs/Active/game_polish_a/SPEC.md` — navigation & structure motion: a screen-agnostic `LayeredPush` (`Assets/Scripts/UI/Polish/`) for same-pillar SAME-background pairs (Play `2e5476ee…` group, Tournaments/Rankings `0d425c0a…` group, Gacha `5ec22d10…` group), 16 px entry `Rise` on fade-path arrivals, cross-fades for Inventory/Rankings/GachaHistory tabs and the Settings overlay + accordion, `UiSelection` bumps on tabs, and the NEW bottom-nav selected state (§D7: gold halo + brighter ring replaces the cyan tint, on the game bar AND the GPS bar — the one authorised `Gps/` touch is `GpsNavBarHighlight.cs`); fade-to-black kept for Home, cross-pillar and background-changing moves (Cesar). Option (b) push-with-background-cross-fade only as a 5 s video behind an OFF flag. Gates as gps_polish (invariants JSON, 0 px parity vs first-commit baselines, chrome seam ≤ 2, GC ≤ 32 B). Map approved 2026-09-03: `Docs/Specs/Queued/game_polish/MAP.md` (b = content & modals, c = sweep — specs follow). **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
 
-- **`game_polish_c`: SPEC_READY (2026-09-08, GAME polish track — Notion 2111, slice c of three — the sweep).** `Docs/Specs/Active/game_polish_c/SPEC.md` — ButtonPressFeedback backfill on every player-facing Button (live table, builder fix, coverage test tripwired), one scroll feel (Elastic/0.1/inertia/0.135) on every draggable ScrollRect, safe-area verdict per surface at iPhone 15 Pro Max with `SafeAreaFitter` fixes, Toast onto `UiMotion.Fade`. No new motion, no `Gps/`, 0 px rest parity. **NEXT.**
+- ~~**`game_polish_c`**~~ — **DONE 2026-09-08** (`d2da35695` + `663deaab7`, toast follow-up `2596639fa`; approved by Cesar). Architect-verified against HEAD: player-facing buttons missing feedback 244 → **0** (511 live buttons, 157 named exclusions; serialized 354 Button / 353 feedback), 18 in-scope ScrollRects at Elastic/0.1/inertia/0.135/20 (the 4 Clamped/40 are the auth screens + GachaRatesModal, excluded), 2 safe-area hits fixed with `SafeAreaFitter`, rest geometry inside the control envelope, no `Gps/`/`UiMotion`/`ButtonPressFeedback`/`SafeAreaFitter` change. Toast now EASES (Cesar's call; deviation D-1 resolved). Open: `_capture/game_polish_c_final_tests.txt` (19:34 JST, pre-toast-commit) reads `passed=2885 failed=1` while the report quotes 2884/0 — re-run needed to name the one. **`game_polish` (2111) is COMPLETE: a + b + c.** Original pointer:
+  **`game_polish_c`: SPEC_READY (2026-09-08, GAME polish track — Notion 2111, slice c of three — the sweep).** `Docs/Specs/Active/game_polish_c/SPEC.md` — ButtonPressFeedback backfill on every player-facing Button (live table, builder fix, coverage test tripwired), one scroll feel (Elastic/0.1/inertia/0.135) on every draggable ScrollRect, safe-area verdict per surface at iPhone 15 Pro Max with `SafeAreaFitter` fixes, Toast onto `UiMotion.Fade`. No new motion, no `Gps/`, 0 px rest parity. **NEXT.**
 
-### Kickoff · game_polish_c (issued 2026-09-08)
+### Kickoff · game_polish_c — SUPERSEDED (DONE 2026-09-08, do not paste)
 
 ```
 Read Docs/Specs/Active/game_polish_c/SPEC.md and implement it.
