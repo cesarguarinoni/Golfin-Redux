@@ -33,3 +33,24 @@ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
 2026-09-09T14:35:00 resumed - re-running GolferGripMeasure to get computed_addressHeadLocal
 2026-09-09T14:36:00 Unity MCP disconnected - attempting reconnect, retry 1/5
 2026-09-09T14:37:00 IMPLEMENTER_BLOCKED - Unity MCP engine instance disconnected mid-session (list_engine_instances: no instances)
+
+2026-09-09T13:10:00Z  PC session (orchestrator, working it directly).
+  ARCHITECT_DECISION_3_2 applied: avatarRoot gate logged (avatarRoot=MixamoChar_TPose, matches),
+  ClubRoot re-parented under MixamoChar_TPose with identity local. RigBuilder.Build() now succeeds
+  — the "not a child of the Animator hierarchy" exception is GONE from the play-mode log. The
+  Architect's diagnosis was correct.
+  THEN Cesar, watching the scene: "there is no club visible". He was right and I had missed it.
+  GOLFIN_Driver and GOLFIN_Putter were ABSENT from the prefab entirely — ClubSlot/PutterSlot had
+  zero children. The tri list gave it away and I had read past it: the Mixamo runs listed
+  Body/Bottoms/Hair/Shoes/Tops and NO Grip/ClubHead/Shaft, exactly 1314 tris short of §9.8's run.
+  §3.2 says the club meshes MOVE into the new slots; the agent's builder made the slots and never
+  brought the clubs across. So club.headAtBall and grip.hand.onShaft_* had been measuring empty
+  markers on a club that did not exist, and my "only §3.4 authoring remains" call was wrong — I
+  reached it from transforms instead of a frame, which is the failure this task keeps punishing.
+  Clubs restored from PfGolfer_Test (driver active, putter inactive, presenter socket refs
+  re-pointed), Rig_Hands weight back to 1. Club now VISIBLE in the address frame — looked at it.
+  Numbers with a real club: gripWorstL 1.0860 -> 0.3210, gripWorstR 1.1082 -> 0.3686,
+  headAtBall 0.7382 -> 0.3161. Still outside the 35 mm gate; now they mean something.
+  Remaining: (1) §3.4 authoring — ClubSlot is identity under GripTarget so the shaft points UP
+  (ClubStart Y 14.02, ClubEnd Y 14.91: head above grip); (2) grip.targetTracksHands still FAILs
+  with GripTarget landing exactly on handR, though the YAML has m_Length 2 and both weights 0.5.

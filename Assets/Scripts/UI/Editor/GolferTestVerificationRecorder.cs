@@ -315,7 +315,14 @@ namespace Golfin.EditorTools
             var anim = golfer.GetComponent<Animator>();
             Assert("spawn.animator", anim != null && anim.runtimeAnimatorController != null && anim.avatar != null && anim.avatar.isHuman,
                    "animator=" + (anim != null) + " controller=" + (anim?.runtimeAnimatorController?.name ?? "<null>") +
-                   " avatar=" + (anim?.avatar?.name ?? "<null>") + " isHuman=" + (anim?.avatar?.isHuman));
+                   " avatar=" + (anim?.avatar?.name ?? "<null>") + " isHuman=" + (anim?.avatar?.isHuman) +
+                   // golfer_club_grip ARCHITECT_DECISION_3_2 (3): the one diagnostic that decides
+                   // where a CONSTRAINED transform may live. Animation Rigging binds read-write
+                   // handles against avatarRoot — the nested FBX instance, NOT the prefab root —
+                   // and a MultiParentConstraint on a transform outside that subtree throws
+                   // "not a child of the Animator hierarchy" at RigBuilder.Build(). Logged at
+                   // spawn so the next person reads the name instead of re-parenting by trial.
+                   " avatarRoot=" + (anim?.avatarRoot?.name ?? "<null>"));
 
             var pres = golfer.GetComponent(FindType("Golfin.Gameplay.Golfer.GolferPresenter"));
             Assert("spawn.presenter", pres != null, "GolferPresenter present on the spawned root");
@@ -338,6 +345,48 @@ namespace Golfin.EditorTools
             // was visibly wrong cleared the gate. This does exactly that, on the same frame the
             // PNG above was captured, with no shot in progress — the resting state a player
             // spends nearly all of a hole looking at.
+            // golfer_club_grip layer-1 gate. Everything downstream (grip.hand.onShaft_*,
+            // grip.hands.order, club.headAtBall) is measured relative to a club hanging off
+            // GripTarget, so if GripTarget is not tracking the hands those numbers describe the
+            // wrong thing entirely — which is exactly how three runs produced "the clip's hands
+            // are impossible" from a constraint that was never binding. Measure the mechanism
+            // itself, not only its consequences.
+            {
+                var allT = golfer.GetComponentsInChildren<Transform>(true);
+                Transform Tf(string n) => allT.FirstOrDefault(x => x.name == n);
+                var gtT = Tf("GripTarget"); var hLt = Tf("mixamorig:LeftHand"); var hRt = Tf("mixamorig:RightHand");
+                if (gtT != null && hLt != null && hRt != null)
+                {
+                    Vector3 mid = (hLt.position + hRt.position) * 0.5f;
+                    float d = Vector3.Distance(gtT.position, mid);
+                    // Full geometry at address, as a Mark not an assertion — the numbers needed to
+                    // author §3.4, and to tell "layer 1 is dead" apart from "layer 1 ran and layer
+                    // 2 then moved the hands", which look identical if you only measure the end
+                    // state. (Layer 2's IK pulls the hands ONTO the anchors after layer 1 computes
+                    // GripTarget from the CLIP's hands, so GripTarget != final hand midpoint is
+                    // expected, not a fault.)
+                    var csT = Tf("ClubSlot"); var ceT = Tf("ClubEnd"); var cstT = Tf("ClubStart");
+                    var alT = Tf("GripAnchor_Lead"); var atT = Tf("GripAnchor_Trail");
+                    Mark("§3.4 GEOMETRY @address | GripTarget=" + V(gtT.position) +
+                         " handL=" + V(hLt.position) + " handR=" + V(hRt.position) +
+                         " handMid=" + V(mid) +
+                         " ClubStart=" + (cstT == null ? "?" : V(cstT.position)) +
+                         " ClubEnd=" + (ceT == null ? "?" : V(ceT.position)) +
+                         " anchorLead=" + (alT == null ? "?" : V(alT.position)) +
+                         " anchorTrail=" + (atT == null ? "?" : V(atT.position)) +
+                         " | handL->anchorLead=" + (alT == null ? "?" : F(Vector3.Distance(hLt.position, alT.position))) +
+                         " handR->anchorTrail=" + (atT == null ? "?" : F(Vector3.Distance(hRt.position, atT.position))) +
+                         " | GripTarget lossyScale=" + (gtT.lossyScale.ToString("F3")));
+
+                    Assert("grip.targetTracksHands", d < 0.01f,
+                           "GripTarget is " + F(d) + " m from the hand midpoint at address (want < 0.01). " +
+                           "This is the MultiParentConstraint (layer 1) doing its job; if it fails, every " +
+                           "other grip number below is measuring a club that is not in his hands. " +
+                           "GripTarget=" + V(gtT.position) + " handMid=" + V(mid));
+                }
+                else Skip("grip.targetTracksHands", "N/A — no GripTarget on this prefab");
+            }
+
             string liveAtAddress = CurrentState(anim);
             Assert("shot.addressAtRest", liveAtAddress.StartsWith("Address"),
                    "animator state live on the captured address frame (no shot in progress) = '" +

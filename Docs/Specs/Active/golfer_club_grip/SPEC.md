@@ -3,7 +3,7 @@
 > **Authoritative spec for this task.** Implementer reads this and ONLY this for the work definition. STATUS.md tracks pipeline state. Reports go in `IMPLEMENTER_REPORT.md`.
 
 ## Status
-See `STATUS.md`. `SPEC_READY` (2026-09-07). Depends on nothing open; `golfer_3d_test` §9.8 is done (`d3deb518d`).
+See `STATUS.md`. `SPEC_READY` (2026-09-07); **amended 2026-09-09** after `FINDING_3_2_IMPOSSIBLE.md` — decision in `ARCHITECT_DECISION_3_2.md`, §1/§3.2/§3.3 updated in place. Depends on nothing open; `golfer_3d_test` §9.8 is done (`d3deb518d`).
 
 > **EXPERIMENT LANE — still opt-in.** Everything here lives under `GOLFIN_GOLFER_TEST` and the `_Test` asset gate exactly like `golfer_3d_test` §5.6. Nothing reaches a normal build. The one exception is the Animation Rigging package itself (§3.1), which is in `Packages/manifest.json` for every build — accepted, see §3.1.
 
@@ -15,7 +15,7 @@ What it fixes: on `PfGolfer_MixamoNative` the club is parented to the right hand
 ## 1. Why this shape (Architect, 2026-09-07)
 - The clips are empty-hand mocap; they carry two hands *near* each other but no shaft. Anything parented to one hand inherits that hand's roll. Deriving the club from **both** hands (position and rotation averaged) removes the single-hand roll and puts the shaft on the line the hands already make.
 - IK closes the residual the other way round: instead of moving the club to the hands, the hands move the last few centimetres to the club. Two-bone IK on the arm cannot touch the legs, so the §9.8 foot-slide numbers must not move (§6 checks this).
-- Animation Rigging evaluates inside the Animator graph, after the clip and before `LateUpdate`, and rig layers evaluate in order — so layer 1 (grip target from the clip's hands) and layer 2 (hands onto the club) are one pass with no feedback and no script in the hot path.
+- Animation Rigging evaluates inside the Animator graph, after the clip and before `LateUpdate`, and rig layers evaluate in order — so layer 1 (grip target from the clip's hands) and layer 2 (hands onto the club) are one pass with no feedback and no script in the hot path. **Constraint (learned 2026-09-09, `FINDING_3_2_IMPOSSIBLE.md`):** a *constrained* (written) transform must be a descendant of **`Animator.avatarRoot`** — on this prefab that is the nested FBX instance `MixamoChar_TPose`, not the prefab root. Bones are not required; the subtree is. See §3.2.
 - Fingers stay as the clip has them (loosely closed). An authored grip hand pose is a separate, later item (§8).
 
 ## 2. Assets
@@ -27,18 +27,19 @@ None new. The club meshes are the existing `GOLFIN_Driver` / `GOLFIN_Putter` alr
 Add `com.unity.animation.rigging` to `Packages/manifest.json` (Unity 6000.3.9f1 — take the version the Package Manager marks as released for this editor; **NOTE:** 1.3.x/1.4.x, confirm in the Package Manager rather than guessing). It ships in every build (~100 KB of managed code, no scenes reference it with the define off); accepted by the Architect. Do not add it to any assembly definition outside `Golfin.Gameplay.Golfer`'s asmdef (if that asmdef exists — else the default assembly, as `GolferPresenter` is today).
 
 ### 3.2 Prefab — `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab`
-Restructure the club so it is **not under a bone**:
+Restructure the club so it is **not under a bone** (but *is* under the avatar root — amended 2026-09-09):
 
 ```
 PfGolfer_MixamoNative            (Animator · GolferPresenter · RigBuilder)
-├ mixamorig:Hips …               (skeleton, untouched)
-├ ClubRoot                       NEW — top-level, identity transform
-│  └ GripTarget                  NEW — the constrained object (§3.3)
-│     ├ ClubSlot  ▸ GOLFIN_Driver    MOVED here from the hand; local pose = the authored grip offset (§3.4)
-│     ├ PutterSlot ▸ GOLFIN_Putter   MOVED here; its own local pose
-│     ├ GripAnchor_Lead          NEW — empty ON the shaft, 0.03 m below the butt cap (shaft axis = ClubSlot local +Y per GolferPresenter.JoinLeadHandToShaft)
-│     ├ GripAnchor_Trail         NEW — empty ON the shaft, 0.11 m below the butt cap
-│     └ ClubStart / ClubEnd      as before (grip / head empties), now children of the club, not of the hand
+├ MixamoChar_TPose               (nested FBX instance = Animator.avatarRoot — AMENDED 2026-09-09, see ARCHITECT_DECISION_3_2.md)
+│  ├ mixamorig:Hips …            (skeleton, untouched)
+│  └ ClubRoot                    NEW — direct child of MixamoChar_TPose, NOT of a bone; identity transform
+│     └ GripTarget               NEW — the constrained object (§3.3); bindable because it is under avatarRoot
+│        ├ ClubSlot  ▸ GOLFIN_Driver    MOVED here from the hand; local pose = the authored grip offset (§3.4)
+│        ├ PutterSlot ▸ GOLFIN_Putter   MOVED here; its own local pose
+│        ├ GripAnchor_Lead       NEW — empty ON the shaft, 0.03 m below the butt cap (shaft axis = ClubSlot local +Y per GolferPresenter.JoinLeadHandToShaft)
+│        ├ GripAnchor_Trail      NEW — empty ON the shaft, 0.11 m below the butt cap
+│        └ ClubStart / ClubEnd   as before (grip / head empties), now children of the club, not of the hand
 └ GolferRig                      NEW — Animation Rigging `Rig`
    ├ Rig_Grip                    `Rig`, weight 1 — layer 1
    │  └ GripTarget_Constraint    `MultiParentConstraint` — constrained = GripTarget; sources = mixamorig:LeftHand (0.5), mixamorig:RightHand (0.5); position+rotation; Maintain Offset OFF
@@ -46,11 +47,14 @@ PfGolfer_MixamoNative            (Animator · GolferPresenter · RigBuilder)
       ├ IK_Lead                  `TwoBoneIKConstraint` — root mixamorig:LeftArm, mid mixamorig:LeftForeArm, tip mixamorig:LeftHand; target GripAnchor_Lead; hint none; weight 1
       └ IK_Trail                 `TwoBoneIKConstraint` — root mixamorig:RightArm, mid mixamorig:RightForeArm, tip mixamorig:RightHand; target GripAnchor_Trail; hint none; weight 1
 ```
-`RigBuilder.layers` = [Rig_Grip, Rig_Hands] in that order. Lead = left hand, trail = right (the prefab is right-handed; §8 for the mirror). `GameplayIdleClubSlot` / `GameplayIdlePuttClubSlot`, if present on this prefab, move under `GripTarget` as well and keep their names (R5 socket contract in `CHARACTER_3D_REMAKE_OPTIONS.md` §2).
+`RigBuilder.layers` = [Rig_Grip, Rig_Hands] in that order. `GolferRig` stays at the prefab root — constraint *components* only read/write handles; their own GameObjects need not be under `avatarRoot`.
+
+**Bind-order rule (the §3.2 lesson):** anything a constraint *writes* (`GripTarget`, the arm bones) lives under `MixamoChar_TPose`; anything a constraint only *reads* (`GripAnchor_*`, hand sources) may live anywhere. Before the first run, `GolferTestBootstrap` (or the harness `spawn.animator` detail) logs `anim.avatarRoot.name` once — expected `MixamoChar_TPose`. If it prints anything else, **stop and report the name**; do not re-parent by trial. Lead = left hand, trail = right (the prefab is right-handed; §8 for the mirror). `GameplayIdleClubSlot` / `GameplayIdlePuttClubSlot`, if present on this prefab, move under `GripTarget` as well and keep their names (R5 socket contract in `CHARACTER_3D_REMAKE_OPTIONS.md` §2).
 
 **`PfGolfer_Test` (Quaternius) is not touched.** It is the dead branch; leave it exactly as §9 left it.
 
 ### 3.3 Why MultiParent with Maintain Offset OFF
+**Amended 2026-09-09:** the constrained object is still `GripTarget`, unchanged; only its parent moved (§3.2). No script replaces this constraint — `GripTargetDriver.cs` and any magic-constant driver stay deleted.
 Maintain Offset captures the constrained→source offset at rig build, i.e. in the prefab's T-pose, which is meaningless for a grip. With it OFF, `GripTarget` *is* the average of the two hand frames every frame, and the grip is authored once as the club's **local** pose under it (§3.4). Nothing is captured at runtime; the prefab is the whole truth.
 
 ### 3.4 Authoring the grip offset — once, by measurement, not by eye
