@@ -305,8 +305,8 @@ namespace GolfinRedux.UI.ModeSelect
             versus.rewardList.Add(new HoleReward(RewardType.Points, 20));
             _modes.Add(versus);
             _modes.Add(new ModeData { id = "practice",     title = "PRACTICE",      tagline = "Sharpen your skills.",              description = "Practice on any course.",             entryFee = 10, rewards = 5,   locked = false, target = "hole_select",    order = 2 });
-            _modes.Add(new ModeData { id = "driving_range",title = "DRIVING RANGE",  tagline = "Coming Soon.",                      description = "Practice long shots.",                entryFee = 0,   rewards = 0,   locked = true,  target = "none",           order = 3 });
-            _modes.Add(new ModeData { id = "missions",     title = "MISSIONS",       tagline = "Coming Soon.",                      description = "Complete challenges for rewards.",     entryFee = 0,   rewards = 20,  locked = true,  target = "none",           order = 4 });
+            _modes.Add(new ModeData { id = "driving_range",title = "DRIVING RANGE",  tagline = "Coming Soon.",                      description = "Practice long shots.",                entryFee = 0,   rewards = 0,   locked = true,  target = "none",           order = 4 });
+            _modes.Add(new ModeData { id = "missions",     title = "MISSIONS",       tagline = "Coming Soon.",                      description = "Complete challenges for rewards.",     entryFee = 0,   rewards = 20,  locked = true,  target = "none",           order = 3 });
         }
 
         public List<ModeData> GetAllModes()
