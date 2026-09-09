@@ -378,6 +378,42 @@ namespace Golfin.EditorTools
                          " handR->anchorTrail=" + (atT == null ? "?" : F(Vector3.Distance(hRt.position, atT.position))) +
                          " | GripTarget lossyScale=" + (gtT.lossyScale.ToString("F3")));
 
+                    // §3.4 SOLVED, not eyeballed. The spec asks for the club's local pose under
+                    // GripTarget such that (a) the anchors sit in the palms and (b) ClubEnd is at
+                    // the ball. Both fall out of one construction, because the club's own geometry
+                    // already fits: GripAnchor_Lead is 0.11 above ClubSlot's origin and ClubEnd
+                    // 0.80 below, so lead-anchor-to-head is 0.91 m — and the measured lead hand to
+                    // ball is 0.909 m. So: point the shaft from the ball up through the lead hand,
+                    // then slide the club until the lead anchor lands on that hand; ClubEnd then
+                    // arrives at the ball on its own.
+                    //
+                    // Roll is pinned by the hand line (clubface perpendicular to it) rather than
+                    // left free — an unconstrained roll is what put the blade at the sky in
+                    // golfer_3d_test F3.
+                    var ballT2 = BallTransform();
+                    if (ballT2 != null && csT != null && alT != null)
+                    {
+                        Vector3 ball = ballT2.position;
+                        Vector3 up   = (hLt.position - ball).normalized;            // +Y = toward the butt cap
+                        Vector3 across = (hRt.position - hLt.position);
+                        Vector3 fwd  = Vector3.Cross(up, across).normalized;
+                        if (fwd.sqrMagnitude < 1e-6f) fwd = Vector3.Cross(up, Vector3.up).normalized;
+
+                        float leadOffset = alT.localPosition.y;                      // 0.11 by construction
+                        Quaternion wantRot = Quaternion.LookRotation(fwd, up);
+                        Vector3    wantPos = hLt.position - up * leadOffset;
+
+                        Vector3    localPos = gtT.InverseTransformPoint(wantPos);
+                        Quaternion localRot = Quaternion.Inverse(gtT.rotation) * wantRot;
+
+                        Mark("§3.4 SOLVED ClubSlot local pose under GripTarget: " +
+                             "localPosition=" + localPos.ToString("F5") +
+                             "  localEuler=" + localRot.eulerAngles.ToString("F3") +
+                             "  (leadAnchorOffset=" + F(leadOffset) +
+                             ", |leadHand-ball|=" + F(Vector3.Distance(hLt.position, ball)) +
+                             ", club leadAnchor->ClubEnd=" + F(leadOffset - ceT.localPosition.y) + ")");
+                    }
+
                     Assert("grip.targetTracksHands", d < 0.01f,
                            "GripTarget is " + F(d) + " m from the hand midpoint at address (want < 0.01). " +
                            "This is the MultiParentConstraint (layer 1) doing its job; if it fails, every " +
