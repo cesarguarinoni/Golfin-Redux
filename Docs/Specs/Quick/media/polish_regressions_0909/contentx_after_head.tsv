@@ -1,0 +1,24 @@
+# per-frame content X — ModeSelection -> MissionSelection   [after_head]
+# driven by the REAL mode-card ExpandedContainer/ActionButton.onClick
+# contentWidth=1074px  frames=16
+# arriver rect = Canvas/ScreensRoot/MissionSelectionScreen/Content
+# leaver  rect = Canvas/ScreensRoot/ModeSelectionScreen/CardsContainer
+# dArriver/dLeaver = fraction of the content width travelled SINCE THE PREVIOUS FRAME.
+# A single large dArriver is fix 1's teleport; dArriver != dLeaver is the parallax.
+frame	dt_ms	elapsed_ms	arriverX	leaverX	dArriver	dLeaver
+0	16.8	0.1	0.0	0.0	0.0 %	0.0 %
+1	110.4	10.6	0.0	-408.4	0.0 %	-38.0 %
+2	11.3	21.0	0.0	-521.5	0.0 %	-10.5 %
+3	21.4	42.7	0.0	-704.2	0.0 %	-17.0 %
+4	18.0	60.5	0.0	-828.0	0.0 %	-11.5 %
+5	15.6	76.2	0.0	-915.9	0.0 %	-8.2 %
+6	17.6	93.9	0.0	-995.1	0.0 %	-7.4 %
+7	16.5	110.4	0.0	-1052.5	0.0 %	-5.3 %
+8	17.2	127.4	0.0	-1097.4	0.0 %	-4.2 %
+9	15.0	142.4	0.0	-1125.6	0.0 %	-2.6 %
+10	18.0	168.6	0.0	-1148.5	0.0 %	-2.1 %
+11	11.2	173.5	0.0	-1157.7	0.0 %	-0.9 %
+12	22.1	193.8	0.0	-1167.4	0.0 %	-0.9 %
+13	16.0	209.8	0.0	-1169.7	0.0 %	-0.2 %
+14	16.1	225.9	0.0	-1170.0	0.0 %	0.0 %
+15	16.6	242.5	0.0	-1170.0	0.0 %	0.0 %

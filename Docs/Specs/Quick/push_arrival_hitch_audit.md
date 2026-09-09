@@ -147,11 +147,60 @@ actually measured: `null` at `36dc3d480` (fix 3 did not exist yet), `0.30`, and 
 
 **1.0 ships unless Cesar overrules it.**
 
-### 4d · Still open from the original list
+### 4d · DONE — the per-frame content-X log, and P1
 
-- The per-frame content-X log for `ModeSelection → MissionSelection`.
-- P1 evidence: `Rebind x10` with a different first prize than the previous pull; `ShowPrizes`
-  logging `instant`; the Prizes arrival under the modal fade.
+**Per-frame content X** (`media/…/contentx_before_36dc3d480.tsv`, `contentx_after_head.tsv`,
+written by `Assets/Editor/PushContentXLogger.cs`). One row per frame of the push, driven by the
+REAL mode-card `ExpandedContainer/ActionButton`. Sampled from `LateUpdate`, not from the logger's
+own coroutine: coroutines resume in START order and this one starts first, so reading there
+reported every value one frame stale — which is exactly the doubt that makes an odd number useless.
+
+| | frames | leaver travel | worst single frame | worst dt |
+|---|---|---|---|---|
+| before `36dc3d480` | 11 | **351 px = 30 % of W** | 223 px = **63 % of its own travel** | 92 ms |
+| after HEAD | 16 | **1170 px = 100 % of W** | 408 px = **35 % of its own travel** | 110 ms |
+
+Both fixes are in those two columns. **Fix 3** is the travel: 30 % of the width before (the old
+`ParallaxFactor` 0.3 applied to a same-backdrop pair), 100 % after. **Fix 1** is the worst frame:
+before, one 92 ms hitch consumed 63 % of the leaver's whole journey in a single draw — the teleport,
+measured; after, the same class of hitch (110 ms, the arriving screen still costs what it costs) can
+only spend `MaxTweenStep` = 1/30 s of the tween, which an ease-out turns into 35 %. The cap is doing
+exactly what it was written to do, and the held frame is why the 110 ms lands before the slide
+rather than inside it.
+
+**⚠️ An anomaly the log found, and it is NOT a regression.** `MissionSelectionScreen/Content` — the
+ARRIVER's content rect — reads `0.0` on every frame, in BOTH builds. Only the leaver travels. Ruled
+out: duplicate scene objects (instance ids logged, one each), a layout group on the parent (the
+screen root has none; the VLG on `Content` drives its children, not itself), coroutine sampling
+order (re-measured from `LateUpdate`), `ScreenEntryMotion`/`UiMotion.Rise` (it preserves `x`), and
+`Collect` filtering on active (it does not — `Transform.Find` sees inactive children). `LayeredPush`
+parks the arriver at `RestX + enterOffset` before `SetActive` and lerps it every frame, and
+`LastPushEnterOffset` is recorded as 1170, so the intent is there and the write is not landing.
+
+It predates this task — identical in both builds — so it is filed rather than fixed here. Two things
+follow from it: the transition still reads correctly because the leaver's travel does the work, and
+**the invariant gate cannot see it** — `endTargetX` and `endTargetRestX` are both 0, so every
+arriver assertion passes vacuously whether the rect moved or not. Worth a `p.To.Content.Count > 0`
+assertion in the probe.
+
+**P1** (`media/…/gacha_p1_*.jpg`). Two REAL x10 pulls against the live server, the second made FROM
+the Prizes screen:
+
+```
+[GachaPullService] Pulled 'banner_test_b' -> ok x10 … tickets=1690
+[GachaPullFlow] Opening GachaPrizes instant (under the reveal scrim).
+[GachaPrizesScreenController] Rebind x10 first=item:repairkit_common entrance=True
+
+[GachaPullService] Pulled 'banner_test_b' -> ok x10 … tickets=1015
+[GachaPrizesScreenController] Rebind x10 first=club:club_iron7_mireo entrance=True
+```
+
+The first arrival is `instant` — under the scrim, revealed by the modal's fade, which is what
+`ShowPrizes`' own comment always claimed. The second pull rebinds to a DIFFERENT first prize
+(`repairkit_common` → `club_iron7_mireo`, and a different ten under it), and logs NO
+`Opening GachaPrizes` line and no `Already on … ignoring` — it did not navigate at all. That absence
+is the fix, and it is the line to look for if this regresses. `entrance=True` on both, so the card
+pop still plays, under the fade.
 
 Compile status at the time of writing: **Assembly-CSharp, Assembly-CSharp-Editor and
 Golfin.UI.Polish.Tests all build clean (0 errors)**, checked with Unity's own Roslyn against the
