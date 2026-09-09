@@ -4,6 +4,54 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 — mode_select_driving_range_last: **Driving Range drops to the bottom, and the CSV fallback stops lying** — DONE, approved by Cesar
+
+Driving Range is the only mode still locked, and it sat at `order=4` with playable Missions below it
+at 5 — one Coming Soon card wedged between two live ones. Swapped the two `order` values in
+`Assets/Resources/Data/modes.csv`, so the vertical list now reads 1v1, Practice, Tournaments,
+Missions, Driving Range.
+
+**Published, not just edited.** `modes` is a content catalog, so the published rows overlay the
+bundled CSV at runtime and a CSV-only edit would have left the old order winning on device. Import
+PLAN `0 add / 2 change / 3 same / 0 conflict` → `--apply` → `golfin_mode_fees` re-mirrored from the
+drafts *before* publishing (the ordering `contentMutations.mirrorModeFees` uses; `entryFee` and
+`locked` were unchanged, so an idempotent re-upsert) → `content_publish` **modes v10 → v11** →
+re-export, `content_version.txt` `modes=10 → 11`, `--check` **clean**.
+
+**Then the fallback, which was the real find.** `AddFallbackModes()` — the path that runs when
+`Resources.Load` cannot produce modes.csv — was a hand-built list of five `ModeData` objects, i.e. a
+second independent model of the same rows that every CSV edit had to be mirrored into by hand. It
+silently was not. It carried **no `tournaments` row at all** (declined on purpose in
+`tournaments_mode_card` SPEC §87 — "if the CSV is missing we have bigger problems"), still had
+`missions` as `locked=true, target="none"` six weeks after `missions_v1` unlocked it, and paid 20 RP
+against the CSV's 35. Had it ever fired, the one code path whose job is to rescue a broken build
+would have rendered a game that does not exist.
+
+Fixed by removing the duplication rather than re-typing it: the fallback is now
+`ModesDatabaseCSV.FallbackCsv`, a **verbatim copy of the file** parsed by `LoadFromCSV` itself, so
+there are no fields left to keep in sync — only one string that either equals the file or does not.
+The copy is generated from the file, never transcribed. Side benefit: the fallback now honours the
+content overlay and the withhold rule, which the hardcoded list bypassed entirely.
+
+**Guards, so it cannot drift again.** `ModesFallbackCsvTests` (EditMode) compares line by line so a
+failure *names* the drifted row, plus a well-formedness check on column count / unique ids / unique
+`order`; `ModesFallbackBuildHook` is an `IPreprocessBuildWithReport` that **fails the build** on
+divergence, modelled on `LocalizationBuildHook`; and `Tools ▸ Golfin ▸ Modes ▸ Sync Fallback CSV`
+regenerates it in one click, because a guard whose repair is hand-editing a string literal is a
+guard people learn to skip.
+
+**Verified.** Embedded copy byte-identical to modes.csv (1259 bytes both sides). Drift/repair round
+trip simulated against the real file — a CSV-only edit reads DRIFTED and `Sync()` repairs it touching
+exactly one line, proving the tool's anchors match the file as written. Full EditMode suite:
+**2997 total, 2994 passed, 0 failed, 3 skipped** (the pre-existing `HoleCompleteDriverTests`
+ignores); both new tests named individually in the filtered run, since `FailedTests` counts only the
+filter. `ModesOverlayTests` 11/11, so the order swap broke nothing. `ModesFallbackBuildHook` is the
+one piece still unexercised — it needs a real player build.
+
+Unity was owned by another session for most of this, so the C# was compile-checked out-of-process
+first (Unity's own Roslyn against the generated `.csproj`s, all three assemblies, 0 errors) and the
+EditMode run came later, once the Editor was idle.
+---
 ## 2026-09-10 — mode_carousel_play_charges_and_goes_nowhere: **PLAY stops taking the fee for nothing** — DONE, approved by Cesar
 
 The defect the `hole_selection_first_card_gap` harness spotted in passing (below) is fixed. The Home
