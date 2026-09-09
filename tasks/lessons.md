@@ -4042,3 +4042,59 @@ the artifact. A convention I have to remember is not a fix; a tool that cannot e
 thing to distrust): here the number was anomalous rather than clean, and the same discipline applies
 in reverse — an anomaly that survives five good explanations is more likely to be the measurement
 than the code.
+
+---
+
+## Lesson AK — `Destroy` is deferred to end of frame, so "clear the list, then measure it" measures the corpses (`asset_loans_polish`, 2026-09-09)
+
+`LoanModalController.LoadRecipients` cleared four placeholder rows, spawned the three real ones and
+called `GpsPaintMotion.StaggerRise` — all in one frame. The first recipient row then drew nowhere:
+`y = -448`, four 112 px slots below its place, outside the viewport, at **full alpha**. Not
+transparent — *elsewhere*.
+
+`Object.Destroy` removes a GameObject at END of frame, so the four placeholders were still children
+of the layout group for the rest of that frame. `StaggerRise` force-rebuilds the parent's layout to
+learn each row's rest position, and item 0's beat fires **synchronously** inside `UiMotion.Run` — so
+row 0 measured its rest slot behind four corpses and `UiMotion.Rise` pinned it there. Rows 1..n were
+correct only by accident of timing: their beats land on later frames, after the placeholders have
+actually gone. The fix is one `yield return null` between the clear and the spawn. **The problem is
+the frame, not the rebuild** — a second `ForceRebuildLayoutImmediate` fixes nothing.
+
+`StaggerRise`'s own header already warns that rows under a layout group have no rest position until
+layout runs, and its rebuild is the fix for that. It cannot help when the thing corrupting the
+layout is a child that has not been collected yet. A documented hazard with a documented fix can
+still have a second entrance.
+
+**And the invariant gate passed 21/21 while it was live.** The stagger assertions asked whether the
+rows lit up at spread-out frames and settled at alpha 1 — all true. None of them asked *where the
+rows were*. It was found by looking at a video frame against the shipped capture. **A motion
+assertion that never reads a position is not a check that the motion landed anywhere.** Assert
+per-row `anchoredPosition` and in-viewport alongside alpha; sister to Lesson AJ (point the instrument
+at the subject) and to `feedback_read_whole_frame_not_just_your_feature`.
+
+---
+
+## Lesson AL — reading `RectTransform.rect` in edit mode is a WRITE to the whole scene (`asset_loans_polish`, 2026-09-09)
+
+Setting `anchoredPosition.x = rt.rect.width * 0.5f` on **two** objects, then saving, baked **1367
+lines of anchor churn across 157 unrelated objects** in `ShellScene`. Twice — the second time
+immediately after a clean `OpenScene` from disk, which is what ruled out play-mode leftovers and
+named the real cause.
+
+Reading `rect` on a rect whose parent is a `LayoutGroup` makes Unity evaluate layout for the whole
+canvas, and every `LayoutGroup` then writes its children's `anchoredPosition` and `sizeDelta`. The
+save is honest: it serialises what is now in memory. **Use `sizeDelta`** — with the x anchors
+collapsed to a point it is the same number, and it reads nothing. Same hazard for `GetWorldCorners`:
+if you need to MEASURE, do it in play mode (an invariant probe), not in the edit-mode scene you are
+about to save.
+
+This is a fourth trigger for `project_scene_save_bakes_layout_churn`, and the nastiest, because the
+other three (entering play mode, `ForceUpdateCanvases`, activating a hidden subtree) all *look* like
+actions. A property read looks like a read.
+
+**Corollary, same task: re-running an idempotent builder to add two components is not free.**
+`LoanUiBuilder.Build()` reshuffled 669 lines of fileIDs across `LoanModal.prefab` and
+`LoanReturnModal.prefab` — it recreated the buttons' `Text (TMP)` children under new fileIDs, which
+is how scene overrides get orphaned. Both prefabs were reverted and the two `CanvasGroup`s added
+surgically with `SerializedObject`. Final scene diff: 62 insertions, 6 deletions. **Diff the YAML
+before trusting any authoring pass** — a >200-line diff for a few-node change means churn.
