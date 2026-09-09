@@ -319,8 +319,14 @@ namespace Golfin.UI.Polish.Tests
         static bool    Pb(string name) => (bool)P(name)!;
         static float   Const(string name) => (float)T.GetField(name)!.GetRawConstantValue()!;
 
+        // GetField + GetRawConstantValue, NOT GetProperty: UiMotion.PushDur is
+        // `public const float` (UiMotion.cs:83), and GetProperty returns NULL for a const
+        // field — so the `!` below used to dereference null and this fixture's one user of
+        // PushDur (NoSingleFrameAdvancesMoreThanTwoFramesOfTravel) threw a
+        // NullReferenceException before it reached a single assertion. Same shape, and the
+        // same fix, as `Const` two lines up, which reads LayeredPush's own consts.
         static float PushDur => (float)Probe.Type("Golfin.UI.Polish.UiMotion")
-                                             .GetProperty("PushDur")!.GetValue(null)!;
+                                             .GetField("PushDur")!.GetRawConstantValue()!;
 
         /// <summary>The whole rig: a common parent, the ARRIVER authored FIRST (the occluded
         /// shape — ModeSelection at ScreensRoot 10 arriving over MissionSelection at 8), the

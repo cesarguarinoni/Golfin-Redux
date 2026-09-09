@@ -240,6 +240,23 @@ namespace Golfin.UI.Polish.Tests
         public void Slide_DefaultCurve_StillDefersToItsEaseOutBool()
         {
             RequireAFrameWithin(10f);
+
+            // MEASURED AGAINST LINEAR, not against a constant — polish_regressions_0909 R0.
+            //
+            // This used to assert `x < 1f`, which silently assumed the first frame advanced only a
+            // sliver of the 10 s tween. In EditMode `Time.unscaledDeltaTime` is the EDITOR's last
+            // frame delta, and during a 2.5-minute suite a single frame of several seconds is
+            // ordinary: at dt = 3.7 s the ease-in position is ~3.7, the assert failed, and the
+            // build went red on a test whose subject had not changed. RequireAFrameWithin did not
+            // catch it because its threshold (half the duration) is far looser than what `x < 1f`
+            // actually needed (dt < 2.15 s).
+            //
+            // The property under test does not depend on dt at all: for the SAME elapsed fraction,
+            // ease-in trails the linear position and ease-out leads it. Asserting that directly is
+            // both exact and immune to whatever the editor's clock did.
+            float dt = Time.unscaledDeltaTime;
+            float linear = 100f * Mathf.Clamp01(dt / 10f);
+
             foreach (bool easeOut in new[] { true, false })
             {
                 var go = new GameObject("SlideTarget", typeof(RectTransform));
@@ -250,8 +267,8 @@ namespace Golfin.UI.Polish.Tests
                 float x = rt.anchoredPosition.x;
                 sl.MoveNext();
                 // ease-out leads, ease-in lags — the bool must still choose between them.
-                if (easeOut) Assert.Greater(x, 0f, "easeOut:true must lead");
-                else         Assert.Less(x, 1f,  "easeOut:false must lag");
+                if (easeOut) Assert.Greater(x, linear, $"easeOut:true must LEAD linear ({linear:F3})");
+                else         Assert.Less(x, linear,    $"easeOut:false must LAG linear ({linear:F3})");
                 UnityEngine.Object.DestroyImmediate(go);
             }
         }

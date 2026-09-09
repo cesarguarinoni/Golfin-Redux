@@ -345,6 +345,17 @@ namespace Golfin.UI.Polish.Tests
                 while (e.MoveNext()) { drawn.Add(tmp.text); frames++; }
 
                 Assert.LessOrEqual(drawn.Count, 13, "more distinct strings than values counted");
+
+                // polish_regressions_0909 R0 — the same EditMode clock trap as
+                // UiMotionEaseTests.Slide_DefaultCurve. `frames > drawn.Count` needs the loop to
+                // have RUN more than once, and in EditMode Time.unscaledDeltaTime is the editor's
+                // last frame delta: one slow frame during a long suite swallows the whole 0.4 s
+                // tween, frames == 1, and the build goes red on a gate that was never exercised.
+                // An explicit skip says that out loud instead of failing an untested assertion.
+                if (frames <= 1)
+                    Assert.Ignore($"the editor frame clock ({Time.unscaledDeltaTime:F3}s) swallowed the " +
+                                  "0.4s tween in one step — there is no per-frame gate to assert on");
+
                 Assert.Greater(frames, drawn.Count,
                     "every frame drew a new value — the integer gate is not working");
                 Assert.AreEqual("12", tmp.text);
