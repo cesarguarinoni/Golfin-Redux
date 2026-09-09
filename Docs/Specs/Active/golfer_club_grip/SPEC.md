@@ -3,7 +3,7 @@
 > **Authoritative spec for this task.** Implementer reads this and ONLY this for the work definition. STATUS.md tracks pipeline state. Reports go in `IMPLEMENTER_REPORT.md`.
 
 ## Status
-See `STATUS.md`. `SPEC_READY` (2026-09-07); **amended 2026-09-09** after `FINDING_3_2_IMPOSSIBLE.md` — decision in `ARCHITECT_DECISION_3_2.md`, §1/§3.2/§3.3 updated in place. Depends on nothing open; `golfer_3d_test` §9.8 is done (`d3deb518d`).
+See `STATUS.md`. `SPEC_READY` (2026-09-07); **amended 2026-09-09 twice** — `ARCHITECT_DECISION_3_2.md` (GripTarget under the avatar root) and `ARCHITECT_DECISION_RIG_DEAD.md` (the Rigs too; plus the exception gate in §6 A0). Depends on nothing open; `golfer_3d_test` §9.8 is done (`d3deb518d`).
 
 > **EXPERIMENT LANE — still opt-in.** Everything here lives under `GOLFIN_GOLFER_TEST` and the `_Test` asset gate exactly like `golfer_3d_test` §5.6. Nothing reaches a normal build. The one exception is the Animation Rigging package itself (§3.1), which is in `Packages/manifest.json` for every build — accepted, see §3.1.
 
@@ -40,16 +40,17 @@ PfGolfer_MixamoNative            (Animator · GolferPresenter · RigBuilder)
 │        ├ GripAnchor_Lead       NEW — empty ON the shaft, 0.03 m below the butt cap (shaft axis = ClubSlot local +Y per GolferPresenter.JoinLeadHandToShaft)
 │        ├ GripAnchor_Trail      NEW — empty ON the shaft, 0.11 m below the butt cap
 │        └ ClubStart / ClubEnd   as before (grip / head empties), now children of the club, not of the hand
-└ GolferRig                      NEW — Animation Rigging `Rig`
-   ├ Rig_Grip                    `Rig`, weight 1 — layer 1
-   │  └ GripTarget_Constraint    `MultiParentConstraint` — constrained = GripTarget; sources = mixamorig:LeftHand (0.5), mixamorig:RightHand (0.5); position+rotation; Maintain Offset OFF
-   └ Rig_Hands                   `Rig`, weight 1 — layer 2
-      ├ IK_Lead                  `TwoBoneIKConstraint` — root mixamorig:LeftArm, mid mixamorig:LeftForeArm, tip mixamorig:LeftHand; target GripAnchor_Lead; hint none; weight 1
-      └ IK_Trail                 `TwoBoneIKConstraint` — root mixamorig:RightArm, mid mixamorig:RightForeArm, tip mixamorig:RightHand; target GripAnchor_Trail; hint none; weight 1
+│  └ GolferRig                   NEW — plain empty; under MixamoChar_TPose (AMENDED 2026-09-09, 2nd — the Rigs were outside the stream root)
+│     ├ Rig_Grip                 `Rig`, weight 1 — layer 1
+│     │  └ GripTarget_Constraint `MultiParentConstraint` — constrained = GripTarget; sources = mixamorig:LeftHand (0.5), mixamorig:RightHand (0.5); position+rotation; Maintain Offset OFF
+│     └ Rig_Hands                `Rig`, weight 1 — layer 2
+│        ├ IK_Lead               `TwoBoneIKConstraint` — root mixamorig:LeftArm, mid mixamorig:LeftForeArm, tip mixamorig:LeftHand; target GripAnchor_Lead; hint none; weight 1
+│        └ IK_Trail              `TwoBoneIKConstraint` — root mixamorig:RightArm, mid mixamorig:RightForeArm, tip mixamorig:RightHand; target GripAnchor_Trail; hint none; weight 1
+└ UnplayableChecker ×2           (unchanged; nothing else on the root)
 ```
-`RigBuilder.layers` = [Rig_Grip, Rig_Hands] in that order. `GolferRig` stays at the prefab root — constraint *components* only read/write handles; their own GameObjects need not be under `avatarRoot`.
+`RigBuilder.layers` = [Rig_Grip, Rig_Hands] in that order. **`GolferRig` (both `Rig`s and every constraint GameObject) also lives under `MixamoChar_TPose` — amended 2026-09-09 (2nd), see `ARCHITECT_DECISION_RIG_DEAD.md`.** A constraint's weight and per-constraint floats are read through `PropertyStreamHandle`s bound to the constraint's *own* transform; outside the stream root they never resolve and the job throws every frame (`FloatProperty.Get` in `TwoBoneIKConstraintJob.ProcessAnimation`). `RigBuilder` alone stays on the prefab root, on the Animator's GameObject.
 
-**Bind-order rule (the §3.2 lesson):** anything a constraint *writes* (`GripTarget`, the arm bones) lives under `MixamoChar_TPose`; anything a constraint only *reads* (`GripAnchor_*`, hand sources) may live anywhere. Before the first run, `GolferTestBootstrap` (or the harness `spawn.animator` detail) logs `anim.avatarRoot.name` once — expected `MixamoChar_TPose`. If it prints anything else, **stop and report the name**; do not re-parent by trial. Lead = left hand, trail = right (the prefab is right-handed; §8 for the mirror). `GameplayIdleClubSlot` / `GameplayIdlePuttClubSlot`, if present on this prefab, move under `GripTarget` as well and keep their names (R5 socket contract in `CHARACTER_3D_REMAKE_OPTIONS.md` §2).
+**Stream-root rule (the §3.2 lesson, corrected twice):** with the Animator one level above the FBX instance, the animation stream is rooted at `Animator.avatarRoot` = `MixamoChar_TPose`. **Every** object Animation Rigging touches through a stream handle lives under it: transforms it writes (`GripTarget`, the arm bones), transforms it reads (`GripAnchor_*`, hand sources — put them there too, no exceptions), and the `Rig` / constraint components themselves (their weights are stream properties). The only thing on the prefab root is `RigBuilder`, beside the Animator. Before the first run, `GolferTestBootstrap` (or the harness `spawn.animator` detail) logs `anim.avatarRoot.name` once — expected `MixamoChar_TPose`. If it prints anything else, **stop and report the name**; do not re-parent by trial. Lead = left hand, trail = right (the prefab is right-handed; §8 for the mirror). `GameplayIdleClubSlot` / `GameplayIdlePuttClubSlot`, if present on this prefab, move under `GripTarget` as well and keep their names (R5 socket contract in `CHARACTER_3D_REMAKE_OPTIONS.md` §2).
 
 **`PfGolfer_Test` (Quaternius) is not touched.** It is the dead branch; leave it exactly as §9 left it.
 
@@ -90,13 +91,14 @@ Authored grip hand pose (fingers); left-handed mirror (swap the two anchors + mi
 ## 6. Acceptance (Implementer fills `IMPLEMENTER_REPORT.md`, PASS/FAIL + one-line evidence)
 | # | Check | Pass condition |
 |---|---|---|
+| A0 | Rig alive (added 2026-09-09) | Zero `InvalidOperationException` from `UnityEngine.Animations.Rigging` in the Console / `Editor.log` for the whole run (Code counts them; the number goes in the report). A run with any is not a run — every other grip number in this table is void without A0. |
 | A1 | Package | `com.unity.animation.rigging` in `manifest.json`, project compiles with the define **off** and **on** |
 | A2 | Prefab | Hierarchy per §3.2; `RigBuilder.layers` order Grip → Hands; club not under any bone (`object-get-data` or a one-line editor check) |
 | A3 | Harness run — ONE, Mixamo-native, Hole 06 | `grip.hand.onShaft_l/_r` < 0.035 m worst-of-three; `grip.hands.order` in band; `club.headAtBall` < 0.05 m; `grip.ikNoLegEffect` in band; every §9.8 PASS still PASS; `budget.tris` still the one FAIL (unchanged, out of scope) |
 | A4 | Frames | `evidence/grip/` — address, t = 0.6 s, impact, **on the gameplay camera**, plus one Scene-view close-up of the hands at address labelled as such. Side-by-side with `golfer_3d_test/evidence/9_8/mixamo_*.png` (before) |
 | A5 | Define off | EditMode sweep green; `git diff --stat` of shipped (non-`_Test`, non-`#if`) code is empty except `manifest.json` / `packages-lock.json` |
 | A6 | Profile | active build profile restored to **`iOS-Full-GPS`** before the final commit, stated in the report |
-| A7 | Numbers in report | both authored local poses (§3.4), the measured `addressHeadLocal`, the three grip samples per hand |
+| A7 | Numbers in report | both authored local poses (§3.4), the measured `addressHeadLocal`, the three grip samples per hand, the Animation Rigging package version, the A0 count |
 
 Exit: A1–A7 → `STATUS.md` = `READY_FOR_SELF_REVIEW`.
 

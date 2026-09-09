@@ -4,6 +4,58 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 (golfer_club_grip iter-4) — **the rig had never evaluated; it does now**
+
+**The bug, and it invalidated a week of numbers.** Every `TwoBoneIKConstraintJob` threw
+`InvalidOperationException: The PropertyStreamHandle cannot be resolved` — **2,850 times per run**,
+from the frame the golfer spawned. A throwing rig job stops the graph, so `GripTarget` was never
+written, the club hung at the golfer's root, and `club.headAtBall = 0.7382 m` was never a club
+measurement at all — it was the golfer→ball stance distance. Every grip number this task produced,
+mine and three implementer runs', described a dead rig.
+
+**The cause.** The Animator sits one level ABOVE the FBX instance, so the animation stream is rooted
+at `Animator.avatarRoot` = `MixamoChar_TPose`, not at the Animator's own GameObject. `Rig_Grip`,
+`Rig_Hands` and the three constraint GameObjects were on the prefab root, outside that subtree —
+and a constraint's **weight** is a `PropertyStreamHandle` bound to the constraint's OWN transform.
+Correct transform bindings cannot rescue a property handle on a transform the stream cannot see.
+
+**The rule, now complete (SPEC §3.2):** *every* object Animation Rigging touches through a stream
+handle lives under `avatarRoot` — transforms it writes, transforms it reads, AND the `Rig` /
+constraint components themselves. Only `RigBuilder` stays beside the Animator. Moving three
+GameObjects took the exception count **2,850 → 0**.
+
+| measured on the same harness run | dead rig | live rig |
+|---|---|---|
+| `club.headAtBall` | 0.7382 m | **0.0198 m PASS** |
+| `grip.hand.onShaft_l` | 1.0855 m | **0.0197 m PASS** |
+| §3.4 desired-vs-actual club pose | 130.0170° | **0.0000°** |
+| the club on screen | underground | in his hands, head on the ball |
+
+**Still open.** `IK_Lead` lands its hand exactly on its anchor; `IK_Trail` misses by 0.0775 m, and
+the three remaining grip FAILs are all that one fact. Both constraints are configured identically
+(weight 1, `targetPositionWeight` 1, no hint, arm reach 0.4639 / 0.4564 m — read off the prefab), so
+the asymmetry is geometric: with `ClubEnd` on the ball and `GripAnchor_Lead` in the left palm,
+`GripAnchor_Trail` is where the right arm does not put its hand. That is SPEC §3.4's written stop
+condition, so the task stopped there instead of sliding the anchor until the assertion went green.
+
+**Falsified along the way** (worth as much as the fix): `forceGripPose` was serialized `1` against
+SPEC §3.5. Setting it `false` and re-running returned **byte-identical** grip numbers — so the
+legacy `LateUpdate` grip was never doing the work; `IK_Lead` was. Also struck: my own earlier
+claim that the rig needed to be built through the Animation Rigging editor UI. There is no
+editor-side registration; the layout was simply outside the stream root.
+
+**Two lessons with teeth.**
+1. **A run with exceptions is not a run.** Gate A0 — zero `UnityEngine.Animations.Rigging`
+   exceptions, counted, before any other number is reported — is now an acceptance row. Not having
+   it is what let a week of measurements accumulate against a rig that never executed.
+2. **Trace the exception before the geometry.** The tell was on screen the whole time (Cesar: *"the
+   club is underground"*) and in the log 2,850 times; three rounds were spent inferring about
+   package internals instead of reading it.
+
+Branch `golfer_3d_test`, `STATUS = READY_FOR_ARCHITECT_REVIEW`. Animation Rigging 1.3.1 (Registry).
+Active profile restored to `iOS-Full-GPS`. Nothing merged to `main`.
+
+---
 ## 2026-09-07 (§9.8 closed) — **retargeting was the cause; the roster pipeline is "rig it in Mixamo"**
 
 **The experiment answered.** Same hole, same harness, same controller states, same bootstrap, no

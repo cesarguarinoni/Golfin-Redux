@@ -1,49 +1,41 @@
-IMPLEMENTER_BLOCKED
+READY_FOR_ARCHITECT_REVIEW (iter-4)
 
-THE RIG HAS NEVER EVALUATED. Every grip number produced by this task, mine and the agents',
-describes a dead rig. Found only because Cesar said "club is underground" and I finally traced the
-exception instead of the geometry.
+Cesar's kickoff asked for READY_FOR_SELF_REVIEW; hard rule 1 routes a report carrying FAIL items
+down the architect path, and A3/A5 carry them. Deviation flagged, not laundered.
 
-  System.InvalidOperationException: The PropertyStreamHandle cannot be resolved.
-    at UnityEngine.Animations.Rigging.FloatProperty.Get
-    at UnityEngine.Animations.Rigging.TwoBoneIKConstraintJob.ProcessAnimation
+A0 = 0. Zero Animation Rigging exceptions over a complete run — was 2850. ARCHITECT_DECISION_RIG_DEAD
+was right: moving GolferRig (both Rigs + all three constraints) under MixamoChar_TPose fixed it.
+The re-parent ran; the prefab-variant fallback was NOT needed.
 
-2850 occurrences in ONE run, starting the frame the golfer spawns. When a rig job throws the graph
-stops evaluating, so GripTarget is never written and keeps its inherited parent transform — the
-golfer's ROOT, on the ground. The club hangs 0.80 m below that, which is why it renders underground
-and why club.headAtBall reads 0.7382 m: that is exactly the golfer->ball stance distance, not a
-club measurement.
+The rig has evaluated for the first time in this task:
+  club.headAtBall     0.7382 -> 0.0198 m  PASS
+  grip.hand.onShaft_l 1.0855 -> 0.0197 m  PASS
+  §3.4 desired-vs-actual  130.0170 deg -> 0.0000 deg
+  the club is in his hands with the head on the ball (screenshots/iter4_grip_address.png)
 
-WHAT IS VERIFIED, NOT GUESSED
- - The IK bindings are CORRECT. IK_Lead root/mid/tip = mixamorig:LeftArm/LeftForeArm/LeftHand,
-   target GripAnchor_Lead; IK_Trail the same on the right. All five transforms are under
-   Animator.avatarRoot (MixamoChar_TPose). Both constraints weight 1, enabled, active. Both Rigs
-   weight 1. RigBuilder layers Rig_Grip -> Rig_Hands. Read back off the prefab.
- - The exception is FloatProperty.Get — an animatable WEIGHT property, not a transform. That is why
-   correct transform bindings do not fix it.
- - The §3.4 solve arithmetic is CORRECT: desired ClubEnd (80.2105, 13.4334, -24.5437) against ball
-   (80.2103, 13.4343, -24.5443) — a 1 mm fit. It was never given a working rig to land on.
- - ARCHITECT_DECISION_3_2 was right and its fix holds: ClubRoot under avatarRoot removed the
-   "not a child of the Animator hierarchy" bind exception at RigBuilder.Build().
+STILL FAILING — all three are one geometric fact, not a wiring defect:
+  IK_Lead lands its hand exactly on GripAnchor_Lead (0.0000 m). IK_Trail misses GripAnchor_Trail by
+  0.0775 m. Both constraints are configured identically (weight 1, targetPositionWeight 1, no hint,
+  arm reach 0.4639 vs 0.4564 m) — read off the prefab, not assumed. With ClubEnd on the ball AND
+  GripAnchor_Lead in the left palm, GripAnchor_Trail is where the right arm does not put its hand.
+  That is SPEC §3.4's written stop condition, so I stopped instead of sliding the anchor until the
+  number went green.
+    grip.hand.onShaft_r    0.0476 (want < 0.035)
+    grip.hands.order       0.0188 (want 0.05-0.12; L station 0.1100 R 0.0912)
+    grip.targetTracksHands 0.0349 (want < 0.01) - downstream: layer 1 reads the PRE-IK hand midpoint
+  budget.tris 36510 unchanged, out of scope since §9.1.
 
-TRIED AND DID NOT FIX IT
- - Flattening the Rigs to direct children of the RigBuilder GameObject (removing the GolferRig
-   wrapper). Layer order preserved. Exception count unchanged at 2850/run. The prefab is LEFT
-   flattened — it matches Unity's convention and is not harmful — but it is an unverified change.
+FALSIFIED, worth as much as the fix: forceGripPose was serialized 1 against SPEC §3.5. Set false and
+re-ran — every grip number byte-identical. The legacy LateUpdate grip was not doing the work; IK_Lead
+was. Left false because §3.5 mandates it, but it is not load-bearing.
 
-CORRECTIONS TO THINGS I PREVIOUSLY WROTE DOWN AS FINDINGS — all superseded by the above:
- - "§3.4 single-frame authoring cannot work because of cross-frame feedback" (commit c10b175d4).
-   Overreached. There is no evidence of a feedback loop; there is a rig that never ran.
- - "GripTarget lands on handR instead of the 0.5/0.5 midpoint, despite correct weights."
-   Not a weighting bug — the constraint was not executing.
- - "club.headAtBall / grip.hand.onShaft_* show the clip's hands are impossible." They show nothing
-   about hands; they measure markers on a club parked at the golfer's root.
+NOT PROVEN: reach exhaustion is a strong inference, not a measurement. One harness line (RightArm
+world position and |RightArm -> anchorTrail| beside maxReach 0.4564) settles it next run.
 
-WHAT THIS NEEDS — not mine to guess at, three structural guesses is enough
-The rig was authored ENTIRELY by script (SaveAsPrefabAsset), never once through Animation Rigging's
-own editor tooling. The unresolvable weight handles point at registration that the editor path does
-and the scripted path does not. The cheapest next step is for someone to open
-PfGolfer_MixamoNative in the Inspector and build/repair the rig through the Animation Rigging UI
-once, then re-run — rather than a fourth inference from me about package internals.
+NOT AUTHORED, Architect's call: measured addressHeadLocal = (0.7543, -0.0283, -0.0734) vs the
+serialized (0.735, 0, -0.069). Authoring it moves the address placement, which re-opens the §3.4
+solve. club.headAtBall already passes without it.
 
-Active build profile restored to iOS-Full-GPS. Branch golfer_3d_test. ClubSlot at identity.
+EditMode 2762/2765; the 3 failures are content-cache and pendulum tests, untouched by a diff that is
+one prefab. §9.6 build gate 5/5 green with the define off. Active profile restored to iOS-Full-GPS.
+Animation Rigging 1.3.1 (Registry, not preview).

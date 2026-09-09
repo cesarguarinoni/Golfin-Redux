@@ -640,8 +640,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3996670742270448806}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0.8831916, y: -0.27991813, z: 0.20366539, w: 0.31644732}
+  m_LocalPosition: {x: -0.00605, y: 0.11099, z: 0.05487}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -728,8 +728,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4504549658261191582}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0.8831916, y: -0.27991813, z: 0.20366539, w: 0.31644732}
+  m_LocalPosition: {x: -0.00605, y: 0.11099, z: 0.05487}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -775,8 +775,6 @@ Transform:
   - {fileID: 1382613239056366304}
   - {fileID: 3454502758825805584}
   - {fileID: 3155557420107571319}
-  - {fileID: 6567663082985239235}
-  - {fileID: 6676592457181539309}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &1690746870778995238
@@ -813,6 +811,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6beb239ff0e2545a38b0d80de9cf8175, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Gameplay.Golfer.GolferPresenter
+  anim: {fileID: 0}
+  driverSocketRoot: {fileID: 0}
+  putterSocketRoot: {fileID: 0}
+  skins: []
+  stanceDistance: 0.735
+  stanceForwardOffset: 0
+  rightHanded: 1
+  enabledInBuild: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  forceGripPose: 0
+  shaftRadius: 0.012
+  fingerRadius: 0.009
+  maxJointBend: 80
+  addressHeadLocal: {x: 0.735, y: 0, z: -0.069}
 --- !u!114 &5819904696128760695
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -894,7 +908,7 @@ Transform:
   m_Children:
   - {fileID: 3328240635281756647}
   - {fileID: 2681082680335421300}
-  m_Father: {fileID: 317032517904262828}
+  m_Father: {fileID: 156421874056579852}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2899035612529706542
 MonoBehaviour:
@@ -972,7 +986,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2180011167821255178}
-  m_Father: {fileID: 317032517904262828}
+  m_Father: {fileID: 156421874056579852}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8508718253391787404
 MonoBehaviour:
@@ -1341,6 +1355,39 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &8152459201842575261
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 156421874056579852}
+  m_Layer: 0
+  m_Name: GolferRig
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &156421874056579852
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8152459201842575261}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6567663082985239235}
+  - {fileID: 6676592457181539309}
+  m_Father: {fileID: 3155557420107571319}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8758451528341601223
 GameObject:
   m_ObjectHideFlags: 0
@@ -1430,6 +1477,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: d7cc1f41f451a654eabafa666970d3a6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5296802905310584105}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: d7cc1f41f451a654eabafa666970d3a6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 156421874056579852}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d7cc1f41f451a654eabafa666970d3a6, type: 3}
 --- !u!4 &1140304974727688756 stripped

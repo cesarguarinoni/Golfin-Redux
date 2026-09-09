@@ -54,3 +54,18 @@ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
   Remaining: (1) §3.4 authoring — ClubSlot is identity under GripTarget so the shaft points UP
   (ClubStart Y 14.02, ClubEnd Y 14.91: head above grip); (2) grip.targetTracksHands still FAILs
   with GripTarget landing exactly on handR, though the YAML has m_Length 2 and both weights 0.5.
+
+=== iter-4 kickoff baseline 2026-09-09T06:30:33Z ===
+HEAD c2336867cb698069ab711ab3484a107bbde9fac2
+DIRTY:
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ M Docs/Specs/Active/golfer_club_grip/SPEC.md
+ M Docs/Specs/Active/golfer_club_grip/STATUS.md
+ M ProjectSettings/EditorBuildSettings.asset
+?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_DECISION_RIG_DEAD.md
+=== end baseline ===
+
+[06:36:06Z] iter-4: GolferRig moved under MixamoChar_TPose. A0 GATE = 0 Animation Rigging exceptions over a complete run (was 2850). Rig alive: grip.hand.onShaft_r 0.0032 m. Harness re-solved §3.4 against the LIVE rig: ClubSlot lp=(-0.00605,0.11099,0.05487) le=(333.580,216.836,135.890) — the old 0daf243cf solve is void with the rest. Pose authored to ClubSlot and PutterSlot. Launching the ONE measurement run.
+
+[06:40:52Z] iter-4: SPEC §3.5 violation found — forceGripPose was serialized 1 on PfGolfer_MixamoNative; the spec says it stays false. The legacy LateUpdate JoinLeadHandToShaft was clamping the lead fist to LeadHandFromButt, which is what produced L station 0.1100 / R 0.0912 (grip.hands.order 0.0188). Set to false and re-running. Both runs reported.
