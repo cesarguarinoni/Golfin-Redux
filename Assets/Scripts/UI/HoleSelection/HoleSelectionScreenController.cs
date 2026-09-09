@@ -215,7 +215,15 @@ namespace GolfinRedux.UI.HoleSelection
                 c.OnCardTapped -= HandleCardTapped;
                 c.OnActionButtonClicked -= HandleActionClicked;
             }
-            foreach (Transform child in cardsContent) Destroy(child.gameObject);
+            // Destroy is deferred to END of frame, so "cleared" cards stay children of the
+            // VerticalLayoutGroup and StaggerRise below measures card 0's rest slot BEHIND those
+            // corpses (Hole 1 pinned off-screen, empty slot at the top). SetActive(false) drops
+            // them out of LayoutGroup.rectChildren immediately. Do not "simplify" this away.
+            foreach (Transform child in cardsContent)
+            {
+                child.gameObject.SetActive(false);
+                Destroy(child.gameObject);
+            }
             _cards.Clear();
 
             // For Yaita filter: no holes (no Yaita data exists)

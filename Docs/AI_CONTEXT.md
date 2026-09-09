@@ -43,6 +43,43 @@ ShowScreen(HoleSelection) calls=1` — no double navigation. Latch fix: hidden m
 EditMode suite: **2994 passed, 0 failed** (3 pre-existing intentional skips).
 
 ---
+## 2026-09-09 — hole_selection_first_card_gap: **Hole 1 stops hiding behind a card-sized gap** — implemented, awaiting Cesar
+
+Practice → Hole Selection was dropping the Hole 1 REPLAY card into slot 19 (≈ −5,500 px) and leaving
+an empty card-shaped hole at the top of the column, on every re-entry through the Home carousel's
+PLAY. `HoleSelectionScreenController.RebuildCards` swept the old cards with
+`foreach (Transform child in cardsContent) Destroy(child.gameObject)` and then instantiated,
+bound and `StaggerRise`d the new ones **in the same frame**. `Destroy` is deferred to end of frame,
+so the previous visit's 18 cards were still active children of the `VerticalLayoutGroup` when
+`StaggerRise`'s `ForceRebuildLayoutImmediate` measured the column — and `UiMotion.Rise` captures
+`restY` at call time, with item 0's beat firing synchronously inside `UiMotion.Run`. Rows 1–17 were
+right only by accident: their beats land after the corpses are gone.
+
+**The fix is one line** (`Docs/Specs/Quick/hole_selection_first_card_gap.md`, Option A):
+`child.gameObject.SetActive(false)` before the `Destroy`, so the corpses leave
+`LayoutGroup.rectChildren` immediately instead of at end of frame, plus a comment naming the trap.
+No new field, no scene or prefab edit, no change to the push path. Same bug class as store_history
+§8 and the `asset_loans_polish` trap.
+
+**Proven by A/B, not by looking at it.** A throwaway editor harness drove the real player route —
+boot → real `StartButton` → Home → the Home carousel's own `PlayButton` → HoleSelection → real
+`NavHomeButton` → repeat ×3 — and dumped a per-entry invariant JSON: card 0's `anchoredPosition.y`,
+whether it is the topmost card, and its distance from where a fresh layout pass puts it. Pre-fix:
+**fail == 6**, card 0 at `y = −432` with card 1 at `−330`, i.e. Hole 1 rendered *below* Hole 2 on all
+three entries. Post-fix: **fail == 0**, `card_y = [0, −330, −1180, −1510, …]`. Both arms ran with
+every other working-tree file byte-identical (md5-checked), so the one line was the only variable.
+The push path (`instant (push)`) and the filter-pill repaint passed in **both** arms, which is
+exactly why the bug read as intermittent. `GamePolishProbe` push mode: **fail: 0** over 84 pairs.
+The harness was deleted afterwards; its output lives at
+`Docs/Diagnostics/_capture/hole_selection_first_card_gap{.log,_invariants.json}`.
+
+**Found in passing, spun off and fixed separately:** the Home mode carousel instantiates the mode
+list three times to loop but subscribed `OnPlayClicked` on the middle pass only. A pass-0 / pass-2
+practice clone swiped to centre showed an active PLAY, **charged the 10 RP entry fee**
+(`[PointsService] Spent 10 (mode_entry_fee:practice) → ok`) and navigated nowhere — reproduced twice
+while building the harness here, then fixed in `536c7e294` (mode_carousel).
+
+---
 ## 2026-09-09 — loading_tips: **the loading screen finally teaches the game we shipped** — DONE, approved by Cesar
 
 The Pro Tips were two systems out of date: seven `TIP_*` strings describing grade rings that were
