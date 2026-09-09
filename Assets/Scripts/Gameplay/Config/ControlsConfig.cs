@@ -360,9 +360,9 @@ namespace Golfin.Gameplay.Config
             ConeFadeOutSeconds             = 0.30f,
             BallHitZoneRadiusPx            = 80f,
             TargetingLineLengthMeters      = 30f,
-            BaseArrowSpeedHzAtCC0          = 2.0f,     // F13 (arrow_speed_retune): 3.0 → 2.0 (mirror controls.csv); low-CC arrow was too fast to time
-            ArrowSpeedHzPerCC              = -0.03f,   // F13: −0.05 → −0.03 (mirror controls.csv); moves as a PAIR with the base — CC 0–50 spans 2.0→0.5 Hz, CC-50 end unchanged from F11
-            MinArrowSpeedHz                = 0.5f,     // F13: floor = the calibrated CC-50 speed; no-op on reachable CC 0–50, guards CC > 66.7 where the raw line goes negative
+            BaseArrowSpeedHzAtCC0          = 1.0f,     // F17 (flick_arrow_speed_retune): 2.0 → 1.0 (mirror controls.csv); starter Commons (CC 6–7) ran at ~1.8 Hz, too fast to time. F13: 3.0 → 2.0
+            ArrowSpeedHzPerCC              = -0.012f,  // F17: −0.03 → −0.012 (mirror controls.csv); moves as a PAIR with the base — keeps F13's 2.5× ladder shape, CC 0–50 spans 1.0→0.4 Hz. F13: −0.05 → −0.03
+            MinArrowSpeedHz                = 0.4f,     // F17: 0.5 → 0.4 = the new calibrated CC-50 speed; no-op on reachable CC 0–50, guards CC > 83.3 where the raw line goes negative. F13: introduced at 0.5 (guard was CC > 66.7)
             MaxCleanPassesAtCC0            = 1f,
             CleanPassesPerCC               = 0.08f,    // Order 732: 0.04 → 0.08 (mirror controls.csv); CC 0–50 → 1–5 clean passes
             MaxTotalPasses                 = 10f,

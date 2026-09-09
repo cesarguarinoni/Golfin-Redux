@@ -6,6 +6,89 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F17 — Flick arrow speed halved for low Club Control (2026-09-09)
+
+**Task:** `flick_arrow_speed_retune` (Quick)
+**Reason:** Cesar, 2026-09-09: *"The timing arrows in Flick control are too fast when starting the
+game with weak characters."* Starter Commons (`Assets/Data/Characters.csv`: James CC 6, Olivia
+CC 7) ran the arrow at `2.0 − 0.03·CC ≈ 1.8 Hz` — one pass through the cone every **0.55 s**. That
+is the same speed Cesar rejected on the Pendulum marker on 2026-09-05 ("moving way too fast",
+1.82 Hz), which got its own `PendulumBaseHzAtCC0 = 1.0`; Flick was left on F13's base of 2.0.
+Third pass on this ladder (F11 → F13 → F17) — the previous two moved the base 3.0 → 2.0 against
+the same complaint.
+**Locked by:** Cesar, 2026-09-09 (numbers decided by Cesar in the spec).
+
+### Value changes (both mirrors)
+
+| Key | Old (F13) | New | Rationale |
+|---|---|---|---|
+| `BaseArrowSpeedHzAtCC0` | 2.0 | **1.0** | halves the low-CC arrow; 0.500 s → 1.000 s per pass at CC 0 |
+| `ArrowSpeedHzPerCC` | −0.03 | **−0.012** | moves as a **pair** with the base — preserves F13's 2.5× spread across CC 0–50 |
+| `MinArrowSpeedHz` | 0.5 | **0.4** | floor re-anchored to the new calibrated CC-50 speed, so it stays a no-op on the reachable range |
+
+Base and slope are still **not independently tunable**: halving the base at slope −0.03 would send
+the high-CC end negative (1.0 − 50×0.03 = −0.5 Hz). Unlike F13 — which held the CC-50 anchor fixed
+and narrowed the spread — F17 holds the *shape* (2.5×) and moves the whole ladder down, so the
+CC-50 end drops 0.5 → 0.4 Hz.
+
+### Resulting ladder (swing; putt = × `PuttArrowSpeedMultiplier` 0.8, unchanged)
+
+| CC | swing Hz | s/pass | putt Hz | putt s/pass |
+|---|---|---|---|---|
+| 0 *(fallback)* | 1.000 | 1.000 | 0.800 | 1.250 |
+| 6–7 *(starter Commons)* | 0.928 / 0.916 | 1.08 / 1.09 | 0.742 / 0.733 | 1.35 / 1.36 |
+| 25 *(Common cap)* | 0.700 | 1.429 | 0.560 | 1.786 |
+| 50 *(Supreme cap)* | 0.400 | 2.500 | 0.320 | 3.125 |
+
+### Floor clamp — re-anchored, mechanism unchanged
+
+`ShotController.TickArrow()` is **untouched**; the clamp introduced by F13 still reads
+`arrowHz = Mathf.Max(arrowHz, _config.MinArrowSpeedHz)` before the putt multiply. Only the floor
+VALUE moves. The raw line now crosses zero at `CC = Base/|Slope| = 1.0/0.012 = **83.3**` (was
+66.7), and the floor equals the calibrated CC-50 speed, so it remains a **no-op across the entire
+reachable range** (`RarityStatCaps` caps ClubControl at 50) and purely a soft-lock guard above it.
+
+### Knock-ons
+
+- **Auto-cancel window** (`MaxTotalPasses = 10` is a time window in disguise): worst case at CC 50
+  stretches from F13's 20 s swing / 25 s putt to **25 s swing / 31.3 s putt**; the CC-0 end goes
+  5.0 s → **10.0 s** swing. `MaxTotalPasses` deliberately left at 10 (same call as F13).
+- **Putt compounding**: worst case 3.125 s/pass at CC 50, up from 2.5 s. Above F13's ~2.5–3 s
+  tolerance note by ~0.1 s at the unreachable-in-practice Supreme end; accepted with the retune.
+- **Clean passes unchanged** — `MaxCleanPassesAtCC0`, `CleanPassesPerCC`,
+  `DegradationYawDegPerPass` and the timing slab bands (`TimingBand*Y01`) are untouched. The
+  starter's single clean pass now simply lasts twice the wall time.
+- **Pendulum / Needle / Free Swing unaffected** — each carries its own constants
+  (`PendulumBaseHzAtCC0` etc.); they were deliberately decoupled from the Flick trio and are not
+  re-coupled here.
+- **Hole 1 completability: unaffected.** Bots bypass `TickArrow`; `BotSwing` schemes carry their
+  own sigma, not the arrow.
+
+### Tests — `Golfin.Gameplay.Tests`
+
+- `ShotControllerTests.Test11_ArrowSpeed_MonotonicDecreasingWithCC` — relational, green unchanged.
+- `ShotControllerTests.Test12_ArrowSpeed_FloorClamp_StaysPositiveBeyondStatCaps` — both
+  preconditions still hold: raw arrowHz at CC 100 is 1.0 − 1.2 = **−0.2 < 0**, and
+  `MinArrowSpeedHz ≤ BaseArrowSpeedHzAtCC0` (0.4 ≤ 1.0).
+- `ShotControllerTests.OnePassDtAtCC0` derives the tick from the config
+  (`1.02f / ControlsConfig.Default.BaseArrowSpeedHzAtCC0`) — no literal to update, per F13's fix.
+- `ShotControllerPuttModeTests.F1_IsPutt_ArrowsSlowedByMultiplier` — relational; comment numbers
+  refreshed to the F17 pair (swing 1.0 Hz → putt 0.8 Hz at CC 0).
+- `ShotControllerSeamParityTests` / `ShotTimingPowerTests` / `ShotTimingTelemetryTests` inject
+  their own config — unaffected.
+
+### Known stale, deliberately not touched
+
+`Assets/Scripts/UI/Editor/ClubControlArrowDemoRecorder.cs` (editor-only demo recorder) still
+documents the **F11** ladder in its comments and log strings — `3.0 − 0.05·CC`, "CC=25 → 1.75 Hz",
+"CC=50 → 0.50 Hz", plus a `cc50_hz: 0.50` literal in its cut JSON and phase hold durations tuned to
+1.75 Hz. It was already stale before F17 (F13 did not update it) and it mirrors nothing at runtime
+— it reads the live config through `ShotController`, so the clip it records is always correct; only
+its captions and its `Cc25Hold`/`Cc50Hold` pacing are wrong. Re-recording that demo is a separate
+task.
+
+---
+
 ## F16 — BallWindCutPerPoint 0.01 → 0.02, and `Physics/stats.csv` retired (2026-08-31)
 
 **Task:** `ball_data_wiring`

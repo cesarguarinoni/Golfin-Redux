@@ -132,7 +132,8 @@ namespace Golfin.Gameplay.Tests
         {
             // Polarity-independent invariant: at equal CC, putt arrowHz < non-putt arrowHz.
             // PuttArrowSpeedMultiplier < 1.0, so putt advances at that fraction of the non-putt rate.
-            // At CC=0 non-putt arrowHz = BaseArrowSpeedHzAtCC0 and putt arrowHz = that × the multiplier.
+            // At CC=0 non-putt arrowHz = BaseArrowSpeedHzAtCC0 and putt arrowHz = that × the multiplier
+            // (F17: swing 1.0 Hz → putt 0.8 Hz at CC=0, multiplier 0.8).
             // Assertion is relational, so it holds across arrow-speed retunes; it only fails if the
             // multiplier reaches 1.0 or the floor clamp is ever applied AFTER the putt multiply
             // (which would raise putt speed to the floor and break "putt slower than swing").

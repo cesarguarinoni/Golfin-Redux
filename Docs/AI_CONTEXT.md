@@ -4,6 +4,23 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 — flick_arrow_speed_retune: **Flick timing arrow halved at low Club Control** (F17)
+
+Quick spec `Docs/Specs/Quick/flick_arrow_speed_retune.md`. Cesar: *"The timing arrows in Flick
+control are too fast when starting the game with weak characters."* Starter Commons (James CC 6,
+Olivia CC 7) were reading the arrow at ~1.8 Hz — 0.55 s per pass, the same speed that got the
+Pendulum marker its own base on 2026-09-05. `ControlsConfig.Default` (runtime truth) + the
+`controls.csv` mirror: `BaseArrowSpeedHzAtCC0` 2.0 → **1.0**, `ArrowSpeedHzPerCC` −0.03 → **−0.012**,
+`MinArrowSpeedHz` 0.5 → **0.4**. Keeps F13's 2.5× CC ladder shape and moves the whole ladder down —
+CC 0 1.00 Hz, starter Commons 0.92 Hz, Common cap 0.70 Hz, Supreme cap 0.40 Hz (putt × 0.8
+unchanged). The floor is re-anchored to the new CC-50 speed, so it stays a no-op below CC 83.3.
+`ShotController` logic, clean-pass counts, timing slab bands and every Pendulum/Needle/FreeSwing
+constant are untouched. `Golfin.Gameplay.Tests` **757 passed / 0 failed / 0 skipped** (assembly,
+unfiltered); Test11/Test12 arrow gates green on the new values. Changelog entry **F17** in
+`Docs/Physics/PHYSICS_TUNING_CHANGELOG.md`. **Open:** Cesar's on-device feel pass (starter Common,
+Flick, driver off the tee + a putt on the green).
+
+---
 ## 2026-09-09 — asset_loans: **lend a character or club to somebody you follow** — DONE
 
 Spec `Docs/Specs/Completed/asset_loans/`. Built end to end in one sitting; report + eight 1170×2532
