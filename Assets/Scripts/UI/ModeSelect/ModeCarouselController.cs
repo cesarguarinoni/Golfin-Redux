@@ -93,6 +93,17 @@ namespace GolfinRedux.UI.ModeSelect
         private void OnEnable()
         {
             StopAllCoroutines();
+            // StopAllCoroutines kills a snap or expand mid-flight without running the lines that
+            // clear these, so whatever was in flight when the screen was hidden stays latched.
+            // A latched _isSnapping / _layoutAnim is read by OnBeginDrag and HandleCardTapped as
+            // "an animation owns the carousel", and nothing ever hands it back — the carousel
+            // comes back from the next Home visit permanently unswipeable and untappable. Tapping
+            // a card and then PLAY mid-slide is exactly the sequence that hides the screen mid-
+            // snap, and it only became reachable when PLAY started working on side clones.
+            // Nothing is in flight here by definition: the rebuild below starts from scratch.
+            _isSnapping = false;
+            _isDragging = false;
+            _layoutAnim = null;
             StartCoroutine(RebuildCardsCoroutine());
         }
 
@@ -153,10 +164,17 @@ namespace GolfinRedux.UI.ModeSelect
                     // Set heights before Bind so AnimateHeight uses correct targets on initial Collapsed state
                     card.SetHeights(_collapsedCardHeight, _expandedCardHeight);
                     card.Bind(mode, state);
-                    if (pass == 1) card.OnPlayClicked += HandlePlayClicked;
+                    // Wired on EVERY pass — PLAY included. Pass 1 is not special: it is only
+                    // where NormalizeCenterInstant parks the centre once a snap has SETTLED. It
+                    // is NOT where the centre is DURING one — HandleCardTapped centres the very
+                    // instance the player tapped, which is a pass-0 or pass-2 clone, and
+                    // ApplyCardStates turns that clone's PLAY on for the whole slide. Wiring
+                    // pass 1 alone left a live PLAY button with nobody behind it: the spend gate
+                    // debited the entry fee and OnPlayClicked reached no subscriber, so the
+                    // player paid and stayed on Home. HandlePlayClicked routes from card.ModeId,
+                    // so it never cared which clone the click came from.
+                    card.OnPlayClicked += HandlePlayClicked;
                     card.OnTaglineTapped += HandleTaglineTapped;
-                    // Wired on EVERY pass (unlike PLAY): the cards a player taps are the side/peek
-                    // instances, which live in passes 0 and 2 as well as 1.
                     card.OnCardTapped += HandleCardTapped;
                     _allCards.Add(card);
                 }

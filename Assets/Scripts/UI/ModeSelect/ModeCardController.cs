@@ -607,6 +607,22 @@ namespace GolfinRedux.UI.ModeSelect
                 return;
             }
 
+            // NOTHING IS LISTENING → DO NOT CHARGE. Every step below this line is irreversible from
+            // the player's side (the debit is server-side), and the only thing that redeems it is
+            // the Invoke at the bottom, which is what actually enters the mode. An unsubscribed
+            // OnPlayClicked therefore means the whole click can only end one way: money out, no
+            // round. That is not a hypothetical — the home carousel subscribed one of its three
+            // clone passes and charged 10 RP for a button that navigated nowhere. That wiring is
+            // fixed; this makes the CLASS of bug uncharge-able, so the next surface to show a card
+            // without wiring PLAY gets a red console line instead of taking a player's points.
+            if (OnPlayClicked == null)
+            {
+                Debug.LogError($"[ModeCard] PLAY on '{_data.id}' has no OnPlayClicked subscriber — " +
+                               "refusing to spend. The card was shown with PLAY live but unwired; " +
+                               "whoever built it must subscribe OnPlayClicked.", this);
+                return;
+            }
+
             // Slice 2: the entry fee is debited server-side BEFORE the mode is entered, so a refused
             // or unreachable debit cannot drop the player into a round they never paid for.
             // Flag OFF (or a free mode) → this runs inline and synchronously, exactly as before.

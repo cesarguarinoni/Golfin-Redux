@@ -4,6 +4,45 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 — mode_carousel_play_charges_and_goes_nowhere: **PLAY stops taking the fee for nothing** — DONE, approved by Cesar
+
+The defect the `hole_selection_first_card_gap` harness spotted in passing (below) is fixed. The Home
+carousel loops by instantiating the mode list three times and sliding a window over the middle copy,
+and it subscribed `OnPlayClicked` on the middle pass only — `if (pass == 1)` — on the reasoning that
+the centred card is always a pass-1 instance. That holds for a **settled** carousel, because
+`NormalizeCenterInstant` folds the centre index back into the middle third after every snap. It is
+false for a **moving** one: `HandleCardTapped` centres the instance the player actually tapped, a
+pass-0 or pass-2 clone, and `ApplyCardStates` lights that clone's PLAY immediately.
+
+Pressed there, `HandlePlayButtonClicked` ran the whole spend path — `PointsSpendGate.Spend` debited
+the fee server-side — and then invoked an event with no subscribers, so `ScreenManager.ShowScreen`
+was never called. The window is wider than the 0.22 s slide suggests, because the spend is a server
+round-trip: the click commits the moment it lands and the answer arrives long after the snap settles.
+
+**Three changes.** (1) `OnPlayClicked` is wired on every pass — `HandlePlayClicked` routes from
+`card.ModeId` and never cared which clone it came from; one subscriber per card, which is what
+`UnwireCards` already assumed. (2) `ModeCardController.HandlePlayButtonClicked` **refuses to spend
+when `OnPlayClicked` has no subscriber** — everything past that line is irreversible for the player
+and only the `Invoke` at the bottom redeems it, so an unwired card can only mean money out and no
+round; it now logs an error and returns before the gate, closing the class rather than the instance.
+(3) `OnEnable` clears `_isSnapping` / `_layoutAnim` / `_isDragging`: `OnDisable`'s
+`StopAllCoroutines()` kills a snap without clearing them, and `OnBeginDrag` and `HandleCardTapped`
+both read a stale latch as "an animation owns the carousel" — a carousel hidden mid-slide came back
+from the next Home visit permanently unswipeable and untappable.
+
+**Proven through the real widgets, and tripwired.** `Assets/Tests/EditMode/ModeCarouselPlayWiringTests.cs`
+builds a real carousel from the real `ModeHomeCard.prefab` through the real `RebuildCards` in a
+preview scene, and sweeps the invariant — *a clone showing a live PLAY has a live subscriber* — over
+**every** centre index, not just pass 1. Reverted to `if (pass == 1)` it fails, naming all 8 offenders
+(the four playable modes × passes 0 and 2; `driving_range` is locked so it never shows PLAY). In play
+mode on ShellScene, driving only real `onClick`s: tapping a pass-2 side card then pressing PLAY
+mid-snap gave `MID-SNAP: centre=11 (pass 2) PLAY active=True subscribers=1` →
+`RP 6308 → 6298; screen = HoleSelection`. Settled path: `RP 6298 → 6288;
+ShowScreen(HoleSelection) calls=1` — no double navigation. Latch fix: hidden mid-snap leaves
+`_isSnapping=True`, and after re-show it is `False` with the centre moving `6 → 5` on a tap. Full
+EditMode suite: **2994 passed, 0 failed** (3 pre-existing intentional skips).
+
+---
 ## 2026-09-09 — loading_tips: **the loading screen finally teaches the game we shipped** — DONE, approved by Cesar
 
 The Pro Tips were two systems out of date: seven `TIP_*` strings describing grade rings that were
