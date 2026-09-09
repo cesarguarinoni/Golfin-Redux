@@ -214,7 +214,7 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
         if (instant || tipContentGroup == null || !UiMotion.Enabled || !Application.isPlaying)
         {
             UiMotion.Stop(this, ref _swap);
-            SwapTo(_seq.Advance());
+            SwapTo(_seq.Advance(), instant: true);
             if (tipContentGroup != null)
                 UiMotion.Run(this, ref _swap, UiMotion.Fade(tipContentGroup, 0f, 1f));
             return;
@@ -252,8 +252,24 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
     }
 
     /// <summary>Rebind, ease the card to its new height, persist, and re-arm the tap pulse.</summary>
-    private void SwapTo(LoadingTip tip)
+    /// <param name="instant">A FRESH SHOW — the loading screen was just enabled. There is nothing
+    /// to ease from, and more importantly nothing to measure yet: on the enable frame the card's
+    /// children have not laid out, so the natural height reads ~0. Easing to that collapsed the
+    /// card from the previous tip's size down to nothing over 0.25 s before the fitter snapped it
+    /// back, which is what Cesar saw as "the previous loading screen visible for a few frames"
+    /// (2026-09-09). Measured: prefH 870.5 → 113.9 → 0.0, then -1 → 1097.5.</param>
+    private void SwapTo(LoadingTip tip, bool instant = false)
     {
+        if (instant)
+        {
+            UiMotion.Stop(this, ref _height);
+            _cardLayout.preferredHeight = -1f;   // the ContentSizeFitter owns the height outright
+            Show(tip);
+            LoadingTipStore.Save(_seq.State);
+            ArmTapPulse();
+            return;
+        }
+
         float from = _cardLayout.preferredHeight >= 0f
             ? _cardLayout.preferredHeight
             : _cardRect.rect.height;
@@ -276,7 +292,9 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
         _cardLayout.preferredHeight = from;
         LayoutRebuilder.ForceRebuildLayoutImmediate(_cardRect);
 
-        if (Mathf.Abs(to - from) > 0.5f)
+        // `to > 0.5f` is not paranoia: a height of zero means the layout could not be measured,
+        // never that the card is genuinely empty. Easing to it is always wrong.
+        if (to > 0.5f && Mathf.Abs(to - from) > 0.5f)
         {
             UiMotion.Run(this, ref _height, UiMotion.Then(
                 UiMotion.Tween(from, to, UiMotion.EntryDur, h => _cardLayout.preferredHeight = h),

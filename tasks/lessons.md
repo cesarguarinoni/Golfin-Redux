@@ -4177,3 +4177,38 @@ Plus a content defect: a caption runs until the NEXT one opens, so leaving a bea
 "Six shot grades now, not three" sit over the *map* tip for half its window. **One caption per beat**
 is the only arrangement where a caption cannot outlive the frame it describes
 (`reference_caption_window_must_match_the_frame`).
+
+---
+
+## Lesson AP — a layout measured on the ENABLE frame reads zero, and easing to it collapses the thing (`loading_tips`, 2026-09-09)
+
+Cesar, on the shipped build: *"when quitting and loading a new hole, the previous loading screen
+seems to be visible for a few frames until the new one appears. This does not happen on the first
+loading."*
+
+`SwapTo` measures the new natural height by releasing its `LayoutElement` pin, rebuilding, and
+reading `LayoutUtility.GetPreferredHeight`. On a **fresh enable** the card's children have not laid
+out yet, so that reads **~0** — and the code then dutifully eased the card from the previous tip's
+height down to nothing over 0.25 s before the `ContentSizeFitter` snapped it to the real value.
+Measured, frame by frame:
+
+```
+frame 0   prefH 870.5   ← easing down from the previous tip's height
+frame 7   prefH 113.9
+frame 14  prefH   0.0   ← the tween target
+frame 16  prefH  -1.0 → rectH 1097.5   ← fitter rescues it
+```
+
+The tip CONTENT was correct from frame 0 — text and sprite are rebound synchronously. What read as
+"the previous loading screen" was the previous tip's **size**, collapsing.
+
+**Two rules out of it.** (1) On a fresh show there is nothing to ease *from* and nothing valid to
+measure — hand the height to the fitter (`preferredHeight = -1`) and let it size the card outright.
+(2) **A measured height of zero means the measurement failed, never that the content is empty** —
+guard every "ease to the measured value" with `to > 0.5f`. Both were one-line changes; finding them
+was four frames of a CSV.
+
+**And: my first hypothesis was wrong, again.** I predicted the card would start at the previous
+tip's height and ease *up* to the new one — plausible, wrong in the important half. The probe cost
+ten minutes and named the real mechanism. Sister to Lesson AJ and to
+`feedback_never_eyeball_brightness`: *reproduce and sample before explaining.*
