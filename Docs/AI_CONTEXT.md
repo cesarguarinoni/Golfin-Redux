@@ -4,6 +4,64 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 — asset_loans: **lend a character or club to somebody you follow** — DONE
+
+Spec `Docs/Specs/Completed/asset_loans/`. Built end to end in one sitting; report + eight 1170×2532
+captures in the task folder.
+
+**What it is.** A player hands an asset to an account they follow for 1 / 3 / 7 days. For that window
+the BORROWER plays it and pays to level it — and every level lands on the LENDER's `golfin_progress`
+row, because the lender still owns it. In exchange the lender takes 20 % of the RP the borrower earns
+in rounds played with it. **No RP is created**: the cut comes out of the borrower's earn, so lending
+to your own alt gains you nothing. Auto-return at expiry, no lender recall, no accept step.
+
+**Server (playlife `2add3a5`).** `2026_09_09_golfin_loans.sql` — `golfin_loans` plus two PARTIAL
+UNIQUE indexes that are the real enforcement behind the router's pre-checks; a loan-aware
+`golfin_level_up` where the progress row uses the OWNER and the debit uses the CALLER; and
+`golfin_loan_split`, which pays the borrower and every lender in one transaction with per-share
+derived keys so a replayed round replays the shares too. `routers/loans.py` — three endpoints, every
+business outcome a 200 with a `status`, recipients limited to the follow graph, and **the lender's
+progress row seeded at lend time**, which is what stops a borrower ever grandfathering a level on
+somebody else's asset. `loan_lender_share` is deliberately NOT in `game_point_actions`, so the cut
+pays real RP and never ranks.
+
+**LIVE.** Cesar applied the migration 2026-09-09 (all ten verification rows matched, including the
+one that checks `golfin_level_up`'s grandfather seed survived being REPLACED); `fly deploy` followed,
+in that order, because `points.py` imports the loans router. Verified by the image version and live
+probes rather than the exit code — machines v70 → v71, all three loan routes 403 unauthenticated
+while `/api/v1/nonexistent` is 404, and no other route regressed. The 31 strings are being served
+(`texts` v49, read back off the deployed content endpoint).
+
+**What is left is a person, not infrastructure:** the two-account E2E — a follow, a lend, a level, a
+hole played on borrowed gear, a return — which is the only thing that can prove the RP split and the
+`on_behalf_of` attribution against prod.
+
+**Client.** `LoanService` (Golfin.Social) owns the rules and is EditMode-testable; `LoanSyncBehaviour`
+(Assembly-CSharp) owns the effects, because the managers are not visible from a leaf asmdef. A
+borrowed asset is a RUNTIME-ONLY instance behind three independent guards, and the third is real
+rather than decorative: the blob's merge is additive, so one borrowed row reaching it would be
+permanent on every device forever.
+
+**Two defects the capture run found that no frame showed.** The club panel's `LeftPanel` is a
+`VerticalLayoutGroup` (the Roster's is not), so the ribbon and the dim were laid out into the flow
+instead of over the artwork — fixed with `ignoreLayout`, now noted in `UI_ELEMENT_PALETTE.md`. And
+three "Roster" captures were pictures of Home while the log said "reached Roster on attempt 1":
+`ScreenManager.CurrentScreen` had been set by a navigation the boot chain then stomped, and
+`ShowScreen(x)` no-ops when `_currentScreen == x`, so every retry did nothing. The bot now waits for
+the boot to go quiet and asserts the destination's own panel is active.
+
+**Strings.** 31 rows EN+JA — the SPEC's 29 plus the modal's two section labels. Published (`texts`
+v49), `export --check` clean, and the bundled table rebuilt to 1140 rows carrying all 31 keys, read
+back off the asset rather than the CSV.
+
+**Tests.** EditMode 2942 → **2975, 2971 passed / 0 failed**; 31 more on the Python side. Two suites
+this task broke and fixed: the modal's new `ScrollRect` was off the one-scroll-feel reference, and
+the round snapshot in `ApplyPreloadSetup` built the net stack inside an EditMode test.
+
+**One gate could not run:** the Rule 21 UI fidelity lint and the Rule 9 node re-pull both need the
+Figma MCP, which is not authorised in this session. Flagged in the report rather than claimed.
+
+---
 ## 2026-09-09 — notice_panel_slide: **the Home notice box now slides, and waits 10s** — DONE
 
 Spec `Docs/Specs/Completed/notice_panel_slide/`. Implemented directly (no subagent chain — Cesar

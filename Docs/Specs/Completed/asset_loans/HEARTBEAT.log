@@ -1,0 +1,10 @@
+=== iter-1 kickoff baseline 2026-09-09 ===
+HEAD e8882599b1ca6199e7ca8b46fb3a247230445829
+DIRTY (git status --porcelain --untracked-files=all at kickoff, BEFORE any asset_loans edit):
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Diagnostics/roster_locked_overlay/
+?? Docs/Specs/Active/loading_tips/
+?? Docs/Specs/Quick/flick_arrow_speed_retune.md
+=== end baseline ===
