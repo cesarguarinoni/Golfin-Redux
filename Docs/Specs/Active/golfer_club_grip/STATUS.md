@@ -66,3 +66,24 @@ were measured as if they were new. Every .cs edit now needs AssetDatabase.Refres
 a version probe — GolferTestVerificationRunner.SolverVersion exists for exactly that.
 
 Active profile restored to iOS-Full-GPS. Animation Rigging 1.3.1 (Registry, not preview).
+
+ADDENDUM — targetRotationWeight (Cesar: "seems to be getting worse. Maybe you are moving the hands
+the wrong way?"). He was right that it looked worse, and the cause was NOT the direction of travel:
+both TwoBoneIKConstraints had targetRotationWeight = 0, so the IK set hand POSITION only and hand
+ROTATION still came from the clip — authored for a club that was not there. Pulling two unrotated
+hands precisely onto the shaft axis is what made it read as a shaft through a fused hand mass.
+Set to 1 on IK_Lead and IK_Trail: the palms now wrap the shaft.
+
+EVERY NUMBER WAS IDENTICAL BEFORE AND AFTER (headAtBall 0.0085, hands.order 0.0695, onShaft
+0.0000/0.0000, ikNoLegEffect PASS). NO ASSERTION IN §6 MEASURES HAND ORIENTATION, which is why a
+visibly broken grip carried a full set of green grip numbers through every gate. Architect: §6 needs
+a hand-orientation row (e.g. angle between the hand's palm normal and the shaft axis), otherwise the
+next iteration can regress this without a single number moving.
+
+Second measurement gap, same shape: grip.hand.onShaft measures the hand BONE ORIGIN — the wrist —
+against the shaft segment, so 0.0000 m is achieved by putting the shaft THROUGH the wrist. The
+assertion should target the palm, i.e. carry a palm-radius offset. Left as-is and reported rather
+than changed, because moving it changes what §6 means.
+
+Fingers remain open: this rig has no finger bones, so nothing can close them. Out of reach by
+construction, as the eight SKIPs already say.

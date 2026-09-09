@@ -548,7 +548,7 @@ MonoBehaviour:
     m_Target: {fileID: 2708688044333944562}
     m_Hint: {fileID: 0}
     m_TargetPositionWeight: 1
-    m_TargetRotationWeight: 0
+    m_TargetRotationWeight: 1
     m_HintWeight: 0
     m_MaintainTargetPositionOffset: 0
     m_MaintainTargetRotationOffset: 0
@@ -700,7 +700,7 @@ MonoBehaviour:
     m_Target: {fileID: 5111934233522446315}
     m_Hint: {fileID: 0}
     m_TargetPositionWeight: 1
-    m_TargetRotationWeight: 0
+    m_TargetRotationWeight: 1
     m_HintWeight: 0
     m_MaintainTargetPositionOffset: 0
     m_MaintainTargetRotationOffset: 0
@@ -811,22 +811,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6beb239ff0e2545a38b0d80de9cf8175, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Gameplay.Golfer.GolferPresenter
-  anim: {fileID: 0}
-  driverSocketRoot: {fileID: 0}
-  putterSocketRoot: {fileID: 0}
-  skins: []
-  stanceDistance: 0.735
-  stanceForwardOffset: 0
-  rightHanded: 1
-  enabledInBuild: 1
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  forceGripPose: 0
-  shaftRadius: 0.012
-  fingerRadius: 0.009
-  maxJointBend: 80
-  addressHeadLocal: {x: 0.735, y: 0, z: -0.069}
 --- !u!114 &5819904696128760695
 MonoBehaviour:
   m_ObjectHideFlags: 0
