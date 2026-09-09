@@ -3,39 +3,66 @@ READY_FOR_ARCHITECT_REVIEW (iter-4)
 Cesar's kickoff asked for READY_FOR_SELF_REVIEW; hard rule 1 routes a report carrying FAIL items
 down the architect path, and A3/A5 carry them. Deviation flagged, not laundered.
 
-A0 = 0. Zero Animation Rigging exceptions over a complete run — was 2850. ARCHITECT_DECISION_RIG_DEAD
-was right: moving GolferRig (both Rigs + all three constraints) under MixamoChar_TPose fixed it.
-The re-parent ran; the prefab-variant fallback was NOT needed.
+PART 1 — THE ARCHITECT'S FIX. A0 = 0 on every run since.
+ARCHITECT_DECISION_RIG_DEAD was right: GolferRig (both Rigs + all three constraint GameObjects)
+moved under MixamoChar_TPose beside ClubRoot; only RigBuilder stays on the prefab root. The
+re-parent ran; the prefab-variant fallback was NOT needed. Animation Rigging exceptions 2850 -> 0.
 
-The rig has evaluated for the first time in this task:
-  club.headAtBall     0.7382 -> 0.0198 m  PASS
-  grip.hand.onShaft_l 1.0855 -> 0.0197 m  PASS
-  §3.4 desired-vs-actual  130.0170 deg -> 0.0000 deg
-  the club is in his hands with the head on the ball (screenshots/iter4_grip_address.png)
+PART 2 — THEN CESAR LOOKED AT THE FRAME AND THE TASK GOT ITS REAL BUG.
+"You do see that the club is stabbing the player since it is backwards, right?"
+He was right, and my club.headAtBall = 0.0198 m PASS was FALSE. Measured off the driver mesh in
+ClubSlot local space:
+    Grip     span -0.0411 .. +0.0878  -> butt cap at -0.0411
+    ClubHead span +0.9633 .. +1.0815  -> head at +1.0224
+so ClubSlot local +Y runs BUTT -> HEAD, exactly as GolferPresenter and SPEC §3.2 always said. But
+the ClubEnd marker sat at -0.80 — the OPPOSITE END, 1.82 m from the real head — and the harness
+§3.4 solver carried the same inverted assumption ("+Y = toward the butt cap"). The solve dutifully
+planted that marker on the ball, rotating the club 180 degrees: head up behind the shoulder, shaft
+through the chest, and an assertion reporting 2 cm.
 
-STILL FAILING — all three are one geometric fact, not a wiring defect:
-  IK_Lead lands its hand exactly on GripAnchor_Lead (0.0000 m). IK_Trail misses GripAnchor_Trail by
-  0.0775 m. Both constraints are configured identically (weight 1, targetPositionWeight 1, no hint,
-  arm reach 0.4639 vs 0.4564 m) — read off the prefab, not assumed. With ClubEnd on the ball AND
-  GripAnchor_Lead in the left palm, GripAnchor_Trail is where the right arm does not put its hand.
-  That is SPEC §3.4's written stop condition, so I stopped instead of sliding the anchor until the
-  number went green.
-    grip.hand.onShaft_r    0.0476 (want < 0.035)
-    grip.hands.order       0.0188 (want 0.05-0.12; L station 0.1100 R 0.0912)
-    grip.targetTracksHands 0.0349 (want < 0.01) - downstream: layer 1 reads the PRE-IK hand midpoint
-  budget.tris 36510 unchanged, out of scope since §9.1.
+FIXED — every number measured or searched, none tuned:
+ 1. markers re-derived from the mesh bounds; GripAnchor_Lead/_Trail had also been swapped
+ 2. solver axis flipped (up = ball - hand); grip.hands.order sign flipped with it; the hard-coded
+    0.91 lead-anchor-to-head replaced by a value read from the markers
+ 3. club scaled 0.86880 to the golfer's reach — he is 1.328 m holding a full-size driver, so lead
+    anchor to head was 1.0335 m against a 0.8855 m hand-to-ball and the head buried 0.148 m at any
+    rotation. Scale derived from the harness's own §3.4 LENGTH line.
+ 4. club now hangs from the HAND MIDPOINT (what §1/§3.3 asked for — GripTarget IS the 0.5/0.5 MPC
+    midpoint), then slid 0.010 m along the shaft by a BOUNDED search that maximises the worse of
+    the two arms' reach slack. New §3.4 REACH marks measure shoulder->target against arm length
+    instead of inferring "out of reach" from a shortfall, which I had asserted twice without proof.
 
-FALSIFIED, worth as much as the fix: forceGripPose was serialized 1 against SPEC §3.5. Set false and
-re-ran — every grip number byte-identical. The legacy LateUpdate grip was not doing the work; IK_Lead
-was. Left false because §3.5 mandates it, but it is not load-bearing.
+RESULT (final run, A0 = 0):
+    club.headAtBall      0.7382 -> 0.0085 m   PASS
+    grip.hand.onShaft_l  1.0855 -> 0.0000 m   PASS
+    grip.hand.onShaft_r  1.1078 -> 0.0000 m   PASS
+    grip.hands.order     0.0188 -> 0.0695 m   PASS  (the full anchor spacing; both hands ON their
+                                                     anchors, L station -0.0096, R station 0.0599)
+    grip.ikNoLegEffect   L 0.0527 / R 0.0933  PASS
+    §3.4 REACH           both arms now report WITHIN reach (lead slack 0.0467, trail 0.0006)
+    26 PASS / 2 FAIL / 8 SKIP
 
-NOT PROVEN: reach exhaustion is a strong inference, not a measurement. One harness line (RightArm
-world position and |RightArm -> anchorTrail| beside maxReach 0.4564) settles it next run.
+STILL FAILING:
+ - grip.targetTracksHands 0.0175 (want < 0.01). STRUCTURAL, not a rig fault: layer 1 computes
+   GripTarget from the PRE-IK hands, layer 2 then moves them, and the assertion compares GripTarget
+   against the POST-IK midpoint. It cannot reach < 0.01 by construction. Architect: this assertion
+   needs redefining (sample the midpoint before layer 2, or widen the band), not the rig changing.
+ - budget.tris 36510. Unchanged, out of scope since §9.1.
+ - "one finger crooked" (Cesar): the Mixamo hand mesh rest pose. This rig has no finger bones, so
+   no constraint or script can close them. Out of reach of this task by construction.
 
-NOT AUTHORED, Architect's call: measured addressHeadLocal = (0.7543, -0.0283, -0.0734) vs the
-serialized (0.735, 0, -0.069). Authoring it moves the address placement, which re-opens the §3.4
-solve. club.headAtBall already passes without it.
+FALSIFIED, kept because it is worth as much as a fix: forceGripPose was serialized 1 against SPEC
+§3.5. Set false and re-ran — every grip number byte-identical. The legacy LateUpdate grip was never
+doing the work; IK_Lead was.
 
-EditMode 2762/2765; the 3 failures are content-cache and pendulum tests, untouched by a diff that is
-one prefab. §9.6 build gate 5/5 green with the define off. Active profile restored to iOS-Full-GPS.
-Animation Rigging 1.3.1 (Registry, not preview).
+NOT A GAME BUG (Cesar asked): the golfer vanishing and the lighting resetting just before the shot
+is THIS HARNESS — section 7 calls QualityTierService.SetOverride(Low) then (High) then Auto, and Low
+sets animatorCulling = CullCompletely. Nothing in the real shot path does that.
+
+ENVIRONMENT FINDING that cost most of the session: Unity only auto-imports on Editor FOCUS. Driven
+over MCP the Editor never gets focus, so .cs edits sat unimported and runs silently executed the
+PREVIOUS build while "0 compile errors" and isCompiling=false both read clean. Two solver revisions
+were measured as if they were new. Every .cs edit now needs AssetDatabase.Refresh(ForceUpdate) plus
+a version probe — GolferTestVerificationRunner.SolverVersion exists for exactly that.
+
+Active profile restored to iOS-Full-GPS. Animation Rigging 1.3.1 (Registry, not preview).

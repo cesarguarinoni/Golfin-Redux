@@ -217,6 +217,14 @@ namespace Golfin.EditorTools
 
     public class GolferTestVerificationRunner : MonoBehaviour
     {
+        /// <summary>
+        /// Bumped by hand on every change to the §3.4 solver. Read by reflection before a launch:
+        /// "0 compile errors" does NOT prove the new code is LOADED — Unity keeps the last good
+        /// assemblies when a compile fails, and it kept them here twice while runs quietly executed
+        /// the previous solver and I read the results as if they were the new one.
+        /// </summary>
+        public const string SolverVersion = "balance-v2-bounded";
+
         int _hole;
         readonly StringBuilder _log = new StringBuilder();
         readonly List<string>  _json = new List<string>();
@@ -378,14 +386,46 @@ namespace Golfin.EditorTools
                          " handR->anchorTrail=" + (atT == null ? "?" : F(Vector3.Distance(hRt.position, atT.position))) +
                          " | GripTarget lossyScale=" + (gtT.lossyScale.ToString("F3")));
 
+                    // REACH, measured rather than inferred. The trail hand has fallen short of its
+                    // anchor in every configuration this task has run (0.0073 / 0.0775 / 0.0387 /
+                    // 0.0301 m) and "the arm cannot reach" has twice been asserted from the shortfall
+                    // alone. A two-bone IK that cannot reach points straight at the target and stops,
+                    // so shoulder->target > upperArm+foreArm is the whole test. If the target is
+                    // INSIDE reach the shortfall is something else and the inference was wrong again.
+                    if (anim != null && anim.avatar != null && anim.avatar.isHuman)
+                    {
+                        void Reach(string side, HumanBodyBones sh, HumanBodyBones el, HumanBodyBones wr, Transform tgt)
+                        {
+                            var s = anim.GetBoneTransform(sh); var e = anim.GetBoneTransform(el); var w = anim.GetBoneTransform(wr);
+                            if (s == null || e == null || w == null || tgt == null) return;
+                            float max = Vector3.Distance(s.position, e.position) + Vector3.Distance(e.position, w.position);
+                            float need = Vector3.Distance(s.position, tgt.position);
+                            Mark("§3.4 REACH " + side + " | shoulder=" + V(s.position) +
+                                 " maxReach=" + F(max) + " shoulder->target=" + F(need) +
+                                 " slack=" + F(max - need) +
+                                 (need > max ? "  => TARGET OUT OF REACH by " + F(need - max) + " m"
+                                             : "  => target is WITHIN reach; a shortfall here is NOT arm length"));
+                        }
+                        Reach("lead(L)",  HumanBodyBones.LeftUpperArm,  HumanBodyBones.LeftLowerArm,  HumanBodyBones.LeftHand,  alT);
+                        Reach("trail(R)", HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, atT);
+                    }
+
                     // §3.4 SOLVED, not eyeballed. The spec asks for the club's local pose under
                     // GripTarget such that (a) the anchors sit in the palms and (b) ClubEnd is at
-                    // the ball. Both fall out of one construction, because the club's own geometry
-                    // already fits: GripAnchor_Lead is 0.11 above ClubSlot's origin and ClubEnd
-                    // 0.80 below, so lead-anchor-to-head is 0.91 m — and the measured lead hand to
-                    // ball is 0.909 m. So: point the shaft from the ball up through the lead hand,
-                    // then slide the club until the lead anchor lands on that hand; ClubEnd then
-                    // arrives at the ball on its own.
+                    // the ball. Both fall out of one construction: point the shaft from the lead
+                    // hand down to the ball, then slide the club along it until the lead anchor
+                    // lands on that hand; ClubEnd then arrives at the ball on its own.
+                    //
+                    // AXIS, corrected 2026-09-09 (Cesar: "the club is stabbing the player since it
+                    // is backwards"). ClubSlot local +Y runs BUTT -> HEAD. That is what
+                    // GolferPresenter has always said ("axisD = slot.up; // club local +Y runs down
+                    // the shaft to the head"), what SPEC §3.2 says, and what the driver mesh
+                    // measures: Grip spans -0.0411..+0.0878, ClubHead +0.9633..+1.0815. This solve
+                    // and the ClubStart/ClubEnd/GripAnchor_* markers were both built on the
+                    // OPPOSITE convention, so the solve rotated the club 180 degrees to plant a
+                    // marker at the ball that sat on the butt end — head up behind the shoulder,
+                    // shaft through the chest — while club.headAtBall reported 0.0198 m PASS.
+                    // Nothing downstream of a wrong axis is worth reading; that PASS was false.
                     //
                     // Roll is pinned by the hand line (clubface perpendicular to it) rather than
                     // left free — an unconstrained roll is what put the blade at the sky in
@@ -394,14 +434,98 @@ namespace Golfin.EditorTools
                     if (ballT2 != null && csT != null && alT != null)
                     {
                         Vector3 ball = ballT2.position;
-                        Vector3 up   = (hLt.position - ball).normalized;            // +Y = toward the butt cap
+
+                        // Hang the club from the HAND MIDPOINT, not from the lead hand.
+                        // (corrected 2026-09-09 — Cesar: "hands are still overlapping")
+                        // Pinning the lead anchor to the lead hand put the trail anchor 0.0301 m
+                        // beyond the right arm — MEASURED, see the §3.4 REACH marks: trail
+                        // shoulder->target 0.4865 m against a 0.4564 m arm, while the lead arm sat
+                        // on 0.0203 m of slack. A two-bone IK that cannot reach extends straight
+                        // and stops, so the trail hand parked short and the two fists closed to
+                        // 0.0425 m — visibly one hand inside the other.
+                        // Straddling the midpoint splits that error between the two arms, and it
+                        // is what §1/§3.3 asked for in the first place: GripTarget IS the 0.5/0.5
+                        // midpoint the MultiParentConstraint computes, so the club should hang off
+                        // it rather than off one hand.
+                        Vector3 handMid = (hLt.position + hRt.position) * 0.5f;
+                        Vector3 up   = (ball - handMid).normalized;                 // +Y = toward the HEAD
                         Vector3 across = (hRt.position - hLt.position);
                         Vector3 fwd  = Vector3.Cross(up, across).normalized;
                         if (fwd.sqrMagnitude < 1e-6f) fwd = Vector3.Cross(up, Vector3.up).normalized;
 
-                        float leadOffset = alT.localPosition.y;                      // 0.11 by construction
+                        // Read from the markers, never assumed: the anchors moved when the axis was
+                        // corrected and again when the club was scaled to the golfer's reach, and a
+                        // hard-coded offset is how the old solve outlived the geometry it was
+                        // written for.
+                        float leadOffset  = alT.localPosition.y;
+                        float trailOffset = atT != null ? atT.localPosition.y : leadOffset;
+                        float midOffset   = (leadOffset + trailOffset) * 0.5f;
                         Quaternion wantRot = Quaternion.LookRotation(fwd, up);
-                        Vector3    wantPos = hLt.position - up * leadOffset;
+                        Vector3    wantPos = handMid - up * midOffset;
+
+                        // BALANCE THE TWO ARMS (2026-09-09 — Cesar: "hands are clearly still
+                        // overlapping"). The midpoint solve left the lead arm on 0.0318 m of slack
+                        // while the trail arm was 0.0159 m SHORT, so the trail hand parked short of
+                        // its anchor and the fists closed to 0.0557 m — under a hand width, so they
+                        // still interpenetrate even though grip.hands.order's 0.05 floor passes it.
+                        // The anchors are 0.08 m apart by construction; the hands only reach that if
+                        // BOTH arms can actually make their anchor.
+                        //
+                        // So slide the club along its own shaft axis by d and pick the d that
+                        // maximises the WORSE of the two arms' slack. Searched, not guessed, and
+                        // reported below so the chosen offset is auditable.
+                        if (anim != null && anim.avatar != null && anim.avatar.isHuman && atT != null)
+                        {
+                            var shL = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+                            var elL = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+                            var wrL = anim.GetBoneTransform(HumanBodyBones.LeftHand);
+                            var shR = anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
+                            var elR = anim.GetBoneTransform(HumanBodyBones.RightLowerArm);
+                            var wrR = anim.GetBoneTransform(HumanBodyBones.RightHand);
+                            if (shL && elL && wrL && shR && elR && wrR)
+                            {
+                                float reachL = Vector3.Distance(shL.position, elL.position) + Vector3.Distance(elL.position, wrL.position);
+                                float reachR = Vector3.Distance(shR.position, elR.position) + Vector3.Distance(elR.position, wrR.position);
+                                // Sliding the club along its shaft moves ClubEnd off the ball by
+                                // exactly that much, so the search is BOUNDED by the club.headAtBall
+                                // budget. Without the bound the first version of this ran straight
+                                // to its boundary (d = -0.12) and "fixed" the arms by taking the
+                                // blade 12 cm off the ball — an optimiser doing exactly what it was
+                                // told, which was the wrong thing.
+                                const float HeadAtBallBudget = 0.030f;   // half the 0.05 assertion
+                                float bestD = 0f, bestScore = float.NegativeInfinity;
+                                for (float slide = -HeadAtBallBudget; slide <= HeadAtBallBudget; slide += 0.001f)
+                                {
+                                    Vector3 basePos = handMid - up * midOffset + up * slide;
+                                    float sL = reachL - Vector3.Distance(shL.position, basePos + up * leadOffset);
+                                    float sR = reachR - Vector3.Distance(shR.position, basePos + up * trailOffset);
+                                    // Prefer both-reachable; among those prefer the SMALLEST slide,
+                                    // so the head stays as close to the ball as the arms allow.
+                                    float score = Mathf.Min(sL, sR) >= 0f
+                                                ? 1000f - Mathf.Abs(slide)      // feasible: least displacement wins
+                                                : Mathf.Min(sL, sR);            // infeasible: get as close as possible
+                                    if (score > bestScore) { bestScore = score; bestD = slide; }
+                                }
+                                Vector3 balanced = handMid - up * midOffset + up * bestD;
+                                float fL = reachL - Vector3.Distance(shL.position, balanced + up * leadOffset);
+                                float fR = reachR - Vector3.Distance(shR.position, balanced + up * trailOffset);
+                                Mark("§3.4 BALANCE | shaft offset d=" + F(bestD) +
+                                     "  slack lead=" + F(fL) + " trail=" + F(fR) +
+                                     (Mathf.Min(fL, fR) >= 0f ? "  => BOTH anchors reachable; the hands can make the full "
+                                                                + F(trailOffset - leadOffset) + " m of grip spacing"
+                                                              : "  => STILL unreachable by " + F(-Mathf.Min(fL, fR)) +
+                                                                " m at the best offset — no club placement lets both arms reach"));
+                                wantPos = balanced;
+                            }
+                        }
+
+                        // What the club WOULD have to measure for the head to reach the ball from
+                        // here — so a length mismatch is read off the log instead of eyeballed off
+                        // a buried clubhead.
+                        Mark("§3.4 LENGTH | anchorMid->head needed=" + F(Vector3.Distance(handMid, ball) ) +
+                             " have=" + F(ceT.localPosition.y - midOffset) +
+                             "  => club scale to fit = " +
+                             F(Vector3.Distance(handMid, ball) / Mathf.Max(1e-4f, ceT.localPosition.y - midOffset)));
 
                         Vector3    localPos = gtT.InverseTransformPoint(wantPos);
                         Quaternion localRot = Quaternion.Inverse(gtT.rotation) * wantRot;
@@ -419,7 +543,9 @@ namespace Golfin.EditorTools
                              " | ClubEnd y=" + F(ceT.position.y) + "  ball y=" + F(ball.y) +
                              "  (ClubEnd " + (ceT.position.y < ball.y ? "BELOW" : "above") + " ball by " +
                              F(Mathf.Abs(ceT.position.y - ball.y)) + " m)" +
-                             " | desired ClubEnd=" + V(hLt.position - up * 0.91f) +
+                             // was a hard-coded 0.91 (lead-anchor-to-head under the old inverted
+                             // axis). Derived from the markers now, so it cannot drift from them.
+                             " | desired ClubEnd=" + V(wantPos + up * ceT.localPosition.y) +
                              "  actual ClubEnd=" + V(ceT.position));
 
                         Mark("§3.4 SOLVED ClubSlot local pose under GripTarget: " +
@@ -427,7 +553,7 @@ namespace Golfin.EditorTools
                              "  localEuler=" + localRot.eulerAngles.ToString("F3") +
                              "  (leadAnchorOffset=" + F(leadOffset) +
                              ", |leadHand-ball|=" + F(Vector3.Distance(hLt.position, ball)) +
-                             ", club leadAnchor->ClubEnd=" + F(leadOffset - ceT.localPosition.y) + ")");
+                             ", club leadAnchor->ClubEnd=" + F(ceT.localPosition.y - leadOffset) + ")");
                     }
 
                     Assert("grip.targetTracksHands", d < 0.01f,
@@ -506,9 +632,13 @@ namespace Golfin.EditorTools
                     // grip.hands.order: lead (left) must be 0.05–0.12 m nearer the butt cap than trail (right)
                     if (slot != null && handL != null && handR != null)
                     {
+                        // slot.up is +Y = BUTT -> HEAD (see the §3.4 axis note above), so a SMALLER
+                        // station is nearer the butt cap. This read alongL - alongR while the axis
+                        // was assumed inverted; with the corrected markers that returns the sign
+                        // backwards, which would have passed a club held upside down.
                         float alongL = Vector3.Dot(handL.position - slot.position, slot.up);
                         float alongR = Vector3.Dot(handR.position - slot.position, slot.up);
-                        float leadNearerButt = alongL - alongR;
+                        float leadNearerButt = alongR - alongL;
                         Assert("grip.hands.order",
                                leadNearerButt >= 0.05f && leadNearerButt <= 0.12f,
                                "lead (left) is " + F(leadNearerButt) + " m nearer the butt cap than trail (right) at address " +
