@@ -469,6 +469,45 @@ class RoundTripProperty(unittest.TestCase):
             "content_catalogs": [{"name": "balls", "published_version": 1}],
         })
 
+    @property
+    def row_count(self) -> int:
+        """However many rows `Balls.csv` has TODAY.
+
+        Derived, never written down. Both of this class's tests used to assert the
+        literal `2`, which was true when they were written and stopped being true
+        the moment the catalog grew to 20 balls — so the property they exist to
+        guard went unchecked from then on, and the suite was red for a reason that
+        had nothing to do with the loop. A test about a round trip must not also be
+        a test about how much data happens to exist.
+        """
+        return len(read_csv(BALLS, self.root).rows)
+
+    def edit_cell(self, text: str, row_id: str, column: str, value: str) -> str:
+        """Change one row's cell, addressed BY COLUMN NAME.
+
+        This replaces a literal (`"ball_putt_ace,Putt Ace,Putt Ace,10,"`) that
+        encoded the column ORDER. Inserting `rarity` between `brand` and `power`
+        turned that replace into a silent no-op, and the test then failed on its own
+        "the fixture must actually change" guard — which is the guard working, but
+        it should never have been reachable. A cell addressed by name cannot rot
+        when a column is added.
+
+        `split(",")` is safe even though `info` is quoted and full of commas: every
+        column before it is comma-free, and `",".join(x.split(","))` is lossless, so
+        the quoted tail is put back exactly as it was.
+        """
+        lines = text.split("\n")
+        idx = lines[0].split(",").index(column)
+        for i, line in enumerate(lines):
+            if i == 0 or not line.startswith(row_id + ","):
+                continue
+            cells = line.split(",")
+            self.assertNotEqual(value, cells[idx], "the edit must actually change the cell")
+            cells[idx] = value
+            lines[i] = ",".join(cells)
+            return "\n".join(lines)
+        raise AssertionError(f"{row_id} is not in the fixture")
+
     def import_publish_export(self):
         plan = import_content.build_plan(
             BALLS, self.root,
@@ -488,7 +527,8 @@ class RoundTripProperty(unittest.TestCase):
     def test_the_loop_is_byte_identical(self):
         plan = self.import_publish_export()
 
-        self.assertEqual(2, len(plan.adds), "a catalog with no rows means every CSV row is new")
+        self.assertEqual(self.row_count, len(plan.adds),
+                         "a catalog with no rows means every CSV row is new")
         self.assertEqual(self.original, self.read(),
                          "import → publish → export must not move a single byte of the CSV")
 
@@ -498,8 +538,7 @@ class RoundTripProperty(unittest.TestCase):
         self.import_publish_export()
         self.assertEqual(self.original, self.read())
 
-        edited = self.original.decode("utf-8").replace(
-            "ball_putt_ace,Putt Ace,Putt Ace,10,", "ball_putt_ace,Putt Ace,Putt Ace,9,", 1)
+        edited = self.edit_cell(self.original.decode("utf-8"), "ball_putt_ace", "power", "9")
         self.assertNotEqual(self.original.decode("utf-8"), edited, "the fixture must actually change")
         with open(self.dst, "w", encoding="utf-8", newline="") as fh:
             fh.write(edited)
@@ -519,7 +558,7 @@ class RoundTripProperty(unittest.TestCase):
             2400, BY, NOW, False,
         )
         self.assertEqual(0, again.touched)
-        self.assertEqual(2, again.unchanged)
+        self.assertEqual(self.row_count, again.unchanged)
 
     def read(self) -> bytes:
         with open(self.dst, "rb") as fh:
