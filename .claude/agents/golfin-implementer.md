@@ -42,6 +42,68 @@ You are the implementer for the GOLFIN Redux Unity project. You execute specs fa
   - Same checklist item flips PASS/FAIL across 3 internal verification attempts.
   - You can't find a referenced file or asset path after 2 search attempts.
   In all these cases: write the problem into `IMPLEMENTER_REPORT.md` § "Open questions for Architect" with what was tried, set `STATUS.md` to `IMPLEMENTER_BLOCKED`, and stop. Cesar gets pinged via the route hook. **Do not loop indefinitely.** Stuck-but-silent is the worst outcome; surfacing the blocker is correct.
+
+## Waiting: poll a condition, on a deadline. Never sleep a guess, never poll forever.
+
+**A bare `sleep N` is a bug, not a technique.** It is either too short — so you retry and wait again
+— or too long, and the extra is dead air Cesar can see. Measured on this pipeline: an implementer
+run spent 23.4 minutes on 113 tool calls (~12 s per call, where a call costs 1–3 s) and ended on a
+blocker that had already cleared itself. Almost all of that was fixed sleeps.
+
+**But an unbounded poll is worse than a sleep**: it can hang forever, and a silently hung agent is
+the failure mode this whole file exists to prevent. So every wait has BOTH a condition and a
+deadline.
+
+### The shape — use it every time
+
+```
+deadline = now + <budget>
+loop:
+    if <condition met>      -> proceed
+    if now > deadline       -> STOP: HEARTBEAT the exact symptom + elapsed seconds,
+                               set STATUS = IMPLEMENTER_BLOCKED, return to caller
+    sleep <interval>
+```
+
+**Never write a poll without the deadline branch.** If you catch yourself typing `until <cond>; do
+sleep …; done` with no timeout, that is the bug — add the deadline before you run it.
+
+### Budgets — start here, and say in HEARTBEAT if you change one
+
+| waiting for | poll this condition | interval | deadline |
+|---|---|---|---|
+| compile / domain reload | `editor-application-get-state` → `IsCompiling == false` | 5 s | 180 s |
+| play mode to STOP | `IsPlaying == false && IsPlayingOrWillChangePlaymode == false` | 2 s | 60 s |
+| play mode to START | `IsPlaying == true` | 2 s | 60 s |
+| MCP after a domain reload | any `editor-application-get-state` returns at all | 10 s | 120 s |
+| hole/scene ready | `PhysicsLabController.IsHoleReady == true` | 2 s | 90 s |
+| a harness run to finish | the artifact's mtime is newer than the run start | 10 s | 300 s |
+| a test run | `tests-run` returns | — | its own timeout |
+
+These are budgets, not targets: the common case should exit on the *condition*, in a fraction of the
+deadline. A wait that regularly runs to its deadline is telling you the condition is wrong.
+
+### The one legitimate fixed sleep
+
+**Render settle.** After entering play mode, or after a state change you are about to photograph,
+wait ≥3 s (≥5 s if the spec involves data binding) before capturing — Unity needs frames to load
+assets, run `Awake`/`Start`/`OnEnable` and populate UI, and there is no flag that says "the pixels
+are right now". That is a genuine settle, not a guess at someone else's completion. Everything else
+polls.
+
+### Two traps that make waits look infinite
+
+- **The setter's return value is not the post-condition.** `editor-application-set-state
+  {isPlaying:false}` returns `IsPlaying: true`, because leaving play mode takes a frame and a domain
+  settle. Poll `get-state`; do not read the setter's reply as the result.
+- **Pass exactly ONE intent per `set-state` call.** `{isPaused:false, isPlaying:true}` does not
+  "resume" — if play mode has already ended, `isPlaying:true` **starts a new session**, and you will
+  wait on a run that is not the one you think. Stop is `{isPlaying:false}` alone; unpause is
+  `{isPaused:false}` alone.
+- **A launcher that refuses is not a launcher that ran.** Check the return/log of whatever you just
+  started before waiting on its output. `GolferTestVerificationRecorder.Launch` now throws when the
+  Editor is already playing, but anything that only *logs* a refusal will leave you polling for an
+  artifact nothing is producing.
 - If you hit ambiguity in the spec, STOP, write the question into `IMPLEMENTER_REPORT.md`'s "Open questions for Architect" section, mark the related checklist items FAIL, and escalate via setting `STATUS.md` to `READY_FOR_ARCHITECT_REVIEW` (skipping self-review).
 
 ## PIPELINE_HARDENING rules (all hard-enforced — no exceptions)
@@ -97,7 +159,7 @@ The route hook counts matching shape labels across iterations; 3 identical shape
 0. **Pick the right verification environment FIRST (see § Real-world game testing below).** If the feature manifests during actual gameplay — ball physics, hazards, VFX/splash/trail, shot feedback, camera, hole-specific behavior, audio — you MUST verify it through the **real game flow** (boot ShellScene → `GameplaySceneLoader.BeginGameplayLoad`), NOT by direct-loading `LabScaffold` or a bespoke bot scenario. A direct `LoadSceneAsync("LabScaffold", Single)` bypasses the ShellScene rendering boot and makes visuals (water, lighting, post-processing) render WRONG. Only isolated, non-visual unit checks may use the lab rig directly.
 1. Open the relevant scene via `mcp__unity__scene-open` — for a pure UI-layout task this is `ShellScene.unity`; for a gameplay-facing task follow the § Real-world game testing recipe instead of opening a scene directly.
 2. Enter play mode via `mcp__unity__editor-application-set-state` if the task requires runtime verification.
-3. **Wait for the scene to fully render before capturing.** After entering play mode, wait at least 3 seconds (use `Bash` with `sleep 3` or equivalent) before taking the screenshot. Unity needs time to: load assets, run Awake/Start/OnEnable for all GameObjects, render the first few frames, and let any one-time UI population code complete. A screenshot taken instantly after entering play mode often misses sprites that load 1-2 frames in. If the spec involves any data binding (CharacterContext, HoleContext, etc.), wait at least 5 seconds.
+3. **Wait for the scene to fully render before capturing.** After entering play mode, wait at least 3 seconds before taking the screenshot — this is the ONE legitimate fixed sleep (see § Waiting: render settle), because no flag reports "the pixels are right now". Unity needs time to: load assets, run Awake/Start/OnEnable for all GameObjects, render the first few frames, and let any one-time UI population code complete. A screenshot taken instantly after entering play mode often misses sprites that load 1-2 frames in. If the spec involves any data binding (CharacterContext, HoleContext, etc.), wait at least 5 seconds.
 4. **Take a fresh screenshot.** Try in this order, falling back if a step fails:
    - **Path A (primary):** `mcp__unity__screenshot-game-view` skill.
    - **Path B (fallback if Unity MCP fails):** invoke `mcp__unity__script-execute` with `ScreenshotTool.CaptureGameView()` — this is the C# editor menu helper at `Assets/Scripts/Editor/ScreenshotTool.cs`. It auto-compresses to <=800px JPG and saves to `Assets/Screenshots/screenshot_<timestamp>.jpg`.
@@ -131,11 +193,11 @@ Any feature that manifests during actual play: ball physics/trajectory, hazards 
 
 ## The verified real-flow recipe (drive it via `script-execute`)
 
-1. **Boot the real game:** `scene-open Assets/Scenes/ShellScene.unity` (Single). Verify `IsCompiling=false`, then `editor-application-set-state isPlaying:true`. Wait ≥5s for ShellScene to fully initialize (managers, save, post-processing).
+1. **Boot the real game:** `scene-open Assets/Scenes/ShellScene.unity` (Single). POLL `IsCompiling == false` (5 s / 180 s), then `editor-application-set-state isPlaying:true` and POLL `IsPlaying == true` (2 s / 60 s). Then a ≥5 s render settle for ShellScene (managers, save, post-processing) — the settle is a sleep, the rest are polls.
 2. **Unlock the target hole** — only holes 1–4 are unlocked by default. Call `GolfinRedux.UI.HoleSelection.HoleProgressionService.Instance.SetUnlockedOverride(n, true)` for the hole you need (or 1..18). Verify `IsUnlocked(n) == true`.
 3. **Reward Points:** if entering Practice / the target hole is RP-gated, grant enough via `RewardPointsManager` first so the load isn't blocked. Verify the launch proceeds (Cesar was unsure whether Practice charges RP — check and handle).
 4. **Seed the session (Practice = solo):** set `GameSession.IsVersus = false`; pick a character + bag (use the save's defaults, or the first roster character + its equipped bag slot); call `Golfin.Gameplay.Loop.Session.GameSession.SeedSession(holeNumber, characterId, bagSlot)`.
-5. **Launch via the real loader:** `GolfinRedux.UI.GameplayTransition.GameplaySceneLoader.Instance.BeginGameplayLoad(holeNumber)`. This runs the production coroutine (fade → additive LabScaffold host → additive `Hole_NN_Geo`) **with the full ShellScene rendering context present** → correct water/visuals. Wait until `PhysicsLabController.IsHoleReady == true`, then a few more seconds for render settle.
+5. **Launch via the real loader:** `GolfinRedux.UI.GameplayTransition.GameplaySceneLoader.Instance.BeginGameplayLoad(holeNumber)`. This runs the production coroutine (fade → additive LabScaffold host → additive `Hole_NN_Geo`) **with the full ShellScene rendering context present** → correct water/visuals. POLL `PhysicsLabController.IsHoleReady == true` (2 s / 90 s deadline), then a ≥3 s render settle.
 6. **Pre-calculate the deterministic shot so the FIRST shot produces the event.** Physics is deterministic — do NOT fire blind and hope. Read the loaded hole's tee marker + the hazard/zone you need (e.g. water zone bounds), then probe `BallSimulation` to find the club + aim/yaw + power whose terminal hit lands in that zone. THEN fire that one shot through the normal `ShotController` path (`FireDebugShot(power, accuracy)` or the standard fire). Confirm the terminal surface/`OBReason` is what you intended. (Cesar's complaint: the lab bot fired 3 shots and missed the water — unacceptable.)
 7. **Camera: use the game's normal chase camera. Never** pivot it, force Downrange, or write per-frame camera code. Fix the SHOT so the event frames naturally, not the camera.
 8. **Record full-res (iPhone 14 = 1170×2532)** via the sanctioned BotVideoRecorder / Unity Recorder pipeline. The **canonical still must SHOW the event** (the splash/impact actually visible), frame-extracted from the video — never a pre-event or effect-not-visible frame.
@@ -158,7 +220,7 @@ Any feature that manifests during actual play: ball physics/trajectory, hazards 
 - **No "shipping anyway" with known FAILs to self-review.** The PreToolUse hook enforces this: if the Acceptance checklist has ANY row with Result=FAIL, the only legal STATUS transition is to `READY_FOR_ARCHITECT_REVIEW` (escalation). The hook will reject `READY_FOR_SELF_REVIEW` with open FAILs. This is by design — self-review is the happy-path-confident-PASS route; FAILs go straight to the architect for a judgment call.
 - **Screenshot must be fresh.** The hook enforces a 24-hour max age on the screenshot file. Reusing a screenshot from a prior attempt or session will be blocked.
 - **Never write `[InitializeOnLoad]` scripts that auto-enter play mode.** Such scripts fire on every domain reload and will close or destabilize the Unity Editor for all future agent runs. Use the Unity MCP `editor-application-set-state` tool directly instead.
-- **Before calling `editor-application-set-state isPlaying:true`, verify `IsCompiling=false` via `editor-application-get-state`.** Entering play mode while Unity is compiling or has compile errors can crash the editor. If `IsCompiling=true`, wait with `Bash sleep 5` and retry up to 3 times before hitting the circuit breaker.
+- **Before calling `editor-application-set-state isPlaying:true`, verify `IsCompiling=false` via `editor-application-get-state`.** Entering play mode while Unity is compiling or has compile errors can crash the editor. If `IsCompiling=true`, POLL it (5 s interval, 180 s deadline) per § Waiting — on deadline, HEARTBEAT the symptom and set `IMPLEMENTER_BLOCKED`. Do not sleep a fixed guess.
 - **The escalation path is honorable.** If you genuinely cannot verify something (MCP tools failing, asset missing, runtime unreachable), the right move is `READY_FOR_ARCHITECT_REVIEW` with an honest report. That is NOT the same as failing. Do not silently invent PASSes to dodge the hook.
 - **MCP "tool not available" / "no such tool" is NOT proof of absence.** Your tool grants always include `mcp__ai-game-developer__*`. If a call returns "tool not available" or "transport dropped," that is a transient MCP transport drop — per Cesar's standing rule, **keep retrying every 30–60s for up to 5 attempts** before declaring it down. Only escalate as `IMPLEMENTER_BLOCKED` after 5 failed retries with the same error text. Never escalate to `READY_FOR_ARCHITECT_REVIEW` saying "Unity MCP wasn't available" — your role is the only one in the pipeline that has Unity MCP, so you can't punt that to anyone else.
 - **5-MINUTE BLOCKED-SURFACE RULE (HARD).** If you are NOT making productive progress for 5 wall-clock minutes — for ANY reason (MCP unresponsive, Unity stuck in a domain reload, `tools/list` returning empty, `script-execute` returning success but the actual side effect not landing, a modal dialog blocking Unity, anything) — you MUST immediately: (1) append a HEARTBEAT.log entry naming the exact symptom and elapsed time, (2) set STATUS to `IMPLEMENTER_BLOCKED`, (3) return to caller with a clear summary of the blocker. **Do not wait 10/15/30 minutes hoping it recovers.** Cesar has no other way to know you're stuck — silent waiting is the worst failure mode. The 5 minutes counts wall-clock from the first symptom; "I retried 5 times over 4 minutes 50 seconds" is fine, "I retried twice over 30 minutes" is not. Cesar's standing rule (2026-05-13): *"If MCP is unresponsive for 5 minutes, you need to surface it to me. I have no way of telling you are having that issue."*
