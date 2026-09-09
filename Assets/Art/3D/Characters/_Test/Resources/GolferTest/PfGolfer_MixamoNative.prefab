@@ -552,39 +552,6 @@ MonoBehaviour:
     m_HintWeight: 0
     m_MaintainTargetPositionOffset: 0
     m_MaintainTargetRotationOffset: 0
---- !u!1 &2441568203177058860
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6467634956955994797}
-  m_Layer: 0
-  m_Name: GolferRig
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6467634956955994797
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2441568203177058860}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 6676592457181539309}
-  - {fileID: 6567663082985239235}
-  m_Father: {fileID: 317032517904262828}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3680128545908091918
 GameObject:
   m_ObjectHideFlags: 0
@@ -808,7 +775,8 @@ Transform:
   - {fileID: 1382613239056366304}
   - {fileID: 3454502758825805584}
   - {fileID: 3155557420107571319}
-  - {fileID: 6467634956955994797}
+  - {fileID: 6567663082985239235}
+  - {fileID: 6676592457181539309}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &1690746870778995238
@@ -845,22 +813,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6beb239ff0e2545a38b0d80de9cf8175, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Gameplay.Golfer.GolferPresenter
-  anim: {fileID: 0}
-  driverSocketRoot: {fileID: 0}
-  putterSocketRoot: {fileID: 0}
-  skins: []
-  stanceDistance: 0.735
-  stanceForwardOffset: 0
-  rightHanded: 1
-  enabledInBuild: 1
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  forceGripPose: 1
-  shaftRadius: 0.012
-  fingerRadius: 0.009
-  maxJointBend: 80
-  addressHeadLocal: {x: 0.735, y: 0, z: -0.069}
 --- !u!114 &5819904696128760695
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -942,7 +894,7 @@ Transform:
   m_Children:
   - {fileID: 3328240635281756647}
   - {fileID: 2681082680335421300}
-  m_Father: {fileID: 6467634956955994797}
+  m_Father: {fileID: 317032517904262828}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2899035612529706542
 MonoBehaviour:
@@ -1020,7 +972,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2180011167821255178}
-  m_Father: {fileID: 6467634956955994797}
+  m_Father: {fileID: 317032517904262828}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8508718253391787404
 MonoBehaviour:

@@ -406,6 +406,22 @@ namespace Golfin.EditorTools
                         Vector3    localPos = gtT.InverseTransformPoint(wantPos);
                         Quaternion localRot = Quaternion.Inverse(gtT.rotation) * wantRot;
 
+                        // §3.4 VERIFY — desired vs ACTUAL, at the same instant. The solve is done
+                        // in world space and then converted to a local pose under GripTarget; if
+                        // GripTarget's rotation at run time differs from the frame the pose was
+                        // solved on, the authored local pose produces a different world pose and
+                        // the club goes somewhere else entirely. This prints the divergence
+                        // instead of leaving it to be inferred from a bad screenshot.
+                        Mark("§3.4 VERIFY | GripTarget euler=" + gtT.rotation.eulerAngles.ToString("F2") +
+                             " | desired ClubSlot up=" + up.ToString("F4") +
+                             "  actual ClubSlot up=" + csT.up.ToString("F4") +
+                             "  angle=" + F(Vector3.Angle(up, csT.up)) + " deg" +
+                             " | ClubEnd y=" + F(ceT.position.y) + "  ball y=" + F(ball.y) +
+                             "  (ClubEnd " + (ceT.position.y < ball.y ? "BELOW" : "above") + " ball by " +
+                             F(Mathf.Abs(ceT.position.y - ball.y)) + " m)" +
+                             " | desired ClubEnd=" + V(hLt.position - up * 0.91f) +
+                             "  actual ClubEnd=" + V(ceT.position));
+
                         Mark("§3.4 SOLVED ClubSlot local pose under GripTarget: " +
                              "localPosition=" + localPos.ToString("F5") +
                              "  localEuler=" + localRot.eulerAngles.ToString("F3") +
