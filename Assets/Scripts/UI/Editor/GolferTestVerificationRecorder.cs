@@ -223,7 +223,7 @@ namespace Golfin.EditorTools
         /// assemblies when a compile fails, and it kept them here twice while runs quietly executed
         /// the previous solver and I read the results as if they were the new one.
         /// </summary>
-        public const string SolverVersion = "balance-v2-bounded";
+        public const string SolverVersion = "hand-orient-v1";
 
         int _hole;
         readonly StringBuilder _log = new StringBuilder();
@@ -237,6 +237,146 @@ namespace Golfin.EditorTools
         float _gripWorstL = float.NaN;
         float _gripWorstR = float.NaN;
         float _headAtBallM = float.NaN;
+
+        // ── golfer_club_grip §3.7 — hand orientation and palm offset ────────────────────
+        // grip.hand.onShaft_* used to measure the hand BONE ORIGIN (the wrist), so 0.0000 m was
+        // scored by putting the shaft THROUGH the wrist while the palm sat beside the club. These
+        // hold the palm point in hand space, measured from the finger bones (which DO exist on this
+        // rig — the grip.* SKIPs are keyed to Quaternius names, a different fact).
+        Vector3 _palmLocalL = Vector3.zero, _palmLocalR = Vector3.zero;
+        bool    _palmKnownL, _palmKnownR;
+        float   _palmHalfThicknessL = float.NaN, _palmHalfThicknessR = float.NaN;
+        float   _orientWorstL = float.NaN, _orientWorstR = float.NaN;   // deg, worst of 3
+        float   _apartWorst   = float.NaN;                              // m, SMALLEST of 3
+
+        /// <summary>
+        /// §3.7 Rule 2. Palm point in HAND-LOCAL space: the place the shaft AXIS passes through a
+        /// closed hand. P is the palm centre along the hand, n is the palm normal from the finger
+        /// spread (sign-checked against the way the fingers curl), and the offset is the palm half
+        /// thickness plus the shaft radius. Returns false when the finger bones are absent, so the
+        /// caller can fall back and SAY it fell back rather than silently measuring the wrist.
+        /// </summary>
+        static bool TryPalmLocal(Animator anim, bool left, float shaftRadius,
+                                 out Vector3 palmLocal, out float halfThickness)
+        {
+            palmLocal = Vector3.zero; halfThickness = float.NaN;
+            if (anim == null || anim.avatar == null || !anim.avatar.isHuman) return false;
+            var hand    = anim.GetBoneTransform(left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+            var middle1 = anim.GetBoneTransform(left ? HumanBodyBones.LeftMiddleProximal : HumanBodyBones.RightMiddleProximal);
+            var middle2 = anim.GetBoneTransform(left ? HumanBodyBones.LeftMiddleIntermediate : HumanBodyBones.RightMiddleIntermediate);
+            var index1  = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexProximal : HumanBodyBones.RightIndexProximal);
+            var pinky1  = anim.GetBoneTransform(left ? HumanBodyBones.LeftLittleProximal : HumanBodyBones.RightLittleProximal);
+            if (hand == null || middle1 == null || index1 == null || pinky1 == null) return false;
+
+            Vector3 P = hand.position + 0.5f * (middle1.position - hand.position);
+            Vector3 n = Vector3.Cross(index1.position - hand.position, pinky1.position - hand.position).normalized;
+            if (n.sqrMagnitude < 1e-8f) return false;
+            // n must point OUT of the palm, the way the fingers curl.
+            if (middle2 != null && Vector3.Dot(n, middle2.position - middle1.position) < 0f) n = -n;
+
+            // Palm half thickness, measured off the HAND MESH as §3.7 specifies — at the scale the
+            // prefab actually runs at, so the 0.86880 club scale and the 0.42992 model import scale
+            // are both already baked in.
+            //
+            // NOT from index1/pinky1: those two bones DEFINE n via the cross product, so their
+            // component along n is ~0 by construction. The first version of this did exactly that
+            // and returned 0.0010 m — a 1 mm palm. A degenerate measurement that looks like a
+            // measurement is worse than the declared fallback.
+            halfThickness = MeasureHandHalfThickness(anim, hand, P, n);
+
+            Vector3 palmW = P + n * (halfThickness + shaftRadius);
+            palmLocal = hand.InverseTransformPoint(palmW);
+            return true;
+        }
+
+        /// <summary>
+        /// §3.7: half the palm's thickness, measured off the skinned hand mesh. Takes the vertices
+        /// whose dominant bone weight is the hand bone, projects them onto the palm normal, and
+        /// returns half the extent. Falls back to the spec's declared 0.010 m — and says so via
+        /// <paramref name="n"/>-independent NaN — only when the mesh cannot be read.
+        /// </summary>
+        static float MeasureHandHalfThickness(Animator anim, Transform hand, Vector3 P, Vector3 n)
+        {
+            const float fallback = 0.010f;
+            // The source FBX has isReadable: 0, so sharedMesh.vertices / .boneWeights cannot be
+            // read — and turning Read/Write on for a stand-in asset to take one measurement is a
+            // worse trade than measuring the posed mesh. SkinnedMeshRenderer.BakeMesh writes into
+            // a mesh WE own, which is readable regardless of the source asset's flag.
+            //
+            // Vertices are then selected geometrically (within one hand-length of the palm centre)
+            // rather than by bone weight, because boneWeights needs the same unreadable asset.
+            Mesh baked = null;
+            try
+            {
+                var middle1 = anim.GetBoneTransform(hand == anim.GetBoneTransform(HumanBodyBones.LeftHand)
+                                                   ? HumanBodyBones.LeftMiddleProximal
+                                                   : HumanBodyBones.RightMiddleProximal);
+                if (middle1 == null) return fallback;
+                float handLen = Vector3.Distance(hand.position, middle1.position);
+                if (handLen < 1e-4f) return fallback;
+                float radius = handLen;                       // covers the palm, excludes the forearm
+
+                foreach (var smr in anim.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    if (smr.sharedMesh == null) continue;
+                    if (System.Array.IndexOf(smr.bones, hand) < 0) continue;   // this mesh is not skinned to the hand
+
+                    baked = new Mesh();
+                    smr.BakeMesh(baked, true);                // true = use the renderer's scale
+                    var verts = baked.vertices;
+                    if (verts == null || verts.Length == 0) { UnityEngine.Object.DestroyImmediate(baked); baked = null; continue; }
+
+                    var toWorld = smr.transform.localToWorldMatrix;
+                    float min = float.PositiveInfinity, max = float.NegativeInfinity;
+                    int used = 0;
+                    for (int i = 0; i < verts.Length; i++)
+                    {
+                        Vector3 wp = toWorld.MultiplyPoint3x4(verts[i]);
+                        if ((wp - P).sqrMagnitude > radius * radius) continue;
+                        float d = Vector3.Dot(wp - P, n);
+                        if (d < min) min = d;
+                        if (d > max) max = d;
+                        used++;
+                    }
+                    UnityEngine.Object.DestroyImmediate(baked); baked = null;
+
+                    if (used >= 24 && max > min)
+                    {
+                        float half = (max - min) * 0.5f;
+                        // sanity band for a hand on a 1.328 m character; outside it, trust the spec
+                        if (half > 0.003f && half < 0.05f) return half;
+                    }
+                }
+            }
+            catch { /* fall through to the declared fallback */ }
+            finally { if (baked != null) UnityEngine.Object.DestroyImmediate(baked); }
+            return fallback;
+        }
+
+        /// <summary>
+        /// §3.7 uses GolferPresenter's EXISTING shaftRadius rather than a second constant, so the
+        /// palm offset cannot drift away from the value the presenter's own grip code uses.
+        /// Private [SerializeField], so reflection — this file already reflects into the presenter's
+        /// assembly for the same reason.
+        /// </summary>
+        static float PresenterShaftRadius(Component presenter)
+        {
+            const float fallback = 0.012f;
+            if (presenter == null) return fallback;
+            var f = presenter.GetType().GetField("shaftRadius",
+                        BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (f == null || f.FieldType != typeof(float)) return fallback;
+            return (float)f.GetValue(presenter);
+        }
+
+        /// <summary>Palm point in world space for a hand, using the baked local offset.</summary>
+        Vector3 PalmWorld(Transform hand, bool left)
+        {
+            if (hand == null) return Vector3.zero;
+            var pl = left ? _palmLocalL : _palmLocalR;
+            bool known = left ? _palmKnownL : _palmKnownR;
+            return known ? hand.TransformPoint(pl) : hand.position;
+        }
 
         public void Begin(int hole) { _hole = hole; StartCoroutine(Sequence()); }
 
@@ -556,13 +696,60 @@ namespace Golfin.EditorTools
                              ", club leadAnchor->ClubEnd=" + F(ceT.localPosition.y - leadOffset) + ")");
                     }
 
-                    Assert("grip.targetTracksHands", d < 0.01f,
-                           "GripTarget is " + F(d) + " m from the hand midpoint at address (want < 0.01). " +
-                           "This is the MultiParentConstraint (layer 1) doing its job; if it fails, every " +
-                           "other grip number below is measuring a club that is not in his hands. " +
-                           "GripTarget=" + V(gtT.position) + " handMid=" + V(mid));
+                    // §3.7 / ARCHITECT_DECISION_HAND_ORIENT: RETIRED. It compared layer 1's PRE-IK
+                    // midpoint against the POST-IK hands, so it could not pass by construction —
+                    // layer 2 moves the hands after layer 1 has already averaged them. What it was
+                    // reaching for is now covered by grip.hand.onShaft_* (palm point) and the new
+                    // grip.hand.orient_*. The number is still logged, because it is a useful read
+                    // of how far layer 2 displaces the hands.
+                    Skip("grip.targetTracksHands",
+                         "RETIRED (§3.6, 2026-09-09) — compares pre-IK midpoint with post-IK hands; " +
+                         "cannot pass by construction. Observed this run: " + F(d) + " m " +
+                         "(GripTarget=" + V(gtT.position) + " handMid=" + V(mid) + "). Superseded by " +
+                         "grip.hand.onShaft_* on the palm point and grip.hand.orient_*.");
+
+                    // ── §3.7 BAKE — the two values the Architect asked to be measured, not eyeballed.
+                    // Rule 1: each anchor takes the CLIP's own hand-to-club frame at address, with
+                    // Rig_Hands at weight 0 so the hands are exactly where the mocap actor put them
+                    // and the IK has not yet moved anything. Rule 2: palmLocal per hand.
+                    // These are logged for authoring into the prefab; nothing is written from here.
+                    {
+                        var rigHands = golfer.GetComponentsInChildren<UnityEngine.Animations.Rigging.Rig>(true)
+                                             .FirstOrDefault(r => r.gameObject.name == "Rig_Hands");
+                        float restore = rigHands != null ? rigHands.weight : 1f;
+                        if (rigHands != null) rigHands.weight = 0f;
+                        yield return null; yield return null;   // let the graph evaluate without layer 2
+
+                        var alB = Tf("GripAnchor_Lead");
+                        var atB = Tf("GripAnchor_Trail");
+                        void Bake(string side, Transform anchor, Transform handBone, bool left)
+                        {
+                            if (anchor == null || handBone == null || anchor.parent == null)
+                            { Mark("§3.7 BAKE " + side + ": missing anchor/hand — not baked"); return; }
+                            Quaternion rLocal = Quaternion.Inverse(anchor.parent.rotation) * handBone.rotation;
+                            bool ok = TryPalmLocal(anim, left, PresenterShaftRadius(pres),
+                                                   out var palm, out var half);
+                            if (left) { _palmLocalL = palm; _palmKnownL = ok; _palmHalfThicknessL = half; }
+                            else      { _palmLocalR = palm; _palmKnownR = ok; _palmHalfThicknessR = half; }
+                            Mark("§3.7 BAKE " + side +
+                                 " | R_anchor_local(euler)=" + rLocal.eulerAngles.ToString("F3") +
+                                 " quat=(" + rLocal.x.ToString("F5") + ", " + rLocal.y.ToString("F5") +
+                                 ", " + rLocal.z.ToString("F5") + ", " + rLocal.w.ToString("F5") + ")" +
+                                 " | palmLocal=" + (ok ? palm.ToString("F5") : "<FINGER BONES NOT FOUND — falling back to the wrist>") +
+                                 " palmHalfThickness=" + (ok ? F(half) : "n/a") +
+                                 " shaftRadius=" + F(PresenterShaftRadius(pres)) +
+                                 " | WristTarget.localPosition = " + (ok ? (-palm).ToString("F5") : "n/a"));
+                        }
+                        Bake("lead(L)",  alB, anim != null && anim.avatar != null && anim.avatar.isHuman
+                                              ? anim.GetBoneTransform(HumanBodyBones.LeftHand) : null, true);
+                        Bake("trail(R)", atB, anim != null && anim.avatar != null && anim.avatar.isHuman
+                                              ? anim.GetBoneTransform(HumanBodyBones.RightHand) : null, false);
+
+                        if (rigHands != null) rigHands.weight = restore;
+                        yield return null;
+                    }
                 }
-                else Skip("grip.targetTracksHands", "N/A — no GripTarget on this prefab");
+                else Skip("grip.targetTracksHands", "RETIRED (§3.6) — no GripTarget on this prefab");
             }
 
             string liveAtAddress = CurrentState(anim);
@@ -647,12 +834,32 @@ namespace Golfin.EditorTools
                     else Assert("grip.hands.order", false,
                                "handL=" + (handL != null) + " handR=" + (handR != null) + " slot=" + (slot != null) + " — cannot measure");
 
-                    // Address sample for grip.hand.onShaft_l/_r (worst of 3 is asserted after shot)
+                    // Address sample for grip.hand.onShaft_l/_r (worst of 3 is asserted after shot).
+                    // §3.6 REDEFINED 2026-09-09: the PALM point, not the bone origin. Measuring the
+                    // wrist scored a perfect 0.0000 m with the shaft driven through the wrist and
+                    // the palm beside the club — a metric that was optimal and visibly wrong.
                     if (handL != null && clubStart != null && clubEnd != null)
-                        _gripWorstL = GripHandToSegment(handL.position, clubStart.position, clubEnd.position);
+                        _gripWorstL = GripHandToSegment(PalmWorld(handL, true), clubStart.position, clubEnd.position);
                     if (handR != null && clubStart != null && clubEnd != null)
-                        _gripWorstR = GripHandToSegment(handR.position, clubStart.position, clubEnd.position);
-                    Mark("grip §3.6 address: handL=" + F(_gripWorstL) + " m  handR=" + F(_gripWorstR) + " m from shaft segment (want < 0.035 m worst-of-3)");
+                        _gripWorstR = GripHandToSegment(PalmWorld(handR, false), clubStart.position, clubEnd.position);
+                    Mark("grip §3.6 address (palm point): handL=" + F(_gripWorstL) + " m  handR=" + F(_gripWorstR) +
+                         " m from shaft segment (want < 0.035 m worst-of-3)" +
+                         (_palmKnownL && _palmKnownR ? "" : "  [WARNING: palm offset unavailable, measuring the WRIST]"));
+
+                    // §3.6 NEW — the row that was missing. A visibly wrong grip must move a number:
+                    // both of these are blind to position and catch exactly what four rounds of
+                    // green position numbers did not.
+                    {
+                        var alO = Fb("GripAnchor_Lead"); var atO = Fb("GripAnchor_Trail");
+                        if (handL != null && alO != null)
+                            _orientWorstL = Quaternion.Angle(handL.rotation, alO.rotation);
+                        if (handR != null && atO != null)
+                            _orientWorstR = Quaternion.Angle(handR.rotation, atO.rotation);
+                        if (handL != null && handR != null)
+                            _apartWorst = Vector3.Distance(PalmWorld(handL, true), PalmWorld(handR, false));
+                        Mark("grip §3.6 address: orient L=" + F(_orientWorstL) + " deg R=" + F(_orientWorstR) +
+                             " deg (want < 5)  palms apart=" + F(_apartWorst) + " m (want >= 0.045)");
+                    }
                 }
 
                 if (slot != null && hasQuaterniusFingers)
@@ -815,8 +1022,12 @@ namespace Golfin.EditorTools
             bool highOk = smrs.All(s => s.quality == SkinQuality.Bone4 &&
                                         s.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.On);
             Assert("tier.high", highOk, "High: " + string.Join(", ", smrs.Select(s => s.name + " q=" + s.quality + " shadow=" + s.shadowCastingMode)));
-            QualityTierService.SetOverride(QualityTierService.AutoPref);
-            PlayerPrefs.DeleteKey(QualityTierService.PrefKey); PlayerPrefs.Save();
+            // §3.6 (2026-09-09): the Auto restore used to happen HERE, immediately before the shot
+            // block — and the Low override sets animatorCulling = CullCompletely, which is the
+            // "the whole model disappears before taking the shot and re-enters, lighting resets"
+            // Cesar saw and reasonably read as a game bug. Flipping the global quality tier a
+            // second before the measured shot is also just bad instrumentation. Restore moved to
+            // AFTER the shot block; the tier stays High across the swing.
             yield return Hold(1f);
 
             // ── 8. a REAL shot: commit -> swing, ball rest -> re-placed ────────────────
@@ -855,16 +1066,47 @@ namespace Golfin.EditorTools
             {
                 if (!float.IsNaN(_gripWorstL) && !float.IsNaN(_gripWorstR))
                 {
+                    string palmNote = (_palmKnownL && _palmKnownR)
+                        ? " (PALM point per §3.7, palmLocal L=" + _palmLocalL.ToString("F4") + " R=" + _palmLocalR.ToString("F4") + ")"
+                        : " [WARNING: palm offset unavailable — this is the WRIST, the old meaning]";
                     Assert("grip.hand.onShaft_l", _gripWorstL < 0.035f,
-                           "left hand worst dist to shaft segment across 3 samples (address/0.6s/impact) = " + F(_gripWorstL) + " m (want < 0.035 m)");
+                           "left palm worst dist to shaft segment across 3 samples (address/0.6s/impact) = " + F(_gripWorstL) + " m (want < 0.035 m)" + palmNote);
                     Assert("grip.hand.onShaft_r", _gripWorstR < 0.035f,
-                           "right hand worst dist to shaft segment across 3 samples (address/0.6s/impact) = " + F(_gripWorstR) + " m (want < 0.035 m)");
+                           "right palm worst dist to shaft segment across 3 samples (address/0.6s/impact) = " + F(_gripWorstR) + " m (want < 0.035 m)" + palmNote);
                 }
                 else
                 {
                     Assert("grip.hand.onShaft_l", false, "no grip samples collected — ClubStart/ClubEnd or hand bones not found");
                     Assert("grip.hand.onShaft_r", false, "no grip samples collected — ClubStart/ClubEnd or hand bones not found");
                 }
+
+                // ── §3.6 NEW — orientation and separation. These exist because four rounds of
+                // green POSITION numbers described a grip Cesar rejected on sight every time.
+                if (!float.IsNaN(_orientWorstL) && !float.IsNaN(_orientWorstR))
+                {
+                    Assert("grip.hand.orient_l", _orientWorstL < 5f,
+                           "left hand worst angle to its anchor across 3 samples (address/0.6s/impact) = " +
+                           F(_orientWorstL) + " deg (want < 5). With the anchor carrying the clip's own " +
+                           "address hand frame (§3.7 Rule 1), this staying small IS the hand keeping its " +
+                           "grip on the club through the swing.");
+                    Assert("grip.hand.orient_r", _orientWorstR < 5f,
+                           "right hand worst angle to its anchor across 3 samples (address/0.6s/impact) = " +
+                           F(_orientWorstR) + " deg (want < 5)");
+                }
+                else
+                {
+                    Assert("grip.hand.orient_l", false, "no orientation samples — GripAnchor_* or hand bones not found");
+                    Assert("grip.hand.orient_r", false, "no orientation samples — GripAnchor_* or hand bones not found");
+                }
+
+                if (!float.IsNaN(_apartWorst))
+                    Assert("grip.hands.apart", _apartWorst >= 0.045f,
+                           "smallest palm-to-palm distance across 3 samples (address/0.6s/impact) = " +
+                           F(_apartWorst) + " m (want >= 0.045). Two palms cannot occupy the same 4.5 cm; " +
+                           "this is the number for \"one hand inside the other\".");
+                else
+                    Assert("grip.hands.apart", false, "no separation samples — hand bones not found");
+
                 // grip.ikNoLegEffect: foot slide within ±0.010 m of §9.8 baseline L=0.0528 / R=0.0915 m
                 const float baselineL = 0.0528f, baselineR = 0.0915f, band = 0.010f;
                 Assert("grip.ikNoLegEffect",
@@ -872,6 +1114,13 @@ namespace Golfin.EditorTools
                        "foot slide L=" + F(_slideL) + " m (baseline " + F(baselineL) + " ±" + F(band) +
                        ")  R=" + F(_slideR) + " m (baseline " + F(baselineR) + " ±" + F(band) + ")");
             }
+
+            // §3.6: the quality-tier restore, moved here from before the shot block (see the note
+            // at section 7). Unconditional, as it was. The measured swing now happens entirely at
+            // the High tier instead of across a tier flip.
+            QualityTierService.SetOverride(QualityTierService.AutoPref);
+            PlayerPrefs.DeleteKey(QualityTierService.PrefKey); PlayerPrefs.Save();
+            Mark("tier: restored to Auto AFTER the shot block (§3.6) — the swing was measured at High");
             bool addressed = addrSeen.Any(x => x.StartsWith("Address"));
             // NOT a render check, and it must never be read as one: it samples states seen ACROSS
             // the drag, so a single Address frame anywhere in that window passes it. The gate for
@@ -1179,21 +1428,45 @@ namespace Golfin.EditorTools
 
             float t0 = Time.realtimeSinceStartup;
 
+            // §3.7: mid-swing is where the hands "go through one another", so orientation and
+            // separation are sampled at the same three instants as position — address alone proved
+            // nothing (SPEC §6 A4).
+            var anchorL = all.FirstOrDefault(x => x.name == "GripAnchor_Lead");
+            var anchorR = all.FirstOrDefault(x => x.name == "GripAnchor_Trail");
+            void SampleAll(string label)
+            {
+                float dL = GripHandToSegment(PalmWorld(handL, true),  clubStart.position, clubEnd.position);
+                float dR = GripHandToSegment(PalmWorld(handR, false), clubStart.position, clubEnd.position);
+                if (float.IsNaN(_gripWorstL) || dL > _gripWorstL) _gripWorstL = dL;
+                if (float.IsNaN(_gripWorstR) || dR > _gripWorstR) _gripWorstR = dR;
+
+                float oL = anchorL != null ? Quaternion.Angle(handL.rotation, anchorL.rotation) : float.NaN;
+                float oR = anchorR != null ? Quaternion.Angle(handR.rotation, anchorR.rotation) : float.NaN;
+                if (!float.IsNaN(oL) && (float.IsNaN(_orientWorstL) || oL > _orientWorstL)) _orientWorstL = oL;
+                if (!float.IsNaN(oR) && (float.IsNaN(_orientWorstR) || oR > _orientWorstR)) _orientWorstR = oR;
+
+                // SMALLEST separation is the worst case — that is the interpenetration.
+                float apart = Vector3.Distance(PalmWorld(handL, true), PalmWorld(handR, false));
+                if (float.IsNaN(_apartWorst) || apart < _apartWorst) _apartWorst = apart;
+
+                Mark("[GripMid] " + label + ": palmL=" + F(dL) + " m  palmR=" + F(dR) +
+                     " m  orient L=" + F(oL) + " R=" + F(oR) + " deg  apart=" + F(apart) + " m" +
+                     "  (running worst onShaft L=" + F(_gripWorstL) + " R=" + F(_gripWorstR) +
+                     ", orient L=" + F(_orientWorstL) + " R=" + F(_orientWorstR) +
+                     ", apart=" + F(_apartWorst) + ")");
+            }
+
             // t = 0.6 s after commit
             while (Time.realtimeSinceStartup - t0 < 0.6f) yield return null;
-            float dL06 = GripHandToSegment(handL.position, clubStart.position, clubEnd.position);
-            float dR06 = GripHandToSegment(handR.position, clubStart.position, clubEnd.position);
-            if (float.IsNaN(_gripWorstL) || dL06 > _gripWorstL) _gripWorstL = dL06;
-            if (float.IsNaN(_gripWorstR) || dR06 > _gripWorstR) _gripWorstR = dR06;
-            Mark("[GripMid] t=0.6s: handL=" + F(dL06) + " m  handR=" + F(dR06) + " m (running worst L=" + F(_gripWorstL) + " R=" + F(_gripWorstR) + ")");
+            SampleAll("t=0.6s");
 
             // t ≈ 1.167 s after commit (GolferImpactDelayDriveSeconds from §9.2 baseline)
             while (Time.realtimeSinceStartup - t0 < 1.167f) yield return null;
-            float dLImp = GripHandToSegment(handL.position, clubStart.position, clubEnd.position);
-            float dRImp = GripHandToSegment(handR.position, clubStart.position, clubEnd.position);
-            if (float.IsNaN(_gripWorstL) || dLImp > _gripWorstL) _gripWorstL = dLImp;
-            if (float.IsNaN(_gripWorstR) || dRImp > _gripWorstR) _gripWorstR = dRImp;
-            Mark("[GripMid] impact: handL=" + F(dLImp) + " m  handR=" + F(dRImp) + " m (final worst L=" + F(_gripWorstL) + " R=" + F(_gripWorstR) + ")");
+            SampleAll("impact");
+            // A4's hand close-ups are full-res CROPS of these same gameplay frames, not a new
+            // capture path: CAPTURE RULE 0 / the 2026-05-13 lesson say CaptureCore is the only
+            // sanctioned capture, and a second camera here would be exactly the per-task
+            // workaround that corrupted a scene last time.
         }
 
         IEnumerator MeasureFrameMs(int frames, Action<float> result)

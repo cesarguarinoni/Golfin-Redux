@@ -4,6 +4,49 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 (golfer_club_grip iter-5) — **the grip is on the club, and the metrics can finally see it**
+
+**What §3.7 fixed.** Two rules, both measured off the clip and the bones, nothing authored by eye:
+
+1. **Anchor rotation = the clip's own hand-to-club frame at address**, baked once per hand with
+   `Rig_Hands` at weight 0, then `targetRotationWeight = 1`. At address it is a no-op by
+   construction; through the swing each hand keeps *its own* address relationship to the club, so
+   the two hands cannot rotate into each other. Setting the weight to 1 **without** the bake is what
+   made both hands snap to one club rotation and interpenetrate.
+2. **The IK aims the palm, not the wrist.** Each anchor gained a `WristTarget` child at
+   `−palmLocal`, so driving the hand bone there puts the *palm* on the shaft. Two-bone IK moves the
+   hand bone origin — the wrist — which is why the old metric scored a perfect 0.0000 m with the
+   shaft driven through the wrist and the palm beside the club.
+
+| | iter-4 | iter-5 |
+|---|---|---|
+| `grip.hand.orient_l` / `_r` | *did not exist* | **0.0000° / 0.0000°** at all three samples |
+| `grip.hands.apart` | *did not exist* | **0.0695 m**, constant across the swing |
+| `grip.hand.onShaft_l` / `_r` | 0.0000 m — the **wrist** | **0.0000 m** — the **palm** |
+| `grip.hands.order` | 0.0695 m | **0.0968 m** |
+
+**The lesson worth keeping, and it is not about rigging.** Every defect in this task was found by
+Cesar looking at a frame, and each one had a full set of green numbers beside it: a club buried
+underground, a club rotated 180° with the head behind the shoulder, two hands fused together. The
+metrics were not wrong, they were *aimed at the wrong things* — a marker instead of the mesh, a bone
+origin instead of the palm, position with no measure of orientation at all. `grip.hand.orient_*`
+exists so that a visibly wrong grip has to move a number.
+
+**Open:** `grip.ikNoLegEffect` regressed — right foot 0.0710 m against a 0.0915 ± 0.010 baseline, i.e.
+sliding *less* than the no-rig reference and failing a two-sided band. Two changes this iteration
+could cause it (the rotation constraint; the Architect-requested tier-restore move, which means the
+swing is now measured at a single quality tier instead of across a flip) and one run cannot separate
+them. Not re-baselined — moving a threshold to match a result is the failure mode this task spent
+the week correcting.
+
+**Also:** `palmHalfThickness` is the spec's declared 0.010 fallback, not a measurement — the
+bone-derived version was degenerate (1 mm palm) and the mesh route is blocked by `isReadable: 0` on
+the FBX. Fingers stay open; the finger bones *do* exist (the harness SKIP is keyed to Quaternius
+names), so a closed hand is a one-frame pose clip on a masked layer — backlog.
+
+`STATUS = READY_FOR_SELF_REVIEW`. Profile `iOS-Full-GPS`. Animation Rigging 1.3.1. Nothing merged.
+
+---
 ## 2026-09-09 (golfer_club_grip iter-4) — **the rig had never evaluated; it does now**
 
 **The bug, and it invalidated a week of numbers.** Every `TwoBoneIKConstraintJob` threw

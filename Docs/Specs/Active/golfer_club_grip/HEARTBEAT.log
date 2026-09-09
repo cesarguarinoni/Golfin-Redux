@@ -69,3 +69,13 @@ DIRTY:
 [06:36:06Z] iter-4: GolferRig moved under MixamoChar_TPose. A0 GATE = 0 Animation Rigging exceptions over a complete run (was 2850). Rig alive: grip.hand.onShaft_r 0.0032 m. Harness re-solved §3.4 against the LIVE rig: ClubSlot lp=(-0.00605,0.11099,0.05487) le=(333.580,216.836,135.890) — the old 0daf243cf solve is void with the rest. Pose authored to ClubSlot and PutterSlot. Launching the ONE measurement run.
 
 [06:40:52Z] iter-4: SPEC §3.5 violation found — forceGripPose was serialized 1 on PfGolfer_MixamoNative; the spec says it stays false. The legacy LateUpdate JoinLeadHandToShaft was clamping the lead fist to LeadHandFromButt, which is what produced L station 0.1100 / R 0.0912 (grip.hands.order 0.0188). Set to false and re-running. Both runs reported.
+
+=== iter-5 kickoff baseline 2026-09-09T14:23:42Z ===
+HEAD 67ce40c1bda1ee4eb558f947e85242d94ca2922b
+DIRTY:
+ M Docs/Specs/Active/golfer_club_grip/SPEC.md
+ M Docs/Specs/Active/golfer_club_grip/STATUS.md
+?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_DECISION_HAND_ORIENT.md
+=== end baseline ===
+
+[14:36:11Z] iter-5: §3.7 authored. Rule 1 baked (L quat -0.05943,0.46660,-0.29832,0.83052 / R 0.41102,0.73048,0.05360,-0.54275, identical across 3 bake runs). Rule 2 WristTargets at -palmLocal (L 0.00016,-0.05926,0.02200 / R -0.00012,-0.05556,0.02200); palmHalfThickness = 0.010 DECLARED FALLBACK (FBX isReadable=0 blocks vertices/boneWeights; BakeMesh+radius selection did not land in the sanity band). IKs retargeted to the WristTargets, posW/rotW = 1. Running the ONE verification pass.
