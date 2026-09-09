@@ -743,8 +743,15 @@ namespace Golfin.Gameplay.Golfer
         /// addressing empty grass a metre from the ball, because +Z is not where this pose puts
         /// the club. Placing from <see cref="AddressHeadLocal"/> makes the club head land ON the
         /// ball by construction — there is no angle left to get wrong.</para>
+        ///
+        /// <para>golfer_club_grip §3.5: promoted to [SerializeField] so each prefab variant can
+        /// carry its own value. After §3.4 the Mixamo-native prefab measures ClubEnd at address
+        /// and sets this field to the measured golfer-local position — then club.headAtBall
+        /// (ClubEnd world) and stance.address.clubReachesBall (AddressClubHeadWorld) agree
+        /// instead of the latter passing by construction. PfGolfer_Test keeps the default
+        /// (byte-identical behaviour).</para>
         /// </summary>
-        static readonly Vector3 AddressHeadLocal = new Vector3(0.735f, 0f, -0.069f);
+        [SerializeField] Vector3 addressHeadLocal = new Vector3(0.735f, 0f, -0.069f);
 
         public void PlaceAtBall(Vector3 ball, float headingRad)
         {
@@ -762,7 +769,7 @@ namespace Golfin.Gameplay.Golfer
             // and the impact velocity runs to his LEFT, which agrees.
             Quaternion rot = Quaternion.LookRotation(rightHanded ? d : -d, Vector3.up);
 
-            Vector3 head = AddressHeadLocal;
+            Vector3 head = addressHeadLocal;
             if (!rightHanded) head.x = -head.x;
 
             Vector3 p = ball - rot * head + d * stanceForwardOffset;
@@ -773,7 +780,7 @@ namespace Golfin.Gameplay.Golfer
 
         /// <summary>Where the club head lands at address, for the harness to assert against.</summary>
         public Vector3 AddressClubHeadWorld => transform.TransformPoint(
-            rightHanded ? AddressHeadLocal : new Vector3(-AddressHeadLocal.x, AddressHeadLocal.y, AddressHeadLocal.z));
+            rightHanded ? addressHeadLocal : new Vector3(-addressHeadLocal.x, addressHeadLocal.y, addressHeadLocal.z));
 
         /// <summary>Ground height under <paramref name="p"/>, or <paramref name="fallback"/>.</summary>
         float GroundY(Vector3 p, float fallback)

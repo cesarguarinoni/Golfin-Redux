@@ -225,6 +225,11 @@ namespace Golfin.EditorTools
         internal string _variant = "";
         float _slideL, _slideR;
 
+        // golfer_club_grip §3.6 — header fields for the Mixamo-native JSON
+        float _gripWorstL = float.NaN;
+        float _gripWorstR = float.NaN;
+        float _headAtBallM = float.NaN;
+
         public void Begin(int hole) { _hole = hole; StartCoroutine(Sequence()); }
 
         void Mark(string m) { _log.AppendLine(m); Debug.Log("[GolferVerify] " + m); }
@@ -253,7 +258,21 @@ namespace Golfin.EditorTools
 
         static string F(float v) => v.ToString("F4", CultureInfo.InvariantCulture);
         static string V(Vector3 v) => "(" + F(v.x) + ", " + F(v.y) + ", " + F(v.z) + ")";
+        static string FNull(float v) => float.IsNaN(v) ? "null" : F(v);
         static IEnumerator Hold(float s) { yield return new WaitForSecondsRealtime(s); }
+
+        /// <summary>
+        /// golfer_club_grip §3.6 — perpendicular distance from point p to segment a→b.
+        /// Used for grip.hand.onShaft_l/_r assertions on the Mixamo-native rig.
+        /// </summary>
+        static float GripHandToSegment(Vector3 p, Vector3 a, Vector3 b)
+        {
+            Vector3 ab = b - a;
+            float len2 = ab.sqrMagnitude;
+            if (len2 < 1e-10f) return Vector3.Distance(p, a);
+            float t = Mathf.Clamp01(Vector3.Dot(p - a, ab) / len2);
+            return Vector3.Distance(p, a + t * ab);
+        }
 
         static Type FindType(string n) => AppDomain.CurrentDomain.GetAssemblies()
             .Select(a => { try { return a.GetType(n); } catch { return null; } }).FirstOrDefault(t => t != null);
@@ -359,6 +378,50 @@ namespace Golfin.EditorTools
                                                "grip.wrapped_r", "grip.wrapped_l",
                                                "grip.thumbDownShaft_r", "grip.thumbDownShaft_l" })
                         Skip(id, "N/A — rig has no Quaternius finger bones");
+                }
+
+                // ── golfer_club_grip §3.6 — Mixamo-native grip block (address-time samples) ──
+                if (!hasQuaterniusFingers)
+                {
+                    var clubStart = Fb("ClubStart");
+                    var clubEnd   = Fb("ClubEnd");
+                    bool isHumanAnim = anim != null && anim.avatar != null && anim.avatar.isHuman;
+                    Transform handL = isHumanAnim ? anim.GetBoneTransform(HumanBodyBones.LeftHand)  : null;
+                    Transform handR = isHumanAnim ? anim.GetBoneTransform(HumanBodyBones.RightHand) : null;
+
+                    // club.headAtBall: ClubEnd in plan distance to ball at address
+                    if (clubEnd != null && ballT != null)
+                    {
+                        Vector3 ep = clubEnd.position, bp = ballT.position;
+                        _headAtBallM = Vector3.Distance(new Vector3(ep.x, 0f, ep.z), new Vector3(bp.x, 0f, bp.z));
+                        Assert("club.headAtBall", _headAtBallM < 0.05f,
+                               "ClubEnd is " + F(_headAtBallM) + " m from the ball in plan at address (want < 0.05 m). " +
+                               "Note: stance.address.clubReachesBall reads AddressClubHeadWorld (a placement constant); " +
+                               "this assertion uses the real ClubEnd transform.");
+                    }
+                    else Assert("club.headAtBall", false,
+                               "ClubEnd=" + (clubEnd != null) + " ballT=" + (ballT != null) + " — cannot measure");
+
+                    // grip.hands.order: lead (left) must be 0.05–0.12 m nearer the butt cap than trail (right)
+                    if (slot != null && handL != null && handR != null)
+                    {
+                        float alongL = Vector3.Dot(handL.position - slot.position, slot.up);
+                        float alongR = Vector3.Dot(handR.position - slot.position, slot.up);
+                        float leadNearerButt = alongL - alongR;
+                        Assert("grip.hands.order",
+                               leadNearerButt >= 0.05f && leadNearerButt <= 0.12f,
+                               "lead (left) is " + F(leadNearerButt) + " m nearer the butt cap than trail (right) at address " +
+                               "(want 0.05–0.12 m; negative means trail is above lead; L station=" + F(alongL) + " R station=" + F(alongR) + ")");
+                    }
+                    else Assert("grip.hands.order", false,
+                               "handL=" + (handL != null) + " handR=" + (handR != null) + " slot=" + (slot != null) + " — cannot measure");
+
+                    // Address sample for grip.hand.onShaft_l/_r (worst of 3 is asserted after shot)
+                    if (handL != null && clubStart != null && clubEnd != null)
+                        _gripWorstL = GripHandToSegment(handL.position, clubStart.position, clubEnd.position);
+                    if (handR != null && clubStart != null && clubEnd != null)
+                        _gripWorstR = GripHandToSegment(handR.position, clubStart.position, clubEnd.position);
+                    Mark("grip §3.6 address: handL=" + F(_gripWorstL) + " m  handR=" + F(_gripWorstR) + " m from shaft segment (want < 0.035 m worst-of-3)");
                 }
 
                 if (slot != null && hasQuaterniusFingers)
@@ -548,10 +611,36 @@ namespace Golfin.EditorTools
             // t = 0.6 s after commit, plus the assertion that the ball has NOT left yet.
             var deferProbe = StartCoroutine(ProveLaunchDeferred(shot, anim, 0.6f));
             var slideProbe = StartCoroutine(MeasureFootSlide(golfer, anim));
+            // golfer_club_grip §3.6: sample grip distances at t=0.6s and impact (Mixamo-native only)
+            bool isMixamoNative = !string.IsNullOrEmpty(_variant) && _variant.Contains("MixamoNative");
+            Coroutine gripMidProbe = isMixamoNative ? StartCoroutine(SampleGripMidSwing(golfer, anim, shot)) : null;
             yield return DriveARealShot(shot);
             if (addrProbe != null) StopCoroutine(addrProbe);
             yield return deferProbe;
             yield return slideProbe;
+            if (gripMidProbe != null) yield return gripMidProbe;
+            // golfer_club_grip §3.6: assert grip.hand.onShaft and grip.ikNoLegEffect for Mixamo-native
+            if (isMixamoNative)
+            {
+                if (!float.IsNaN(_gripWorstL) && !float.IsNaN(_gripWorstR))
+                {
+                    Assert("grip.hand.onShaft_l", _gripWorstL < 0.035f,
+                           "left hand worst dist to shaft segment across 3 samples (address/0.6s/impact) = " + F(_gripWorstL) + " m (want < 0.035 m)");
+                    Assert("grip.hand.onShaft_r", _gripWorstR < 0.035f,
+                           "right hand worst dist to shaft segment across 3 samples (address/0.6s/impact) = " + F(_gripWorstR) + " m (want < 0.035 m)");
+                }
+                else
+                {
+                    Assert("grip.hand.onShaft_l", false, "no grip samples collected — ClubStart/ClubEnd or hand bones not found");
+                    Assert("grip.hand.onShaft_r", false, "no grip samples collected — ClubStart/ClubEnd or hand bones not found");
+                }
+                // grip.ikNoLegEffect: foot slide within ±0.010 m of §9.8 baseline L=0.0528 / R=0.0915 m
+                const float baselineL = 0.0528f, baselineR = 0.0915f, band = 0.010f;
+                Assert("grip.ikNoLegEffect",
+                       Mathf.Abs(_slideL - baselineL) <= band && Mathf.Abs(_slideR - baselineR) <= band,
+                       "foot slide L=" + F(_slideL) + " m (baseline " + F(baselineL) + " ±" + F(band) +
+                       ")  R=" + F(_slideR) + " m (baseline " + F(baselineR) + " ±" + F(band) + ")");
+            }
             bool addressed = addrSeen.Any(x => x.StartsWith("Address"));
             // NOT a render check, and it must never be read as one: it samples states seen ACROSS
             // the drag, so a single Address frame anywhere in that window passes it. The gate for
@@ -822,6 +911,60 @@ namespace Golfin.EditorTools
             for (int i = 0; i < n; i++) { into.Add(CurrentState(a)); yield return new WaitForSecondsRealtime(dt); }
         }
 
+        /// <summary>
+        /// golfer_club_grip §3.6 — samples grip-hand-to-shaft distances at t=0.6 s and impact
+        /// (1.167 s) after commit, updating _gripWorstL/_gripWorstR with the worst value seen.
+        /// Runs parallel to DriveARealShot so it can share the Resolving-state trigger.
+        /// </summary>
+        IEnumerator SampleGripMidSwing(GameObject golfer, Animator anim, Component shot)
+        {
+            var all = golfer.GetComponentsInChildren<Transform>(true);
+            Transform FindT(string n) => all.FirstOrDefault(x => x.name == n);
+            var clubStart = FindT("ClubStart");
+            var clubEnd   = FindT("ClubEnd");
+            bool isHuman  = anim != null && anim.avatar != null && anim.avatar.isHuman;
+            Transform handL = isHuman ? anim.GetBoneTransform(HumanBodyBones.LeftHand)  : null;
+            Transform handR = isHuman ? anim.GetBoneTransform(HumanBodyBones.RightHand) : null;
+
+            if (clubStart == null || clubEnd == null || handL == null || handR == null)
+            {
+                Mark("[GripMid] missing transforms — mid-swing samples skipped " +
+                     "(start=" + (clubStart != null) + " end=" + (clubEnd != null) +
+                     " L=" + (handL != null) + " R=" + (handR != null) + ")");
+                yield break;
+            }
+
+            var stateProp = shot?.GetType().GetProperty("State");
+            if (stateProp == null) { Mark("[GripMid] no State property — skipped"); yield break; }
+
+            // Wait for commit (State == Resolving)
+            float deadline = Time.realtimeSinceStartup + 30f;
+            while (Time.realtimeSinceStartup < deadline &&
+                   stateProp.GetValue(shot)?.ToString() != "Resolving")
+                yield return null;
+
+            if (stateProp.GetValue(shot)?.ToString() != "Resolving")
+            { Mark("[GripMid] never reached Resolving within 30 s — mid-swing samples skipped"); yield break; }
+
+            float t0 = Time.realtimeSinceStartup;
+
+            // t = 0.6 s after commit
+            while (Time.realtimeSinceStartup - t0 < 0.6f) yield return null;
+            float dL06 = GripHandToSegment(handL.position, clubStart.position, clubEnd.position);
+            float dR06 = GripHandToSegment(handR.position, clubStart.position, clubEnd.position);
+            if (float.IsNaN(_gripWorstL) || dL06 > _gripWorstL) _gripWorstL = dL06;
+            if (float.IsNaN(_gripWorstR) || dR06 > _gripWorstR) _gripWorstR = dR06;
+            Mark("[GripMid] t=0.6s: handL=" + F(dL06) + " m  handR=" + F(dR06) + " m (running worst L=" + F(_gripWorstL) + " R=" + F(_gripWorstR) + ")");
+
+            // t ≈ 1.167 s after commit (GolferImpactDelayDriveSeconds from §9.2 baseline)
+            while (Time.realtimeSinceStartup - t0 < 1.167f) yield return null;
+            float dLImp = GripHandToSegment(handL.position, clubStart.position, clubEnd.position);
+            float dRImp = GripHandToSegment(handR.position, clubStart.position, clubEnd.position);
+            if (float.IsNaN(_gripWorstL) || dLImp > _gripWorstL) _gripWorstL = dLImp;
+            if (float.IsNaN(_gripWorstR) || dRImp > _gripWorstR) _gripWorstR = dRImp;
+            Mark("[GripMid] impact: handL=" + F(dLImp) + " m  handR=" + F(dRImp) + " m (final worst L=" + F(_gripWorstL) + " R=" + F(_gripWorstR) + ")");
+        }
+
         IEnumerator MeasureFrameMs(int frames, Action<float> result)
         {
             var samples = new List<float>(frames);
@@ -980,6 +1123,9 @@ namespace Golfin.EditorTools
                           ",\n  \"skip\": " + _skip +
                           ",\n  \"footSlideLeftM\": " + F(_slideL) +
                           ",\n  \"footSlideRightM\": " + F(_slideR) +
+                          ",\n  \"gripWorstL\": " + FNull(_gripWorstL) +
+                          ",\n  \"gripWorstR\": " + FNull(_gripWorstR) +
+                          ",\n  \"headAtBallM\": " + FNull(_headAtBallM) +
                           ",\n  \"assertions\": [\n" + string.Join(",\n", _json) + "\n  ]\n}\n";
             Directory.CreateDirectory("Docs/Diagnostics/_capture");
             File.WriteAllText("Docs/Diagnostics/_capture/" + file, json);
