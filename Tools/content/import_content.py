@@ -160,6 +160,43 @@ class Plan:
         return len(self.adds) + len(self.changes)
 
 
+def _meaningful(data: Optional[dict]) -> dict:
+    """A row's fields with the EMPTY ones dropped, for comparison only.
+
+    An absent key and an empty cell are the same fact, and the CSV cannot tell them
+    apart: every column exists on every line, so a field nobody has filled in
+    arrives here as `""`. A stored row written before that column was added to the
+    CSV simply has no such key. Comparing the two dicts strictly then reports a
+    difference that no consumer can observe — the exporter writes an absent key
+    back out as an empty cell, and the client's `f.Get(col)` answers `""` either
+    way.
+
+    Found on 2026-09-09: `import_content.py` had been reporting all 12 `characters`
+    and all 3 `items` rows as "change" on every run since `content_art_bundling`
+    (2026-08-27) added the art-URL columns, because those rows were published
+    before the columns existed. `export_content.py --check` called the same
+    catalogs unchanged, correctly, and the two tools looked like they disagreed.
+    Applying that plan would have written 15 rows whose only difference is empty
+    strings.
+
+    A permanent false positive is worse than a noisy one: it is the reason nobody
+    reads the plan, and the same run carried a real `shop_catalog` conflict that
+    deserved to be read.
+
+    Comparison ONLY. What gets written is still the CSV's own `data`, empty
+    strings and all — this decides whether a row is worth writing, never what
+    lands in it.
+    """
+    if not data:
+        return {}
+    return {k: v for k, v in data.items() if v is not None and v != ""}
+
+
+def same_data(a: Optional[dict], b: Optional[dict]) -> bool:
+    """True when two rows say the same thing, treating absent and empty as equal."""
+    return _meaningful(a) == _meaningful(b)
+
+
 def build_plan(
     catalog: Catalog,
     repo_root: str,
@@ -184,7 +221,7 @@ def build_plan(
             draft is not None
             and pub is not None
             and (
-                draft.get("data") != pub.get("data")
+                not same_data(draft.get("data"), pub.get("data"))
                 or draft.get("min_build") != pub.get("min_build")
                 or draft.get("is_active") != pub.get("is_active")
             )
@@ -211,7 +248,7 @@ def build_plan(
             # A row created in the admin and not yet published. Its min_build was
             # chosen deliberately there, so an overwrite keeps it rather than
             # resetting it to this run's default.
-            if draft.get("data") == data:
+            if same_data(draft.get("data"), data):
                 plan.unchanged += 1
             elif not overwrite_dirty:
                 plan.conflicts.append(f"{rid} (unpublished draft differs from the CSV)")
@@ -235,7 +272,7 @@ def build_plan(
         pub_active = pub.get("is_active") is not False
         want_active = pub_active if csv_active is None else csv_active
 
-        if pub.get("data") == data and pub_active == want_active and not draft_is_dirty:
+        if same_data(pub.get("data"), data) and pub_active == want_active and not draft_is_dirty:
             plan.unchanged += 1
             continue
 

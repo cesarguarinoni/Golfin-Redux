@@ -368,6 +368,83 @@ class CliRefusal(unittest.TestCase):
         self.assertEqual([], self.client.writes)
 
 
+class AbsentAndEmptyAreTheSameFact(unittest.TestCase):
+    """A column nobody filled in must not read as a change, forever.
+
+    The CSV cannot express "absent": every column exists on every line, so an
+    unfilled field arrives as `""`. A row published BEFORE that column was added
+    simply has no such key. Compared strictly, every one of those rows is a
+    "change" on every run — and it was: all 12 `characters` and all 3 `items` rows
+    reported change from 2026-08-27 (`content_art_bundling` added the art-URL
+    columns) until 2026-09-09, while `export_content.py --check` correctly called
+    the same catalogs unchanged. Applying that plan would have written 15 rows
+    whose only difference is empty strings.
+
+    A permanent false positive is worse than a noisy one: it is why nobody reads
+    the plan, and the run that surfaced this carried a real `shop_catalog`
+    conflict that deserved to be read.
+    """
+
+    # `spin` is the stand-in for a column added after these rows were published.
+    ROW_NO_SPIN = 'ball_golfin,Golfin,Golfin,0,0,0,0,,Golfin,Golfin,"The standard ball."'
+
+    def _client(self, stored: dict):
+        return FakePostgrestClient({
+            "content_rows":   [published_row("balls", "ball_golfin", stored)],
+            "content_drafts": [published_row("balls", "ball_golfin", stored)],
+        })
+
+    def test_a_published_row_missing_a_column_the_csv_leaves_empty_is_NOT_a_change(self):
+        stored = data_golfin()
+        del stored["spin"]                       # published before the column existed
+        repo = TempRepo([HEADER, self.ROW_NO_SPIN])   # CSV has the column, empty
+        self.addCleanup(repo.close)
+
+        plan = plan_for(repo, self._client(stored))
+
+        self.assertEqual(0, len(plan.changes),
+                         "an absent key and an empty cell are the same fact — reporting a "
+                         "change here is the false positive that trains everyone to skim.")
+        self.assertEqual(1, plan.unchanged)
+
+    def test_the_reverse_direction_too(self):
+        # Stored carries the key as "", the CSV column is empty as well.
+        repo = TempRepo([HEADER, self.ROW_NO_SPIN])
+        self.addCleanup(repo.close)
+        plan = plan_for(repo, self._client(data_golfin(spin="")))
+        self.assertEqual(0, len(plan.changes))
+
+    def test_a_REAL_difference_is_still_a_change(self):
+        # The tripwire: normalising must not swallow a value that actually moved,
+        # nor an empty field being filled IN, nor a filled field being cleared.
+        cases = [
+            (data_golfin(spin="-4"), ROW_GOLFIN,        "a value that moved"),
+            ({k: v for k, v in data_golfin().items() if k != "spin"}, ROW_GOLFIN, "empty -> filled"),
+            (data_golfin(spin="7"), self.ROW_NO_SPIN,   "filled -> empty"),
+        ]
+        for stored, csv_line, why in cases:
+            with self.subTest(why=why):
+                repo = TempRepo([HEADER, csv_line])
+                self.addCleanup(repo.close)
+                self.assertEqual(1, len(plan_for(repo, self._client(stored)).changes), why)
+
+    def test_what_is_WRITTEN_still_carries_the_empty_fields(self):
+        # Comparison ONLY. A row worth writing is written as the CSV has it —
+        # empty strings included — so the stored shape converges instead of
+        # staying half-migrated.
+        stored = data_golfin(power="3")
+        del stored["spin"]
+        repo = TempRepo([HEADER, self.ROW_NO_SPIN.replace("Golfin,Golfin,0,0", "Golfin,Golfin,9,0")])
+        self.addCleanup(repo.close)
+
+        plan = plan_for(repo, self._client(stored))
+
+        self.assertEqual(1, len(plan.changes), "power moved 3 -> 9, so this row IS written")
+        self.assertIn("spin", plan.changes[0]["data"],
+                      "normalisation decides WHETHER to write, never WHAT is written.")
+        self.assertEqual("", plan.changes[0]["data"]["spin"])
+
+
 class RoundTripProperty(unittest.TestCase):
     """import → publish → export leaves the CSV BYTE-IDENTICAL.
 
