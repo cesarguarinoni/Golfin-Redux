@@ -127,6 +127,22 @@ namespace Golfin.EditorTools
                 _prevA = ax; _prevL = lx; _f++;
             }
 
+            /// <summary>(arriver, leaver) as the running push actually collected them.</summary>
+            static (RectTransform, RectTransform)? FromActivePush()
+            {
+                var f = LP.GetField("_active", BindingFlags.NonPublic | BindingFlags.Static);
+                object act = f?.GetValue(null);
+                if (act == null) return null;
+                RectTransform First(string side)
+                {
+                    object layer = act.GetType().GetField(side).GetValue(act);
+                    var list = layer.GetType().GetField("Content").GetValue(layer) as System.Collections.IList;
+                    return list != null && list.Count > 0 ? list[0] as RectTransform : null;
+                }
+                RectTransform a = First("To"), l = First("From");
+                return a == null ? ((RectTransform, RectTransform)?)null : (a, l);
+            }
+
             static string PathOf(Transform t)
             {
                 if (t == null) return "<null>";
@@ -157,31 +173,36 @@ namespace Golfin.EditorTools
                 var tee = Find("NavTeeButton");
                 if (tee != null) { tee.onClick.Invoke(); yield return Wait(2.5f); }
 
+                // The MISSIONS card BY NAME. Taking "the first expanded ActionButton" gets PRACTICE.
+                foreach (var t in Resources.FindObjectsOfTypeAll<Transform>())
+                {
+                    if (t.name != "CardTapButton" || string.IsNullOrEmpty(t.gameObject.scene.name)) continue;
+                    if (!t.gameObject.activeInHierarchy || t.parent == null) continue;
+                    bool match = false;
+                    foreach (var lbl in t.parent.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                        if (lbl != null && lbl.text != null &&
+                            lbl.text.IndexOf("MISSIONS", StringComparison.OrdinalIgnoreCase) >= 0) { match = true; break; }
+                    if (!match) continue;
+                    var tap = t.GetComponent<Button>();
+                    if (tap != null && tap.interactable) tap.onClick.Invoke();
+                    break;
+                }
+                yield return Wait(1.2f);
+
                 Button play = null;
                 foreach (var b in Resources.FindObjectsOfTypeAll<Button>())
                 {
                     if (b.gameObject.name != "ActionButton" || string.IsNullOrEmpty(b.gameObject.scene.name)) continue;
                     if (!b.gameObject.activeInHierarchy || !b.interactable) continue;
-                    if (b.transform.parent != null && b.transform.parent.name == "ExpandedContainer") { play = b; break; }
+                    if (b.transform.parent == null || b.transform.parent.name != "ExpandedContainer") continue;
+                    Transform card = b.transform.parent.parent;
+                    if (card == null) continue;
+                    foreach (var lbl in card.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                        if (lbl != null && lbl.text != null &&
+                            lbl.text.IndexOf("MISSIONS", StringComparison.OrdinalIgnoreCase) >= 0) { play = b; break; }
+                    if (play != null) break;
                 }
-                if (play == null)
-                {
-                    foreach (var t in Resources.FindObjectsOfTypeAll<Transform>())
-                    {
-                        if (t.name != "CardTapButton" || string.IsNullOrEmpty(t.gameObject.scene.name)) continue;
-                        if (!t.gameObject.activeInHierarchy) continue;
-                        var tap = t.GetComponent<Button>();
-                        if (tap != null && tap.interactable) { tap.onClick.Invoke(); break; }
-                    }
-                    yield return Wait(1.0f);
-                    foreach (var b in Resources.FindObjectsOfTypeAll<Button>())
-                    {
-                        if (b.gameObject.name != "ActionButton" || string.IsNullOrEmpty(b.gameObject.scene.name)) continue;
-                        if (!b.gameObject.activeInHierarchy || !b.interactable) continue;
-                        if (b.transform.parent != null && b.transform.parent.name == "ExpandedContainer") { play = b; break; }
-                    }
-                }
-                if (play == null) { Debug.LogError("[ContentX] no mode-card ActionButton"); EditorApplication.ExitPlaymode(); yield break; }
+                if (play == null) { Debug.LogError("[ContentX] no MISSIONS ActionButton"); EditorApplication.ExitPlaymode(); yield break; }
 
                 object modeId = Enum.Parse(IdT, "ModeSelection");
                 object missId = Enum.Parse(IdT, "MissionSelection");
@@ -202,8 +223,13 @@ namespace Golfin.EditorTools
                 // the arriver starts at +1170 — i.e. it was measuring a rect the push never
                 // touches. A number that disagrees with a known-good instrument is a resolution
                 // bug until the path proves otherwise, so the path is now in the header.
-                missGo = Obj(missId);
-                arriver = FirstContent(missId, missGo);
+                // THE ARRIVER COMES FROM THE PUSH, not from a guess at which screen was targeted.
+                // The first version of this resolved MissionSelectionScreen/Content by name and
+                // then reported it motionless on every frame — because the card it tapped was
+                // PRACTICE, so the push was ModeSelection -> HoleSelection and the rect being
+                // measured was not in the animation at all. Reading LayeredPush's own collected
+                // layer makes that mistake unrepresentable.
+                (arriver, leaver) = FromActivePush() ?? (FirstContent(missId, Obj(missId)), leaver);
                 string arriverPath = PathOf(arriver), leaverPath = PathOf(leaver);
                 Debug.Log($"[ContentX] leaver='{leaverPath}' x={(leaver != null ? leaver.anchoredPosition.x : float.NaN)}  " +
                           $"arriver='{arriverPath}' x={(arriver != null ? arriver.anchoredPosition.x : float.NaN)}");
@@ -222,6 +248,28 @@ namespace Golfin.EditorTools
                     if (!PathOf(rt).Contains("MissionSelectionScreen") && !PathOf(rt).Contains("ModeSelectionScreen")) continue;
                     Debug.Log($"[ContentX]   scene rect id={rt.GetInstanceID()} x={rt.anchoredPosition.x:F1} {PathOf(rt)}");
                 }
+                // What the push ACTUALLY collected. Everything else has been eliminated; this is
+                // the list the tween writes, read straight off the live Push_ instance.
+                var activeF = LP.GetField("_active", BindingFlags.NonPublic | BindingFlags.Static);
+                object act = activeF?.GetValue(null);
+                if (act != null)
+                {
+                    foreach (string side in new[] { "To", "From" })
+                    {
+                        object layer = act.GetType().GetField(side).GetValue(act);
+                        var content = layer.GetType().GetField("Content").GetValue(layer) as System.Collections.IList;
+                        var restX   = layer.GetType().GetField("RestX").GetValue(layer) as System.Collections.IList;
+                        var sb2 = new StringBuilder($"[ContentX] p.{side}.Content.Count={content?.Count ?? -1} :");
+                        for (int i = 0; content != null && i < content.Count; i++)
+                        {
+                            var rt = content[i] as RectTransform;
+                            sb2.Append($" [{i}] {(rt == null ? "<null>" : PathOf(rt))} id={(rt == null ? 0 : rt.GetInstanceID())} restX={restX[i]}");
+                        }
+                        Debug.Log(sb2.ToString());
+                    }
+                }
+                else Debug.LogWarning("[ContentX] LayeredPush._active is null — cannot read the collected layers");
+
                 var offP = LP.GetProperty("LastPushEnterOffset");
                 Debug.Log($"[ContentX] LastPushEnterOffset={(offP != null ? offP.GetValue(null) : (object)"<absent>")} " +
                           $"arriverId={(arriver != null ? arriver.GetInstanceID() : 0)} leaverId={(leaver != null ? leaver.GetInstanceID() : 0)}");

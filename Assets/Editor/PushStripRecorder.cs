@@ -105,7 +105,7 @@ namespace Golfin.EditorTools
             _recorder = null;
         }
 
-        class Mark { public string Name = "", How = ""; public float Start, End; public float Parallax; }
+        class Mark { public string Name = "", How = "", Target = ""; public float Start, End; public float Parallax; }
 
         class Runner : MonoBehaviour
         {
@@ -149,11 +149,14 @@ namespace Golfin.EditorTools
                 yield return Wait(1.2f);          // settle, so the mark is the push and nothing else
                 var mk = new Mark { Name = name, How = how, Start = Now };
                 go();
+                // One frame in, ask the push what it is ACTUALLY moving — see FindModeCardActionButton.
+                yield return null; yield return null;
+                mk.Target = ActualTarget();
                 yield return Wait(1.0f);          // the push is 0.25s; 1s brackets it generously
                 mk.End = Now;
                 mk.Parallax = LastParallax();
                 _marks.Add(mk);
-                Debug.Log($"[PushStrip] {name}: t={mk.Start:F3}..{mk.End:F3}s parallax={mk.Parallax:F2} ({how})");
+                Debug.Log($"[PushStrip] {name}: t={mk.Start:F3}..{mk.End:F3}s parallax={mk.Parallax:F2} target={mk.Target} ({how})");
             }
 
             IEnumerator Go()
@@ -178,16 +181,20 @@ namespace Golfin.EditorTools
                 var tee = Find("NavTeeButton");
                 if (tee != null) { tee.onClick.Invoke(); yield return Wait(2.5f); }
 
-                Button play = FindModeCardActionButton();
+                FindModeCardActionButton("MISSIONS");     // expand the MISSIONS card
+                yield return Wait(1.2f);
+                Button play = ActionButtonOn("MISSIONS");
                 if (play != null)
+                {
                     yield return Push("ModeSelection__MissionSelection",
-                                      "REAL widget: mode card ExpandedContainer/ActionButton.onClick",
+                                      "REAL widget: MISSIONS card ExpandedContainer/ActionButton.onClick",
                                       () => play.onClick.Invoke());
+                }
                 else
                 {
-                    Debug.LogWarning("[PushStrip] no mode-card ActionButton — falling back to ShowScreen");
+                    Debug.LogWarning("[PushStrip] no MISSIONS ActionButton — falling back to ShowScreen");
                     yield return Push("ModeSelection__MissionSelection",
-                                      "harness ShowScreen (no ActionButton found — NOT a tap)",
+                                      "harness ShowScreen (no MISSIONS ActionButton — NOT a tap)",
                                       () => Show("MissionSelection"));
                 }
 
@@ -205,25 +212,68 @@ namespace Golfin.EditorTools
                 EditorApplication.ExitPlaymode();
             }
 
-            static Button FindModeCardActionButton()
+            /// <summary>
+            /// The ActionButton of the card whose title contains <paramref name="want"/>.
+            ///
+            /// <para>NAMED, not "the first expanded one". The first version of this took whichever
+            /// ActionButton happened to be active, which is PRACTICE — so it drove
+            /// ModeSelection -> HoleSelection while every artifact said MissionSelection. The
+            /// numbers were real and the label was wrong, which is the worse of the two failures.
+            /// The target screen is now also read back off the push itself (see the caller), so a
+            /// mismatch cannot survive to the report again.</para>
+            /// </summary>
+            static Button FindModeCardActionButton(string want)
+            {
+                foreach (var t in Resources.FindObjectsOfTypeAll<Transform>())
+                {
+                    if (t.name != "CardTapButton" || string.IsNullOrEmpty(t.gameObject.scene.name)) continue;
+                    if (!t.gameObject.activeInHierarchy) continue;
+                    Transform card = t.parent;
+                    if (card == null) continue;
+                    bool match = false;
+                    foreach (var lbl in card.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                        if (lbl != null && lbl.text != null &&
+                            lbl.text.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0) { match = true; break; }
+                    if (!match) continue;
+                    var tap = t.GetComponent<Button>();
+                    if (tap != null && tap.interactable) tap.onClick.Invoke();
+                    return null;   // caller waits a beat, then calls ActionButtonOn(card)
+                }
+                return null;
+            }
+
+            static Button ActionButtonOn(string want)
             {
                 foreach (var b in Resources.FindObjectsOfTypeAll<Button>())
                 {
                     if (b.gameObject.name != "ActionButton") continue;
                     if (string.IsNullOrEmpty(b.gameObject.scene.name)) continue;
                     if (!b.gameObject.activeInHierarchy || !b.interactable) continue;
-                    // must live under ExpandedContainer on a mode card
-                    if (b.transform.parent != null && b.transform.parent.name == "ExpandedContainer") return b;
-                }
-                // nothing expanded yet — expand the first card, then look again
-                foreach (var t in Resources.FindObjectsOfTypeAll<Transform>())
-                {
-                    if (t.name != "CardTapButton" || string.IsNullOrEmpty(t.gameObject.scene.name)) continue;
-                    if (!t.gameObject.activeInHierarchy) continue;
-                    var tap = t.GetComponent<Button>();
-                    if (tap != null && tap.interactable) { tap.onClick.Invoke(); break; }
+                    if (b.transform.parent == null || b.transform.parent.name != "ExpandedContainer") continue;
+                    Transform card = b.transform.parent.parent;
+                    if (card == null) continue;
+                    foreach (var lbl in card.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                        if (lbl != null && lbl.text != null &&
+                            lbl.text.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0) return b;
                 }
                 return null;
+            }
+
+            /// <summary>The screen the push is ACTUALLY moving to, read off LayeredPush's own
+            /// collected layer rather than assumed from which button was pressed.</summary>
+            static string ActualTarget()
+            {
+                var lp = Type.GetType("Golfin.UI.Polish.LayeredPush, Assembly-CSharp");
+                var f = lp?.GetField("_active", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                object act = f?.GetValue(null);
+                if (act == null) return "<no active push>";
+                object layer = act.GetType().GetField("To").GetValue(act);
+                var content = layer.GetType().GetField("Content").GetValue(layer) as System.Collections.IList;
+                if (content == null || content.Count == 0) return "<To.Content EMPTY>";
+                var rt = content[0] as RectTransform;
+                Transform t = rt; string path = rt != null ? rt.name : "?";
+                while (t != null && t.parent != null) { t = t.parent; path = t.name + "/" + path; }
+                return path;
             }
 
             void WriteSidecar()
@@ -239,7 +289,7 @@ namespace Golfin.EditorTools
                     sb.AppendLine("    { \"name\": \"" + m.Name + "\", \"start\": " + m.Start.ToString("F3")
                                 + ", \"end\": " + m.End.ToString("F3")
                                 + ", \"parallax\": " + (float.IsNaN(m.Parallax) ? "null" : m.Parallax.ToString("F2"))
-                                + ", \"how\": \"" + m.How.Replace("\"", "'") + "\" }"
+                                + ", \"actualTarget\": \"" + m.Target + "\", \"how\": \"" + m.How.Replace("\"", "'") + "\" }"
                                 + (i < _marks.Count - 1 ? "," : ""));
                 }
                 sb.AppendLine("  ]");
