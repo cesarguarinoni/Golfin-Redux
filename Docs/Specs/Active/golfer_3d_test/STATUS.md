@@ -1,4 +1,8 @@
-READY_FOR_SELF_REVIEW
+ARCHITECT_REVIEW_PASS (2026-09-07) — close as DONE and move to Docs/Specs/Completed/ (the golfer_club_grip kickoff does it)
+
+Architect review: numbers and the three side-by-side frames verified. Verdict stands — pipeline proven, retargeting was the cause (0.4770 → 0.0915 m), roster pipeline = Mixamo-native. Conclusion + F2 scale rule carried into Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md §7. The club orientation left open by F3 is taken up by Docs/Specs/Active/golfer_club_grip/. Note for future harness work: stance.address.clubReachesBall reads AddressClubHeadWorld, a placement constant, so its 0.0000 m is by construction — golfer_club_grip adds club.headAtBall on the real ClubEnd.
+
+Previous state: READY_FOR_SELF_REVIEW
 
 §9.8 complete. Retargeting confirmed as the cause of the sliding legs: worst foot slide
 0.4770 m (Quaternius, Unity retarget) vs 0.0915 m (Mixamo-native, clips on the model) = 5.2x less,

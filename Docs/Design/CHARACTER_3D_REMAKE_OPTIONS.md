@@ -1,6 +1,6 @@
 # 3D Character Remake — Options & Costs
 
-Date: 2026-09-03 · Author: Claude (Architect) · Status: DECISION NEEDED
+Date: 2026-09-03 · Author: Claude (Architect) · Status: DECISION NEEDED on the model source (§3/§4) — **the animation pipeline is DECIDED, see §7 (2026-09-07)**
 Budget frame (Cesar): < $1k for tools/assets; 3D artist budgeted separately.
 
 ## 1. What the repo actually contains (GolfinRedux, checked 2026-09-03)
@@ -130,7 +130,7 @@ from a freelancer before the pilot proves the rig/animation contract on device.
 ## 5. Unity implementation (unchanged whichever option wins) — spec follows after pilot
 
 - `Assets/Art/3D/Characters/<Name>/MESH_<Name>.fbx` + `T_<Name>_Albedo.png` + `M_<Name>.mat` (URP Simple Lit, Low tier; Lit on High).
-- One `Assets/Animations/Golfer/AnimatorController_Golfer.controller` shared by all; per-model Humanoid avatar; pack clips imported as Humanoid with "Bake Into Pose" root settings matched to the pack.
+- One `Assets/Animations/Golfer/AnimatorController_Golfer.controller` shared by all; per-model Humanoid avatar. **Clips are NOT retargeted by Unity (§7):** every model is auto-rigged in Mixamo and its clips are downloaded *on that model* (With Skin), imported as Humanoid with Avatar → *Copy From Other Avatar* = the model's own. Root settings per `golfer_3d_test` SPEC §5.1.
 - `Prefabs/Characters/PfGolfer_<Name>.prefab` = mesh + Animator + the six socket transforms + two `UnplayableChecker` volumes copied from `PfYoungMale.prefab` (same script guid `41412eff…`).
 - `Characters.csv` gains `modelPrefab` column (default `PfGolfer_<Name>`); loader resolves via `Resources.Load` like sprites (CSV-first, no ScriptableObjects). Missing prefab → fall back to starter model, log once (same "renderable" pattern as `CONTENT_TWO_WAY_SPEC` §4).
 - Addressables **not** needed: 12 × ~1.5 MB (mesh + ASTC atlas) ≈ 18 MB in-build; revisit only if roster > 30.
@@ -140,6 +140,50 @@ from a freelancer before the pilot proves the rig/animation contract on device.
 - [ ] Ken: accept semi-realistic (A/C/D) vs anime (B)? Show the pilot renders side-by-side with the 2D art.
 - [ ] Headshot 3 price (not verified) if Option C is chosen.
 - [ ] Who is the "separate" 3D artist — existing contact or new hire? Brief = §2 table verbatim.
+
+## 7. Pipeline decision — animation is Mixamo-native, never Unity-retargeted (2026-09-07, from `golfer_3d_test` §9.8)
+
+**Decision:** every roster model is uploaded to Mixamo, auto-rigged there, and the golf clips are
+downloaded **on that model** ("With Skin"). Unity does no Humanoid retargeting at all: clip avatar
+= character avatar. Club-in-hand mocap (CMU 64 / Motion Cast #05) is **off the table** — the clips
+were never the problem.
+
+**Evidence** (`Docs/Specs/Active/golfer_3d_test/IMPLEMENTER_REPORT.md` §13 + F1, one harness run
+each, Hole 06, no tuning on either side):
+
+| measure | Quaternius stand-in, Y-Bot clips **retargeted by Unity** | Mixamo Remy, same clips **downloaded on the model** |
+|---|---|---|
+| foot slide during the swing, worst foot | **0.4770 m** | **0.0915 m** (5.2× less) |
+| foot slide, other foot | 0.4552 m | 0.0528 m |
+| grip / finger / forearm correction | 7 rounds of solver code | none (`forceGripPose=false`) |
+| mid-swing frame (t = 0.6 s) | legs splayed, feet dragged, club barely off the ball | recognisable backswing, feet planted |
+
+Same clips by origin, same controller states, same bootstrap, same camera, same assertions; the
+only variable is whether Unity retargeted. The *less* corrected prefab holds its stance 5× better,
+so the bend-at-the-waist / sliding legs / open hands seen on the stand-in were a retargeting artefact
+(mocap proportions ≠ body proportions, no foot pinning), not a presenter bug and not a clip quality
+issue. Seven grip-tuning rounds on the Quaternius rig were spent on the wrong cause.
+
+**What this changes in the options above**
+- Any model source (A/B/C/D) must survive a Mixamo auto-rig: single mesh (or few), clean A/T-pose,
+  symmetric, no separate hair/cloth rigs — check this before paying for a finish pass. VRoid (B)
+  exports need the Mixamo round-trip too; treat it as a hard step in the pilot (§4 step 2).
+- R1 still stands (Unity Humanoid), but its *purpose* is now the shared controller + sockets, not
+  cross-model retargeting. R3 (limb proportions) matters less for animation and more for the look.
+- The pilot (§4) gets one more gate: the Mixamo-native prefab's foot slide ≤ 0.10 m in the
+  `golfer_3d_test` harness before the character is accepted.
+
+**Import rule that will bite every Mixamo FBX (F2):** the character arrives ~2.33× oversized
+(foot→head 3.089 m vs the 1.328 m stand-in) because the FBX carries a 0.01 file scale. Do **not**
+turn *Use File Scale* off — that multiplies by 100 (measured 132.8 m). Keep `useFileScale = true`
+and put the correction in `globalScale` (Remy: `1.328 / 3.089 = 0.42992`, applied to the character
+**and every clip**). For roster models target R2 (≈1.75 m male / 1.65 m female) instead of 1.328 m.
+
+**Still open after the test:** the club's world orientation follows the clip's wrist roll, so the
+shaft reads wrong at address on the Mixamo-native rig (`sbs_address.jpg`). That is fixed by
+parenting the club to a grip target and pulling both hands onto the shaft with Animation Rigging
+two-bone IK — spec `golfer_club_grip`. Fingers stay open until an authored grip hand pose exists
+(backlog). Remy itself is 36,510 tris and is a pipeline proof, not a shippable character.
 
 ## Sources
 - Tripo pricing: https://www.tripo3d.ai/pricing · Tripo Unity rig export: https://www.tripo3d.ai/blog/export-ai-character-rig-animation-unity

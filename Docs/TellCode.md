@@ -252,7 +252,24 @@ verification (the feel constants), update STATUS.md + IMPLEMENTER_REPORT.md in
 the spec folder, and update Docs/AI_CONTEXT.md.
 ```
 
-- **`golfer_3d_test` — UNBLOCKED 2026-09-07 by Cesar (Address fix at `9c3da7e3d` reviewed PASS, 35/1). Close-out scope is SPEC §9; kickoff below SUPERSEDES the original one.** Original: SPEC_READY (2026-09-05), assets DONE. EXPERIMENT: opt-in only via `GOLFIN_GOLFER_TEST`, default OFF — must not reach normal builds.** Free-asset proof of the golfer pipeline: Quaternius Universal Base Characters (CC0) + 11 Mixamo golf clips on Y Bot, both already in `Assets/Art/3D/Characters/_Test/` → `PfGolfer_Test` + shared `AnimatorController_Golfer` + `GolferPresenter` driven by `ShotController.OnShotResolved` / `BallStateMachine.OnShotComplete` / `ClubSelectionBroadcast.OnPutterModeChanged`. Only the FBX changes when the real roster models land (`Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md`). Kickoff:
+- **`golfer_club_grip` — SPEC_READY (2026-09-07), pasteable NOW.** `Docs/Specs/Active/golfer_club_grip/SPEC.md`. The club on `PfGolfer_MixamoNative` follows the right wrist's roll; fix = club parented to a `GripTarget` driven by a `MultiParentConstraint` on both hands, two `TwoBoneIKConstraint`s pulling the hands onto anchors on the shaft (Animation Rigging package added), grip offset authored once by measurement, four new harness assertions. `PfGolfer_Test` untouched. Also closes `golfer_3d_test` (Architect review PASS 2026-09-07 — see its STATUS.md). Kickoff:
+
+```
+Read Docs/Specs/Active/golfer_club_grip/SPEC.md and implement it.
+
+Context:
+- First, close golfer_3d_test: move Docs/Specs/Active/golfer_3d_test/ to Docs/Specs/Completed/ and set its STATUS.md to DONE (Architect review PASS 2026-09-07 — the text is already in STATUS.md). Keep the harness and MenuItems in the repo.
+- Add com.unity.animation.rigging (the released version for 6000.3 — confirm in the Package Manager). Restructure PfGolfer_MixamoNative per SPEC §3.2: ClubRoot/GripTarget at prefab root (NOT under a bone), ClubSlot/PutterSlot/GripAnchor_Lead/GripAnchor_Trail/ClubStart/ClubEnd under GripTarget, GolferRig with Rig_Grip (MultiParent on GripTarget, sources LeftHand+RightHand 0.5/0.5, Maintain Offset OFF) then Rig_Hands (TwoBoneIK Lead = left arm → GripAnchor_Lead, Trail = right arm → GripAnchor_Trail). PfGolfer_Test is not touched.
+- Author the driver and putter local offsets under GripTarget once, by measurement at address (SPEC §3.4) — numbers in the report, no by-eye iteration rounds.
+- GolferPresenter: only promote AddressHeadLocal to a serialized field (default unchanged) and set the MixamoNative prefab's value from the measured ClubEnd. forceGripPose stays false; finger-solver code stays.
+- Harness: add grip.hand.onShaft_l/_r (worst of address / t=0.6 s / impact 1.167 s, < 0.035 m), grip.hands.order, club.headAtBall (< 0.05 m on the REAL ClubEnd), grip.ikNoLegEffect (foot slide within ±0.010 m of 0.0528 / 0.0915). ONE run of GOLFIN > Golfer Test > Verify Mixamo-native on Hole 06.
+- Minimal diff. Everything under GOLFIN_GOLFER_TEST / the _Test gate as before; define-off shipped code diff must be empty apart from the manifest.
+- Out of scope: fingers, left-handed mirror, clubface roll, removing the Quaternius solver, Remy's tri count (all in GPS_BACKLOG.md).
+
+When done: the four new numbers + the three frames beside evidence/9_8/mixamo_*.png, changed files with a 1-line summary each, restore the active profile to iOS-Full-GPS, STATUS.md → READY_FOR_SELF_REVIEW + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
+
+- **`golfer_3d_test` — ✅ SPENT: §9.8 DONE at `d3deb518d`, Architect review PASS 2026-09-07; closed by the `golfer_club_grip` kickoff above. Kept for history.** Was: UNBLOCKED 2026-09-07 by Cesar (Address fix at `9c3da7e3d` reviewed PASS, 35/1). Close-out scope is SPEC §9; kickoff below SUPERSEDES the original one.** Original: SPEC_READY (2026-09-05), assets DONE. EXPERIMENT: opt-in only via `GOLFIN_GOLFER_TEST`, default OFF — must not reach normal builds.** Free-asset proof of the golfer pipeline: Quaternius Universal Base Characters (CC0) + 11 Mixamo golf clips on Y Bot, both already in `Assets/Art/3D/Characters/_Test/` → `PfGolfer_Test` + shared `AnimatorController_Golfer` + `GolferPresenter` driven by `ShotController.OnShotResolved` / `BallStateMachine.OnShotComplete` / `ClubSelectionBroadcast.OnPutterModeChanged`. Only the FBX changes when the real roster models land (`Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md`). Kickoff:
 
 ```
 Read Docs/Specs/Active/golfer_3d_test/SPEC.md §9 as AMENDED 2026-09-07 ("1+2") and finish it.
