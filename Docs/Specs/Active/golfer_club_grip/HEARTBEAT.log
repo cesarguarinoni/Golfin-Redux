@@ -79,3 +79,13 @@ DIRTY:
 === end baseline ===
 
 [14:36:11Z] iter-5: §3.7 authored. Rule 1 baked (L quat -0.05943,0.46660,-0.29832,0.83052 / R 0.41102,0.73048,0.05360,-0.54275, identical across 3 bake runs). Rule 2 WristTargets at -palmLocal (L 0.00016,-0.05926,0.02200 / R -0.00012,-0.05556,0.02200); palmHalfThickness = 0.010 DECLARED FALLBACK (FBX isReadable=0 blocks vertices/boneWeights; BakeMesh+radius selection did not land in the sanity band). IKs retargeted to the WristTargets, posW/rotW = 1. Running the ONE verification pass.
+
+=== iter-6 kickoff baseline 2026-09-09T21:38:43Z ===
+HEAD 365332ab98003d3504bb4b6680917bec5aca3a1c
+DIRTY:
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/Specs/Active/golfer_club_grip/SPEC.md
+ M Docs/Specs/Active/golfer_club_grip/STATUS.md
+?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_DECISION_FINGERS.md
+?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_REVIEW_ITER5.md
+=== end baseline ===

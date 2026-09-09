@@ -1,45 +1,46 @@
-READY_FOR_SELF_REVIEW (iter-5, §3.7 hand orientation + palm offset)
+READY_FOR_SELF_REVIEW (iter-6, §3.8 finger pose)
 
-A0 = 0. 30 PASS / 2 FAIL / 9 SKIP. Solver hand-orient-v1, verified loaded before the run.
+A0 = 0 on every run. 32 PASS / 6 FAIL / 9 SKIP. Solver finger-pose-v1, verified loaded before each run.
 
-BOTH §3.7 RULES LANDED, and the two assertions the Architect added pass at their floor:
-    grip.hand.orient_l / _r   0.0000 deg / 0.0000 deg   PASS (< 5)
-    grip.hands.apart          0.0695 m                  PASS (>= 0.045)
-    grip.hand.onShaft_l / _r  0.0000 m / 0.0000 m       PASS (< 0.035) -- now the PALM point
-    grip.hands.order          0.0968 m                  PASS (0.05-0.12)
-    club.headAtBall           0.0085 m                  PASS (< 0.05)
-Orientation and separation hold at those values at ALL THREE samples (address / t=0.6 / impact),
-which is Rule 1 behaving exactly as predicted: each hand keeps its own address relationship to the
-club, so they cannot rotate into each other mid-swing. That was the "going through one another".
+BUILT: the §3.8.1 pose clip (one frame, 40 Humanoid finger muscles, isHumanMotion), the §3.8.2 Hands
+layer (Override, weight 1, Mask_HandsOnly = LeftFingers + RightFingers only, confirmed live at
+runtime as "1:Hands w=1.00"), the §3.8.4 trail station, the four §3.8.5 assertions, the rig-off
+foot-slide baseline, and the sanctioned scene-cam so the impact close-up exists at all.
 
-Rule 1 baked (identical across 3 independent bake runs):
-    GripAnchor_Lead  R_anchor_local = (-0.05943, 0.46660, -0.29832, 0.83052)  euler (10.351, 55.477, 325.938)
-    GripAnchor_Trail R_anchor_local = ( 0.41102, 0.73048,  0.05360, -0.54275) euler (328.367, 241.590, 39.564)
-Rule 2:
-    palmLocal L (-0.00016, 0.05926, -0.02200)  ->  WristTarget.localPosition ( 0.00016, -0.05926, 0.02200)
-    palmLocal R ( 0.00012, 0.05556, -0.02200)  ->  WristTarget.localPosition (-0.00012, -0.05556, 0.02200)
-    palmHalfThickness = 0.010 -- the SPEC'S DECLARED FALLBACK, not a measurement, and saying so:
-      (a) the bone-derived version was degenerate (index1/pinky1 DEFINE the normal, so their
-          component along it is ~0) and returned 0.0010 m -- a 1 mm palm;
-      (b) the mesh route is blocked by isReadable: 0 on MixamoChar_TPose.fbx, and the BakeMesh
-          workaround did not land inside the sanity band. I did not flip Read/Write on the asset.
-    shaftRadius 0.012 read from GolferPresenter, not re-declared.
+STOPPED at §3.8.3, as the spec and the kickoff both require: roll correction 36.44 deg (lead) /
+53.74 deg (trail), over the 35 deg stop. THE COMPOSED ANCHOR ROTATION WAS NOT AUTHORED. The prefab
+still carries the iter-5 §3.7 rotations; nothing is built on a number the spec says to stop at.
 
-ONE NEW FAILURE, reported not explained away:
-  grip.ikNoLegEffect  L 0.0530 (baseline 0.0528 +/-0.010) OK   R 0.0710 (baseline 0.0915) FAIL by 0.0105
-  The right foot slides LESS than the no-rig baseline, failing a two-sided band. Two changes this
-  iteration could cause it and ONE run cannot separate them:
-    1. targetRotationWeight = 1 + the WristTargets -- the arm chain now resolves differently;
-    2. the §3.6 tier-restore move (Architect-requested) -- the swing is now measured entirely at the
-       High tier instead of across a flip to Auto, and tier.low sets animatorCulling=CullCompletely,
-       so the measured window differs from the §9.8 run the 0.0915 baseline came from.
-  Cause 2 makes the stored baseline arguably stale by construction. I have NOT re-baselined or
-  widened the band -- quietly moving a threshold to match a result is the exact failure mode this
-  task has spent the week correcting. The A/B is one run with the tier restore put back.
+The stop has a mechanism, not just a threshold breach. The clip works (sampling it bends index1 to
+-71 deg) and the muscle range works (+1.00 -> knuckle-tip 0.0860; -1.00 -> 0.0674). But at full curl
+index1's local euler is (281.0, 307.9, 53.7): -52 deg of YAW and +54 deg of ROLL alongside the
+flexion. The fingers splay sideways as they bend instead of curling. So knuckle-tip only shortens
+22% across the whole range, r_curl floors at ~0.030 against an 0.018 ceiling, the fitted tunnel comes
+out skewed, and the tips sit 21-38 mm from the shaft instead of 8-24 mm.
+Root cause candidate, checkable: every finger bone in the avatar has useDefaultValues=True with
+min=max=(0,0,0) -- the finger axes on this Mixamo auto-avatar were never configured.
+Two routes, Architect's call: (a) configure the finger muscle axes in the Avatar and re-run, keeping
+muscle space so every roster model inherits the clip; (b) the other path the decision file lists --
+author the pose as BONE ROTATIONS on a posed hand clone, sidestepping the avatar, at the cost of
+being per-rig.
 
-budget.tris 36510 unchanged, out of scope since §9.1. Fingers still open -- backlog, and the
-Architect is right that the bones exist (the harness SKIP is keyed to Quaternius names).
+MOVED BY THE POSE (iter-5 -> now): fingers.closed_l [0.0293..0.0456] -> [0.0213..0.0384];
+fingers.closed_r [0.0288..0.0454] -> [0.0146..0.0329]; shaft.inTunnel_r now PASSES; thumb.downShaft_l
+24.40 deg PASS; hands.noOverlap 0.0094 -> 0.0097 (still 0.3 mm under the floor).
+UNCHANGED AND STILL GREEN: onShaft_l/_r 0.0000, orient_l/_r 0.0000 deg, hands.apart 0.0703,
+hands.order 0.0976, club.headAtBall 0.0085.
 
-EditMode 2760/2765; the 2 failures are a path-separator test and a pendulum test, untouched by a
-diff that is one gated prefab + one Editor-only file. Active profile restored to iOS-Full-GPS.
-Animation Rigging 1.3.1. Frames: evidence/grip37/ (three gameplay + three hand close-ups).
+grip.ikNoLegEffect: rig-off baseline measured as §3.6 requires -- baselineSlideL 0.0518,
+baselineSlideR 0.0810, both in the JSON header. Against the old §9.8 0.0915 that confirms the
+Architect exactly: the harness ordering moved the number, not the rig. BUT three rig-on runs of an
+effectively identical prefab gave R = 0.0279 / 0.0843 / 0.0338 -- a 0.056 m spread against a
++/-0.010 m band. The row passed on one and failed on two. That is not a leg effect and not a bad
+baseline: the measurement is not repeatable at its own threshold. Band NOT widened.
+
+DEVIATION, flagged: §3.8.1 names VoxHands / HumanoidHandPoseHelper. Both exist only to emit a
+Humanoid muscle clip, so the clip was written directly with AnimationClip.SetCurve -- identical
+artifact, no third-party package in the repo, smaller diff. Say the word if you want the sliders.
+
+Adjustments used: 2 of 3, both measurement-driven. Evidence: evidence/grip38/ -- six full-res
+1400x1400 PNG hand shots (down-the-shaft + target-side at address / t=0.6 / impact) plus three
+gameplay frames. EditMode 2760/2765. Active profile restored to iOS-Full-GPS. Animation Rigging 1.3.1.

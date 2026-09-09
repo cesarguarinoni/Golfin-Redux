@@ -1,0 +1,253 @@
+<title>Golf Grip Geometry</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f6f7f3; --ink:#1d221c; --muted:#5d665a; --line:#c9cfc3; --panel:#ffffff;
+  --shaft:#b5471f; --lead:#2f6f4e; --trail:#2b5f9e; --pad:#e0c9a6; --grid:#e6e9e1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161a16; --ink:#e7eae2; --muted:#a3ab9d; --line:#3a413a; --panel:#1f241f;
+    --shaft:#e8794a; --lead:#6cc397; --trail:#7fb2ee; --pad:#8a7352; --grid:#262c26;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161a16; --ink:#e7eae2; --muted:#a3ab9d; --line:#3a413a; --panel:#1f241f;
+  --shaft:#e8794a; --lead:#6cc397; --trail:#7fb2ee; --pad:#8a7352; --grid:#262c26;
+}
+body{background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;padding:32px 20px 64px;max-width:1040px;margin:0 auto}
+h1{font-size:28px;font-weight:600;margin:0 0 4px;text-wrap:balance}
+h2{font-size:18px;font-weight:600;margin:40px 0 8px}
+p{max-width:68ch;margin:0 0 12px}
+.lede{color:var(--muted);font-size:15px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+figure{margin:16px 0 0;background:var(--panel);border:1px solid var(--line);padding:16px}
+figure svg{max-width:100%;height:auto;display:block;color:var(--ink)}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:10px;max-width:70ch}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+code,.mono{font-family:"IBM Plex Mono",monospace;font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:12px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;font-size:13px}
+td:first-child{white-space:nowrap}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:14px}
+.key span::before{content:"";display:inline-block;width:14px;height:4px;margin-right:6px;vertical-align:middle;border-radius:2px}
+.k-shaft::before{background:var(--shaft)} .k-lead::before{background:var(--lead)} .k-trail::before{background:var(--trail)} .k-pad::before{background:var(--pad);height:10px!important}
+.wrong{border-color:var(--shaft)}
+.note{border-left:3px solid var(--shaft);padding:8px 12px;margin:16px 0;background:var(--panel)}
+ul{max-width:70ch;padding-left:20px}
+li{margin-bottom:4px}
+</style>
+
+<div class="eyebrow">GOLFIN Redux · golfer_club_grip · reference</div>
+<h1>Golf Grip Geometry</h1>
+<p class="lede">Where the shaft actually lies in each hand, in landmarks a rig can measure. Right-handed golfer; lead = left hand, trail = right hand. Real-world sizes — scale by <span class="mono">s = characterHeight / 1.75</span> (Remy stand-in: 1.328 m → s ≈ 0.76).</p>
+
+<div class="note"><strong>The one fact the rig has been missing:</strong> the club is not held across the palm like a bat. In the lead hand it runs <em>diagonally through the fingers</em> — from the base of the little finger to the <em>middle joint</em> of the index finger — with the heel pad of the hand sitting <em>on top of</em> the grip. A line fitted through the middle of a closed fist (what §3.8.3 asked for) gives a bat grip, rotated ~25–30° from a golf grip and shifted toward the wrist.</div>
+
+<div class="grid2">
+<figure>
+<svg viewBox="0 0 420 470" role="img" aria-label="Lead (left) hand, palm view, open: the shaft line runs from the crease at the base of the little finger to the middle joint of the index finger; the heel pad sits above it; the butt cap extends about 13 mm past the heel">
+  <defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <text x="14" y="24" font-size="12" font-weight="600" fill="currentColor">LEAD HAND · palm view · open</text>
+  <!-- palm -->
+  <path d="M120,300 C110,240 118,200 130,180 L285,180 C300,200 306,240 300,300 C300,350 270,395 240,405 L190,405 C150,395 122,350 120,300 z" fill="var(--pad)" fill-opacity=".35" stroke="currentColor" stroke-width="1.5"/>
+  <!-- heel pad -->
+  <path d="M195,405 C165,398 140,370 130,330 C150,345 175,352 205,350 z" fill="var(--pad)" stroke="currentColor" stroke-width="1"/>
+  <text x="118" y="430" font-size="11" fill="currentColor">heel pad — sits ON TOP of the grip</text>
+  <!-- fingers: index, middle, ring, pinky (left hand palm view: thumb on the RIGHT) -->
+  <g stroke="currentColor" stroke-width="1.5" fill="var(--panel)">
+    <rect x="130" y="60"  width="36" height="128" rx="18"/>   <!-- pinky -->
+    <rect x="170" y="34"  width="38" height="154" rx="19"/>   <!-- ring -->
+    <rect x="212" y="26"  width="38" height="162" rx="19"/>   <!-- middle -->
+    <rect x="254" y="48"  width="38" height="140" rx="19"/>   <!-- index -->
+    <path d="M300,200 C330,190 372,205 385,240 C392,262 375,282 352,278 L305,262 z"/> <!-- thumb -->
+  </g>
+  <!-- joint creases -->
+  <g stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".7">
+    <line x1="130" y1="104" x2="166" y2="104"/><line x1="130" y1="146" x2="166" y2="146"/>
+    <line x1="170" y1="86" x2="208" y2="86"/><line x1="170" y1="138" x2="208" y2="138"/>
+    <line x1="212" y1="80" x2="250" y2="80"/><line x1="212" y1="134" x2="250" y2="134"/>
+    <line x1="254" y1="96" x2="292" y2="96"/><line x1="254" y1="142" x2="292" y2="142"/>
+  </g>
+  <!-- landmarks -->
+  <circle cx="148" cy="188" r="5" fill="var(--lead)"/><text x="60" y="206" font-size="11" fill="var(--lead)">Pinky1 (MCP)</text>
+  <circle cx="273" cy="142" r="5" fill="var(--lead)"/><text x="300" y="146" font-size="11" fill="var(--lead)">Index2 (PIP)</text>
+  <circle cx="273" cy="188" r="3.5" fill="none" stroke="var(--lead)"/><text x="300" y="192" font-size="10" fill="var(--muted)">Index1 (MCP)</text>
+  <!-- shaft -->
+  <line x1="60" y1="222" x2="360" y2="106" stroke="var(--shaft)" stroke-width="22" stroke-linecap="round" opacity=".55"/>
+  <line x1="60" y1="222" x2="360" y2="106" stroke="var(--shaft)" stroke-width="2"/>
+  <circle cx="72" cy="217" r="11" fill="none" stroke="var(--shaft)" stroke-width="2"/>
+  <text x="26" y="252" font-size="11" fill="var(--shaft)">butt cap ≈ 13 mm past the heel edge</text>
+  <text x="240" y="98" font-size="11" fill="var(--shaft)">→ toward the club head</text>
+  <text x="14" y="455" font-size="11" fill="var(--muted)">Shaft axis (lead) = line through Pinky1 and Index2, offset toward the palm side by finger half-thickness + grip radius.</text>
+</svg>
+<figcaption>Lead hand. The grip crosses the fingers diagonally — base of the pinky to the <strong>middle</strong> joint of the index finger — and the heel pad closes over the top of it. The butt cap shows about half an inch (≈13 mm) beyond the heel.</figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 420 470" role="img" aria-label="Trail (right) hand, palm view, open: the shaft lies in the crease at the base of the fingers, from the base of the little finger to the first knuckle of the index finger; the lifeline crease later covers the lead thumb">
+  <text x="14" y="24" font-size="12" font-weight="600" fill="currentColor">TRAIL HAND · palm view · open</text>
+  <path d="M120,300 C110,240 118,200 130,180 L285,180 C300,200 306,240 300,300 C300,350 270,395 240,405 L190,405 C150,395 122,350 120,300 z" fill="var(--pad)" fill-opacity=".35" stroke="currentColor" stroke-width="1.5"/>
+  <!-- right hand palm view: thumb on the LEFT -->
+  <g stroke="currentColor" stroke-width="1.5" fill="var(--panel)">
+    <rect x="254" y="60"  width="36" height="128" rx="18"/>   <!-- pinky -->
+    <rect x="212" y="34"  width="38" height="154" rx="19"/>   <!-- ring -->
+    <rect x="170" y="26"  width="38" height="162" rx="19"/>   <!-- middle -->
+    <rect x="128" y="48"  width="38" height="140" rx="19"/>   <!-- index -->
+    <path d="M120,200 C90,190 48,205 35,240 C28,262 45,282 68,278 L115,262 z"/> <!-- thumb -->
+  </g>
+  <g stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".7">
+    <line x1="254" y1="104" x2="290" y2="104"/><line x1="254" y1="146" x2="290" y2="146"/>
+    <line x1="212" y1="86" x2="250" y2="86"/><line x1="212" y1="138" x2="250" y2="138"/>
+    <line x1="170" y1="80" x2="208" y2="80"/><line x1="170" y1="134" x2="208" y2="134"/>
+    <line x1="128" y1="96" x2="166" y2="96"/><line x1="128" y1="142" x2="166" y2="142"/>
+  </g>
+  <!-- lifeline -->
+  <path d="M150,205 C140,250 150,300 185,340" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="188" y="340" font-size="11" fill="currentColor">lifeline — covers the lead thumb</text>
+  <!-- landmarks -->
+  <circle cx="272" cy="188" r="5" fill="var(--trail)"/><text x="288" y="206" font-size="11" fill="var(--trail)">Pinky1 (MCP)</text>
+  <circle cx="147" cy="188" r="5" fill="var(--trail)"/><text x="60" y="206" font-size="11" fill="var(--trail)">Index1 (MCP)</text>
+  <!-- shaft: along the MCP crease, slight diagonal -->
+  <line x1="360" y1="205" x2="60" y2="180" stroke="var(--shaft)" stroke-width="22" stroke-linecap="round" opacity=".55"/>
+  <line x1="360" y1="205" x2="60" y2="180" stroke="var(--shaft)" stroke-width="2"/>
+  <text x="252" y="232" font-size="11" fill="var(--shaft)">← toward the butt (lead hand)</text>
+  <text x="60" y="172" font-size="11" fill="var(--shaft)">toward the head →</text>
+  <text x="14" y="455" font-size="11" fill="var(--muted)">Shaft axis (trail) = line through Pinky1 and Index1, same palm-side offset. Pinky does not wrap: it rides on the lead index.</text>
+</svg>
+<figcaption>Trail hand. The grip rests <em>in the fingers</em> along the base crease — base of the pinky to the first knuckle of the index — barely diagonal. The right pinky does not grip the shaft; it lies over the gap between the lead index and middle fingers (overlap) and the lifeline closes over the lead thumb.</figcaption>
+</figure>
+</div>
+
+<div class="grid2">
+<figure>
+<svg viewBox="0 0 420 420" role="img" aria-label="Cross-section looking down the shaft from the butt end: the grip circle sits in the curl of the lead fingers, the heel pad on top, the thumb at one o'clock, the trail palm on the thumb">
+  <text x="14" y="24" font-size="12" font-weight="600" fill="currentColor">SECTION · looking down the shaft from the butt</text>
+  <!-- clock ring -->
+  <circle cx="210" cy="220" r="150" fill="none" stroke="var(--grid)" stroke-width="1"/>
+  <text x="203" y="60" font-size="10" fill="var(--muted)">12 — golfer's eyes</text>
+  <text x="366" y="224" font-size="10" fill="var(--muted)">3</text>
+  <text x="206" y="386" font-size="10" fill="var(--muted)">6 — ground</text>
+  <text x="46" y="224" font-size="10" fill="var(--muted)">9</text>
+  <!-- lead fingers wrapping from below-left -->
+  <path d="M120,300 C90,250 110,170 170,150 C160,190 165,240 200,268 C185,290 150,300 120,300 z" fill="var(--lead)" fill-opacity=".25" stroke="var(--lead)" stroke-width="1.5"/>
+  <text x="66" y="330" font-size="11" fill="var(--lead)">lead fingers curl up from below</text>
+  <!-- heel pad on top -->
+  <path d="M150,150 C180,120 250,120 280,160 C255,150 200,150 150,150 z" fill="var(--pad)" stroke="currentColor" stroke-width="1"/>
+  <text x="150" y="110" font-size="11" fill="currentColor">heel pad on top</text>
+  <!-- grip circle -->
+  <circle cx="210" cy="220" r="58" fill="var(--shaft)" fill-opacity=".5" stroke="var(--shaft)" stroke-width="2"/>
+  <text x="196" y="224" font-size="11" fill="currentColor">Ø 23 mm</text>
+  <!-- thumb at 1 o'clock -->
+  <path d="M240,160 C258,150 282,160 288,182 C292,196 280,208 268,204 C256,200 248,180 240,160 z" fill="var(--lead)" fill-opacity=".5" stroke="var(--lead)" stroke-width="1.5"/>
+  <text x="296" y="176" font-size="11" fill="var(--lead)">lead thumb at 1 o'clock</text>
+  <!-- trail palm over thumb -->
+  <path d="M300,140 C340,170 350,240 320,290 C300,260 280,220 268,200 C282,190 292,170 300,140 z" fill="var(--trail)" fill-opacity=".25" stroke="var(--trail)" stroke-width="1.5"/>
+  <text x="300" y="312" font-size="11" fill="var(--trail)">trail palm (lifeline) on the thumb</text>
+  <!-- offset annotation -->
+  <line x1="210" y1="220" x2="210" y2="268" stroke="currentColor" stroke-width="1" marker-end="url(#ah)"/>
+  <text x="216" y="262" font-size="10" fill="currentColor">r = 11.5 mm</text>
+  <line x1="210" y1="268" x2="210" y2="292" stroke="currentColor" stroke-width="1" marker-end="url(#ah)"/>
+  <text x="216" y="290" font-size="10" fill="currentColor">finger ½-thickness ≈ 9 mm</text>
+  <text x="14" y="408" font-size="11" fill="var(--muted)">Shaft centre = finger bone axis + n_palm × (9 + 11.5) mm, n_palm = the palm-side normal at the landmark.</text>
+</svg>
+<figcaption>Section from the butt. The grip sits in the curl of the lead fingers with the heel pad closed over the top; the lead thumb lies along the shaft slightly right of top (“1 o'clock”), and the trail palm's lifeline covers it. Neither palm centre is on the shaft.</figcaption>
+</figure>
+
+<figure class="wrong">
+<svg viewBox="0 0 420 420" role="img" aria-label="Comparison of a bat grip across the palm with a golf grip diagonal through the fingers, on the same lead hand outline; the difference is a rotation of about 25 to 30 degrees and a shift toward the fingertips at the index">
+  <text x="14" y="24" font-size="12" font-weight="600" fill="currentColor">BAT GRIP vs GOLF GRIP · same lead hand</text>
+  <path d="M120,300 C110,240 118,200 130,180 L285,180 C300,200 306,240 300,300 C300,350 270,395 240,405 L190,405 C150,395 122,350 120,300 z" fill="var(--pad)" fill-opacity=".2" stroke="currentColor" stroke-width="1.2"/>
+  <g stroke="currentColor" stroke-width="1.2" fill="var(--panel)">
+    <rect x="130" y="60"  width="36" height="128" rx="18"/>
+    <rect x="170" y="34"  width="38" height="154" rx="19"/>
+    <rect x="212" y="26"  width="38" height="162" rx="19"/>
+    <rect x="254" y="48"  width="38" height="140" rx="19"/>
+    <path d="M300,200 C330,190 372,205 385,240 C392,262 375,282 352,278 L305,262 z"/>
+  </g>
+  <!-- bat grip: across the MCP row / palm, perpendicular to fingers -->
+  <line x1="70" y1="215" x2="360" y2="215" stroke="currentColor" stroke-width="18" stroke-linecap="round" opacity=".18"/>
+  <line x1="70" y1="215" x2="360" y2="215" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="60" y="246" font-size="11" fill="currentColor">bat: across the palm, ⟂ to the fingers — what a centred fist-fit produces</text>
+  <!-- golf grip -->
+  <line x1="60" y1="222" x2="360" y2="106" stroke="var(--shaft)" stroke-width="18" stroke-linecap="round" opacity=".5"/>
+  <line x1="60" y1="222" x2="360" y2="106" stroke="var(--shaft)" stroke-width="2"/>
+  <text x="222" y="92" font-size="11" fill="var(--shaft)">golf: Pinky1 → Index2, diagonal in the fingers</text>
+  <!-- angle arc -->
+  <path d="M150,215 A80,80 0 0 0 138,186" fill="none" stroke="var(--shaft)" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="96" y="192" font-size="11" fill="var(--shaft)">≈ 25–30°</text>
+  <text x="14" y="300" font-size="11" fill="var(--muted)">Two errors in the current rig, both visible in the iter-5 frames:</text>
+  <text x="14" y="318" font-size="11" fill="var(--muted)">1. axis across the palm → shaft passes between index and middle;</text>
+  <text x="14" y="336" font-size="11" fill="var(--muted)">2. hands stationed apart → no overlap, finger pokes through the gap.</text>
+  <text x="14" y="408" font-size="11" fill="var(--muted)">Herman Williams: “fingers wrap in a spiral fashion around the club — different than the way we grip a baseball bat.”</text>
+</svg>
+<figcaption>What the rig has versus what a grip is. The fitted-fist axis is a bat grip; the golf shaft is rotated ~25–30° in the hand plane and moved toward the fingertips at the index side. That rotation is why the shaft sat between the index and middle fingers.</figcaption>
+</figure>
+</div>
+
+<h2>Assembled grip, from the golfer's eyes at address</h2>
+<figure>
+<svg viewBox="0 0 900 300" role="img" aria-label="Both hands on the grip seen from the golfer's viewpoint: lead hand nearest the butt with two knuckles visible and the thumb down the shaft at one o'clock; trail hand below it with its pinky overlapping the gap between the lead index and middle fingers, lifeline over the lead thumb, index finger as a trigger; the V of each thumb and forefinger points to the trail shoulder">
+  <!-- shaft -->
+  <line x1="60" y1="150" x2="860" y2="150" stroke="var(--shaft)" stroke-width="26" stroke-linecap="round" opacity=".5"/>
+  <line x1="60" y1="150" x2="860" y2="150" stroke="var(--shaft)" stroke-width="2"/>
+  <text x="40" y="196" font-size="11" fill="var(--shaft)">butt cap</text>
+  <text x="810" y="196" font-size="11" fill="var(--shaft)">→ head</text>
+  <!-- lead hand block -->
+  <rect x="86" y="92" width="270" height="118" rx="40" fill="var(--lead)" fill-opacity=".22" stroke="var(--lead)" stroke-width="2"/>
+  <text x="112" y="82" font-size="12" font-weight="600" fill="var(--lead)">LEAD HAND (left)</text>
+  <!-- knuckles visible -->
+  <circle cx="300" cy="112" r="7" fill="none" stroke="var(--lead)" stroke-width="2"/>
+  <circle cx="262" cy="108" r="7" fill="none" stroke="var(--lead)" stroke-width="2"/>
+  <circle cx="226" cy="110" r="7" fill="none" stroke="var(--lead)" stroke-width="2" stroke-dasharray="3 2"/>
+  <text x="196" y="70" font-size="10" fill="var(--lead)">2–2½ knuckles visible</text>
+  <!-- lead thumb down the shaft -->
+  <path d="M250,150 L385,150 L385,166 L250,172 z" fill="var(--lead)" fill-opacity=".55" stroke="var(--lead)"/>
+  <text x="392" y="176" font-size="11" fill="var(--lead)">thumb down the shaft, 1 o'clock, “short thumb”</text>
+  <!-- trail hand block, overlapping -->
+  <rect x="330" y="118" width="250" height="118" rx="40" fill="var(--trail)" fill-opacity=".22" stroke="var(--trail)" stroke-width="2"/>
+  <text x="392" y="262" font-size="12" font-weight="600" fill="var(--trail)">TRAIL HAND (right)</text>
+  <!-- pinky over gap -->
+  <path d="M330,134 C318,120 334,104 350,112 L362,128 z" fill="var(--trail)" fill-opacity=".6" stroke="var(--trail)"/>
+  <text x="256" y="246" font-size="11" fill="var(--trail)">pinky rides ON the lead index/middle gap — not on the shaft</text>
+  <!-- trigger finger -->
+  <path d="M560,150 C590,146 606,160 592,178 C580,186 566,176 560,166 z" fill="var(--trail)" fill-opacity=".6" stroke="var(--trail)"/>
+  <text x="606" y="170" font-size="11" fill="var(--trail)">index = “trigger” behind the shaft</text>
+  <!-- Vs -->
+  <path d="M210,96 L246,60 L282,96" fill="none" stroke="var(--lead)" stroke-width="2" stroke-dasharray="4 3"/>
+  <path d="M470,122 L506,86 L542,122" fill="none" stroke="var(--trail)" stroke-width="2" stroke-dasharray="4 3"/>
+  <text x="600" y="66" font-size="11" fill="currentColor">both V's (thumb–forefinger) point at the trail shoulder</text>
+  <line x1="590" y1="72" x2="512" y2="86" stroke="currentColor" stroke-width="1" marker-end="url(#ah)"/>
+  <!-- stations -->
+  <line x1="86" y1="286" x2="356" y2="286" stroke="var(--lead)" stroke-width="2"/>
+  <line x1="330" y1="292" x2="580" y2="292" stroke="var(--trail)" stroke-width="2"/>
+  <text x="86" y="280" font-size="10" fill="var(--muted)">lead occupies ≈ 85–95 mm of grip from the butt</text>
+  <text x="440" y="280" font-size="10" fill="var(--muted)">trail overlaps by one finger (≈ 18 mm)</text>
+</svg>
+<figcaption>Assembled. The hands <strong>overlap</strong> — the trail pinky sits on top of the lead index/middle gap, and the trail lifeline covers the lead thumb — so the trail hand's finger crease starts roughly one finger width past the lead index, not a palm width past it. From the golfer's eyes two to two-and-a-half knuckles of the lead hand show, and both thumb–forefinger V's point at the trail shoulder.</figcaption>
+</figure>
+
+<h2>Bone-space rules for the rig</h2>
+<p>Mixamo names; “+ n·d” means offset by <em>d</em> along the palm-side normal at that landmark. <span class="mono">r</span> = grip radius (11.5 mm real → 8.7 mm at s = 0.76), <span class="mono">t</span> = finger half-thickness (9 mm → 6.8 mm).</p>
+<table>
+<tr><th>Quantity</th><th>Rule</th><th>Replaces</th></tr>
+<tr><td>Lead shaft axis</td><td><span class="mono">A = LeftHandPinky1 + n·(t+r)</span>, <span class="mono">B = LeftHandIndex2 + n·(t+r)</span>; direction butt→head = A→B</td><td>§3.8.3 four-midpoint fit (a bat axis)</td></tr>
+<tr><td>Butt cap (lead)</td><td>≈ 13 mm · s beyond the ulnar edge of the heel pad along −(A→B)</td><td>—</td></tr>
+<tr><td>Heel pad</td><td>above the shaft: the palm surface at the pinky-side heel must be on the far side of the axis from the fingertips</td><td>—</td></tr>
+<tr><td>Lead thumb</td><td>along the shaft, rotated ≈ 15–30° toward the trail side from “top” (1 o'clock viewed from the butt); short thumb, tip near the trail hand's lifeline</td><td>§3.8.5 thumb.downShaft (keep, add the clock angle)</td></tr>
+<tr><td>Trail shaft axis</td><td><span class="mono">A' = RightHandPinky1 + n·(t+r)</span>, <span class="mono">B' = RightHandIndex1 + n·(t+r)</span>; butt→head = A'→B'</td><td>§3.8.3</td></tr>
+<tr><td>Trail station</td><td>RightHandPinky1 projects onto the shaft at the same station as the lead hand's Index1/Middle1 gap (overlap); trail middle/ring fingers wrap just past the lead index</td><td>§3.8.4 “lead palm width + 4 mm” — <strong>wrong</strong>, that separates the hands</td></tr>
+<tr><td>Trail palm</td><td>lifeline (crease from Index1 base toward the wrist) lies on the lead thumb; the trail palm centre is <em>off</em> the shaft, on the trail side</td><td>any “palm on shaft” rule</td></tr>
+<tr><td>Trail pinky</td><td>does not grip: lies over the lead index/middle gap. Exclude it from <span class="mono">fingers.closed_r</span></td><td>§3.8.5 (eight fingers → seven)</td></tr>
+<tr><td>Trail index</td><td>“trigger”: curled behind the shaft, separated from the middle finger by ≈ 1 finger width</td><td>—</td></tr>
+<tr><td>Check from the eyes</td><td>2–2½ lead knuckles visible; both V's toward the trail shoulder</td><td>a camera-only check, not an assertion</td></tr>
+</table>
+
+<h2>Sources</h2>
+<ul>
+<li><a href="https://mygolfspy.com/news-opinion/golf-grip-explained/">MyGolfSpy — Golf Grip Explained</a>: “diagonally across the base of your fingers… from the base of your pinky finger to the pad below your index finger”; trail: “across the base of your pinky finger and the first knuckle of your index finger”; “palm of your trailing hand rests on top of the lead thumb”.</li>
+<li><a href="https://www.hermanwilliamsgolf.com/golf-grip-how-to-grip-golf-club/">Herman Williams Golf</a>: “the handle runs through the middle joint of the left forefinger then back along the base of the pinky finger”; heel pad “on top of and across the handle”; thumb “about 1 o'clock”; trail hand “in the crease of the middle two fingers”; “lifeline crease in the right palm covers the left thumb”; “different than the way we grip a baseball bat”.</li>
+<li><a href="https://www.golfdistillery.com/golf-tips/setup/grip/">Golf Distillery</a>: “Grip the club half an inch from the end”; “from the middle of the index finger to the base of the little finger”; “2½ knuckles visible”.</li>
+</ul>

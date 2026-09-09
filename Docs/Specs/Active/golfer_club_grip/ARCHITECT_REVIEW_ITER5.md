@@ -1,0 +1,18 @@
+# Architect review — iter-5 (§3.7) — 2026-09-10
+
+**Re:** `IMPLEMENTER_REPORT.md` iter-5, branch `golfer_3d_test`, solver `hand-orient-v1`. **Verdict: the grip is done. One diagnostic run to close the foot-slide row properly, then READY_FOR_SELF_REVIEW.**
+
+## What I checked
+- The six frames, not just the table. `01_address_hands`: two hands stacked on the grip, palms on the shaft, thumb down — reads as a grip at gameplay scale. `02_t0_6_hands`: top of the backswing, hands together, club over the shoulder, nothing interpenetrating. `03_impact_hands` is a crop of trees — because the gameplay camera has already cut to the ball at impact (the §9.2 deferred launch does exactly that). Not Code's fault; A4 amended (below).
+- Rule 1 bakes identical across three runs; Rule 2 shape correct by construction. `palmHalfThickness = 0.010` declared as the fallback, with both measurement attempts and why each failed — accepted as is; the bone-derived degenerate case (index1/pinky1 define the normal) is a fair catch. Do not flip `isReadable` for this.
+- `grip.hand.orient_*` at 0.0000° at all three samples is the expected value of Rule 1 (the hands are *defined* relative to the club), so it is a regression guard, not a measurement of quality. `grip.hands.apart` constant 0.0695 m — same reason. Fine.
+
+## Decisions
+1. **`grip.ikNoLegEffect` R = 0.0710 m below band — a baseline problem, not a leg problem.** Two-bone IK writes `LeftArm/LeftForeArm/LeftHand` and the right equivalents; it cannot move a foot. What changed under the feet is the harness ordering I asked for (tier restored *after* the shot), so the 0.0915 m baseline was taken under conditions that no longer exist. Code was right not to widen the band. The correct A/B is not "put the tier flip back" — it is **re-measure the baseline the way baselines are made**: one run under the *new* ordering with `RigBuilder` disabled on the spawned prefab (rig off, everything else identical). That number becomes `baselineSlideL/R` in the JSON header, and the §3.7 run must sit within ±0.010 m of it. Expected: R ≈ 0.071 (tier ordering) → row closes. If rig-off returns ≈ 0.0915 → the rig *is* changing the legs somehow, and that is a real finding: stop and report, no fix attempt. SPEC §3.6 amended.
+2. **`addressHeadLocal`: do not author it.** The real club head is on the ball (0.0085 m); authoring the field re-opens the solve for nothing. Field promotion stays as data; `stance.address.clubReachesBall` is informational from now on. SPEC §3.5 amended.
+3. **Impact close-up:** allowed and required from a second camera (`Camera.Render` to a RenderTexture at the impact sample, labelled `scene-cam`). CAPTURE RULE 0 was right for measurements; it does not apply to a frame whose only purpose is showing hands the gameplay camera cannot see. SPEC §6 A4 amended.
+4. **EditMode 2760/2765:** the path-separator test and `PendulumSchemeDriverTests.MarkerFreezes_AtTheUpswingReversal_NotAtRelease` are outside this diff. But "flaky" is a guess; the pendulum one expecting 0.309 and getting 0.0 looks like a real regression from the uncommitted control-scheme edits this tree has carried since §9.7. Not this spec's — Cesar: it needs one run of that test on a clean `main` checkout before the next scheme kickoff.
+5. `palmHalfThickness` 0.010, club scale 0.86880, the §3.4 poses: accepted unchanged.
+
+## Exit
+A3 passes when the foot-slide row is measured against the rig-off baseline (or reports a real leg effect). Then `STATUS.md → READY_FOR_SELF_REVIEW`, and I do the close-out review: merge `golfer_3d_test` → `main` is the step after that (Code, in its own commit, once Cesar says so).

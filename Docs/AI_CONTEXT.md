@@ -4,6 +4,44 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 (golfer_club_grip iter-6) — **the fingers close, and the avatar is why they cannot close further**
+
+**Built.** A one-frame Humanoid muscle clip (40 finger muscles) on an Override `Hands` layer with a
+fingers-only avatar mask — the standard way held props are done, and rig-independent because it is
+muscle space. Plus the four §3.8.5 assertions that encode what "holding" means, the rig-off
+foot-slide baseline, and a sanctioned scene-cam so the impact close-up exists at all (the gameplay
+camera has cut to the ball by then).
+
+**Stopped, as the spec requires.** §3.8.3's roll correction came out 36.44° / 53.74° against a 35°
+stop, so the composed anchor rotation was **not** authored. The stop has a mechanism:
+
+| finger `Stretched` | index1 local euler | knuckle→tip |
+|---|---|---|
+| +1.00 (open) | (16.3, 3.7, 9.2) | 0.0860 |
+| −1.00 (max curl) | (281.0, **307.9**, **53.7**) | 0.0674 |
+
+At full curl the joint carries **−52° of yaw and +54° of roll** alongside the −79° of flexion — the
+fingers splay sideways as they bend instead of curling. So knuckle→tip shortens only 22 % across the
+whole muscle range, `r_curl` floors at ≈0.030 against an 0.018 ceiling, and the fitted tunnel comes
+out skewed. Every finger bone in the avatar has `useDefaultValues = True` with `min = max = 0`: the
+finger axes on this Mixamo auto-generated avatar were never configured. **Muscle space cannot
+produce a clean curl through an unconfigured axis.**
+
+**Two routes, Architect's call:** configure the finger muscle axes in the Avatar (keeps muscle space,
+every roster model inherits the clip), or author the pose as bone rotations on a posed hand clone
+(sidesteps the avatar, per-rig).
+
+**A measurement that cannot support its own threshold.** `grip.ikNoLegEffect` got its proper rig-off
+baseline (L 0.0518 / R 0.0810 — confirming the harness ordering, not the rig, had moved the old
+0.0915). But three rig-on runs of an effectively identical prefab returned R = 0.0279 / 0.0843 /
+0.0338 — a 0.056 m spread against a ±0.010 m band, passing once and failing twice. The band was not
+widened; the row needs either a deterministic measurement or a tolerance derived from its own
+variance before it is trusted in either direction.
+
+**The pose did move the grip:** `fingers.closed_r` [0.0288..0.0454] → [0.0146..0.0329],
+`shaft.inTunnel_r` now passes, `thumb.downShaft_l` 24.40°. Every §3.7 row still green.
+
+---
 ## 2026-09-09 (golfer_club_grip iter-5) — **the grip is on the club, and the metrics can finally see it**
 
 **What §3.7 fixed.** Two rules, both measured off the clip and the bones, nothing authored by eye:
