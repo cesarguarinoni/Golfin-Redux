@@ -1,0 +1,34 @@
+=== iter-1 kickoff baseline 2026-09-09T10:28:23Z ===
+HEAD: 544758d5b676229ed1ca758cae200347d018f66e  (reports: content_art stamped for build 2828)
+DIRTY (git status --porcelain --untracked-files=all) at kickoff:
+(clean — verified at session start, commit 544758d5b)
+=== end baseline ===
+10:28:23Z read SPEC + repo sites (ProTipCard, UiMotion, ButtonPressFeedback, DailyMissionPill, PressFeedbackCoverageTests)
+10:28:23Z launched Unity Editor (was closed); MCP bridge up on :21573 via unity-mcp-cli
+10:28:23Z wrote LoadingTipCatalog / LoadingTipSequencer / LoadingTipStore + LoadingTips.csv (34 rows)
+10:28:23Z rewrote ProTipCard onto the sequencer + UiMotion atoms
+10:28:23Z exported all 34 Authored-diagram frames from Figma at 1x/806px; deleted the 8 old Tip *.png
+10:28:23Z wired ShellScene ProTipCard (TipContent wrapper, ButtonPressFeedback, tipsCsv, 34 named sprites)
+10:28:23Z isolated the ShellScene save from 158 rects of unrelated layout churn (spliced onto HEAD)
+10:28:23Z texts: import plan 28 add / 7 change / 0 conflict -> --apply -> content_publish -> texts v50; export --check clean
+11:05:22Z Cesar interrupt: image outline thick on sides / thin top-bottom
+11:05:22Z   measured: all 34 exports carried an OPAQUE 10-29px slate band L/R, 0px T/B
+11:05:22Z   root cause: download_assets renders a node IN CANVAS CONTEXT, baking the card's
+11:05:22Z   frosted Pop-up panel into the gutters where the inner content frame (x=10,w=786)
+11:05:22Z   does not reach. NOT a Figma authoring bug and NOT a Unity layout bug.
+11:05:22Z   fix: re-exported all 34 via get_screenshot contentsOnly=true -> transparent margins
+11:05:22Z frame trace of a real tap exposed a 1-frame 220px height flash; pinned
+11:05:22Z   LayoutElement.preferredHeight BEFORE the rebind; re-traced clean
+11:05:22Z gates re-run green: GolfinRedux.Tests.EditMode 296/0, Golfin.UI.Polish.Tests 162/0
+11:13:13Z fix 2 (Cesar): Tip_LEVELUP cost 805 RP -> 41 RP
+11:13:13Z   LevelUpCosts.csv row 81 = cost_r 41 (GetLevelUpCost(toLevel) = cost to REACH that level)
+11:13:13Z   Figma text node 14204:33499 edited (Rubik SemiBold, auto-width 142->108), re-exported contentsOnly
+11:13:13Z   Unity re-import verified: GUID unchanged d5d2fde2..., card slot 17 resolves, old glyph strip cleared
+11:13:13Z   admin: nothing to do — TIP_TIMING already is_active=false server-side; no text row changed
+11:13:13Z gate re-run: GolfinRedux.Tests.EditMode 296 passed / 0 failed
+11:35:56Z daily-report video: new LoadingTipsDemoRecorder (Unity Recorder, GameView, 1170x2532)
+11:35:56Z   take 1 exposed a REAL bug: NextTip advanced the sequencer TWICE per tap (1,3,5,7)
+11:35:56Z   cause: UiMotion.Then's tail re-entered Run on the same handle -> tail ran twice
+11:35:56Z   fix: SwapRoutine yields both Fades in one routine; + instant path when motion is off
+11:35:56Z   caption fixes: stale --title default, y-offset over NOW LOADING, 79px overflow, span
+11:35:56Z   verified order 1..8 then pass 2; gates 296/0 and 162/0

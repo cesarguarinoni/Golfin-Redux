@@ -4,6 +4,98 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 — loading_tips: **the loading screen finally teaches the game we shipped** — DONE, approved by Cesar
+
+The Pro Tips were two systems out of date: seven `TIP_*` strings describing grade rings that were
+replaced by `miss_grade_duff`, a "flicker through the ball" aim that `control_scheme_seam` retired,
+and nothing at all about Pendulum / Tap Timing / Free Swing, stats, condition, missions,
+tournaments, 1v1, gacha or PLAYLIFE. There are now **34 tips**, each with a drawn diagram, and the
+card reads them from a catalog instead of owning them.
+
+**`ProTipCard` lost its list.** `string[] tipKeys` + a `Sprite[]` matched **by index** (adding a key
+without a sprite in the same slot silently shifted every image one tip down) became
+`Assets/Resources/Data/LoadingTips.csv` + a name-keyed `TipSprite[]`. The pool rules from the
+original Confluence design live in a pure `LoadingTipSequencer` with an injectable RNG: the 8-tip
+first pool walked end to end **twice** in `order`, then a uniform draw from all 34 **minus the last
+five keys shown**. `LoadingTipStore` persists `{firstPass, firstIndex, recentKeys}` in PlayerPrefs,
+so the position survives a quit — a device property, not an account one, so a reinstall restarts
+the tutorial. `LoadingScreenController`, `GameplaySceneLoader`, `ScreenManager` and `ContentCatalogs`
+were not touched.
+
+**Cesar's rule — "the user gets different tips each run" — is proven end to end**, not asserted:
+cleared PlayerPrefs, real Home → PLAY → hole card → ACTION path, and the three loading screens
+opened on `TIP_SWING` / `TIP_ACCURACY` / `TIP_VIEW` with the state file quoted after each. The cold
+boot opens on tip **1**, not tip 2 — `Initialize` advances only when the recent ring proves a tip
+was already shown, which is the double-advance guard.
+
+**One defect, caught by Cesar on sight, and it was mine.** He said the outline around the image was
+"thick on the sides, thin on top and bottom". Measured rather than eyeballed: all 34 exports carried
+an **opaque** 10–27 px slate band left and right and 0 px top and bottom. `download_assets` renders
+a Figma node **as it sits on the canvas**, so the tip card's own frosted `Pop-up` panel had been
+baked into the gutters where the diagram's content frame (`x=10, w=786`) does not reach. Not a
+Figma bug and not a Unity layout bug — my export call ignored the spec's own words, "transparent
+background". Re-exported all 34 through `get_screenshot` with `contentsOnly: true` and verified
+per file that the margins are `alpha 0`.
+
+**A second defect the frame trace found that no screenshot would have.** A 181-frame sample of a
+real tap showed the card snapping **877.5 → 1097.5 → 942.3** before the height tween's ease began —
+a one-frame 220 px flash, because `Show()`'s `ForceRebuildLayoutImmediate` ran before the pin. The
+`LayoutElement.preferredHeight` pin now goes on **before** the rebind; re-traced at
+1077.5 → 937.5 over 0.24 s, monotone.
+
+**Polish (§3.3a):** the tip swap is one `UiMotion.Fade` on a `TipContent` CanvasGroup covering text
+**and** image (`CrossfadeToTip` and `textFadeDuration` deleted), the height eases with
+`UiMotion.Tween`, the card finally has `ButtonPressFeedback` — Rule 11's sweep only counts `Button`s
+and this is an `IPointerClickHandler` in a scene, so it had been missed for four months — and
+"TAP FOR NEXT TIP" loops `UiMotion.Pulse` 0.55 ↔ 1.0 in the shape `DailyMissionPillController`
+uses. Traced: `contentAlpha` 1.000→0.000→1.000 over 2× `FadeDur`, `cardScaleY` 1.000→**0.950**→1.000
+never above 1.0, `tapAlpha` restarting on the tap. `PressFeedbackCoverageTests` now enumerates the
+card explicitly, because a prefab audit cannot see a scene object.
+
+**Gates:** `GolfinRedux.Tests.EditMode` **296 passed / 0 failed** (16 new), `Golfin.UI.Polish.Tests`
+**162 passed / 0 failed**. Texts: 28 added + 7 changed + `TIP_TIMING` deactivated, published as
+**texts v50**, `export_content.py --check` clean, bundled table rebuilt to 1168 rows. Saving
+ShellScene rewrote 158 unrelated RectTransforms (the known layout-churn scar) — spliced the five
+modified and five new YAML documents onto HEAD instead, final diff 13 hunks inside the card.
+
+**Fix 2, same session.** `Tip_LEVELUP`'s panel drew "Lv 80 → 81, COST 805 RP".
+`GetLevelUpCost(toLevel)` is the cost to reach a level and every call site passes `nextLevel`, so
+the right row is `LevelUpCosts.csv` **81 → 41 RP**. Corrected on the Figma text node and
+re-exported; GUID unchanged, so no scene reference moved. **Nothing was needed on the admin side**,
+checked against `content_rows` rather than assumed: the tip string quotes no number so it did not
+change, and `TIP_TIMING` is already `is_active=false` server-side — the importer carried the CSV's
+fourth column through the publish, so §2.4's "Cesar deactivates the row in the admin" was already
+done. `TIP_STORE` / `TIP_REPAIR` stay `is_active=true` as *strings*; what is gated off is their
+row in the bundled `LoadingTips.csv`.
+
+**The daily-report clip found a bug nothing else could.** `LoadingTipsDemoRecorder` (Unity Recorder,
+Game View, 1170x2532, real widget taps throughout) was asked to show the tutorial *in order*, and
+its per-beat log read `SWING, GRADES, CLUB, RARITIES` — tips **1, 3, 5, 7**, with 2, 4, 6 and 8
+unreachable by tapping. `NextTip` was `Run(ref _swap, Then(fadeOut, () => { Advance(); Run(ref
+_swap, fadeIn); }))`, and `Then` runs its tail **twice** — once at the routine's end and once from
+the finalizer it registers, because an interrupted sequence still owes its tail. Re-entering `Run`
+on the same handle from inside that tail settles the routine running it, the settle fires the
+finalizer, the finalizer runs the tail again. Same shape as the self-re-arming `Then` that took the
+Editor down in `DailyMissionPillController.StartGlow`.
+
+**No trace I had could see it**: both advances land in the same frame, so the alpha, height and
+press-feedback traces were all correct and only the second advance was ever drawn. The swap is now
+ONE routine yielding the two `Fade` sweeps — which exposed a quieter second bug, that a
+finalizer-less routine handed to `UiMotion.Run` does *nothing* when the motion kill switch is off,
+so `NextTip` now takes its instant path when `!UiMotion.Enabled || !Application.isPlaying`. Verified
+order after the fix: `SWING, ACCURACY, GRADES, VIEW, CLUB, FORECAST, RARITIES, CONTROLS`, then pass
+2 restarting on `SWING` in Japanese. Gates 296/0 and 162/0. Clip:
+`Docs/Reports/Media/loading_tips/loading_tips.mp4`.
+
+**Three caption defects on the way there**, all found by decoding frames rather than trusting the
+build: `build_bot_video.py --title` still defaults to a stale `"Loop v2 — Stage F"` and burned it
+over the logo; captions landed on the `NOW LOADING` label (added `--caption-y-offset`, default 0);
+and the default caption size `h // 32` = **79 px** clips at ~33 characters on a 1170-wide frame.
+
+**Open:** the `LegacyBootHome` loading screen never appeared on a signed-in dev boot
+(`Logo → Splash → Home`), so only the `HoleLoad` target was exercised.
+
+---
 ## 2026-09-09 — asset_loans_polish: **the loan UI moves the way the rest of the game moves** — DONE, approved by Cesar
 
 The four hand-rolled behaviours in the shipped `asset_loans` UI now go through the shared polish
