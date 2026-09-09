@@ -1,0 +1,38 @@
+console sweep @ 36dc3d480   (GOLFIN/Design Audit/Console sweep — per screen)
+Every log line is attributed to the screen that was on when it was emitted;
+the counter is armed BEFORE the navigation, so the cost of arriving counts.
+
+screen                      err  warn  exc   how
+--------------------------------------------------------------------------------------------
+Home                          0     0    0   bottom-nav NavHomeButton
+GeneralShop                   0     0    0   bottom-nav NavGachaButton
+ModeSelection                 0     0    0   bottom-nav NavTeeButton
+Inventory                     0     0    0   bottom-nav NavInventoryButton
+Roster                        0     0    0   bottom-nav NavCharactersButton
+SettingsOverlay               0     0    0   SettingsButton.onClick
+HomeReturn                    0     0    0   bottom-nav NavHomeButton
+HoleSelection                 0     0    0   ShowScreen (no player path from a fresh session)
+MissionSelection              0     2    0   ShowScreen (no player path from a fresh session)
+TournamentSelection           0     0    0   ShowScreen (no player path from a fresh session)
+TournamentHoleSelection       0     1    0   ShowScreen (no player path from a fresh session)
+TournamentLeaderboard         0     1    0   ShowScreen (no player path from a fresh session)
+Leaderboard                   0     0    0   ShowScreen (no player path from a fresh session)
+GachaHistory                  0     0    0   ShowScreen (no player path from a fresh session)
+GachaPrizes                   0     0    0   ShowScreen (no player path from a fresh session)
+StaminaShopSelection          0     0    0   ShowScreen (no player path from a fresh session)
+StaminaShopDetail             1     0    0   ShowScreen (no player path from a fresh session)
+--------------------------------------------------------------------------------------------
+TOTAL                         1     4    0   17 screen(s)
+
+── MissionSelection
+   Warning: [Shimmer] missions.daily — NO HOST under MissionSelectionScreen (GpsPolishBuilder has not been run on this prefab)
+
+── TournamentHoleSelection
+   Warning: [TournamentHoleSelection] No SelectedTournamentId set.
+
+── TournamentLeaderboard
+   Warning: [TournamentLeaderboard] SelectedTournamentId is null/empty — normal nav always sets it.
+
+── StaminaShopDetail
+   Error: [StaminaShopDetail] Shop '' not found in catalog.
+
