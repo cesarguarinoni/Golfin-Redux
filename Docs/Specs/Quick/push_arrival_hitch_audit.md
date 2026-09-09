@@ -138,7 +138,7 @@ the five frames really do span the push rather than a guess at where it was.
 
 | artifact | what it shows |
 |---|---|
-| `media/…/strip_modesel_missionsel.jpg` | **ModeSelection → MissionSelection, through the REAL mode-card `ExpandedContainer/ActionButton`.** BEFORE: the leaver slides off to the left over bare background and the arriver NEVER APPEARS — it is drawn underneath, which is §3's defect made visible. AFTER: MissionSelection is on top and visible for the whole travel. |
+| `media/…/strip_modesel_missionsel.jpg` | **ModeSelection → MissionSelection, through the REAL MISSIONS card `ExpandedContainer/ActionButton`** (re-recorded 2026-09-09 — the first take drove the PRACTICE card and was mislabelled). BEFORE: the title flips to MISSIONS immediately while ModeSelection's content just drifts 0.3·W and the arriver is nowhere — it is underneath — and then the screen HARD-CUTS. That is §3's defect made visible. AFTER: both contents travel together and MissionSelection is on top for the whole slide. |
 | `media/…/strip_gachaprizes_generalshop.jpg` | The same, for the pair with no player path (both ends re-seated, labelled on the strip). BEFORE: five frames of the same empty Prizes panel while the title swaps underneath. AFTER: the banner carousel slides in and settles. |
 | `media/…/strip_ab_parallax.jpg` + `media/…/ab_parallax_clip.mp4` | Fix 3's A/B, 4× slow and side by side. At **0.3** the leaver lags and ModeSelection is still sitting there behind the arriving panel — two speeds over a fixed backdrop, which reads as a stutter. At **1.0** the pair moves as one rigid strip. |
 
@@ -151,37 +151,43 @@ actually measured: `null` at `36dc3d480` (fix 3 did not exist yet), `0.30`, and 
 
 **Per-frame content X** (`media/…/contentx_before_36dc3d480.tsv`, `contentx_after_head.tsv`,
 written by `Assets/Editor/PushContentXLogger.cs`). One row per frame of the push, driven by the
-REAL mode-card `ExpandedContainer/ActionButton`. Sampled from `LateUpdate`, not from the logger's
-own coroutine: coroutines resume in START order and this one starts first, so reading there
-reported every value one frame stale — which is exactly the doubt that makes an odd number useless.
+REAL **MISSIONS** mode-card `ExpandedContainer/ActionButton`. Two things make the numbers
+trustworthy, and both exist because the first version of this got them wrong:
 
-| | frames | leaver travel | worst single frame | worst dt |
-|---|---|---|---|---|
-| before `36dc3d480` | 11 | **351 px = 30 % of W** | 223 px = **63 % of its own travel** | 92 ms |
-| after HEAD | 16 | **1170 px = 100 % of W** | 408 px = **35 % of its own travel** | 110 ms |
+- the card is chosen BY NAME. Taking "the first expanded ActionButton" gets PRACTICE, so the push
+  was `ModeSelection → HoleSelection` while every artifact said MissionSelection;
+- the arriver and leaver rects are read from `LayeredPush`'s OWN collected layers
+  (`_active.To.Content[0]`), never resolved by name — so a rect that is not in the animation cannot
+  be measured and reported as motionless. `PushStripRecorder` records `actualTarget` in its sidecar
+  for the same reason.
 
-Both fixes are in those two columns. **Fix 3** is the travel: 30 % of the width before (the old
-`ParallaxFactor` 0.3 applied to a same-backdrop pair), 100 % after. **Fix 1** is the worst frame:
-before, one 92 ms hitch consumed 63 % of the leaver's whole journey in a single draw — the teleport,
-measured; after, the same class of hitch (110 ms, the arriving screen still costs what it costs) can
-only spend `MaxTweenStep` = 1/30 s of the tween, which an ease-out turns into 35 %. The cap is doing
-exactly what it was written to do, and the held frame is why the 110 ms lands before the slide
-rather than inside it.
+Sampled from `LateUpdate`, not from the logger's coroutine: coroutines resume in START order and
+this one starts first, so reading there reported every value one frame stale.
 
-**⚠️ An anomaly the log found, and it is NOT a regression.** `MissionSelectionScreen/Content` — the
-ARRIVER's content rect — reads `0.0` on every frame, in BOTH builds. Only the leaver travels. Ruled
-out: duplicate scene objects (instance ids logged, one each), a layout group on the parent (the
-screen root has none; the VLG on `Content` drives its children, not itself), coroutine sampling
-order (re-measured from `LateUpdate`), `ScreenEntryMotion`/`UiMotion.Rise` (it preserves `x`), and
-`Collect` filtering on active (it does not — `Transform.Find` sees inactive children). `LayeredPush`
-parks the arriver at `RestX + enterOffset` before `SetActive` and lerps it every frame, and
-`LastPushEnterOffset` is recorded as 1170, so the intent is there and the write is not landing.
+| | frames | arriver travel | leaver travel | worst single frame | `dArriver == dLeaver` |
+|---|---|---|---|---|---|
+| before `36dc3d480` | 11 | 962 px | **289 px** | **72.2 %** (arriver) | **no** — ratio ≈ 3.3 = 1 / 0.3 |
+| after HEAD | 16 | 1170 px | **1170 px** | **38.0 %** | **YES, every frame** |
 
-It predates this task — identical in both builds — so it is filed rather than fixed here. Two things
-follow from it: the transition still reads correctly because the leaver's travel does the work, and
-**the invariant gate cannot see it** — `endTargetX` and `endTargetRestX` are both 0, so every
-arriver assertion passes vacuously whether the rect moved or not. Worth a `p.To.Content.Count > 0`
-assertion in the probe.
+Both fixes are in that table, and the last column is the better proof of fix 3 than the A/B clip is:
+
+**Fix 3.** Before, the leaver crawled 289 px while the arriver crossed 962 — two speeds over one
+fixed backdrop, which is the stutter. After, `dArriver` and `dLeaver` are IDENTICAL on every single
+frame (−38.0, −15.0, −13.1, −10.6, −8.6 …). That is what "one rigid strip" means, measured per frame.
+
+**Fix 1.** Before, frame 1 was a 98.7 ms hitch that carried the arriver **72.2 %** of the content
+width in one draw — the teleport, measured. After, the same class of hitch (101.8 ms; the arriving
+screen still costs what it costs) can only spend `MaxTweenStep` = 1/30 s of the tween, which an
+ease-out turns into 38 %. And frame 0 before shows the arriver already at 962 of 1170 — the build
+frame had eaten 18 % of the travel before the first sampled frame; after, frame 0 reads exactly
+1170.0, untouched, which is the held frame doing its job.
+
+> **Correction of record.** An earlier revision of this section reported that the arriver's rect
+> never moves in either build and filed it as a defect the invariant gate could not see. That was a
+> harness bug, described above, not a product defect — the arriver moves correctly in both builds.
+> The one suggestion that survives it on its own merit: an empty `p.To.Content` would pass every
+> arriver assertion vacuously, because `endTargetX` and `endTargetRestX` are both 0, so a
+> `p.To.Content.Count > 0` check in the probe is cheap insurance. Nothing is empty today.
 
 **P1** (`media/…/gacha_p1_*.jpg`). Two REAL x10 pulls against the live server, the second made FROM
 the Prizes screen:
