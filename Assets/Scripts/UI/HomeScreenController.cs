@@ -68,8 +68,19 @@ namespace GolfinRedux.UI
         /// </summary>
         [SerializeField] private Golfin.UI.Home.DailyMissionPillController dailyMissionPill;
 
+        /// <summary>
+        /// The notice box's page motion (notice_panel_slide §2). Assigned, every page change goes
+        /// through <see cref="Golfin.UI.Home.NoticePageSlider.SlideTo"/> — the box slides — and the
+        /// direct <c>.text</c> writes below become the fallback for a scene that has no slider.
+        /// <para>Unassigned is not an error: notices repaint in place, exactly as before this task.</para>
+        /// </summary>
+        [SerializeField] private Golfin.UI.Home.NoticePageSlider noticeSlider;
+
         [SerializeField] private int totalNewsPages = 3;
-        [SerializeField] private float newsAutoCycleInterval = 5f; // seconds
+
+        /// <summary>Seconds between automatic page changes. 10 per SPEC D2 — 5 read as "changing
+        /// too fast" with a box that now takes 0.28 s to travel.</summary>
+        [SerializeField] private float newsAutoCycleInterval = 10f; // seconds
 
         private int _currentNewsIndex;
         private float _newsTimer;
@@ -230,6 +241,7 @@ namespace GolfinRedux.UI
             // leaves Home enabled and so never re-runs this method.
             Golfin.Notices.NoticeService.OnNoticesChanged += OnNoticesChanged;
             LocalizationManager.OnLanguageChanged += OnNoticeLanguageChanged;
+            if (noticeSlider != null) noticeSlider.OnDragCommitted += OnNoticeDragCommitted;
 
             // Screen-entry refresh, throttled to at most one request per minute by the service.
             Golfin.Notices.NoticeService.Instance?.Refresh();
@@ -257,6 +269,7 @@ namespace GolfinRedux.UI
 
             Golfin.Notices.NoticeService.OnNoticesChanged -= OnNoticesChanged;
             LocalizationManager.OnLanguageChanged -= OnNoticeLanguageChanged;
+            if (noticeSlider != null) noticeSlider.OnDragCommitted -= OnNoticeDragCommitted;
         }
 
         private void OnCharacterSelectionChanged(string _) => UpdateHomeCharacterImage();
@@ -286,7 +299,11 @@ namespace GolfinRedux.UI
         {
             // Auto-cycle news panel. Stops dead at one page or none — a single notice must not
             // "cycle" to itself, and a hidden panel has nothing to cycle.
-            if (_autoCycleNews && NewsPageCount > 1 && newsAutoCycleInterval > 0f)
+            // ...and holds while the player owns the box: a finger down or a snap in flight
+            // (notice_panel_slide D3). It HOLDS rather than resets — a touch that never committed
+            // must not cost the player the seconds they already spent reading.
+            if (_autoCycleNews && NewsPageCount > 1 && newsAutoCycleInterval > 0f
+                && (noticeSlider == null || !noticeSlider.IsBusy))
             {
                 _newsTimer += Time.deltaTime;
                 if (_newsTimer >= newsAutoCycleInterval)
@@ -361,30 +378,53 @@ namespace GolfinRedux.UI
         {
             int count = NewsPageCount;
             if (count <= 0) return;
-            _currentNewsIndex = (_currentNewsIndex + 1) % count;
-            _newsTimer = 0f; // Reset timer when manually changed
-            UpdateNewsDots();
-            UpdateNewsContent();
+            GoToNewsPage((_currentNewsIndex + 1) % count, direction: 1);
         }
 
         public void PreviousNewsPage()
         {
             int count = NewsPageCount;
             if (count <= 0) return;
-            _currentNewsIndex = (_currentNewsIndex - 1 + count) % count;
-            _newsTimer = 0f; // Reset timer when manually changed
-            UpdateNewsDots();
-            UpdateNewsContent();
+            GoToNewsPage((_currentNewsIndex - 1 + count) % count, direction: -1);
         }
 
         public void SetNewsPage(int index)
         {
             int count = NewsPageCount;
             if (count <= 0) return;
-            _currentNewsIndex = Mathf.Clamp(index, 0, count - 1);
+            int target = Mathf.Clamp(index, 0, count - 1);
+            if (target == _currentNewsIndex) return;
+            GoToNewsPage(target, direction: target > _currentNewsIndex ? 1 : -1);
+        }
+
+        /// <summary>
+        /// The one path every page change takes (notice_panel_slide §3): move the index, restart
+        /// the countdown, repaint the dots, then either SLIDE the box there or — with no slider
+        /// wired — repaint it in place, which is the pre-task behaviour verbatim.
+        /// </summary>
+        /// <param name="direction">+1 sends the current box out LEFT and the new one in from the
+        /// RIGHT; -1 mirrors it.</param>
+        private void GoToNewsPage(int index, int direction)
+        {
+            _currentNewsIndex = index;
             _newsTimer = 0f; // Reset timer when manually changed
             UpdateNewsDots();
-            UpdateNewsContent();
+
+            if (noticeSlider != null) noticeSlider.SlideTo(index, direction);
+            else UpdateNewsContent();
+        }
+
+        /// <summary>
+        /// The player swiped and the snap has settled. The box is ALREADY on the page it landed
+        /// on, so this only catches the index up and restarts the countdown from there (SPEC D3) —
+        /// calling SlideTo here would slide the panel a second time.
+        /// </summary>
+        private void OnNoticeDragCommitted(int _)
+        {
+            if (noticeSlider == null) return;
+            _currentNewsIndex = noticeSlider.Current;
+            _newsTimer = 0f;
+            UpdateNewsDots();
         }
 
         /// <summary>
@@ -456,6 +496,18 @@ namespace GolfinRedux.UI
             var page = pages[index];
 
             SetNewsPanelVisible(true);
+
+            // notice_panel_slide §3 — the slider owns both page boxes' text, and SetPages paints
+            // INSTANTLY (no motion): this method is only ever reached by a repaint-in-place path
+            // (screen entry, a fetch that replaced the set, a language switch), never by a page
+            // change, which goes through GoToNewsPage -> SlideTo. It also cancels a snap that was
+            // still in flight, so a fetch landing mid-slide leaves no box off-centre.
+            if (noticeSlider != null)
+            {
+                noticeSlider.SetPages(pages, index);
+                return;
+            }
+
             if (newsTitleText != null) newsTitleText.text = page.Title;
             if (newsBodyText != null)  newsBodyText.text  = page.Body;
         }
