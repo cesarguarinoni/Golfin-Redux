@@ -87,3 +87,17 @@ than changed, because moving it changes what §6 means.
 
 Fingers remain open: this rig has no finger bones, so nothing can close them. Out of reach by
 construction, as the eight SKIPs already say.
+
+ADDENDUM 2 — targetRotationWeight = 1 REVERTED. Cesar on the frame: "way worst than second image.
+Hands wrongly rotated, going through one another." He is right and my read of that frame was wrong:
+forcing targetRotationWeight = 1 makes BOTH hands take the anchors' rotation, and the anchors carry
+ClubSlot's frame — a CLUB orientation, not a HAND orientation. Both hands snapped to the same wrong
+rotation and interpenetrated. Prefab restored byte-identical to 376e97861.
+
+Making rotation work needs a per-hand orientation authored on GripAnchor_Lead / GripAnchor_Trail
+(the two palms oppose each other on the grip). That is an Architect decision, not a sixth inference
+from me about Mixamo hand-bone axes. Full writeup with pictures: HANDOFF_ARCHITECT_GRIP.md.
+
+Also fixed in passing: saving this prefab while GOLFIN_GOLFER_TEST is OFF silently strips every
+#if-gated GolferPresenter field (anim, sockets, stanceDistance, addressHeadLocal, ...). It happened
+during the revert and was restored with git restore --source=376e97861.
