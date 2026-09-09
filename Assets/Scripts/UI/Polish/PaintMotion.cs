@@ -236,6 +236,22 @@ namespace Golfin.Gps.UI
                 return;
             }
 
+            // store_history §8 — ROWS UNDER A LAYOUT GROUP HAVE NO REST POSITION UNTIL LAYOUT RUNS.
+            //
+            // `UiMotion.Rise` captures restY off `anchoredPosition.y` at the moment it is CALLED,
+            // and `UiMotion.Stagger` fires item 0 on its FIRST MoveNext — which `UiMotion.Run`
+            // performs synchronously, in the same frame the caller spawned the rows. A layout
+            // group positions its new children at END of frame, so item 0's "rest" is the prefab
+            // default: the first row rises to the wrong place and pins itself there, leaving its
+            // real slot empty. That is the card-sized gap under the first STORE card on the
+            // top-bar "+" entry (GeneralShopScreenController.Rebuild instantiates and staggers in
+            // one frame); rows 1…n are fine only because their beats land after layout.
+            //
+            // Settling the parent here fixes every caller at once — the shop grid, both history
+            // lists' last RowsPerFrame rows — instead of a delay frame per screen.
+            var parent = rows[0] != null ? rows[0].parent as RectTransform : null;
+            if (parent != null) UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(parent);
+
             int n = rows.Count;
             var rects  = new RectTransform[n];
             var groups = new CanvasGroup[n];

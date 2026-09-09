@@ -457,6 +457,14 @@ SHOP_TAB_GIFTS,GIFTS,ギフト,true
 SHOP_FILTER_POPULAR,POPULAR,人気,true
 SHOP_FILTER_OFFERS,OFFERS,オファー,true
 SHOP_HISTORY_COMING_SOON,Store history is coming soon.,ストア履歴は近日公開です。,true
+SHOP_HISTORY,STORE HISTORY,ストア履歴,true
+SHOP_HISTORY_AMOUNT,AMOUNT: {0},数量: {0},true
+SHOP_HISTORY_ACQUIRED,ACQUIRED {0},入手日 {0},true
+SHOP_HISTORY_SOURCE,SOURCE: {0},入手元: {0},true
+SHOP_HISTORY_SOURCE_STORE,STORE,ストア,true
+SHOP_HISTORY_PRICE,PRICE: {0} RP,価格: {0} RP,true
+TICKET_INFO_STANDARD,Spend one for a single pull on any banner that takes a standard ticket.,スタンダードチケット対応バナーでガチャを1回引けます。,true
+TICKET_INFO_GOLD,A premium pull ticket — for the banners that call for one.,対応バナーで使えるプレミアムガチャチケットです。,true
 STAMINA_BUY,BUY,購入,true
 STAMINA_VIEW_ON_MAPS,View on Maps,マップで見る,true
 STAMINA_FEATURED,FEATURED,注目,true

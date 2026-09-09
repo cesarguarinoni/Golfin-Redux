@@ -69,7 +69,15 @@ namespace GolfinRedux.UI
         // auth_recovery_flow — set-new-password screen, reached only from a type=recovery deep link.
         ResetPassword,
         // starting_character_selection — first-run character picker; shares RosterScreen in starter-mode
-        StartingCharacterSelection
+        StartingCharacterSelection,
+
+        // store_history — the STORE pillar's purchase log (Figma 13509:2978), reached from the
+        // History chip on the Rewards Center STORE tab. The Gacha History shell re-titled.
+        //
+        // ⚠️ APPENDED AT THE END, AND ANY FUTURE MEMBER MUST BE TOO. ScreenId is SERIALIZED —
+        // `_backScreen` / `_returnTarget` fields hold it as an int — so inserting a member in the
+        // middle silently repoints every stored value after it at the wrong screen.
+        StoreHistory
     }
 
     /// <summary>
@@ -107,6 +115,8 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _gachaHistoryScreen;
         // Gacha pillar screen 3 — Gacha Prizes / pool preview
         [SerializeField] private GameObject _gachaPrizesScreen;
+        // store_history — the STORE pillar's purchase log
+        [SerializeField] private GameObject _storeHistoryScreen;
         // gps_hub_entry — GPS / PLAYLIFE hub. Draws its OWN bottom nav, so it is deliberately
         // absent from the showBars list below and shown with ShowTopBarOnly() instead.
         [SerializeField] private GameObject _gpsHubScreen;
@@ -487,6 +497,7 @@ namespace GolfinRedux.UI
                 case ScreenId.GeneralShop:             return _generalShopScreen;
                 case ScreenId.GachaHistory:            return _gachaHistoryScreen;
                 case ScreenId.GachaPrizes:             return _gachaPrizesScreen;
+                case ScreenId.StoreHistory:            return _storeHistoryScreen;
                 case ScreenId.Inventory:               return _inventoryScreen;
                 default:                               return null;
             }
@@ -531,6 +542,9 @@ namespace GolfinRedux.UI
                 case ScreenId.GeneralShop:
                 case ScreenId.GachaHistory:
                 case ScreenId.GachaPrizes:
+                // store_history — reached only from the Rewards Center's STORE tab, so the Gacha
+                // slot stays lit here for the same reason it does on the other three.
+                case ScreenId.StoreHistory:
                     return Golfin.UI.PersistentUIManager.Screen.Gacha;
 
                 default:
@@ -750,6 +764,10 @@ namespace GolfinRedux.UI
             if (_gachaPrizesScreen != null)
                 _gachaPrizesScreen.SetActive(screenId == ScreenId.GachaPrizes);
 
+            // store_history — the STORE purchase log
+            if (_storeHistoryScreen != null)
+                _storeHistoryScreen.SetActive(screenId == ScreenId.StoreHistory);
+
             // gps_hub_entry — GPS / PLAYLIFE hub
             if (_gpsHubScreen != null)
                 _gpsHubScreen.SetActive(screenId == ScreenId.GpsHub);
@@ -829,7 +847,11 @@ namespace GolfinRedux.UI
                          // them out of this list rendered both screens with no top bar and no
                          // navbar, which is what the player saw from the History chip.
                          || screenId == ScreenId.GachaHistory
-                         || screenId == ScreenId.GachaPrizes;
+                         || screenId == ScreenId.GachaPrizes
+                         // store_history — the Gacha History shell, so the same reasoning: its
+                         // own TopUI / NavBarContainer are empty placeholders and it draws the
+                         // shared bars.
+                         || screenId == ScreenId.StoreHistory;
             // Account / auth screens reuse the shared top bar for their title only
             // (banner + centered title, no bottom nav or logged-in chrome).
             bool isAccountScreen = screenId == ScreenId.Login

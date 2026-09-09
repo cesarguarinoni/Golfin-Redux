@@ -1352,6 +1352,7 @@ namespace Golfin.UI.Polish.EditorTools
                     ScreenId.GeneralShop             => "GeneralShopScreen",
                     ScreenId.GachaHistory            => "GachaHistoryScreen",
                     ScreenId.GachaPrizes             => "GachaPrizesScreen",
+                    ScreenId.StoreHistory            => "StoreHistoryScreen",
                     ScreenId.StaminaShopSelection    => "StaminaShopSelectionScreen",
                     _                                => null,
                 };

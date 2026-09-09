@@ -1521,6 +1521,30 @@ MonoBehaviour:
   - key: SHOP_HISTORY_COMING_SOON
     english: Store history is coming soon.
     japanese: "\u30B9\u30C8\u30A2\u5C65\u6B74\u306F\u8FD1\u65E5\u516C\u958B\u3067\u3059\u3002"
+  - key: SHOP_HISTORY
+    english: STORE HISTORY
+    japanese: "\u30B9\u30C8\u30A2\u5C65\u6B74"
+  - key: SHOP_HISTORY_AMOUNT
+    english: 'AMOUNT: {0}'
+    japanese: "\u6570\u91CF: {0}"
+  - key: SHOP_HISTORY_ACQUIRED
+    english: ACQUIRED {0}
+    japanese: "\u5165\u624B\u65E5 {0}"
+  - key: SHOP_HISTORY_SOURCE
+    english: 'SOURCE: {0}'
+    japanese: "\u5165\u624B\u5143: {0}"
+  - key: SHOP_HISTORY_SOURCE_STORE
+    english: STORE
+    japanese: "\u30B9\u30C8\u30A2"
+  - key: SHOP_HISTORY_PRICE
+    english: 'PRICE: {0} RP'
+    japanese: "\u4FA1\u683C: {0} RP"
+  - key: TICKET_INFO_STANDARD
+    english: Spend one for a single pull on any banner that takes a standard ticket.
+    japanese: "\u30B9\u30BF\u30F3\u30C0\u30FC\u30C9\u30C1\u30B1\u30C3\u30C8\u5BFE\u5FDC\u30D0\u30CA\u30FC\u3067\u30AC\u30C1\u30E3\u30921\u56DE\u5F15\u3051\u307E\u3059\u3002"
+  - key: TICKET_INFO_GOLD
+    english: "A premium pull ticket \u2014 for the banners that call for one."
+    japanese: "\u5BFE\u5FDC\u30D0\u30CA\u30FC\u3067\u4F7F\u3048\u308B\u30D7\u30EC\u30DF\u30A2\u30E0\u30AC\u30C1\u30E3\u30C1\u30B1\u30C3\u30C8\u3067\u3059\u3002"
   - key: STAMINA_BUY
     english: BUY
     japanese: "\u8CFC\u5165"

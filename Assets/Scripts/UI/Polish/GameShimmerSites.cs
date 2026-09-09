@@ -37,6 +37,12 @@ namespace Golfin.UI.Polish
         /// <summary>Gacha history — page 1 of the pull log.</summary>
         public const string GachaHistory = "gacha.history";
 
+        /// <summary>Store history — page 1 of the shop purchase log. A SEPARATE site from
+        /// <see cref="GachaHistory"/>, not a shared "history" one: the builder places one
+        /// placeholder host per site inside one screen's prefab, so two screens cannot share a
+        /// key without the second screen's host overwriting the first's.</summary>
+        public const string StoreHistory = "store.history";
+
         // THERE IS NO SHOP SITE, deliberately. §D4 lists the General Shop's catalog cards, but
         // GeneralShopCatalog reads a BUNDLED Resources/Data/shop_catalog.csv plus a content
         // overlay, synchronously, on first access — the player never waits on a network for it,
@@ -71,7 +77,7 @@ namespace Golfin.UI.Polish
         public static readonly string[] All =
         {
             RankingsList, RankingsTop3, TournamentCards, TournamentLeaderboard,
-            GachaHistory,
+            GachaHistory, StoreHistory,
         };
     }
 }

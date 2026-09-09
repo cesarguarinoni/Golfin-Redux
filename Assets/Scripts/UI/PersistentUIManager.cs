@@ -858,6 +858,9 @@ namespace Golfin.UI
                 // Gacha pillar sub-screens: the history node keeps the Rewards Center title
                 // (4079:18306), the prizes node overrides it with "PRIZES" (13622:2222).
                 case GolfinRedux.UI.ScreenId.GachaHistory:             return "NAV_REWARDS_CENTER";
+                // store_history — the Gacha History shell on the STORE pillar; same title, for
+                // the same reason (the screen's own title block is inside MainPanel).
+                case GolfinRedux.UI.ScreenId.StoreHistory:             return "NAV_REWARDS_CENTER";
                 case GolfinRedux.UI.ScreenId.GachaPrizes:              return "GACHA_PRIZES_TITLE";
                 // gps_hub_entry §4 — the GPS / PLAYLIFE hub. It has no bottom-nav pillar, so
                 // HighlightScreen returns right after ApplyTopBarCenterText; this case is the

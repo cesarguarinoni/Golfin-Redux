@@ -250,6 +250,17 @@ namespace Golfin.Net
         public static string ShopPurchase => BaseUrl + "/shop/purchase";
 
         /// <summary>
+        /// GET <c>?limit=&amp;before=</c> → <c>{data:{purchases:[…], next_before}}</c> — the
+        /// caller's own shop purchases, newest first. One row per purchase (no nesting).
+        ///
+        /// Keyset pagination on <c>created_at</c> (<c>before</c>), not offset, so a purchase landing
+        /// mid-scroll cannot shift the page under the reader. <c>next_before</c> is null when the
+        /// page was not full. UNLIKE <see cref="ShopPurchase"/>, a missing table degrades to an
+        /// empty page: "no purchases yet" is a real state every player starts in.
+        /// </summary>
+        public static string ShopHistory => BaseUrl + "/shop/history";
+
+        /// <summary>
         /// POST → <c>{data:&lt;golfin_level_up result&gt;}</c> — level ONE character or club, at the
         /// SERVER's price (progress_server_side SPEC §3.3).
         ///

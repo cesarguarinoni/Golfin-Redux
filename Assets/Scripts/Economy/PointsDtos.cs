@@ -559,6 +559,43 @@ namespace Golfin.Economy
         [JsonProperty("balance")]     public int Balance;
     }
 
+    /// <summary><c>GET /api/v1/shop/history</c> → <c>{data:{purchases:[…], next_before}}</c> —
+    /// the caller's own shop purchases, newest first.</summary>
+    public sealed class ShopHistoryPage
+    {
+        [JsonProperty("purchases")]   public ShopPurchaseDto[] Purchases;
+
+        /// <summary>The oldest <c>created_at</c> on this page, or null when the page was not full.
+        /// Null means "there is nothing older" — NOT "start again".</summary>
+        [JsonProperty("next_before")] public string NextBefore;
+    }
+
+    /// <summary>
+    /// One recorded shop purchase. Unlike a gacha pull there is nothing nested — a purchase IS one
+    /// row.
+    ///
+    /// <para><c>CreatedAt</c> is a <b>string</b>, not a <c>DateTime</c>: Newtonsoft's default date
+    /// handling rewrites an ISO timestamp into local wall-clock text, and the disk mirror has to
+    /// round-trip it verbatim. See <c>StoreHistoryStore</c>'s <c>RawDates</c>.</para>
+    /// </summary>
+    public sealed class ShopPurchaseDto
+    {
+        [JsonProperty("id")]         public string Id;
+        [JsonProperty("entry_id")]   public string EntryId = "";
+        [JsonProperty("category")]   public string Category = "";
+        [JsonProperty("ref_id")]     public string RefId = "";
+        [JsonProperty("amount")]     public int    Amount = 1;
+
+        /// <summary>What the player actually paid — the number the PRICE line renders.</summary>
+        [JsonProperty("charged_rp")] public int    ChargedRp;
+
+        /// <summary>The list price at the time of sale. Carried, not rendered (out of scope).</summary>
+        [JsonProperty("list_rp")]    public int    ListRp;
+        [JsonProperty("on_sale")]    public bool   OnSale;
+        [JsonProperty("build")]      public int    Build;
+        [JsonProperty("created_at")] public string CreatedAt = "";
+    }
+
     /// <summary><c>GET /api/v1/gacha/history</c> → <c>{data:{pulls:[…], next_before}}</c>.</summary>
     public sealed class GachaHistoryPage
     {

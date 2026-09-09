@@ -50,17 +50,76 @@ namespace GolfinRedux.UI.Gacha
         /// <para>
         /// The row is only club-specific in ONE place — the <c>BagClubCard</c> in Col1 — and
         /// everything else on it (six metadata lines, the ticket chip) is kind-agnostic. So a
-        /// character, an item or a ticket binds the metadata and leaves Col1's card hidden rather
-        /// than getting a third prefab: a prefab per kind is four prefabs to keep in step for a
-        /// row whose only difference is one image.
+        /// character, an item or a ticket binds onto this same prefab rather than getting one of
+        /// its own: a prefab per kind is four prefabs to keep in step for a row whose only
+        /// difference is one image.
+        /// </para>
+        ///
+        /// <para>
+        /// ⚠️ COL1 IS BOUND, NOT HIDDEN (fixed 2026-09-09, Cesar: "gacha history repair kit is
+        /// missing an image"). This method used to `SetActive(false)` the card, which dates from
+        /// Stage 1, when a non-club prize had nothing that could draw it. <see
+        /// cref="GachaPrizeCardBinder"/> now draws every kind on the club card — it is what the
+        /// reveal modal, the Prizes grid and Store History all use — so a repair kit, a character
+        /// or a ticket in the pull log shows its own art instead of an empty column with the
+        /// metadata sliding into it. One binder, so the same prize cannot look different in two
+        /// places.
         /// </para>
         /// </summary>
         public void BindGeneric(GachaHistoryRecord record, string displayName, string rarityLine)
         {
-            if (_clubCard != null) _clubCard.gameObject.SetActive(false);
+            BindPrizeCard(record);
             BindMetadata(record, displayName, rarityLine);
             BindCurrency(record);
         }
+
+        /// <summary>Col1 for a non-club prize, through the one shared prize-card binder.</summary>
+        private void BindPrizeCard(GachaHistoryRecord record)
+        {
+            if (_clubCard == null) { Debug.LogWarning("[GachaHistoryRow] _clubCard not wired."); return; }
+
+            _clubCard.gameObject.SetActive(true);
+            GachaPrizeCardBinder.Bind(_clubCard.gameObject, new PrizeRecord(
+                KindOf(record.RewardType),
+                record.RewardId,
+                // A DUPLICATE reached the inventory with nothing, so its Quantity is 0 — the card's
+                // "xN" badge must not read "x0". The badge is suppressed at 1 or below anyway.
+                Mathf.Max(1, record.Quantity),
+                RarityOf(record),
+                record.DupeRp > 0,
+                record.DupeRp));
+        }
+
+        /// <summary>The <c>PrizeRecord.Kind*</c> constant for a reward type — the strings the
+        /// binder dispatches on.</summary>
+        private static string KindOf(GachaRewardType type) => type switch
+        {
+            GachaRewardType.Ball      => PrizeRecord.KindBall,
+            GachaRewardType.Character => PrizeRecord.KindCharacter,
+            GachaRewardType.Item      => PrizeRecord.KindItem,
+            GachaRewardType.Ticket    => PrizeRecord.KindTicket,
+            _                         => PrizeRecord.KindClub,
+        };
+
+        /// <summary>
+        /// The rarity the card frame is drawn at.
+        ///
+        /// <para>NO RARITY IS INVENTED for a kind that has none. The history record carries no
+        /// rarity of its own (unlike a live <c>GachaPrizeDto</c>, where the SERVER's rolled tier is
+        /// on the wire), so it comes from this build's databases — and only clubs, balls and
+        /// characters have one. An item or a ticket reports Common, which is what the reveal card
+        /// and the Prizes grid already draw them at.</para>
+        /// </summary>
+        private static CharacterRarity RarityOf(GachaHistoryRecord record) => record.RewardType switch
+        {
+            GachaRewardType.Ball =>
+                BallDatabaseCSV.Instance?.GetBall(record.RewardId)?.rarity ?? CharacterRarity.Common,
+            GachaRewardType.Character =>
+                CharacterDatabaseCSV.Instance?.GetCharacter(record.RewardId)?.rarity ?? CharacterRarity.Common,
+            GachaRewardType.Club =>
+                ClubDatabaseCSV.Instance?.GetClub(record.RewardId)?.rarity ?? CharacterRarity.Common,
+            _ => CharacterRarity.Common,
+        };
 
         // ── Club card ─────────────────────────────────────────────────────────────
 

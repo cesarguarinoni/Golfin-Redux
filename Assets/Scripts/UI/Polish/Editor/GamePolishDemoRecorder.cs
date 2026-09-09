@@ -526,6 +526,7 @@ namespace Golfin.UI.Polish.EditorTools
                 ScreenId.GeneralShop           => "GeneralShopScreen",
                 ScreenId.GachaHistory          => "GachaHistoryScreen",
                 ScreenId.GachaPrizes           => "GachaPrizesScreen",
+                ScreenId.StoreHistory          => "StoreHistoryScreen",
                 _                              => null,
             };
             return n == null ? null : GameObject.Find("Canvas/ScreensRoot/" + n);

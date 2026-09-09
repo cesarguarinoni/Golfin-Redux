@@ -179,29 +179,42 @@ namespace GolfinRedux.UI.Gacha
         }
 
         /// <summary>
-        /// GACHA tab → the gacha pull log. STORE / GIFTS → nothing to open yet, so the chip stays
-        /// inert (the icon is present in the Figma store node, so it is toasted rather than hidden)
-        /// instead of sending the player to the gacha log, which is not their purchase history.
-        /// Point the STORE branch at ScreenId.StoreHistory once that screen ships.
+        /// GACHA tab → the gacha pull log. STORE → the store purchase log (store_history §6).
+        ///
+        /// <para>The STORE arm was a "coming soon" toast, which is what this task closes: the two
+        /// logs are different screens because a pull log is not a purchase history, and the chip
+        /// now opens the right one for the tab you are on rather than either toasting or sending
+        /// the player to the other pillar's log.</para>
+        ///
+        /// <para>GIFTS CANNOT REACH HERE — the tab is <c>interactable = false</c> (see
+        /// <c>WireTabs</c>), so the arm is a warning rather than a branch with UI behind it. If it
+        /// ever fires, the gifts tab was enabled without a history screen behind it.</para>
         /// </summary>
         private void OnHistoryChipTapped()
         {
-            // §D6 / G9 — bump FIRST, including on the arm that only shows a toast: that arm is
-            // the one where the chip otherwise appears to do nothing at all.
+            // §D6 / G9 — bump FIRST, on every arm: the chip must never appear to do nothing.
             Transform? chip = transform.Find(HistoryChipPath);
             if (chip != null) Golfin.UI.Polish.UiSelection.Bump(this, chip);
 
-            if (_activeTab != RewardsTab.Gacha)
+            if (ScreenManager.Instance == null)
             {
-                Debug.Log($"[GachaTab] HistoryChip tapped on the {_activeTab} tab — no history screen yet.");
-                ToastController.Instance?.Show(LocalizationManager.Get("SHOP_HISTORY_COMING_SOON"), 2f);
+                Debug.LogWarning("[GachaTab] ScreenManager not found — cannot open a history screen.");
                 return;
             }
 
-            if (ScreenManager.Instance != null)
-                ScreenManager.Instance.ShowScreen(ScreenId.GachaHistory);
-            else
-                Debug.LogWarning("[GachaTab] ScreenManager not found — cannot open GachaHistory.");
+            switch (_activeTab)
+            {
+                case RewardsTab.Gacha:
+                    ScreenManager.Instance.ShowScreen(ScreenId.GachaHistory);
+                    return;
+                case RewardsTab.Store:
+                    ScreenManager.Instance.ShowScreen(ScreenId.StoreHistory);
+                    return;
+                default:
+                    Debug.LogWarning($"[GachaTab] HistoryChip tapped on the {_activeTab} tab, which " +
+                                     "has no history screen. The tab should not be reachable.");
+                    return;
+            }
         }
 
         // ── Pull buttons ──────────────────────────────────────────────────────

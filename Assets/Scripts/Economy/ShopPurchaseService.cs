@@ -196,6 +196,32 @@ namespace Golfin.Economy
             }
         }
 
+        // ── GET /shop/history ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// <c>GET /api/v1/shop/history</c> — the caller's own purchases, newest first.
+        /// <paramref name="limit"/> is clamped server-side to 200.
+        /// </summary>
+        public void FetchHistoryAsync(int limit, Action<ShopHistoryPage> onDone)
+            => _client.Run(FetchHistoryRoutine(limit, onDone));
+
+        /// <summary>Coroutine form. Same shape as
+        /// <c>GachaPullService.FetchHistoryRoutine</c>, including where the flag gate sits.</summary>
+        public IEnumerator FetchHistoryRoutine(int limit, Action<ShopHistoryPage> onDone)
+        {
+            if (!PointsBackendFlag.Enabled) { onDone?.Invoke(null); yield break; }
+
+            string url = Endpoints.ShopHistory + "?limit=" + Mathf.Clamp(limit, 1, 200);
+
+            ApiResult<ShopHistoryPage> result = null;
+            IEnumerator call = _client.Get<ShopHistoryPage>(url, r => result = r);
+            while (call.MoveNext()) yield return call.Current;
+
+            // NULL ON FAILURE, never an empty page: an empty page means "you have bought nothing",
+            // and handing that to the log on a timeout would blank a real purchase history.
+            onDone?.Invoke(result != null && result.Success ? result.Data : null);
+        }
+
         /// <summary>
         /// Request body for <c>POST /api/v1/shop/purchase</c>. Field names match the deployed
         /// <c>PurchaseRequest</c> pydantic model: <c>{entry_id, idempotency_key, build,

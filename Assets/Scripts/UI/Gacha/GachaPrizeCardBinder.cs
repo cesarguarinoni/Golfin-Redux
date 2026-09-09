@@ -217,13 +217,21 @@ namespace GolfinRedux.UI.Gacha
                     // One ladder — see GachaTicketArt (polish_regressions_0909 R3 audit).
                     var icon = GachaTicketArt.Resolve(type);
 
+                    // A ticket has no stat lanes and no number worth a detail line, so without a
+                    // DESCRIPTION its card was a portrait over an empty half (Cesar, 2026-09-09:
+                    // "gacha ticket needs a description under its portrait"). It reads through the
+                    // same key-with-fallback ladder an item's does, keyed on the ticket's own
+                    // `key` column — `TICKET_INFO_STANDARD`, `TICKET_INFO_GOLD`. `ticket_types.csv`
+                    // has no prose column to fall back to, so a type published after this build
+                    // shipped simply shows no description rather than a raw key.
                     card.InitializePrize(new BagClubCard.PrizeView(
                         icon,
                         (type.DisplayName ?? string.Empty).ToUpperInvariant(),
                         record.Rarity,
-                        badge:  qty,
-                        detail: string.Empty,
-                        stats:  null));
+                        badge:       qty,
+                        detail:      string.Empty,
+                        stats:       null,
+                        description: LocalizedBody("TICKET_INFO_" + Upper(type.Key), null)));
                     return;
                 }
 

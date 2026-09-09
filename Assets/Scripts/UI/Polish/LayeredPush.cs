@@ -164,6 +164,9 @@ namespace Golfin.UI.Polish
                 case ScreenId.GeneralShop:
                     return new Layers(new[] { "BG" }, new[] { "ContentArea", "HistoryChip" });
                 case ScreenId.GachaHistory:
+                // store_history — a duplicate of the GachaHistory prefab, so the same root child
+                // names and therefore literally the same layers.
+                case ScreenId.StoreHistory:
                     return new Layers(new[] { "Background" }, new[] { "GameScreenContent", "FiltersIconRow" });
                 case ScreenId.GachaPrizes:
                     return new Layers(new[] { "Background" }, new[] { "GameScreenContent" });

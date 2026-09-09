@@ -335,9 +335,6 @@ namespace Golfin.Inventory
                 label = go.AddComponent<TextMeshProUGUI>();
                 label.alignment        = TextAlignmentOptions.TopLeft;
                 label.textWrappingMode = TextWrappingModes.Normal;
-                label.enableAutoSizing = true;
-                label.fontSizeMax      = 11f;
-                label.fontSizeMin      = 6f;
                 label.color            = DescriptionColor;
                 label.raycastTarget    = false;
 
@@ -357,6 +354,24 @@ namespace Golfin.Inventory
             if (label != null)
             {
                 label.autoSizeTextContainer = false;   // also for a label built by an older build
+
+                // ⚠️ THE AUTO-SIZE BAND IS RE-ASSERTED ON EVERY BIND, NOT SET ONCE AT CREATION.
+                // This card is re-bound in place — a slot that showed a repair kit shows a ticket
+                // on the next pull — so a band written only in the `else` branch above would leave
+                // whatever the FIRST prize to land on this instance happened to get.
+                //
+                // The ceiling was 11 (Cesar, 2026-09-09: "text is too small; need autosize to be
+                // bigger when not as much text"). TMP's auto-size only ever SHRINKS toward the
+                // floor — it can never exceed fontSizeMax — so a two-line ticket description was
+                // pinned at the size a nine-line repair-kit description needs, leaving most of the
+                // card empty. Raising the ceiling costs the long copy nothing: auto-size still
+                // picks the largest size that FITS, so a description that needed 7pt still gets
+                // 7pt. It only stops short copy from being punished for the longest string on the
+                // card family.
+                label.enableAutoSizing = true;
+                label.fontSizeMax      = DescriptionFontSizeMax;
+                label.fontSizeMin      = DescriptionFontSizeMin;
+
                 label.text = description;
             }
 
@@ -388,6 +403,12 @@ namespace Golfin.Inventory
 
         /// <summary>Muted against the card's dark stats panel — body copy, not a headline.</summary>
         private static readonly Color DescriptionColor = new Color(0.78f, 0.82f, 0.88f, 1f);
+
+        /// <summary>Auto-size band for the prize description. The FLOOR is what a long item
+        /// description needs to fit the card; the CEILING is what a two-line ticket description is
+        /// allowed to grow to. See BindDescription for why the ceiling is not 11.</summary>
+        private const float DescriptionFontSizeMax = 22f;
+        private const float DescriptionFontSizeMin = 6f;
 
         private static readonly string[] StatRowPaths =
         {

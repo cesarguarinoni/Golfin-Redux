@@ -376,6 +376,24 @@ namespace GolfinRedux.UI.Shop
                             // merely true today.
                             rpm.SpendPoints(outcome.Charged);
 
+                            // store_history §3 — the Store History screen is current WITHOUT a
+                            // refetch. The server has no `created_at` in the purchase response, so
+                            // the record is stamped with the DEVICE clock; it is display-only and
+                            // the server's own timestamp replaces it on the next Refresh. It must
+                            // still be a real time, or the row sorts to the bottom of a list that
+                            // is ordered newest-first.
+                            StoreHistoryStore.Prepend(new StoreHistoryRecord
+                            {
+                                Category     = entry.Category,
+                                RefId        = entry.RefId,
+                                EntryId      = entry.EntryId,
+                                Amount       = 1,
+                                ChargedRp    = outcome.Charged,
+                                ListRp       = entry.RpCost,
+                                OnSale       = outcome.Charged < entry.RpCost,
+                                PurchasedUtc = DateTime.UtcNow.ToString("o"),
+                            });
+
                             if (!ApplyPurchaseGrant(outcome.Grant))
                             {
                                 // The RP is gone and the grant is NOT applied — but it is still QUEUED

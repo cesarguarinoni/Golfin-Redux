@@ -392,5 +392,75 @@ namespace Golfin.Economy.Tests
 
             Assert.IsTrue(data.ToSpendResult().IsInsufficient);
         }
+
+        // ── GET /shop/history (store_history §2) ──────────────────────────────────
+        //
+        // The read side. Only three behaviours are worth pinning, and the third is the one that
+        // matters: a FAILED read must answer null, never an empty page. An empty page means "you
+        // have bought nothing", and handing that to StoreHistoryStore on a timeout would blank a
+        // real purchase history behind an offline blip.
+
+        private const string HistoryEnvelope =
+            "{\"data\":{\"purchases\":[" +
+            "{\"id\":\"p1\",\"entry_id\":\"" + Entry + "\",\"category\":\"club\"," +
+            "\"ref_id\":\"club_iron9_klyro\",\"amount\":1,\"charged_rp\":150,\"list_rp\":200," +
+            "\"on_sale\":true,\"build\":2113,\"created_at\":\"2026-09-08T10:00:00Z\"}," +
+            "{\"id\":\"p2\",\"entry_id\":\"shop_ticket_standard\",\"category\":\"ticket\"," +
+            "\"ref_id\":\"0\",\"amount\":10,\"charged_rp\":500,\"list_rp\":500," +
+            "\"on_sale\":false,\"build\":2113,\"created_at\":\"2026-09-07T09:00:00Z\"}]," +
+            "\"next_before\":null}}";
+
+        private ShopHistoryPage History(int limit = 100)
+        {
+            ShopHistoryPage page = null;
+            Pump.Drain(_service.FetchHistoryRoutine(limit, p => page = p));
+            return page;
+        }
+
+        [Test]
+        public void History_MapsTheServersPageOntoTheDto()
+        {
+            _transport.Enqueue(HttpResponse.Status(200, HistoryEnvelope));
+
+            ShopHistoryPage page = History();
+
+            Assert.IsNotNull(page);
+            Assert.AreEqual(2, page.Purchases.Length);
+            Assert.AreEqual("club", page.Purchases[0].Category);
+            Assert.AreEqual(150, page.Purchases[0].ChargedRp);
+            Assert.AreEqual(10, page.Purchases[1].Amount);
+            // VERBATIM. Newtonsoft's default date handling would have rewritten this into local
+            // wall-clock text; the disk mirror has to round-trip the UTC it was given.
+            Assert.AreEqual("2026-09-08T10:00:00Z", page.Purchases[0].CreatedAt);
+            Assert.IsNull(page.NextBefore, "a short page carries no cursor");
+            StringAssert.Contains("/shop/history?limit=100", _transport.SentUrls[0]);
+        }
+
+        [Test]
+        public void History_ClampsTheLimitToWhatTheServerAccepts()
+        {
+            _transport.Enqueue(HttpResponse.Status(200, HistoryEnvelope));
+            History(9999);
+            StringAssert.Contains("limit=200", _transport.SentUrls[0]);
+        }
+
+        [Test]
+        public void History_OnFailure_IsNullSoTheCallerKeepsWhatItHas()
+        {
+            _transport.Enqueue(HttpResponse.Status(500, "{}"));
+
+            Assert.IsNull(History(),
+                "An empty page would read as 'you have bought nothing' and blank a real log.");
+        }
+
+        [Test]
+        public void History_FlagOff_MakesNoRequestAndAnswersNull()
+        {
+            PointsBackendFlag.Enabled = false;
+            _transport.Enqueue(HttpResponse.Status(200, HistoryEnvelope));
+
+            Assert.IsNull(History());
+            Assert.AreEqual(0, _transport.CallCount, "Flag OFF must not reach the network.");
+        }
     }
 }

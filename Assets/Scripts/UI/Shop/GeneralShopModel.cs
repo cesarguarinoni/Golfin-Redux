@@ -544,8 +544,12 @@ namespace GolfinRedux.UI.Shop
         /// the category, and the player sees nothing — which is the correct outcome for a listing this
         /// build cannot honour.
         /// </para>
+        ///
+        /// <para>INTERNAL, not private: <c>StoreHistoryStore</c> parses the same strings off
+        /// <c>golfin_shop_purchases.category</c> and must not carry a second parser that could
+        /// drift from this one.</para>
         /// </summary>
-        private static ShopCategory? ParseCategory(string s)
+        internal static ShopCategory? ParseCategory(string s)
         {
             switch ((s ?? string.Empty).Trim().ToLowerInvariant())
             {

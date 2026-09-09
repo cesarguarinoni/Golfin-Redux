@@ -6,8 +6,9 @@
 // LocalizedText keys; only the behaviour differs — from here a tab means "leave history and open
 // the Rewards Center on that tab", since history has no content panels of its own.
 //
-// GACHA renders active (gold) because you are already inside the gacha pillar; GIFTS is grayed and
-// non-tappable for the same reason it is on the Rewards Center — there is no gifts content yet.
+// The segment for the pillar you are already inside renders active (gold) — GACHA by default,
+// STORE when `_storeIsActive` is ticked (store_history §4); GIFTS is grayed and non-tappable for
+// the same reason it is on the Rewards Center — there is no gifts content yet.
 
 using GolfinRedux.UI;
 using TMPro;
@@ -31,6 +32,16 @@ namespace GolfinRedux.UI.Gacha
         private static readonly Color ActiveTabColor   = new Color(1f, 0.816f, 0.137f);
         private static readonly Color InactiveTabColor = Color.white;
         private static readonly Color DisabledTabColor = new Color(1f, 1f, 1f, 0.35f);
+
+        /// <summary>
+        /// store_history §4 — which pillar's history this strip is sitting on.
+        ///
+        /// <para>The strip is the SAME component on both history screens; only the lit segment
+        /// differs, so this is a serialized bool rather than a second class. Ticked on
+        /// StoreHistoryScreen.prefab, left off on GachaHistoryScreen.prefab (the default, so the
+        /// existing prefab's serialized data means exactly what it meant before).</para>
+        /// </summary>
+        [SerializeField] private bool _storeIsActive;
 
         private Button?   _gacha;
         private Button?   _store;
@@ -68,8 +79,8 @@ namespace GolfinRedux.UI.Gacha
         /// clones and a language refresh repaints them.</summary>
         private void OnEnable()
         {
-            SetLabel(_gachaLabel, ActiveTabColor);
-            SetLabel(_storeLabel, InactiveTabColor);
+            SetLabel(_gachaLabel, _storeIsActive ? InactiveTabColor : ActiveTabColor);
+            SetLabel(_storeLabel, _storeIsActive ? ActiveTabColor   : InactiveTabColor);
             SetLabel(_giftsLabel, DisabledTabColor);
         }
 

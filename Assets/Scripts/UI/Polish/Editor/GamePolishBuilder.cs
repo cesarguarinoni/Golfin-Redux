@@ -75,6 +75,7 @@ namespace Golfin.UI.Polish.EditorTools
             ScreenId.GeneralShop,
             ScreenId.GachaHistory,
             ScreenId.GachaPrizes,
+            ScreenId.StoreHistory,
         };
 
         /// <summary>
@@ -378,6 +379,10 @@ namespace Golfin.UI.Polish.EditorTools
             new ShimmerSite(ScreenId.TournamentLeaderboard, GameShimmerSites.TournamentLeaderboard,
                             "ContentArea/BarsArea/RankingsArea/Modal", 3, 978f, 100f, 20f),
             new ShimmerSite(ScreenId.GachaHistory, GameShimmerSites.GachaHistory,
+                            "GameScreenContent/ContentContainer/MainPanel/CardsContainer", 3, 978f, 100f, 20f),
+            // store_history — the same path, because StoreHistoryScreen.prefab is a duplicate of
+            // GachaHistoryScreen.prefab and its hierarchy is untouched.
+            new ShimmerSite(ScreenId.StoreHistory, GameShimmerSites.StoreHistory,
                             "GameScreenContent/ContentContainer/MainPanel/CardsContainer", 3, 978f, 100f, 20f),
             // The MissionSelection daily site was REMOVED (polish_regressions_0909 R2). Its host —
             // Shimmer_missions_daily, sibling index 1 under Content — was deleted from the scene in
@@ -1172,6 +1177,7 @@ namespace Golfin.UI.Polish.EditorTools
                 ScreenId.GeneralShop             => "_generalShopScreen",
                 ScreenId.GachaHistory            => "_gachaHistoryScreen",
                 ScreenId.GachaPrizes             => "_gachaPrizesScreen",
+                ScreenId.StoreHistory            => "_storeHistoryScreen",
                 _                                => null,
             };
             if (field == null) return null;
