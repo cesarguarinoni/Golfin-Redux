@@ -761,8 +761,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4504549658261191582}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.656846, y: -0.0018220247, z: 0.6130723, w: 0.43896756}
-  m_LocalPosition: {x: 0.04678, y: 0.07685, z: -0.04668}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -845,6 +845,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6beb239ff0e2545a38b0d80de9cf8175, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Gameplay.Golfer.GolferPresenter
+  anim: {fileID: 0}
+  driverSocketRoot: {fileID: 0}
+  putterSocketRoot: {fileID: 0}
+  skins: []
+  stanceDistance: 0.735
+  stanceForwardOffset: 0
+  rightHanded: 1
+  enabledInBuild: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  forceGripPose: 1
+  shaftRadius: 0.012
+  fingerRadius: 0.009
+  maxJointBend: 80
+  addressHeadLocal: {x: 0.735, y: 0, z: -0.069}
 --- !u!114 &5819904696128760695
 MonoBehaviour:
   m_ObjectHideFlags: 0
