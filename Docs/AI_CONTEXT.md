@@ -4,6 +4,69 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 — store_history: **the STORE tab's History chip finally opens something** — awaiting Cesar
+
+Spec `Docs/Specs/Active/store_history/`. Implemented directly (no subagent chain — Cesar asked for
+it in one line). STATUS `ARCHITECT_REVIEW_PASS`, i.e. done and awaiting his approval; no gate ran.
+
+**The screen.** `GachaTabController.OnHistoryChipTapped`'s STORE arm was a "coming soon" toast; it
+now opens `ScreenId.StoreHistory` (appended at the END of the enum — it is serialized). The screen
+is `GachaHistoryScreen.prefab` duplicated and re-titled: same shell, same scrollbar INSIDE the panel
+(measured `inside=True`, not the Figma's x=1138), STORE lit via a new `GachaHistoryTabStrip
+._storeIsActive`, and the chip row **wired** — the §D3 filter site the gacha controller's own comment
+says the chips should route through.
+
+**The data.** New `GET /api/v1/shop/history` over `golfin_shop_purchases` (playlife, deployed —
+image `deployment-01M220GD2ZW514QM9M33FY8V1Y`, v70; 7 tests), a structural copy of `gacha.py`'s
+`history()`: one query, keyset `before`, `next_before` only on a full page, `_missing_relation` →
+empty. Client mirrors it to `store_history.json` exactly as `GachaHistoryStore` does and prepends
+after a purchase. **Copied, not generalised** — `GachaHistoryStore` and `GachaHistoryScreenController`
+are byte-identical to HEAD and `GachaHistoryPagingTests` is untouched, per the spec.
+
+**§8, the bug the spec picked up on the way past.** Entering the Rewards Center from the top-bar "+"
+left a card-sized hole under the first STORE card. `UiMotion.Rise` captures `restY` on beat 0, and
+`UiMotion.Stagger` fires item 0 synchronously — before the layout group has positioned children it
+was handed the same frame. Fixed ONCE, in `PaintMotion.StaggerRise`
+(`ForceRebuildLayoutImmediate(rows[0].parent)`), so the shop grid and both history lists inherit it.
+All three entry paths now measure identically: card y = −137 / −435 / −733, a uniform 298 apart.
+
+**Three things Cesar caught mid-implementation, all fixed at the shared seam** (so Store History,
+Gacha History, Gacha Prizes and the reveal modal all inherit them):
+
+| | what it was |
+|---|---|
+| repair kit had no image in Gacha History | `GachaHistoryRow.BindGeneric` called `SetActive(false)` on Col1 for every non-club/ball kind — Stage-1 behaviour from before `GachaPrizeCardBinder` existed. It binds through that binder now. |
+| ticket card was blank under its portrait | `BindOtherKind`'s ticket branch passed no `description:` (items do) and a ticket has no stat lanes. New `TICKET_INFO_<KEY>` copy on the same key-with-fallback ladder. |
+| description text too small when short | `fontSizeMax = 11`, and TMP autosize only ever SHRINKS — so a 71-char ticket description was pinned at the size a 214-char item description needs. Band now `[6..22]` and **re-asserted on every bind**, since the card is re-bound in place. Measured: ticket 11 → **18.3**, repair kit unchanged at **10.4**. |
+
+Eight new strings (six for the screen, two for the ticket copy), EN+JA, imported → published →
+`export --check` clean (`texts` v46 → **v48**) and the bundled `LocalizationTextTable.asset` rebuilt
+(1109 rows) — a published row alone still renders as a raw key without it.
+
+EditMode sweep **2923 passed / 0 failed / 4 skipped**. Scene diff **511 insertions, 0 deletions** —
+the prefab instance, the one `ScreenManager` reference, the `ScreensRoot` entry and the
+`store.history` shimmer host. Saving ShellScene normally produced 1417/1296 of anchor churn; the
+wanted hunks were isolated with `git apply` and the scene reloads clean.
+
+**Two scars worth keeping.** (1) A 143-failure EditMode run was 132 tests failing on my own MCP
+`ping` polling — the plugin logs "Tool not found" as an Error and NUnit attributes it to whatever
+test is running; never poll MCP during a sweep. (2) `CaptureCore.SnapPlayModeSafe` returned paths
+for files it never wrote (the known phantom-path bug — `ScreenCapture`'s backbuffer read yields
+nothing when the Editor is not frontmost, which is always true over MCP). The acceptance driver now
+verifies the returned path on disk and falls back to the Game View RT.
+
+**Clip for the daily report:** `Docs/Reports/Media/store_history/store_history.mp4` — 56 s,
+1170×2532, real navigation, eight captions. New `StoreHistoryDemoRecorder` on the
+`GeneralShopDemoRecorder` + `GpsFlowDemoRecorder`-sidecar pattern. Every caption was verified
+against a decoded frame in its own window; one had to be **retimed** — "a short description sizes
+up" opened five seconds before the card it describes was on screen, over frames showing club stat
+bars. Sampling the window is what caught it.
+
+**Still owed** (in the report, § "Not verified"): prepend after a real purchase, airplane-mode cache
+paint, paging past 12, a club/character purchase screenshot, the A13 push budget. And one Cesar
+step: deactivate the `SHOP_HISTORY_COMING_SOON` row in the admin.
+
+---
 ## 2026-09-09 — push_arrival_hitch: **the arriver was drawn UNDER the leaver** — DONE
 
 Quick task, spec + audit in `Docs/Specs/Quick/Completed/`. Approved by Cesar 2026-09-09.

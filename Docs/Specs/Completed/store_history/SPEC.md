@@ -3,7 +3,8 @@
 > **Authoritative spec for this task.** Implementer reads this and ONLY this for the work
 > definition. STATUS.md tracks pipeline state. Reports/reviews go in their own files.
 >
-> Filed 2026-09-08 (Architect via Cowork). Figma `Store History Screen` node `13509:2978` in
+> Filed 2026-09-08 (Architect via Cowork). AMENDED same day before kickoff: §8 adds the
+> "+"-entry grid gap fix (Cesar). Figma `Store History Screen` node `13509:2978` in
 > file `5gEAHjl6xAtW8iYY7NMvWd`. Closes the player-visible promise left by
 > `GachaTabController.OnHistoryChipTapped`: "Point the STORE branch at ScreenId.StoreHistory
 > once that screen ships." Decisions of record (Cesar, 2026-09-08): PRICE line = `charged_rp` RP,
@@ -285,7 +286,46 @@ delete from the CSV, the importer would re-append it). Title through a `Localize
 row lines through `LocalizationManager.Get` + `string.Format`. Zero new hardcoded `.text`
 literals (grep quoted in the report).
 
+### 8. Bug fix — the "+" entry gap in the STORE grid (added 2026-09-08, Cesar)
+
+**Symptom.** Enter the Rewards Center from the top-bar "+" (`PersistentUIManager.
+OnShopPlusButtonClick` → `RequestStoreTab()` + `NavigateToPillar(Screen.Gacha)`): the first
+card sits too high, partly under the panel top, and there is an empty card-sized gap between it
+and the second card. Via the bottom-nav Gacha slot → GACHA → STORE it does not happen.
+
+**Cause (read, not guessed).** `GeneralShopScreenController.Rebuild()` instantiates the cards
+under `GridContent` (a layout group) and calls `GpsPaintMotion.StaggerRise` in the SAME frame.
+`UiMotion.Rise` (`UiMotion.cs:420`) captures `restY = rect.anchoredPosition.y` when it starts,
+and `UiMotion.Stagger` fires item 0 on the first beat — before the layout group has positioned
+the new children (layout rebuilds at end of frame). Card 0 therefore "rests" at the prefab
+default y and the rise pins it there; its real slot stays empty. Cards 1…n start on later beats,
+after layout, and capture correct rests. On the GACHA → STORE path the cards are built while
+`StoreContent` is inactive and the tab activation re-dirties the layout after the rise ended,
+which masks it. The same latent defect exists for the last `RowsPerFrame` rows of Gacha History
+(`FillTo` spawns them and staggers in the same frame) and would exist on Store History.
+
+**Fix — in the shared helper, once.** In `PaintMotion.StaggerRise(MonoBehaviour host,
+IList<Transform> rows)`, before building `rects`/`groups`:
+
+```csharp
+// Rows under a layout group have no rest position until layout runs; Rise captures restY on
+// its first frame, and beat 0 fires before end-of-frame layout. Settle the parent first.
+var parent = rows[0] != null ? rows[0].parent as RectTransform : null;
+if (parent != null) LayoutRebuilder.ForceRebuildLayoutImmediate(parent);
+```
+
+Nothing else changes: no per-screen workaround in `GeneralShopScreenController`, no delay
+frame. If the ScrollRect content is not at the top on entry after the fix, ALSO set
+`verticalNormalizedPosition = 1f` in `Rebuild()` before the stagger — but measure first; the
+gap is explained without it.
+
 ## Acceptance checklist (Implementer fills in `IMPLEMENTER_REPORT.md`)
+
+- [ ] §8: from Home, tap the top-bar "+" → STORE grid: first card flush under the panel top,
+  uniform gaps between all cards (screenshot at 1170×2532 + the y of the first three cards'
+  `anchoredPosition` after the stagger ends, with equal spacing). Repeat from GachaHistory via
+  "+", and via bottom-nav Gacha → STORE — all three identical. Gacha History and Store History
+  first pages show no displaced row after their stagger.
 
 - [ ] Backend: six `test_history_*` tests pass; deployed (`flyctl status` pasted); live
   `GET /api/v1/shop/history?limit=5` on a signed-in account returns the account's purchases
@@ -349,6 +389,7 @@ literals (grep quoted in the report).
 - `Assets/Scripts/UI/Shop/ShopTransaction.cs` (one `Prepend` call)
 - `Assets/Scripts/UI/Gacha/GachaHistoryTabStrip.cs` (`_storeIsActive`),
   `GachaTabController.cs` (§6)
+- `Assets/Scripts/UI/Polish/PaintMotion.cs` (§8 — `ForceRebuildLayoutImmediate` in `StaggerRise`)
 - `Assets/Scripts/UI/ScreenManager.cs`, `PersistentUIManager.cs`, `Polish/LayeredPush.cs`,
   `Polish/GameShimmerSites.cs`, `Polish/Editor/GamePolishBuilder.cs`, the three probe maps (§5)
 - `Assets/Scenes/ShellScene.unity` (instance + one reference)
