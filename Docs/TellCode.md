@@ -196,40 +196,7 @@
   Cesar, and update Docs/AI_CONTEXT.md.
   ```
 
-- **`loading_tips` — SPEC_READY 2026-09-09 (Architect).** `Docs/Specs/Active/loading_tips/SPEC.md`. Loading-screen Pro Tips refresh: 7 outdated tips rewritten (grades PURE/GOOD/DUFF, Flick cone aim, hole-card map, tap-or-hold selector), 26 new tips covering every shipped system (schemes, stats/condition, level-up, clubs/balls, surfaces, missions/daily, tournaments, 1v1, leaderboard, RP, gacha, store, GPS check-in/social/wallet, graphics, repair kits), and `ProTipCard` moved from `string[] tipKeys` + index-matched `Sprite[]` to `Assets/Resources/Data/LoadingTips.csv` with two pools (first pool fixed order ×2 passes, persisted; then random general pool, no immediate repeat). Figma page `Loading` (4096:1181): the 34 AUTHORED components (section `Authored — OFFICIAL`) are the source — Cesar's pick 2026-09-09; all 34 sprites exported from Figma, no captures. Texts EN+JA through the importer; `TIP_TIMING` retired (Cesar deactivates in admin). Not a server catalog (deferred). Notion row filed by the Architect.
-
-  ```
-  Read Docs/Specs/Active/loading_tips/SPEC.md and implement it.
-
-  Context:
-  - Loading-screen Pro Tips: 7 existing TIP_* strings + Tip *.png are two systems out of date;
-    the spec rewrites them and adds 26 tips (§2.2, EN+JA given) and two pools (§2.1).
-  - ProTipCard keeps its hierarchy/crossfade/tap; it loses string[] tipKeys and the
-    index-matched Sprite[] for a name-keyed TipSprite[] + a TextAsset LoadingTips.csv;
-    new pure LoadingTipSequencer (+ EditMode tests) and PlayerPrefs LoadingTipStore.
-  - Strings: LocalizationText.csv EN+JA in the same commit -> import_content.py --catalogs
-    texts (plan, read verdicts) -> --apply -> publish texts -> export_content.py --check
-    clean. TIP_TIMING row -> false (never delete). No hardcoded .text literals.
-  - Art: export ALL 34 "Authored diagram" frames (§2.2 ids, Figma section "Authored — OFFICIAL")
-    at 1x / 806 px as Assets/Art/LoadingScreen/Tip_<NAME>.png; delete the 8 old Tip *.png.
-    Every row ships with a sprite — no text-only rows, no captures.
-  - Polish (§3.3a): tip swap = UiMotion.Fade out/in on a CanvasGroup over text+image (drop
-    CrossfadeToTip), card height eased with UiMotion.Tween, ButtonPressFeedback on the
-    ProTipCard object (it is an IPointerClickHandler, Rule 11's sweep missed it), Rise on
-    show, "TAP FOR NEXT TIP" looped UiMotion.Pulse (copy DailyMissionPillController.StartGlow).
-    Shared atoms only, no new motion code.
-  - Every loading screen opens on a NEW tip (Advance() in OnEnable, double-advance guarded);
-    general-pool draws exclude the last 5 keys shown (recentKeys ring, persisted).
-  - Minimal diff. LoadingScreenController, GameplaySceneLoader, ScreenManager,
-    ContentCatalogs untouched.
-  - Out of scope: loading_tips as a server content catalog / admin panel, tip analytics,
-    contextual pools.
-
-  When done: list changed files with a 1-line summary each, run the acceptance
-  tests in the spec, flag which need manual on-device verification, update
-  STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
-  Docs/AI_CONTEXT.md.
-  ```
+- **`loading_tips` — DONE 2026-09-09** (`a455e0e3c`, close-out `7a97c8d7d`, Cesar approved; folder in `Docs/Specs/Completed/`). Architect close-out notes: (1) Code found and fixed a double-advance from re-entering `UiMotion.Run` on the same handle inside a `Then` tail — the guard is the recorder's beat log only; a play-mode "one tap, one advance" test is Notion 2229. (2) `LegacyBootHome` loading screen was unreachable on a signed-in dev boot — confirm a real first-run player still sees it (same row). (3) JA tip rows carry `<color=#EEDC9A>` spans (spec §2.2 JA column had `[..]`) — first JA strings in the game with highlight spans; keep unless Cesar objects. (4) Figma `Screenshot — NOT CHOSEN` section still on the Loading page — delete when Cesar confirms.
 
 
 - ~~`notice_panel_slide`~~ **DONE 2026-09-09** (Cesar approved on sight; `83f0867ea`, close-out `bea5bf1d5`). Folder in `Docs/Specs/Completed/`. Box slides out-left/in-right, finger drag + snap, 10 s cycle, timer holds while busy. Deviations accepted: `ResolveRelease` takes thresholds as params; release velocity measured in canvas px from the local point (correct on any canvas scale); editor-only `NoticeSlideDemoRecorder` added. Open: feel tuning on device (all values are Inspector fields). Notion 2221 Done; deferral 2222 (entry animation on Home open) stays.
