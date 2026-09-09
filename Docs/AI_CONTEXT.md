@@ -4,6 +4,51 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 — notice_panel_slide: **the Home notice box now slides, and waits 10s** — DONE
+
+Spec `Docs/Specs/Completed/notice_panel_slide/`. Implemented directly (no subagent chain — Cesar
+asked for it in one line) and approved by him on sight. Implementation commit `83f0867ea`; report +
+evidence in the task folder.
+
+**What changed.** On a page change the whole notice box — background, title, divider, body — slides
+out to the LEFT while the next slides in from the RIGHT; a finger drag carries both boxes and snaps
+on release; auto-cycle 5 s → 10 s. New `Assets/Scripts/UI/Home/NoticePageSlider.cs` on `NoticePanel`,
+which is now a bare `RectTransform` + slider with the `Image`/`VerticalLayoutGroup` moved down onto a
+`PageA` child and a `PageB` clone parked at +1170. The ROOT keeps its authored rect exactly, which is
+what keeps `DailyMissionPillController.ComputeTargetY()` at **−737** — unchanged. `SwipeDetector` is
+gone from the scene (it would have double-fired `NextNewsPage` on top of the slider's own commit).
+
+**The scene diff is 596/118, and getting there was the interesting part.** The first save produced
+3312 changed lines. Reverting, reopening the scene untouched and saving with *no edits* produced
+**1296** — so ShellScene rewrites ~1300 lines of baked layout state on any open-and-save in this
+Editor, and it would have buried the real change. The file was merged at the **YAML-document** level
+instead: HEAD's bytes kept verbatim for all 6205 untouched documents, only the 29 this change touches
+replaced/removed/added. Unity reopens the merged file clean. Worth reusing — it is more surgical than
+`git apply` hunk-picking and it cannot silently keep a churned hunk.
+
+**Gate is the invariant JSON, not a look at the video.** 48 assertions across three dumps in
+`Docs/Diagnostics/_capture/notice_slide_*.json`, taken in play mode after a real boot to Home with 2
+live notices, every gesture delivered through `ExecuteEvents` to the object
+`GetEventHandler<IBeginDragHandler>` resolves from PageA's own `Image`. Auto-cycle measured **10.38 s
+/ 10.28 s** back to back; a one-frame 25 px flick measures −2150 px/s and commits, the same 25 px
+dragged slowly measures −405 px/s and does not; one page rubber-bands to exactly −80 px; a snapping
+frame allocates no more than an idle Home frame. EditMode **2942 passed / 0 failed**, with a tripwire
+run proving the new 16-test suite actually executes.
+
+**Three instrument defects, all mine, all caught before they became "findings".** (1) A probe
+coroutine hosted on `HomeScreen` died at the `SetActive(false)` it was testing, so it never wrote its
+file. (2) A 2-page auto-cycle running alongside a drag returns the index to where it started —
++1 then +1 — which reads as "the flick did not commit"; the flick was fine, the measurement was not.
+(3) The runner's `realtimeSinceStartup` and the Recorder's timeline drift **0.845 s**, enough to burn
+the flick's caption over the *next* gesture; measured off the encoded mp4 at three gestures (0.83 /
+0.84 / 0.85) and baked into the recorder as `EncoderLead`.
+
+**Clip:** `Docs/Specs/Active/notice_panel_slide/videos/notice_panel_slide_captioned.mp4` — 36 s,
+1170×2532, real StartButton, real drag handlers, seven captions. Every caption window was verified to
+contain its own event by diffing the notice box's title row frame-by-frame, including the negative
+case: the "short drag ... does not change" window contains only small motion and no page change.
+
+---
 ## 2026-09-09 — store_history: **the STORE tab's History chip finally opens something** — awaiting Cesar
 
 Spec `Docs/Specs/Active/store_history/`. Implemented directly (no subagent chain — Cesar asked for

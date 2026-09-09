@@ -1,0 +1,37 @@
+=== iter-1 kickoff baseline 2026-09-09 ===
+HEAD: 5eac454b1 store_history: DONE — Active to Completed
+
+DIRTY (git status --porcelain --untracked-files=all) at kickoff:
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/loading_tips/            (another task's spec + reference renders)
+?? Docs/Specs/Active/notice_panel_slide/      (this task's SPEC.md + STATUS.md)
+
+Everything in that list predates this session and is NOT introduced by this task.
+`Docs/Specs/Quick/flick_arrow_speed_retune.md` appeared in the working tree DURING this
+session and was not written by it — another session on this machine owns it; untouched here.
+=== end baseline ===
+
+12:30  Read SPEC. Mapped NoticePanel (446239822) live via Unity MCP: Image(Notice Background,
+       71badbcc…) + VerticalLayoutGroup(1/0/42/42, spacing 10) + SwipeDetector(50) on the root,
+       3 children. HomeScreenController newsAutoCycleInterval=5 in the scene.
+12:34  Wrote Assets/Scripts/UI/Home/NoticePageSlider.cs + EditMode table test. Compile-checked
+       via MCP: type resolves, ResolveRelease/WrapIndex evaluate correctly.
+12:38  Scene surgery v1. Trap hit: the root's VerticalLayoutGroup re-anchors PageA to (0,1)
+       during its layout pass, so anchors had to be re-asserted AFTER the VLG was destroyed.
+12:41  scene-save produced 3312 changed lines. Proved by experiment (revert -> reopen -> bare
+       save) that ~1300 lines of that is inherent open/save layout churn in this scene, not
+       this task. Redid the surgery, then merged at YAML-DOCUMENT level: HEAD's bytes kept
+       verbatim for all 6205 untouched documents, only the 29 this change touches replaced or
+       added. Diff is now 596+/118-, all of it this task.
+12:44  Scene reopened from the merged file: clean, non-dirty, all references intact,
+       PageA world-corners identical to the pre-change NoticePanel, ComputeTargetY() = -737.
+12:47  EditMode sweep: 2942 tests, 0 failed. Tripwire run confirms the new suite executes.
+12:50  Play mode, real boot to Home, 2 live notices. Invariants probe #1: 30/31 PASS.
+12:53  Probes #2/#3 hit two instrument defects of my own: (a) a coroutine hosted on HomeScreen
+       dies at the SetActive(false) it is testing; (b) a 2-page auto-cycle running concurrently
+       with a drag returns the index to where it started, faking a "no commit". Both fixed by
+       instrumenting the gesture step-by-step (notice_diag.txt) and by measuring cadence in
+       isolation. Final: 30/31 + 11 + 7 assertions, 0 real failures.
+12:56  Demo recorder written and run: 1170x2532 @30fps, real StartButton + real drag handlers.
