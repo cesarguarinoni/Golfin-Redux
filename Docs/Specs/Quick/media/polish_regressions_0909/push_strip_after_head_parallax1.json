@@ -1,0 +1,8 @@
+{
+  "label": "after_head_parallax1",
+  "fps": 60,
+  "pushes": [
+    { "name": "ModeSelection__MissionSelection", "start": 11.439, "end": 12.453, "parallax": 1.00, "how": "REAL widget: mode card ExpandedContainer/ActionButton.onClick" },
+    { "name": "GachaPrizes__GeneralShop", "start": 16.161, "end": 17.176, "parallax": 1.00, "how": "harness ShowScreen (GachaPrizes needs a completed pull — NOT a tap)" }
+  ]
+}

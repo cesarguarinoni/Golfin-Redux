@@ -123,17 +123,35 @@ fixture read it with `GetProperty`, which returns null — so the guard had neve
 `b6ef935b6`; it is green now, and `maxStepFrac ≤ 0.1333` above is the same property measured over 87
 real pushes.
 
-### 4c · STILL OWED — two capture items
+### 4c · DONE — the strips and the A/B parallax clip, 2026-09-09
 
-Both need a SECOND recording from a `36dc3d480` checkout, which is a full Editor recompile cycle each:
+Three recordings of the SAME two pushes at 1170×2532 / 60 fps
+(`Assets/Editor/PushStripRecorder.cs`, left untracked across the checkouts so all three ran the
+identical harness): `before_36dc3d480`, `after_head_parallax1`, and `ab_parallax03` — the last with
+`SameBackdropParallaxFactor` temporarily edited to `0.3f`, since it is a `const` and cannot be
+flipped at runtime. **The const was reverted and `git diff` on `LayeredPush.cs` is empty.**
 
-- Before/after 5-frame strips for `ModeSelection → MissionSelection` and `GachaPrizes → GeneralShop`.
-- The A/B parallax clip (0.3 vs 1.0). `SameBackdropParallaxFactor` is a `const`, so the A side needs a
-  temporary edit + rebuild rather than a runtime flip. The probe already pins WHICH value every pair
-  ships with (1.0 on all 55 same-backdrop pairs); the clip is for Cesar to overrule the choice, and
-  1.0 ships unless he does.
-- Also still open from the original list: the per-frame content-X log, and the P1 evidence
-  (`Rebind x10`, `ShowPrizes` logging `instant`, the Prizes arrival under the modal fade).
+The five frames are chosen from the MEASURED motion window, not from the sidecar timestamp: each
+clip is decoded frame by frame around the mark and the window is where the frame-to-frame delta
+clears a tenth of its peak. That is 11–16 frames per push at ~57 fps, which is a 250 ms tween — so
+the five frames really do span the push rather than a guess at where it was.
+
+| artifact | what it shows |
+|---|---|
+| `media/…/strip_modesel_missionsel.jpg` | **ModeSelection → MissionSelection, through the REAL mode-card `ExpandedContainer/ActionButton`.** BEFORE: the leaver slides off to the left over bare background and the arriver NEVER APPEARS — it is drawn underneath, which is §3's defect made visible. AFTER: MissionSelection is on top and visible for the whole travel. |
+| `media/…/strip_gachaprizes_generalshop.jpg` | The same, for the pair with no player path (both ends re-seated, labelled on the strip). BEFORE: five frames of the same empty Prizes panel while the title swaps underneath. AFTER: the banner carousel slides in and settles. |
+| `media/…/strip_ab_parallax.jpg` + `media/…/ab_parallax_clip.mp4` | Fix 3's A/B, 4× slow and side by side. At **0.3** the leaver lags and ModeSelection is still sitting there behind the arriving panel — two speeds over a fixed backdrop, which reads as a stutter. At **1.0** the pair moves as one rigid strip. |
+
+Sidecars (`push_strip_*.json`) carry each push's window and the `LastPushParallaxFactor` the run
+actually measured: `null` at `36dc3d480` (fix 3 did not exist yet), `0.30`, and `1.00`.
+
+**1.0 ships unless Cesar overrules it.**
+
+### 4d · Still open from the original list
+
+- The per-frame content-X log for `ModeSelection → MissionSelection`.
+- P1 evidence: `Rebind x10` with a different first prize than the previous pull; `ShowPrizes`
+  logging `instant`; the Prizes arrival under the modal fade.
 
 Compile status at the time of writing: **Assembly-CSharp, Assembly-CSharp-Editor and
 Golfin.UI.Polish.Tests all build clean (0 errors)**, checked with Unity's own Roslyn against the
