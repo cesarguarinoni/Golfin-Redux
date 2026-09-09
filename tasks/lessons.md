@@ -4011,3 +4011,34 @@ an object that already existed. The answer should have been "none". Two lines sa
 **last**, so the serialised state is the one you meant. And run the visual-property diff scan on any
 change that claims "no rest movement" — a claim about pixels is checkable against the diff without
 looking at a single frame.
+
+## Lesson AJ — a harness that measures the wrong object reports a defect that isn't there (`polish_regressions_0909` / `push_arrival_hitch` §4d, 2026-09-09)
+
+The per-frame content-X log said the arriving screen's rect sat at `0.0` on every frame of every
+push, in both builds. I ruled out duplicate scene objects (instance ids), a layout group on the
+parent, coroutine sampling order (re-measured from `LateUpdate`), `ScreenEntryMotion`/`UiMotion.Rise`
+(it preserves `x`), and `Collect` filtering on active (it does not). Every one of those checks was
+sound. Then I reported it as a pre-existing defect the invariant gate could not see, and wrote it
+into a commit message and an audit doc.
+
+It was my harness. It tapped "the first expanded mode-card `ActionButton`", which is **PRACTICE** —
+so every run drove `ModeSelection → HoleSelection` while the tool measured
+`MissionSelectionScreen/Content` and every artifact was labelled MissionSelection. A rect that is
+not in the animation does not move. One line of reflection into `LayeredPush._active.To.Content[0]`
+said `HoleSelectionScreen/Content` and ended it.
+
+**The rule: before explaining why a measurement is surprising, prove the instrument is pointed at
+the subject.** I eliminated five causes of "why doesn't it move" without once asking "is this the
+thing being moved". That question is cheaper than any of the five and it is the only one that can
+invalidate all of them at once.
+
+**And the fix belongs in the harness, not the notes.** Both tools now name the target instead of
+inferring it — the mode card is chosen by its label text, the arriver and leaver rects are read from
+the animator's own collected layers rather than resolved by name, and `PushStripRecorder` writes
+`actualTarget` into its sidecar so a recording whose label disagrees with what was pushed says so in
+the artifact. A convention I have to remember is not a fix; a tool that cannot express the mistake is.
+
+**Sister to Lesson AH** (three clean sweeps over a surface nobody had measured should be the first
+thing to distrust): here the number was anomalous rather than clean, and the same discipline applies
+in reverse — an anomaly that survives five good explanations is more likely to be the measurement
+than the code.

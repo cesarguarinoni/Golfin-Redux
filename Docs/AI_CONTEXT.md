@@ -4,6 +4,34 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 — polish_regressions_0909: **the three Cesar saw after a/b/c** — DONE
+
+Quick task, five commits. Spec moved to `Docs/Specs/Quick/Completed/`.
+
+| | what it actually was |
+|---|---|
+| **R1** | Not the reveal animation. An unaffordable PULL opened the modal, shook the bag for the round trip and closed it on the server's `insufficient` — the toast read as the animation breaking. `GachaPullFlow.CanAfford` is now the one predicate both PULL surfaces ask, and the two buttons price SEPARATELY so a wallet covering x1 but not x10 leaves x1 live. 8 tests. |
+| **R2** | The daily-mission "bubble from the left" was §D4's shimmer: a 978×374 placeholder sweeping on EVERY entry for a ~200 ms fetch. Site, host and both `Shimmer()` calls removed (scene diff: 161 deletions, 0 additions); the card fades in via `FadeInPanel`. |
+| **R3** | The Architect's find, verified: `GachaBannerArt.Resolve` step 1 goes silent when `url == bundledUrl`, so once the exporter baked the published `artUrl` into the bundle (`c5558a400`) the placeholder `artSprite` won FOREVER and the uploaded art could never appear. Step 2 is now gated on the sprite being the row's OWN; a placeholder is demoted to step 4. |
+| **R3 audit** | Cesar: "check if this happens with any other data from the admin." Every `CatalogArtCache.Cached` site enumerated: clubs already correct, characters/items/balls structurally exposed but zero rows carry a URL, **ticket_types broken three times** — all three call sites passed `IconUrl` as its own bundled url, making the re-uploaded rung dead code in every build. One `GachaTicketArt` now. |
+| **R4** | `ContentArtFetcher`/`ContentArtValidator` never knew the two gacha catalogs (they landed 4 days after the bundler shipped). Six catalogs now; `GachaBanner_TestA/TestB` bundled; `TournamentArtService.ArtCached` re-binds the carousel so art arrives on the SAME launch. |
+| **R0** | `LayeredPushArrivalTests.NoSingleFrameAdvancesMoreThanTwoFramesOfTravel` had NRE'd since `98e2fd3d5` — `UiMotion.PushDur` is a `const` field read with `GetProperty`. Fixed; the two EditMode clock flakes behind `game_polish_c`'s `2885/1` made clock-independent. **2911 total, 2908 passed, 0 failed.** |
+| Console sweep | 17 shell screens, per screen, same tool across a checkout: warnings 4 → **2**, the whole delta being R2's two `[Shimmer] missions.daily — NO HOST` lines. |
+
+Two gates so R3 cannot return: `Validate Catalog Art` grew a `masked` verdict, and
+`export_content.py --check` refuses both a convention mismatch and a catalog-agnostic conflict
+(one sprite claimed by rows with different uploaded files). Both clean on all six catalogs today;
+both trip on the state `c5558a400` shipped, replayed from git.
+
+**Owed to Cesar:** the two R3 on-device proofs (a third banner published from the admin, and the
+test banners on a build made WITHOUT `Fetch URL Art`), and the importer → publish → export loop for
+the two `artSprite` cells now ahead of the catalog. Both are production actions, not Editor ones.
+
+`push_arrival_hitch` §4 evidence was closed alongside (probe `fail=0` over 87 pushes, before/after
+strips, A/B parallax clip, per-frame content-X, P1). Its own Done-when still owes the four arrival
+costs, the stagger-under-push lines and rest parity — those belong to that task.
+
+---
 ## 2026-09-08 — game_polish_c: **the sweep** — READY_FOR_ARCHITECT_REVIEW
 
 Slice c of `game_polish` (Notion 2111): press feedback on every player-facing button, one scroll
