@@ -4,6 +4,46 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 — push_arrival_hitch: **the arriver was drawn UNDER the leaver** — DONE
+
+Quick task, spec + audit in `Docs/Specs/Quick/Completed/`. Approved by Cesar 2026-09-09.
+
+**P0 was a compositing bug, not a timing one.** `LayeredPush.Push` re-ordered the arriving screen
+to last sibling ONLY when the chrome cross-faded. On a same-backdrop pair it did not, so wherever
+the arriver's `ScreensRoot` index is LOWER than the leaver's, the whole arriving screen — backdrop
+and content — slid for 250 ms underneath the leaver's opaque background, and the player saw the
+leaver drift 30 % and then a hard cut. Derived from the repo: **12 of the 40 pushable ordered pairs**
+were occluded, including both Cesar named (`ModeSelection 10 → MissionSelection 8` "janky",
+`GachaPrizes 18 → GeneralShop 16` back "empty screen on the left"). Full pair × order table, and the
+28 that were already fine, in the audit §3.
+
+**Why a's green gate could not have caught it:** `chromeAlphaMin` and `seamWorstCover` sample
+CanvasGroup *alphas*, and an arriver drawn under an opaque leaver has perfectly correct alphas on
+every frame. Who is on top was not a number anywhere. It is now (`arriverOnTop`, sampled from the
+live transform every frame).
+
+| fix | what shipped | measured |
+|---|---|---|
+| **P0** | arriver last-sibling on EVERY push; on a same-backdrop pair its identical chrome is held at alpha 0 so it cannot cut the leaver's content away instead | `arriverOnTop` false on **0 of 87** pushes; `arriverChromeAlphaMax` clean |
+| **1** | build the screen in a HELD frame, then start the clock; cap every step at `MaxTweenStep` = 1/30 s | before: frame 1 was a 98.7 ms hitch carrying the arriver **72.2 %** of the width in one draw, and frame 0 already read 962/1170. After: same class of hitch (101.8 ms) can only spend 38 %, and frame 0 reads exactly 1170.0 |
+| **2** | `StaggerRise` + `PanelReveal` consult the push — rows land, the slide IS the entrance | unit-tested (`StaggerUnderPushTests`); the runtime log line is still owed, below |
+| **3** | parallax 1.0 on same-backdrop pairs (0.3 kept where the room actually changes) | `dArriver == dLeaver` on **every frame** after, vs a 3.3× ratio before — a better proof than the A/B clip |
+| **4** | MissionSelection + ModeSelect rebind cards by id instead of destroy-and-reinstantiate inside the transition | `arrivalFrameMs` now per-pair in the invariants (9.3–136.6 ms) |
+| **P1** | pull-again from Prizes hit `ShowScreen`'s "already on … ignoring" so `OnEnable` never ran and the player got the PREVIOUS pull's prizes — now a public `Rebind()`; and `ShowPrizes` goes `instant` under the reveal scrim | two real x10 pulls: `first=item:repairkit_common` → `first=club:club_iron7_mireo`, with NO navigation line on the second |
+
+Probe **`measured=87, fail=0`**; EditMode sweep **2911 / 2908 passed / 0 failed**. Two scars worth
+keeping: a probe run launched against a stale checkout's assembly reported `fail=0` and was caught
+only by its OLD field set (`fail = 0` from a build without the fix is not evidence of the fix); and
+the first content-X harness measured the PRACTICE card and read rects by name, so every artifact was
+labelled MissionSelection while the push was `ModeSelection → HoleSelection`.
+
+**Still owed against the spec's Done-when** (approved without them): the `paint(local) — instant
+(push)` runtime log lines for fix 2, `arrivalFrameMs` BEFORE/after for the four Play-pillar screens,
+and rest parity vs the b baselines on the Play pillar. One cheap follow-up the correction surfaced:
+a `p.To.Content.Count > 0` guard in the probe, since an empty content list would pass every arriver
+assertion vacuously (nothing is empty today).
+
+---
 ## 2026-09-09 — polish_regressions_0909: **the three Cesar saw after a/b/c** — DONE
 
 Quick task, five commits. Spec moved to `Docs/Specs/Quick/Completed/`.
