@@ -76,9 +76,10 @@ namespace Golfin.Economy
 
         /// <summary>Mint an earn op, append it, and persist. The returned op carries the idempotency key
         /// that will be replayed verbatim until the server acknowledges it.</summary>
-        public PendingPointsOp EnqueueEarn(string action, int amount)
+        public PendingPointsOp EnqueueEarn(string action, int amount,
+                                           System.Collections.Generic.List<string> loanIds = null)
         {
-            var op = PendingPointsOp.NewEarn(action, amount);
+            var op = PendingPointsOp.NewEarn(action, amount, null, loanIds);
             Enqueue(op);
             return op;
         }

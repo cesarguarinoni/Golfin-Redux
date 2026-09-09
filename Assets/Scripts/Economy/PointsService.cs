@@ -223,7 +223,14 @@ namespace Golfin.Economy
         ///
         /// Returns null when the flag is OFF (nothing is written to disk).
         /// </summary>
-        public PendingPointsOp EnqueueEarn(string action, int amount)
+        /// <param name="loanIds">asset_loans §4.5 — the loans whose assets this round was played
+        /// with, frozen at hole load. Null for every earn that used nothing borrowed, which keeps
+        /// the request byte-identical to what it was before loans existed. The CALLER supplies
+        /// these rather than this service reading <c>LoanService</c> itself: Golfin.Economy does
+        /// not reference Golfin.Social, and one nullable parameter is a much cheaper answer than a
+        /// new assembly edge.</param>
+        public PendingPointsOp EnqueueEarn(string action, int amount,
+                                           System.Collections.Generic.List<string> loanIds = null)
         {
             if (!PointsBackendFlag.Enabled) return null;
 
@@ -233,7 +240,7 @@ namespace Golfin.Economy
                 return null;
             }
 
-            var op = Queue.EnqueueEarn(action, amount);
+            var op = Queue.EnqueueEarn(action, amount, loanIds);
             Debug.Log($"[PointsService] Queued earn {op}. Pending={Queue.Count}.");
             return op;
         }

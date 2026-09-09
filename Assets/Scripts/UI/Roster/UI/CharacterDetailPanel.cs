@@ -116,6 +116,16 @@ namespace Golfin.Roster
         [SerializeField] private GameObject? selectedIcon;       // IconSelectedBig — wire in Inspector
         [SerializeField] private GameObject? levelUpReadyIcon;   // IconLevelUpBig  — wire in Inspector
 
+        // ── asset_loans §4.1 ──────────────────────────────────────────────────
+        [Header("Loans")]
+        /// <summary>The LEND / RETURN button, a clone of CompareButton sharing its row.</summary>
+        [SerializeField] private Button? lendButton;
+        [SerializeField] private TextMeshProUGUI? lendButtonText;
+        /// <summary>ON LOAN / BORROWED ribbon + the lender dim, over the Left panel.</summary>
+        [SerializeField] private Golfin.UI.Loans.LoanRibbonView? loanRibbon;
+        [SerializeField] private Golfin.UI.Loans.LoanModalController? loanModal;
+        [SerializeField] private Golfin.UI.Loans.LoanReturnModalController? loanReturnModal;
+
         [Header("Modals")]
         [SerializeField] private LevelUpModalController? levelUpModal;
         [SerializeField] private RectTransform? levelUpAnchorPanel; // wire to RightPanel
@@ -158,6 +168,7 @@ namespace Golfin.Roster
             if (boostButton != null) boostButton.onClick.AddListener(OnBoostClicked);
             if (compareButton != null) compareButton.onClick.AddListener(OnCompareClicked);
             if (selectButton != null) selectButton.onClick.AddListener(OnSelectClicked);
+            if (lendButton != null) lendButton.onClick.AddListener(OnLendClicked);
         }
 
         private void OnEnable()
@@ -175,6 +186,10 @@ namespace Golfin.Roster
                 RewardPointsManager.Instance.OnPointsChanged += OnPointsChanged;
 
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+
+            // asset_loans §4.1 — a loan can start or end on ANOTHER device, so the panel repaints
+            // off the service rather than off the tap that caused it.
+            Golfin.Social.LoanService.Instance.OnLoansChanged += OnLoansChanged;
 
             // Restart tick if a character is already selected (re-enable from background)
             if (!string.IsNullOrEmpty(currentCharacterId))
@@ -201,6 +216,7 @@ namespace Golfin.Roster
                 RewardPointsManager.Instance.OnPointsChanged -= OnPointsChanged;
 
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+            Golfin.Social.LoanService.Instance.OnLoansChanged -= OnLoansChanged;
 
             // Stop live tick and reset demo accel residue
             StopTick();
@@ -405,8 +421,118 @@ namespace Golfin.Roster
             else
                 ApplyStarterVisibility(characterId);
 
+            // asset_loans §4.1 — AFTER ApplyLockedState, deliberately: a BORROWED character is
+            // `isOwned = true` so the locked treatment never fires for it, and a LENT-OUT one is
+            // owned too — so the loan state is a layer ON TOP of the owned/locked decision, not a
+            // third branch of it.
+            ApplyLoanState(characterId, playerData);
+
             // Ensure tick is running (idempotent restart on same char)
             RestartTick();
+        }
+
+        // ── asset_loans §4.1 — the loan layer ─────────────────────────────────
+
+        private void OnLoansChanged()
+        {
+            if (!string.IsNullOrEmpty(currentCharacterId)) UpdatePanel(currentCharacterId);
+        }
+
+        /// <summary>
+        /// Paint the LEND / RETURN button, the ribbon and every button the loan state disables.
+        ///
+        /// <para>
+        /// FIVE STATES, and the table in SPEC §4.1 is the specification:
+        /// owned-and-free (LEND enabled), owned-and-SELECTED (LEND disabled — pick another
+        /// character first, because a character you are playing as cannot leave), LENT OUT
+        /// (everything disabled, ribbon + dim), BORROWED (RETURN, Boost hidden, everything else
+        /// live), and locked (the row hidden, which <see cref="ApplyLockedState"/> already did).
+        /// </para>
+        /// </summary>
+        private void ApplyLoanState(string characterId, PlayerCharacterData playerData)
+        {
+            Golfin.Social.LoanService loans = Golfin.Social.LoanService.Instance;
+            bool lentOut  = loans.IsLentOut(Golfin.Social.LoanDto.KindCharacter, characterId,
+                                            out Golfin.Social.LoanDto? outLoan);
+            bool borrowed = loans.IsBorrowed(Golfin.Social.LoanDto.KindCharacter, characterId,
+                                             out Golfin.Social.LoanDto? inLoan);
+
+            // Ribbon + dim.
+            if (loanRibbon != null)
+            {
+                if (lentOut)       loanRibbon.Show(outLoan, asLender: true);
+                else if (borrowed) loanRibbon.Show(inLoan,  asLender: false);
+                else               loanRibbon.Clear();
+            }
+
+            // The row itself is hidden on a locked character (ApplyLockedState hides Compare and
+            // Select the same way), and in starter mode, where lending is meaningless.
+            bool rowVisible = playerData.isOwned && !_starterMode;
+            if (lendButton != null) lendButton.gameObject.SetActive(rowVisible);
+
+            if (lendButtonText != null)
+                lendButtonText.text = LocalizationManager.Get(
+                    borrowed ? "LOAN_BTN_RETURN" : "LOAN_BTN_LEND");
+
+            if (lendButton != null)
+                // A SELECTED character cannot be lent: the player has to pick somebody else to
+                // play as first. The label stays LEND — this is "not right now", not a different
+                // action.
+                lendButton.interactable = rowVisible && !lentOut
+                                       && (borrowed || !playerData.isSelected);
+
+            if (lentOut)
+            {
+                // Everything is disabled but nothing is hidden — the Figma lender frame swaps each
+                // instance to its Enabled=No variant, so the player still sees the whole panel and
+                // can read why it is inert off the ribbon.
+                if (levelUpButton != null) levelUpButton.interactable = false;
+                if (boostButton   != null) boostButton.interactable   = false;
+                if (compareButton != null) compareButton.interactable = false;
+                if (selectButton  != null) selectButton.interactable  = false;
+                if (boostButton   != null) boostButton.gameObject.SetActive(true);
+            }
+            else if (borrowed)
+            {
+                // BOOST is HIDDEN, not disabled (Figma 14181:34094 visible=false): boosting spends
+                // real RP on a stamina pool that goes back to the owner in a few days, so the
+                // action is withdrawn rather than offered and refused. LEVEL UP stays live — that
+                // is the whole deal.
+                if (boostButton   != null) boostButton.gameObject.SetActive(false);
+                if (levelUpButton != null) levelUpButton.interactable = true;
+                if (compareButton != null) compareButton.interactable = true;
+                if (selectButton  != null) selectButton.interactable  = !playerData.isSelected;
+            }
+            else
+            {
+                if (boostButton != null) boostButton.gameObject.SetActive(true);
+            }
+        }
+
+        private void OnLendClicked()
+        {
+            if (string.IsNullOrEmpty(currentCharacterId)) return;
+
+            Golfin.Social.LoanService loans = Golfin.Social.LoanService.Instance;
+
+            if (loans.IsBorrowed(Golfin.Social.LoanDto.KindCharacter, currentCharacterId,
+                                 out Golfin.Social.LoanDto? inLoan))
+            {
+                loanReturnModal?.Open(inLoan!, DisplayName(currentCharacterId));
+                return;
+            }
+
+            var playerData = CharacterManager.Instance?.GetCharacterData(currentCharacterId);
+            if (playerData == null) return;
+
+            loanModal?.Open(Golfin.Social.LoanDto.KindCharacter, currentCharacterId,
+                            DisplayName(currentCharacterId), playerData.currentLevel);
+        }
+
+        private static string DisplayName(string characterId)
+        {
+            var csv = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
+            return csv != null ? csv.GetLocalizedDisplayName(singleLine: true) : characterId;
         }
 
         /// <summary>

@@ -94,6 +94,15 @@ namespace Golfin.Inventory
 
         // ── Modals ─────────────────────────────────────────────────────────────
 
+        // ── asset_loans §4.1 ──────────────────────────────────────────────────
+
+        [Header("Loans")]
+        [SerializeField] private Button? lendButton;
+        [SerializeField] private TextMeshProUGUI? lendButtonText;
+        [SerializeField] private Golfin.UI.Loans.LoanRibbonView? loanRibbon;
+        [SerializeField] private Golfin.UI.Loans.LoanModalController? loanModal;
+        [SerializeField] private Golfin.UI.Loans.LoanReturnModalController? loanReturnModal;
+
         [Header("Modals")]
         [SerializeField] private ClubLevelUpModalController?  levelUpModal;
 
@@ -118,6 +127,7 @@ namespace Golfin.Inventory
             if (repairButton  != null) repairButton.onClick.AddListener(OnRepairClicked);
             if (compareButton != null) compareButton.onClick.AddListener(OnCompareClicked);
             if (equipButton   != null) equipButton.onClick.AddListener(OnEquipClicked);
+            if (lendButton    != null) lendButton.onClick.AddListener(OnLendClicked);
         }
 
         private void OnEnable()
@@ -132,6 +142,9 @@ namespace Golfin.Inventory
             }
 
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+
+            // asset_loans §4.1 — a loan can start or end on another device.
+            Golfin.Social.LoanService.Instance.OnLoansChanged += OnLoansChanged;
         }
 
         private void OnDisable()
@@ -146,6 +159,7 @@ namespace Golfin.Inventory
             }
 
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+            Golfin.Social.LoanService.Instance.OnLoansChanged -= OnLoansChanged;
         }
 
         private void RefreshLocalizedText()
@@ -289,6 +303,99 @@ namespace Golfin.Inventory
             bool hasKits     = ItemManager.Instance != null && ItemManager.Instance.HasAnyRepairKit();
             if (levelUpButton != null) levelUpButton.interactable = !atMax;
             if (repairButton  != null) repairButton.interactable  = needsRepair && hasKits;
+
+            // asset_loans §4.1 — LAST, so the loan layer wins over the ordinary button rules
+            // above: a lent club's LEVEL UP must be off even when it is below max, and a borrowed
+            // club's REPAIR must be off even when it is damaged and the player has kits.
+            ApplyLoanState(clubId, playerClub);
+        }
+
+        // ── asset_loans §4.1 — the loan layer ─────────────────────────────────
+
+        private void OnLoansChanged()
+        {
+            if (!string.IsNullOrEmpty(currentClubId)) UpdatePanel(currentClubId);
+        }
+
+        /// <summary>
+        /// Paint the LEND / RETURN button, the ribbon, and the buttons the loan state overrides.
+        ///
+        /// <para>
+        /// AN EQUIPPED CLUB *CAN* BE LENT, unlike a selected character — the difference is that
+        /// unequipping is a side effect the player can be told about up front (the modal's amber
+        /// warning line), whereas "who you are playing as" has no equivalent no-op resolution.
+        /// Confirming the lend pulls the club out of the bag during reconciliation.
+        /// </para>
+        /// </summary>
+        private void ApplyLoanState(string clubId, PlayerClubData playerClub)
+        {
+            Golfin.Social.LoanService loans = Golfin.Social.LoanService.Instance;
+            bool lentOut  = loans.IsLentOut(Golfin.Social.LoanDto.KindClub, clubId,
+                                            out Golfin.Social.LoanDto? outLoan);
+            bool borrowed = loans.IsBorrowed(Golfin.Social.LoanDto.KindClub, clubId,
+                                             out Golfin.Social.LoanDto? inLoan);
+
+            if (loanRibbon != null)
+            {
+                if (lentOut)       loanRibbon.Show(outLoan, asLender: true);
+                else if (borrowed) loanRibbon.Show(inLoan,  asLender: false);
+                else               loanRibbon.Clear();
+            }
+
+            if (lendButton != null) lendButton.gameObject.SetActive(true);
+            if (lendButtonText != null)
+                lendButtonText.text = LocalizationManager.Get(
+                    borrowed ? "LOAN_BTN_RETURN" : "LOAN_BTN_LEND");
+            if (lendButton != null) lendButton.interactable = !lentOut;
+
+            if (lentOut)
+            {
+                if (levelUpButton != null) levelUpButton.interactable = false;
+                if (repairButton  != null) repairButton.interactable  = false;
+                if (compareButton != null) compareButton.interactable = false;
+                if (equipButton   != null) equipButton.interactable   = false;
+            }
+            else if (borrowed)
+            {
+                // Durability is FROZEN on a borrowed club (§3) — nothing wears it down, so there is
+                // nothing to repair and the button is disabled rather than hidden (Figma
+                // 14183:108675 swaps it to Silver Enabled=No, it does not remove it).
+                if (repairButton  != null) repairButton.interactable  = false;
+                if (compareButton != null) compareButton.interactable = true;
+                if (equipButton   != null) equipButton.interactable   = true;
+            }
+            else
+            {
+                if (compareButton != null) compareButton.interactable = true;
+                if (equipButton   != null) equipButton.interactable   = true;
+            }
+        }
+
+        private void OnLendClicked()
+        {
+            if (string.IsNullOrEmpty(currentClubId)) return;
+
+            Golfin.Social.LoanService loans = Golfin.Social.LoanService.Instance;
+
+            if (loans.IsBorrowed(Golfin.Social.LoanDto.KindClub, currentClubId,
+                                 out Golfin.Social.LoanDto? inLoan))
+            {
+                loanReturnModal?.Open(inLoan!, ClubDisplayName(currentClubId));
+                return;
+            }
+
+            var playerClub = ClubManager.Instance?.GetClubData(currentClubId);
+            if (playerClub == null) return;
+
+            loanModal?.Open(Golfin.Social.LoanDto.KindClub, currentClubId,
+                            ClubDisplayName(currentClubId), playerClub.currentLevel,
+                            clubIsEquipped: playerClub.IsEquipped);
+        }
+
+        private static string ClubDisplayName(string clubId)
+        {
+            var template = ClubDatabaseCSV.Instance?.GetClub(clubId);
+            return template != null && !string.IsNullOrEmpty(template.name) ? template.name : clubId;
         }
 
         private void UpdateStatBar(TextMeshProUGUI? nameField, Image? bar,

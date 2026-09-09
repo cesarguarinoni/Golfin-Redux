@@ -77,6 +77,16 @@ namespace Golfin.UI.GameplayTransition
             // but call SetBottomNavVisible(false) explicitly so the contract is enforced
             // even if the loading screen transition is bypassed in tests / dev tools.
             if (persistentUI != null) persistentUI.SetBottomNavVisible(false);
+
+            // asset_loans §4.5 — freeze which borrowed assets this round is played with, HERE.
+            //
+            // This is the one synchronous moment guaranteed to run exactly once per hole load on
+            // every entry path (matchmaking, missions, the practice tap), which is why the
+            // snapshot lives in the prelude rather than at the earn. Taking it at round START is
+            // deliberate: a loan that expires mid-round still splits that round's RP as far as the
+            // client is concerned, and the server drops it if it is no longer live — so the
+            // asymmetry can only ever cost the owner a share, never over-pay one.
+            Golfin.EconomyRuntime.LoanSyncBehaviour.SnapshotRoundLoans();
         }
 
         IEnumerator LoadCoroutine(int holeNumber, ModalController modalToHideOnMidpoint)

@@ -35,6 +35,10 @@ namespace Golfin.Inventory
         [SerializeField] private GameObject? equippedIcon;      // IconEquippedSmall  — wire in Inspector
         [SerializeField] private GameObject? durabilityLowIcon; // IconDurabilitySmall — wire in Inspector
 
+        // asset_loans §4.4 — same badge component and same (8,8) offset as the character card.
+        [Header("Loan Badge")]
+        [SerializeField] private Golfin.UI.Loans.LoanBadgeView? loanBadge;
+
         private string clubId    = "";
         private bool   isSelected = false;
         private Coroutine? scaleCoroutine;
@@ -140,11 +144,17 @@ namespace Golfin.Inventory
             var playerClub = ClubManager.Instance?.GetClubData(clubId);
             if (playerClub == null) return;
 
+            if (loanBadge != null)
+                loanBadge.Apply(playerClub.isLentOut, playerClub.isBorrowed);
+
             if (equippedIcon != null)
                 equippedIcon.SetActive(playerClub.IsEquipped);
 
             if (durabilityLowIcon != null)
-                durabilityLowIcon.SetActive(playerClub.IsDurabilityLow);
+                // A borrowed club's durability is FROZEN (§3), so a low-durability warning on one
+                // would be telling the borrower to fix something they cannot and that will not get
+                // worse. Suppressed rather than left to confuse.
+                durabilityLowIcon.SetActive(playerClub.IsDurabilityLow && !playerClub.isBorrowed);
         }
 
         // ── Selection ─────────────────────────────────────────────────────────

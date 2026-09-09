@@ -121,6 +121,22 @@ namespace Golfin.Save
 
         public List<PersistedCharacter> ownedCharacters = new List<PersistedCharacter>();
 
+        // ── asset_loans §2.1 ──────────────────────────────────────────────────
+        /// <summary>
+        /// Ids of ENDED loans this device has already applied. Newest last, capped at 50.
+        ///
+        /// <para>
+        /// WHY THIS IS SAVE DATA WHEN NOTHING ELSE ABOUT A LOAN IS. The server reports loans that
+        /// ended in the last 14 days so a client that was offline still learns about them — which
+        /// means the SAME ended loan arrives on every refresh for two weeks. Without a record of
+        /// what has been applied, every Roster entry would re-toast "your character is back" and
+        /// re-run the level catch-up. This is a per-device "seen" marker, not a copy of the loan:
+        /// losing it costs a duplicate toast, never a wrong level, because the catch-up is
+        /// idempotent (it only ever raises a level to the server's number).
+        /// </para>
+        /// </summary>
+        public List<string> reconciledLoanIds = new List<string>();
+
         /// <summary>ballId → quantity (-1 = unlimited)</summary>
         public Dictionary<string, int> ballQuantities = new Dictionary<string, int>();
 
@@ -268,6 +284,13 @@ namespace Golfin.Save
     public class PersistedClub
     {
         public string clubId = "";
+
+        // asset_loans §3 — runtime marker, NEVER on disk. `[NonSerialized]` is what makes that
+        // true rather than merely intended: the codec's skip (InventoryCodec.EncodeToObject) needs
+        // a field to read, and the save must not grow one. See SaveData.reconciledLoanIds for why
+        // a loan is the server's fact and not the save's.
+        [System.NonSerialized] public bool isBorrowed;
+
         public int    currentLevel;
         public int    currentDurability;
         public int    maxDurability;
@@ -287,6 +310,10 @@ namespace Golfin.Save
     public class PersistedCharacter
     {
         public string characterId = "";
+
+        /// <summary>asset_loans §3 — runtime marker, NEVER on disk. See PersistedClub.</summary>
+        [System.NonSerialized] public bool isBorrowed;
+
         public int currentLevel;
         public int spentStrength;
         public int spentClubControl;

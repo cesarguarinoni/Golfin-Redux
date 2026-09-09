@@ -327,6 +327,16 @@ namespace Golfin.Roster
 
             if (!ownedCharacters.TryGetValue(characterId, out var playerData)) return;
 
+            // asset_loans §3 — A BORROWED CHARACTER NEVER REACHES THE SAVE.
+            //
+            // This is the first of three guards (the other two are the [NonSerialized] flags on
+            // PlayerCharacterData and the skip in InventoryCodec), and it is the load-bearing one:
+            // every mutation on a borrowed row — the level the borrower buys, the condition they
+            // burn — funnels through here. Writing any of it would leave a PersistedCharacter for
+            // somebody else's character sitting in the save after the loan ended, and the roster
+            // would show it as owned forever.
+            if (playerData.isBorrowed) return;
+
             var saveData = SaveDataHost.Instance.Data;
             var existing = saveData.ownedCharacters.Find(c => c.characterId == characterId);
             if (existing == null)
@@ -526,6 +536,15 @@ namespace Golfin.Roster
                 return;
             }
 
+            // asset_loans §3 — a character that is out on loan is not ours to play right now. The
+            // detail panel disables SELECT too, but a second device can start a loan while this
+            // screen is open, and reconciliation calls straight into here.
+            if (ownedCharacters[characterId].isLentOut)
+            {
+                Debug.LogWarning($"[CharacterManager] Cannot select '{characterId}' — it is out on loan.");
+                return;
+            }
+
             // Deselect previous
             if (!string.IsNullOrEmpty(selectedCharacterId) && ownedCharacters.TryGetValue(selectedCharacterId, out var prev))
             {
@@ -695,6 +714,15 @@ namespace Golfin.Roster
                 return 0;
             }
 
+            // asset_loans §3 — the SERVER refuses this too (golfin_level_up answers
+            // not_available/on_loan), and this is the local half so the player is not charged a
+            // round trip to be told no.
+            if (playerChar.isLentOut)
+            {
+                Debug.LogWarning($"[CharacterManager] Cannot level '{characterId}' — it is out on loan.");
+                return 0;
+            }
+
             int nextLevel = playerChar.currentLevel + 1;
             int maxLevel = GetMaxLevel(characterId);
             if (nextLevel > maxLevel)
@@ -780,6 +808,172 @@ namespace Golfin.Roster
                 StaminaRuntimeService.AccrueRegen(playerData, DateTime.UtcNow);
             SyncCharacterToSaveData(characterId);
         }
+
+        // ── asset_loans §3 — borrowed characters and the lent-out lock ────────
+
+        /// <summary>
+        /// Make <paramref name="characterId"/> present and playable as a BORROWED character at the
+        /// owner's <paramref name="level"/>.
+        ///
+        /// <para>
+        /// NO NEW ROW IS CREATED. Every catalog character is already in <c>ownedCharacters</c> with
+        /// <c>isOwned = false</c> — that is what <see cref="GrantStarter"/> and
+        /// <see cref="UnlockCharacter"/> rely on too — so a borrow is a flag flip, exactly like an
+        /// unlock, and the Roster carousel needs no change at all: the card goes from locked to
+        /// borrowed in place.
+        /// </para>
+        /// <para>
+        /// SP IS ZEROED, AND THAT IS DELIBERATE. The borrower cannot allocate SP (§4.3) — the
+        /// points they buy belong to the owner and arrive unallocated when the loan ends. Carrying
+        /// the owner's allocation across would mean rendering stats the borrower cannot change and
+        /// that this device has no authority over; base-for-the-level is the honest presentation.
+        /// </para>
+        /// <para>
+        /// IDEMPOTENT: called on every reconcile pass for the life of the loan, so it must be
+        /// "make it so" rather than "do it again". An already-owned id is a no-op with a warning —
+        /// the server refuses lending somebody something they own, so reaching this means the two
+        /// disagree and the LOCAL ownership is the one we must not clobber.
+        /// </para>
+        /// </summary>
+        public void EnsureBorrowed(string characterId, int level)
+        {
+            if (string.IsNullOrEmpty(characterId)) return;
+
+            if (!ownedCharacters.TryGetValue(characterId, out var playerData))
+            {
+                Debug.LogWarning($"[CharacterManager] EnsureBorrowed: '{characterId}' is not in the catalog.");
+                return;
+            }
+
+            if (playerData.isOwned && !playerData.isBorrowed)
+            {
+                Debug.LogWarning($"[CharacterManager] EnsureBorrowed: '{characterId}' is already owned — ignoring the loan.");
+                return;
+            }
+
+            bool isNew = !playerData.isBorrowed;
+
+            playerData.isOwned    = true;
+            playerData.isBorrowed = true;
+            playerData.isLentOut  = false;
+            playerData.currentLevel = level;
+
+            if (isNew)
+            {
+                playerData.totalSPEarned    = 0;
+                playerData.spentStrength    = 0;
+                playerData.spentClubControl = 0;
+                playerData.spentRecovery    = 0;
+                playerData.spentStamina     = 0;
+            }
+
+            RefreshStatValues(characterId);   // no-ops the save write: the row is borrowed
+            Debug.Log($"[CharacterManager] Borrowed '{characterId}' at Lv {level}.");
+        }
+
+        /// <summary>
+        /// Take a borrowed character back out of the roster. Returns true when something changed,
+        /// so the caller can decide whether the loss needs a toast and a repaint.
+        ///
+        /// <para>
+        /// The row goes back to <c>isOwned = false</c> — LOCKED, which is what it was before the
+        /// loan and what it must be after: the player never owned it. Selection is NOT repaired
+        /// here; the reconciler does that, because "pick another character" needs a policy
+        /// (first owned, not lent) that belongs with the reconcile pass, not with a data flip.
+        /// </para>
+        /// </summary>
+        public bool RemoveBorrowed(string characterId)
+        {
+            if (string.IsNullOrEmpty(characterId)) return false;
+            if (!ownedCharacters.TryGetValue(characterId, out var playerData)) return false;
+            if (!playerData.isBorrowed) return false;
+
+            playerData.isBorrowed = false;
+            playerData.isOwned    = false;
+            playerData.isSelected = false;
+
+            Debug.Log($"[CharacterManager] Returned borrowed '{characterId}'.");
+            return true;
+        }
+
+        /// <summary>Set or clear the lent-out lock on an OWNED character. Runtime only.</summary>
+        public void SetLentOut(string characterId, bool lentOut)
+        {
+            if (string.IsNullOrEmpty(characterId)) return;
+            if (!ownedCharacters.TryGetValue(characterId, out var playerData)) return;
+            playerData.isLentOut = lentOut;
+        }
+
+        /// <summary>True when this character is present only because somebody lent it to us.</summary>
+        public bool IsBorrowed(string characterId)
+            => ownedCharacters.TryGetValue(characterId, out var c) && c.isBorrowed;
+
+        /// <summary>True when we own this character but it is currently out on loan.</summary>
+        public bool IsLentOut(string characterId)
+            => ownedCharacters.TryGetValue(characterId, out var c) && c.isLentOut;
+
+        /// <summary>
+        /// The first character that is genuinely ours and available to play — owned, not borrowed,
+        /// not lent out. The fallback when the selected character leaves (a borrowed one is
+        /// returned, or an owned one is lent from another device).
+        /// </summary>
+        public string? FirstSelectableCharacterId()
+        {
+            foreach (var c in ownedCharacters.Values)
+                if (c.isOwned && !c.isBorrowed && !c.isLentOut)
+                    return c.characterId;
+            return null;
+        }
+
+        /// <summary>
+        /// Credit the levels a BORROWER bought while this character was out on loan, plus the SP
+        /// those levels earn.
+        ///
+        /// <para>
+        /// THE SP ARRIVES UNALLOCATED. The borrower could not spend it (§4.3), so the owner does —
+        /// in the Level Up modal, exactly as if they had bought the levels themselves. Summing
+        /// <see cref="CharacterLevelUpDatabase.GetSPReward"/> over the range is what makes the
+        /// catch-up indistinguishable from having levelled it by hand, which is the promise the
+        /// lend modal's terms line makes.
+        /// </para>
+        /// </summary>
+        /// <returns>SP credited; 0 when the level did not move.</returns>
+        public int ApplyLoanLevelCatchUp(string characterId, int newLevel)
+        {
+            if (string.IsNullOrEmpty(characterId)) return 0;
+            if (!ownedCharacters.TryGetValue(characterId, out var playerData)) return 0;
+            if (newLevel <= playerData.currentLevel) return 0;
+
+            int maxLevel = GetMaxLevel(characterId);
+            newLevel = Mathf.Min(newLevel, maxLevel);
+            if (newLevel <= playerData.currentLevel) return 0;
+
+            int sp = 0;
+            if (levelUpDatabase != null)
+                for (int lv = playerData.currentLevel + 1; lv <= newLevel; lv++)
+                    sp += levelUpDatabase.GetSPReward(lv);
+
+            playerData.currentLevel  = newLevel;
+            playerData.totalSPEarned += sp;
+
+            RefreshStatValues(characterId);   // also syncs to the save
+            OnCharacterLeveledUp?.Invoke(characterId);
+
+            Debug.Log($"[CharacterManager] Loan catch-up: '{characterId}' -> Lv {newLevel} (+{sp} SP).");
+            return sp;
+        }
+
+        /// <summary>
+        /// Fire <see cref="OnRosterChanged"/> from outside this class.
+        ///
+        /// <para>
+        /// Exists for <c>LoanSyncBehaviour</c> (asset_loans §2.1), which mutates several rows in
+        /// one reconcile pass and wants ONE repaint at the end rather than one per loan. The event
+        /// itself stays private-invoke — this is a named, documented door, not a general
+        /// "anybody can raise the roster event" hole.
+        /// </para>
+        /// </summary>
+        public void RaiseRosterChanged() => OnRosterChanged?.Invoke();
 
         /// <summary>Get the currently selected character ID.</summary>
         public string GetSelectedCharacterId() => selectedCharacterId;

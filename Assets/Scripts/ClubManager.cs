@@ -454,8 +454,148 @@ public class ClubManager : MonoBehaviour
     {
         var host = SaveDataHost.Instance;
         if (host == null) return;
-        host.Data.ownedClubs = ownedClubs.Values.Select(ToPersisted).ToList();
+
+        // asset_loans §3 — A BORROWED CLUB NEVER REACHES THE SAVE.
+        //
+        // This method REWRITES the whole persisted list from the runtime dict, so the filter has
+        // to be here rather than at the call sites: every mutation anywhere in this class ends up
+        // rebuilding `ownedClubs` from scratch, and one that forgot to exclude a borrowed row
+        // would persist somebody else's driver permanently. The [runtime-only] flags on
+        // PlayerClubData and the skip in InventoryCodec are the second and third guards.
+        host.Data.ownedClubs = ownedClubs.Values.Where(c => !c.isBorrowed).Select(ToPersisted).ToList();
         host.MarkDirty();
+    }
+
+    // ── asset_loans §3 — borrowed clubs and the lent-out lock ─────────────────
+
+    /// <summary>
+    /// Make <paramref name="clubId"/> present and playable as a BORROWED club at the owner's
+    /// <paramref name="level"/>.
+    ///
+    /// <para>
+    /// UNLIKE A CHARACTER, THIS IS A REAL INSERT. `ownedClubs` holds only clubs the player owns —
+    /// there is no locked-but-present row to flip — so a borrowed club is added to the dict and
+    /// removed again when the loan ends. That is also why <see cref="GetAllOwnedClubs"/> and
+    /// <see cref="GetOwnedClubsOfType"/> need no change: the carousel, the bags and the in-game
+    /// club selector all read the dict, so a borrowed club appears everywhere a real one does
+    /// without a single call site knowing loans exist.
+    /// </para>
+    /// <para>
+    /// DURABILITY STARTS FULL AND DOES NOT MOVE (§3): repair is disabled on a borrowed club and
+    /// there is no wear call site in the game today, so a borrower can neither run one down nor be
+    /// asked to fix it. Bag slot starts at 0 — borrowing does not equip.
+    /// </para>
+    /// <para>Idempotent: called on every reconcile pass for the life of the loan.</para>
+    /// </summary>
+    public void EnsureBorrowed(string clubId, int level)
+    {
+        if (string.IsNullOrEmpty(clubId)) return;
+
+        if (ownedClubs.TryGetValue(clubId, out var existing))
+        {
+            if (!existing.isBorrowed)
+            {
+                Debug.LogWarning($"[ClubManager] EnsureBorrowed: '{clubId}' is already owned — ignoring the loan.");
+                return;
+            }
+            int cap = GetMaxLevel(clubId);
+            existing.currentLevel = Mathf.Clamp(level, 1, cap);
+            return;
+        }
+
+        var template = ClubDatabaseCSV.Instance?.GetClub(clubId);
+        if (template == null)
+        {
+            Debug.LogWarning($"[ClubManager] EnsureBorrowed: club '{clubId}' not found in DB.");
+            return;
+        }
+
+        var spec = BuildSpec(template);
+        var runtime = ToRuntime(ClubOwnershipService.MakePersisted(spec, 0));
+        runtime.currentLevel      = Mathf.Clamp(level, 1, GetMaxLevel(clubId));
+        runtime.currentDurability = runtime.maxDurability;
+        runtime.equippedBagSlot   = 0;
+        // The owner's SP allocation is NOT carried across — the borrower cannot spend SP (§4.3),
+        // so rendering an allocation this device has no authority over would be a lie.
+        runtime.totalSPEarned      = 0;
+        runtime.spentPower         = 0;
+        runtime.spentAccuracy      = 0;
+        runtime.spentLieResistance = 0;
+        runtime.spentDurability    = 0;
+        runtime.isBorrowed        = true;
+
+        ownedClubs[clubId] = runtime;
+        Debug.Log($"[ClubManager] Borrowed '{clubId}' at Lv {runtime.currentLevel}.");
+        OnInventoryChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Drop a borrowed club. The caller unequips it FIRST (BagManager.RemoveClubFromBag needs the
+    /// row to still be there), which is why this does not do it itself.
+    /// </summary>
+    public bool RemoveBorrowed(string clubId)
+    {
+        if (string.IsNullOrEmpty(clubId)) return false;
+        if (!ownedClubs.TryGetValue(clubId, out var club) || !club.isBorrowed) return false;
+
+        ownedClubs.Remove(clubId);
+        Debug.Log($"[ClubManager] Returned borrowed '{clubId}'.");
+        OnInventoryChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>Set or clear the lent-out lock on an OWNED club. Runtime only.</summary>
+    public void SetLentOut(string clubId, bool lentOut)
+    {
+        if (string.IsNullOrEmpty(clubId)) return;
+        if (ownedClubs.TryGetValue(clubId, out var club)) club.isLentOut = lentOut;
+    }
+
+    /// <summary>
+    /// Fire <see cref="OnInventoryChanged"/> from outside this class — the club-side twin of
+    /// <c>CharacterManager.RaiseRosterChanged</c>, and for the same reason: one reconcile pass,
+    /// one repaint.
+    /// </summary>
+    public void RaiseInventoryChanged() => OnInventoryChanged?.Invoke();
+
+    public bool IsBorrowed(string clubId)
+        => ownedClubs.TryGetValue(clubId, out var c) && c.isBorrowed;
+
+    public bool IsLentOut(string clubId)
+        => ownedClubs.TryGetValue(clubId, out var c) && c.isLentOut;
+
+    /// <summary>
+    /// Credit the levels a borrower bought while this club was out, plus the SP those levels earn.
+    ///
+    /// <para>
+    /// <see cref="SetLevel"/> deliberately does NOT credit SP — it exists for the level-up modal,
+    /// which allocates SP itself right afterwards. A loan catch-up has no modal, so the SP is
+    /// credited here, mirroring <c>CharacterManager.ApplyLoanLevelCatchUp</c> exactly: the owner
+    /// gets it unallocated and spends it whenever they like.
+    /// </para>
+    /// </summary>
+    public int ApplyLoanLevelCatchUp(string clubId, int newLevel)
+    {
+        if (string.IsNullOrEmpty(clubId)) return 0;
+        if (!ownedClubs.TryGetValue(clubId, out var club)) return 0;
+
+        int maxLevel = GetMaxLevel(clubId);
+        newLevel = Mathf.Min(newLevel, maxLevel);
+        if (newLevel <= club.currentLevel) return 0;
+
+        int sp = 0;
+        if (CharacterLevelUpDatabase.Instance != null)
+            for (int lv = club.currentLevel + 1; lv <= newLevel; lv++)
+                sp += CharacterLevelUpDatabase.Instance.GetSPReward(lv);
+
+        club.currentLevel   = newLevel;
+        club.totalSPEarned += sp;
+
+        PersistOwnedClubs();
+        OnClubLeveledUp?.Invoke(clubId);
+
+        Debug.Log($"[ClubManager] Loan catch-up: '{clubId}' -> Lv {newLevel} (+{sp} SP).");
+        return sp;
     }
 
     // ── Ownership / grant (Order 610 Phase A) ───────────────────────────────────
@@ -537,6 +677,18 @@ public class ClubManager : MonoBehaviour
     /// </summary>
     public void EquipClub(string clubId, int bagSlot = 1)
     {
+        // asset_loans §3 — a club that is out on loan is not in our bag to equip.
+        //
+        // ⚠️ `bagSlot > 0` IS LOAD-BEARING. `BagManager.RemoveClubFromBag` unequips by calling
+        // EquipClub(clubId, 0), and reconciliation has to be able to pull a lent club OUT of a bag
+        // — refusing that would leave the asset both lent and equipped, which is the one state
+        // this feature must never produce.
+        if (bagSlot > 0 && IsLentOut(clubId))
+        {
+            Debug.LogWarning($"[ClubManager] Cannot equip '{clubId}' — it is out on loan.");
+            return;
+        }
+
         if (!ownedClubs.TryGetValue(clubId, out var club))
         {
             Debug.LogWarning($"[ClubManager] EquipClub: club '{clubId}' not found.");

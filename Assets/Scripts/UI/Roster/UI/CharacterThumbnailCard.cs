@@ -35,6 +35,11 @@ namespace Golfin.Roster
         [SerializeField] private GameObject? levelUpReadyIcon; // IconLevelUpSmall  — wire in Inspector
         [SerializeField] private GameObject? staminaIcon;      // IconStaminaSmall  — wire in Inspector
 
+        // asset_loans §4.4 — the 44x44 circle at the card's TOP-LEFT. The Lv pill keeps top-right
+        // and the existing selected / level-up / stamina stack is untouched.
+        [Header("Loan Badge")]
+        [SerializeField] private Golfin.UI.Loans.LoanBadgeView? loanBadge;
+
         [Header("Locked State (Starter Mode)")]
         [SerializeField] private GameObject? _lockedOverlay;   // Dark gradient + LOCKED label; MUST be wired in Inspector (prefab-authored, no runtime fallback)
         [SerializeField] private TextMeshProUGUI? _lockedLabel;  // "LOCKED" text inside the overlay
@@ -145,6 +150,11 @@ namespace Golfin.Roster
             var playerData = CharacterManager.Instance?.GetCharacterData(characterId);
             if (playerData == null) return;
 
+            // asset_loans §4.4 — the loan badge, and the two icons its state overrides.
+            bool lentOut  = playerData.isLentOut;
+            bool borrowed = playerData.isBorrowed;
+            if (loanBadge != null) loanBadge.Apply(lentOut, borrowed);
+
             // Selected icon
             if (selectedIcon != null)
                 selectedIcon.SetActive(playerData.isSelected);
@@ -157,7 +167,9 @@ namespace Golfin.Roster
                 bool canLevel = RewardPointsManager.Instance != null
                              && RewardPointsManager.Instance.CanAfford(cost)
                              && playerData.currentLevel < maxLevel;
-                levelUpReadyIcon.SetActive(canLevel);
+                // FORCED OFF while it is out on loan: the level-up it is inviting is refused by
+                // both the panel and the server, so the prompt would be pure noise.
+                levelUpReadyIcon.SetActive(canLevel && !lentOut);
             }
 
             // Stamina icon

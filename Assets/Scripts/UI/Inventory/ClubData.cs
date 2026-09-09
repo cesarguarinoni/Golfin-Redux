@@ -130,6 +130,20 @@ namespace Golfin.Inventory
         public int spentDurability     = 0;
         public const int MAX_SP_PER_STAT = 20;
 
+        // ── asset_loans §3 — RUNTIME ONLY, NEVER PERSISTED ────────────────────
+        //
+        // PlayerClubData is a plain C# class rather than a [Serializable] one — the save writes
+        // PersistedClub, built field-by-field by ClubManager.ToPersisted — so "not persisted" here
+        // is enforced by that mapping simply not carrying these two. `PersistOwnedClubs` skips a
+        // borrowed row entirely on top of that. See PlayerCharacterData for the full reasoning:
+        // a loan belongs to the server, and a save that remembered one could contradict it.
+
+        /// <summary>Somebody else's club, on loan to us. Equippable and levellable; never saved.</summary>
+        public bool isBorrowed;
+
+        /// <summary>Ours, but out on loan. Locked until it comes back.</summary>
+        public bool isLentOut;
+
         public bool IsEquipped      => equippedBagSlot > 0;
         public bool IsDurabilityLow => maxDurability > 0
                                     && (float)currentDurability / maxDurability < 0.25f;

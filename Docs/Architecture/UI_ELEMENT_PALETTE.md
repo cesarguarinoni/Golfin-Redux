@@ -102,6 +102,26 @@ SCRIPT, never the PNG.
 > the border tuned to the radius keeps them exact at both. Check the maths before changing either
 > sprite's size: `2 × effectiveBorder` must stay under BOTH the narrowest width and the height.
 
+### Loan atoms (asset_loans, 2026-09-09)
+
+Four generated sprites, baked by `Docs/Scripts/make_loan_sprites.py` — the script is the source of
+truth for size, radius and colour, and the PNGs are build products. Each is a FIXED-SIZE element
+whose shape no shipped atom carries.
+
+| Atom | Path | GUID | Use for |
+|---|---|---|---|
+| Loan ribbon | `Assets/Art/RosterScreen/S_LoanRibbon.png` | `059e3c5dfcd0f4d1b88ef0f1e7d1d6cb` | 537×72, **TOP corners r=20 and the bottom square**. Every rounded atom in the project rounds all four, which would notch where the ribbon meets the portrait it sits on. Baked WHITE and tinted `#050F1F @ 72 %` on the Image |
+| Loan badge | `Assets/Art/RosterScreen/S_LoanBadge.png` | `47049e2ee6b414910addf74c754d7c87` | 44×44, a `#050F1F @ 85 %` disc inside a 2 px white ring — two colours in one sprite, so it cannot be a tinted white shape. Drawn UNTINTED. Doubles as the recipient-row avatar placeholder (tinted `#38597F`) |
+| Recipient row | `Assets/Art/RosterScreen/S_LoanRow.png` | `f7cd714fa48dc49e08d07faa5ac9f7e3` | 732×96 r=12, WHITE. Tinted `#050F1F @ 60 %` for the unselected lend-modal row |
+| Recipient row, selected | `Assets/Art/RosterScreen/S_LoanRowSelected.png` | `3b4565a6ef4e84ad89b2ffae4fc51a91` | the same rect with `#2775DD @ 35 %` fill AND its 3 px `#2775DD` stroke baked in. **A SPRITE SWAP, not an `Outline` component** — C5 / the fidelity linter: an Outline is four offset copies of the graphic, not a crisp N-px border |
+
+> **The ribbon and the dim must `ignoreLayout`.** The club detail panel's `LeftPanel` is a
+> `VerticalLayoutGroup` (the Roster's is not), so an overlay parented to it is treated as another
+> item in the flow: it lands under the artwork and squashes its siblings. The first capture run of
+> `asset_loans` showed a club whose buttons had gone to their lent state with no ribbon and no dim
+> anywhere. `LayoutElement.ignoreLayout = true` on both, unconditionally — it is inert where there
+> is no group, and a conditional stops protecting the club panel the day the Roster grows one.
+
 ## Streak / badge prefabs
 | Atom | Path | GUID | Use for | Seen in |
 |---|---|---|---|---|
@@ -113,12 +133,17 @@ SCRIPT, never the PNG.
 | Gold button | `Assets/Art/HomeScreen/Play Button.png` | `cff37a7f9ed6d134696ab92626c9a747` | primary / confirm / BUY action | Home PLAY, shop BUY |
 | Silver button | `Assets/Art/RosterScreen/ButtonCancel.png` | `6021c639e9c124b44a06c8ccd977896f` | secondary / cancel / back | Roster cancel, shop CANCEL |
 | Silver button (alt) | `Assets/Art/ResultScreen/Button - Replay.png` | `d7b1c62bfcb4e844ab498b958b38aede` | secondary action (replay-style) | Result screen |
+| **Silver SMALL, native 235×56** | `Assets/Art/RosterScreen/ButtonLevelUp.png` | `3a504f4c40d48e14c81071475d87974b` | the half-width button in a two-up row. **Native 235×56, so it needs no stretching at all** — the 496-wide `ButtonCompare.png` squeezed to 235 distorts its corner radius, which is what the fidelity linter calls "non-9-slice corner distortion" | Roster LEVEL UP / BOOST, Clubs LEVEL UP / REPAIR, **both COMPARE + LEND rows** (asset_loans) |
+| **Gold SMALL, 9-sliced** | `Assets/Art/RosterScreen/ButtonLevelUpLong.png` | `a51f6c0ee74bbf24b8347aa84715db47` | a gold chip at any width. Natively 554×56; **border (25,0,25,0) was set on the importer by `asset_loans`** so it can be drawn `Image.Type.Sliced` at 230–235 with the caps intact. Inert for every existing consumer, which draws it `Simple` at native size | Level Up modal's LEVEL UP; the SELECTED duration chip in the lend modal |
+| **Gold BIG, 9-sliced** | `Assets/Art/RosterScreen/ButtonConfirm.png` | `bc649f28836576548b310e79ce614a06` | a gold confirm at any width. Natively 266×122; **border (25,25,25,25) was set on the importer by `asset_loans`**, matching its silver twin `ButtonCancel.png`'s shipped border, so 345 and 354 both render without corner distortion | Level Up CONFIRM; lend modal LEND; return popup RETURN |
 
 ## Icons
 | Atom | Path | GUID | Use for | Seen in |
 |---|---|---|---|---|
 | RP coin icon | `Assets/Art/HomeScreen/Reward Points Icon.png` | `aab2dfa34afd9cf4abfe974a164268dc` | RP currency coin (pairs with RPContainer) | RP chips everywhere |
 | Stamina icon | `Assets/Art/RosterScreen/IconStaminaSmall.png` | `e9df8622e360a894abb5d5b361930161` | stamina / energy glyph | Roster, shop `+STA` values |
+| Loan OUT glyph (small / big) | `Assets/Art/RosterScreen/IconLoanOutSmall.png` · `IconLoanOutBig.png` | `34a4bc53e32254f62aac303e3e7a36be` · `07b578fc700e74ed2962f727c7d7ad2d` | tray + arrow UP — **ours, lent out**. 24×24 for the card badge, 40×40 for the detail ribbon | Roster + Clubs loan badge / ribbon |
+| Loan IN glyph (small / big) | `Assets/Art/RosterScreen/IconLoanInSmall.png` · `IconLoanInBig.png` | `13ea13224efd342b29cecbfe955c8ba8` · `607dca87b7c7e426aae95de3584446bf` | tray + arrow DOWN — **somebody else's, borrowed** | Roster + Clubs loan badge / ribbon |
 
 ## Dividers
 | Atom | Path | GUID | Use for | Seen in |

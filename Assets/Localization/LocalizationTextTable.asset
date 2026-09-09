@@ -3525,3 +3525,99 @@ MonoBehaviour:
   - key: SHOT_GRADE_SHANK
     english: SHANK
     japanese: "\u30B7\u30E3\u30F3\u30AF"
+  - key: LOAN_BTN_LEND
+    english: LEND
+    japanese: "\u8CB8\u3059"
+  - key: LOAN_BTN_RETURN
+    english: RETURN
+    japanese: "\u8FD4\u3059"
+  - key: LOAN_BTN_CONFIRM
+    english: LEND
+    japanese: "\u8CB8\u3059"
+  - key: LOAN_MODAL_TITLE
+    english: LEND {0}
+    japanese: "{0}\u3092\u8CB8\u3059"
+  - key: LOAN_DAYS_1
+    english: 1 DAY
+    japanese: "1\u65E5"
+  - key: LOAN_DAYS_3
+    english: 3 DAYS
+    japanese: "3\u65E5"
+  - key: LOAN_DAYS_7
+    english: 7 DAYS
+    japanese: "7\u65E5"
+  - key: LOAN_TERMS_FMT
+    english: They level it up, it comes back levelled. You get {0}% of the RP they
+      earn with it.
+    japanese: "\u76F8\u624B\u304C\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3055\u305B\u3001\u30EC\u30D9\u30EB\u306F\u305D\u306E\u307E\u307E\u623B\u3063\u3066\u304D\u307E\u3059\u3002\u76F8\u624B\u304C\u7372\u5F97\u3057\u305FRP\u306E{0}%\u304C\u3042\u306A\u305F\u306B\u5165\u308A\u307E\u3059\u3002"
+  - key: LOAN_NO_FOLLOWING
+    english: Follow players in PLAYLIFE to lend to them.
+    japanese: "\u8CB8\u3059\u306B\u306FPLAYLIFE\u3067\u30D7\u30EC\u30A4\u30E4\u30FC\u3092\u30D5\u30A9\u30ED\u30FC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
+  - key: LOAN_WARN_EQUIPPED
+    english: This club will be removed from your bag.
+    japanese: "\u3053\u306E\u30AF\u30E9\u30D6\u306F\u30D0\u30C3\u30B0\u304B\u3089\u5916\u308C\u307E\u3059\u3002"
+  - key: LOAN_STATUS_OUT_FMT
+    english: "ON LOAN TO {0} \xB7 {1}"
+    japanese: "{0}\u306B\u8CB8\u51FA\u4E2D \xB7 {1}"
+  - key: LOAN_STATUS_IN_FMT
+    english: "BORROWED FROM {0} \xB7 {1}"
+    japanese: "{0}\u304B\u3089\u501F\u7528\u4E2D \xB7 {1}"
+  - key: LOAN_TIME_D_H_FMT
+    english: '{0}d {1}h'
+    japanese: "{0}\u65E5{1}\u6642\u9593"
+  - key: LOAN_TIME_H_M_FMT
+    english: '{0}h {1}m'
+    japanese: "{0}\u6642\u9593{1}\u5206"
+  - key: LOAN_SP_HINT
+    english: SP goes to the owner when the loan ends.
+    japanese: "SP\u306F\u8FD4\u5374\u6642\u306B\u30AA\u30FC\u30CA\u30FC\u306B\u6E21\u308A\u307E\u3059\u3002"
+  - key: LOAN_RETURN_TITLE_CHAR
+    english: RETURN CHARACTER?
+    japanese: "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u3092\u8FD4\u5374\u3057\u307E\u3059\u304B\uFF1F"
+  - key: LOAN_RETURN_TITLE_CLUB
+    english: RETURN CLUB?
+    japanese: "\u30AF\u30E9\u30D6\u3092\u8FD4\u5374\u3057\u307E\u3059\u304B\uFF1F"
+  - key: LOAN_RETURN_CONFIRM
+    english: "Return {0} to {1} now? It goes back at Lv {2} \u2014 the levels you
+      bought stay with it."
+    japanese: "{0}\u3092\u4ECA\u3059\u3050{1}\u306B\u8FD4\u3057\u307E\u3059\u304B\uFF1FLv
+      {2}\u3067\u623B\u308A\u3001\u4E0A\u3052\u305F\u30EC\u30D9\u30EB\u306F\u305D\u306E\u307E\u307E\u6B8B\u308A\u307E\u3059\u3002"
+  - key: LOAN_TOAST_LENT
+    english: '{0} lent to {1} for {2}'
+    japanese: "{0}\u3092{1}\u306B{2}\u8CB8\u3057\u307E\u3057\u305F"
+  - key: LOAN_TOAST_RETURNED_IN
+    english: '{0} returned to {1}'
+    japanese: "{0}\u3092{1}\u306B\u8FD4\u3057\u307E\u3057\u305F"
+  - key: LOAN_TOAST_RETURNED_OUT
+    english: "{0} is back \xB7 +{1} RP"
+    japanese: "{0}\u304C\u623B\u308A\u307E\u3057\u305F \xB7 +{1} RP"
+  - key: LOAN_TOAST_SPLIT_FMT
+    english: '{0} RP to the owner'
+    japanese: "\u30AA\u30FC\u30CA\u30FC\u306B{0} RP"
+  - key: LOAN_ERR_NOT_FOLLOWING
+    english: You need to follow them first.
+    japanese: "\u5148\u306B\u30D5\u30A9\u30ED\u30FC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
+  - key: LOAN_ERR_ALREADY_ON_LOAN
+    english: Already on loan.
+    japanese: "\u3059\u3067\u306B\u8CB8\u51FA\u4E2D\u3067\u3059\u3002"
+  - key: LOAN_ERR_BORROWER_HAS_IT
+    english: They already have this one.
+    japanese: "\u76F8\u624B\u306F\u3059\u3067\u306B\u6301\u3063\u3066\u3044\u307E\u3059\u3002"
+  - key: LOAN_ERR_LIMIT_OUT
+    english: You can lend up to 3 at a time.
+    japanese: "\u540C\u6642\u306B\u8CB8\u305B\u308B\u306E\u306F3\u3064\u307E\u3067\u3067\u3059\u3002"
+  - key: LOAN_ERR_LIMIT_IN
+    english: They are already borrowing 3.
+    japanese: "\u76F8\u624B\u306F\u3059\u3067\u306B3\u3064\u501F\u308A\u3066\u3044\u307E\u3059\u3002"
+  - key: LOAN_ERR_ON_LOAN
+    english: This one is on loan.
+    japanese: "\u3053\u308C\u306F\u8CB8\u51FA\u4E2D\u3067\u3059\u3002"
+  - key: LOAN_ERR_GENERIC
+    english: Couldn't complete the loan. Try again.
+    japanese: "\u8CB8\u51FA\u3092\u5B8C\u4E86\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: LOAN_DURATION
+    english: DURATION
+    japanese: "\u671F\u9593"
+  - key: LOAN_LEND_TO
+    english: LEND TO
+    japanese: "\u8CB8\u3059\u76F8\u624B"

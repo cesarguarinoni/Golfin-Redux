@@ -199,7 +199,16 @@ namespace Golfin.Roster
             if (amount <= 0 || string.IsNullOrEmpty(action)) return;
 
             PointsService service = PointsService.Instance;
-            if (service.EnqueueEarn(action, amount) == null) return;
+
+            // asset_loans §4.5 — if this round was played with borrowed gear, the owner takes a
+            // cut of the earn. The ids ride ON THE QUEUED OP, not on a side channel, so an earn
+            // that sits in the queue overnight still splits correctly when it eventually lands.
+            //
+            // The snapshot was frozen at hole load; null here is the ordinary case and produces
+            // exactly the request this method sent before loans existed.
+            var loanIds = Golfin.Social.LoanService.Instance?.UsedLoanIdsForRound();
+
+            if (service.EnqueueEarn(action, amount, loanIds) == null) return;
 
             service.ReplayPendingAsync();
         }

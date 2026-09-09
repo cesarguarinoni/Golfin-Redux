@@ -75,10 +75,20 @@ namespace Golfin.InventorySync
             catalog ??= EmptyInventoryCatalog.Instance;
             var root = new JObject { [KVersion] = FormatVersion };
 
+            // ⚠️ BORROWED ROWS ARE SKIPPED HERE TOO (asset_loans §3), and this skip is
+            // deliberately redundant. `CharacterManager.SyncCharacterToSaveData` and
+            // `ClubManager.PersistOwnedClubs` already keep a borrowed asset out of the SAVE, and
+            // the projector only ever reads the save — so under correct behaviour `isBorrowed` is
+            // never true on anything that reaches this method. It is checked anyway because the
+            // consequence of one missed skip upstream is that a player's inventory blob claims
+            // ownership of somebody else's character, and the blob's merge is ADDITIVE: once a
+            // borrowed row is in it, it is in it on every device, forever, and no loan ending can
+            // take it back out.
             var clubs = new JArray();
             foreach (var c in snap.Clubs)
             {
                 if (c == null || string.IsNullOrEmpty(c.clubId)) continue;
+                if (c.isBorrowed) continue;
                 clubs.Add(EncodeClub(c, catalog));
             }
             if (clubs.Count > 0) root[KClubs] = clubs;
@@ -87,6 +97,7 @@ namespace Golfin.InventorySync
             foreach (var c in snap.Characters)
             {
                 if (c == null || string.IsNullOrEmpty(c.characterId)) continue;
+                if (c.isBorrowed) continue;
                 chars.Add(EncodeCharacter(c, catalog));
             }
             if (chars.Count > 0) root[KChars] = chars;

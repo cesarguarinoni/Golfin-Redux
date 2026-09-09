@@ -660,6 +660,58 @@ namespace Golfin.Net
         public static string PointsEarn(string action)
             => BaseUrl + "/points/earn?action=" + UnityWebRequest.EscapeURL(action ?? "");
 
+        // ── Asset loans (asset_loans) ─────────────────────────────────────────
+
+        /// <summary>
+        /// GET → <c>{data: {out: [LoanDto…], in: [LoanDto…]}}</c> — every loan the caller is a
+        /// party to that still matters: the LIVE ones plus everything that ended inside the last
+        /// 14 days. AUTH REQUIRED, and the user id comes from the token.
+        ///
+        /// <para>
+        /// POST <c>{kind, ref_id, borrower_id, days, level, idempotency_key}</c> on the SAME url
+        /// lends an asset. EVERY BUSINESS OUTCOME IS HTTP <b>200</b>, exactly like
+        /// <see cref="ProgressLevelUp"/>: <c>ok</c>, <c>self</c>, <c>bad_days</c>,
+        /// <c>unknown_ref</c>, <c>not_following</c>, <c>already_on_loan</c>,
+        /// <c>borrower_has_it</c>, <c>limit_out</c>, <c>limit_in</c> are payloads the client
+        /// branches on, never transport failures.
+        /// </para>
+        /// <para>
+        /// ⚠️ The ENDED window is what makes reconciliation work offline: a lender who was not
+        /// running when their asset came back still learns about it — and about the levels the
+        /// borrower bought — the next time this is read.
+        /// </para>
+        /// </summary>
+        public static string Loans => BaseUrl + "/loans";
+
+        /// <summary>
+        /// POST → <c>{data: {status, loan}}</c> — the BORROWER gives an asset back early.
+        /// <c>not_borrower</c> / <c>not_active</c> are the refusals; a second call on an
+        /// already-returned loan answers <c>ok</c> again (idempotent by intent).
+        ///
+        /// <para>
+        /// There is deliberately NO lender-side recall endpoint (decision of record #3) — the
+        /// borrower returns it or the clock does.
+        /// </para>
+        /// </summary>
+        public static string LoansReturn(string loanId)
+            => BaseUrl + "/loans/" + UnityWebRequest.EscapeURL(loanId ?? "") + "/return";
+
+        /// <summary>
+        /// GET → <c>{data: [{following_id, created_at, profiles:{id, display_name, avatar_url,
+        /// avatar_level}}]}</c> — the accounts <paramref name="userId"/> follows
+        /// (followers.py <c>get_following</c>). AUTH REQUIRED.
+        ///
+        /// <para>
+        /// THIS IS THE LEND MODAL'S RECIPIENT LIST, and the whole recipient model: you may only
+        /// lend to somebody you follow (decision of record #2). The server re-checks the same
+        /// graph, so a client that shows a stale list gets <c>not_following</c> rather than an
+        /// unauthorised transfer.
+        /// </para>
+        /// </summary>
+        public static string SocialFollowing(string userId, int limit = 50)
+            => BaseUrl + "/social/" + UnityWebRequest.EscapeURL(userId ?? "")
+                       + "/following?skip=0&limit=" + limit;
+
         /// <summary>Restore the shipping host (used by tests that retarget <see cref="RootUrl"/>).</summary>
         public static void ResetToDefault() => RootUrl = DefaultRootUrl;
 

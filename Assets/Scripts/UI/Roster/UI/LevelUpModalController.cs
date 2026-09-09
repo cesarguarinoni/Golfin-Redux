@@ -42,6 +42,10 @@ namespace Golfin.Roster
         [Header("SP Allocation")]
         [SerializeField] private TextMeshProUGUI availableSPValue = null!;
 
+        /// <summary>asset_loans §4.3 — LOAN_SP_HINT, shown in place of the SP controls when the
+        /// character is BORROWED. Prefab-authored, inactive by default.</summary>
+        [SerializeField] private TextMeshProUGUI? borrowedSpHint;
+
         // ── Stat Rows ───────────────────────────────────────────────────────
         // Each stat row has: blue bar (current), orange bar (current+pending),
         // value text, pending label (+N), and plus button.
@@ -209,6 +213,8 @@ namespace Golfin.Roster
             // player made and does animate.
             Numbers.BeginOpen();
             _lastPreviewLevel = previewLevel;
+
+            ApplyBorrowedState(playerData.isBorrowed);
 
             RefreshLocalizedText();
             Show();
@@ -581,8 +587,17 @@ namespace Golfin.Roster
                     return;
 
                 default:
-                    // NotAvailable / Unavailable / Disabled. The player cannot act on the difference
-                    // between them and the log already carries it.
+                    // asset_loans §4.3 — `not_available` with reason `on_loan` IS actionable, and
+                    // it is the one refusal in this switch the player can do something about
+                    // (wait for it to come back). Everything else here is a difference they cannot
+                    // act on, and the log already carries it.
+                    if (outcome.Server != null
+                        && string.Equals(outcome.Server.Reason, "on_loan", System.StringComparison.Ordinal))
+                    {
+                        Toast(LocalizationManager.Get("LOAN_ERR_ON_LOAN"));
+                        return;
+                    }
+
                     Toast(PointsSpendGate.OfflineMessage);
                     return;
             }
@@ -634,6 +649,35 @@ namespace Golfin.Roster
             Toast(PointsSpendGate.CostUpdatedMessage);
         }
 
+        /// <summary>
+        /// asset_loans §4.3 — hide the SP allocation controls on a BORROWED character and put the
+        /// hint in their place.
+        ///
+        /// <para>
+        /// HIDDEN, NOT DISABLED. A greyed-out +STR button invites the player to work out why they
+        /// cannot press it; the hint says what actually happens ("SP goes to the owner when the
+        /// loan ends"), which is both the reason and the reassurance. The level stepper and the
+        /// cost preview are untouched — buying levels is the entire point of borrowing.
+        /// </para>
+        /// </summary>
+        private void ApplyBorrowedState(bool borrowed)
+        {
+            if (strengthPlusButton    != null) strengthPlusButton.gameObject.SetActive(!borrowed);
+            if (clubControlPlusButton != null) clubControlPlusButton.gameObject.SetActive(!borrowed);
+            if (recoveryPlusButton    != null) recoveryPlusButton.gameObject.SetActive(!borrowed);
+            if (staminaPlusButton     != null) staminaPlusButton.gameObject.SetActive(!borrowed);
+            if (resetButton           != null) resetButton.gameObject.SetActive(!borrowed);
+
+            if (availableSPValue != null) availableSPValue.gameObject.SetActive(!borrowed);
+            if (availableSPLabel != null) availableSPLabel.gameObject.SetActive(!borrowed);
+
+            if (borrowedSpHint != null)
+            {
+                borrowedSpHint.gameObject.SetActive(borrowed);
+                if (borrowed) borrowedSpHint.text = LocalizationManager.Get("LOAN_SP_HINT");
+            }
+        }
+
         private static void Toast(string message)
         {
             if (ToastController.Instance != null) ToastController.Instance.Show(message, 2f);
@@ -643,8 +687,35 @@ namespace Golfin.Roster
         /// server debit landing first. Never runs when the debit is refused or unreachable.</summary>
         private void CommitLevelUps(PlayerCharacterData playerData)
         {
-            // Commit each previewed level-up (LevelUp deducts RP, increments level, adds SP)
             int levelsGained = previewLevel - playerData.currentLevel;
+
+            // ── asset_loans §4.3 — A BORROWED CHARACTER GAINS LEVELS, NOT SP ──────
+            //
+            // The server has recorded the level on the OWNER's progress row, and the SP those
+            // levels earn is the owner's too: it reaches them, unallocated, when the loan ends
+            // (CharacterManager.ApplyLoanLevelCatchUp). Crediting SP here as well would mint it
+            // twice — once to the borrower who cannot spend it, and again to the owner who can.
+            //
+            // The SP allocation UI is hidden for a borrowed character (ApplyBorrowedState), so
+            // there is no pending allocation to commit either.
+            if (playerData.isBorrowed)
+            {
+                for (int i = 0; i < levelsGained; i++)
+                {
+                    int max = CharacterManager.Instance.GetMaxLevel(characterId);
+                    if (playerData.currentLevel >= max) break;
+                    playerData.currentLevel++;
+                }
+
+                CharacterManager.Instance.RefreshStatValues(characterId);
+                Debug.Log($"[LevelUpModal] Borrowed '{characterId}': +{levelsGained} levels for the owner, no SP.");
+
+                pendingStrength = pendingClubControl = pendingRecovery = pendingStamina = 0;
+                Hide();
+                return;
+            }
+
+            // Commit each previewed level-up (LevelUp deducts RP, increments level, adds SP)
             for (int i = 0; i < levelsGained; i++)
             {
                 CharacterManager.Instance.LevelUp(characterId);

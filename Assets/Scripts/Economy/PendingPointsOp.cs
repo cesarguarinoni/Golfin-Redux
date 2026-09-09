@@ -1,5 +1,6 @@
 // Order: reward_points_backend Slice 1 — one queued, idempotency-keyed earn.
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Golfin.Economy
@@ -36,18 +37,40 @@ namespace Golfin.Economy
         /// <summary>Replay attempts so far. Diagnostics only — it never influences the key.</summary>
         [JsonProperty("attempts")]  public int AttemptCount;
 
+        /// <summary>
+        /// The loans whose assets the round that produced this earn was played with
+        /// (asset_loans §4.5). Null when none, which is every earn in the game today.
+        ///
+        /// <para>
+        /// NO QUEUE MIGRATION, AND THAT IS WHY IT IS NULLABLE RATHER THAN AN EMPTY LIST. Ops queued
+        /// by an older build deserialise with this null and serialise back out without a
+        /// <c>loan_ids</c> field at all — <see cref="ToEarnGameJson"/> omits it when empty — so a
+        /// player who updates mid-queue replays their pending earns unchanged. An empty list would
+        /// travel as <c>"loan_ids": []</c>, which is a different request for no reason.
+        /// </para>
+        /// <para>
+        /// The ids are a CLAIM, not an authority: the server re-reads every one and keeps only
+        /// live loans where this player is the borrower.
+        /// </para>
+        /// </summary>
+        [JsonProperty("loans")]     public List<string> LoanIds;
+
         /// <summary>Parameterless ctor for Newtonsoft.</summary>
         public PendingPointsOp() { }
 
         /// <summary>Mint a new earn op with a fresh key and the current UTC timestamp.</summary>
-        public static PendingPointsOp NewEarn(string action, int amount, long? nowUnix = null) => new PendingPointsOp
+        public static PendingPointsOp NewEarn(string action, int amount, long? nowUnix = null,
+                                              List<string> loanIds = null) => new PendingPointsOp
         {
             IdempotencyKey = Guid.NewGuid().ToString("D"),
             Kind = PendingOpKind.Earn,
             Action = action,
             Amount = amount,
             CreatedAtUnix = nowUnix ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            AttemptCount = 0
+            AttemptCount = 0,
+            // Copied, not aliased: the caller's list is LoanService's live snapshot, and a queued
+            // op that kept a reference to it would silently change when the next round starts.
+            LoanIds = (loanIds != null && loanIds.Count > 0) ? new List<string>(loanIds) : null
         };
 
         /// <summary>
@@ -61,7 +84,9 @@ namespace Golfin.Economy
             {
                 action = Action,
                 amount = Amount > 0 ? (int?)Amount : null,
-                idempotency_key = IdempotencyKey
+                idempotency_key = IdempotencyKey,
+                // Omitted entirely when there is nothing to split — see LoanIds.
+                loan_ids = (LoanIds != null && LoanIds.Count > 0) ? LoanIds : null
             };
             return JsonConvert.SerializeObject(body, new JsonSerializerSettings
             {
@@ -78,6 +103,7 @@ namespace Golfin.Economy
             public string action;
             public int? amount;
             public string idempotency_key;
+            public List<string> loan_ids;
         }
     }
 }

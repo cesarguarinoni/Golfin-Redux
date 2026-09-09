@@ -300,6 +300,10 @@ namespace Golfin.InventorySync
             spentAccuracy      = c.spentAccuracy,
             spentLieResistance = c.spentLieResistance,
             spentDurability    = c.spentDurability,
+            // asset_loans §3 — carried so the codec's skip is a REAL guard and not a decorative
+            // one: if a borrowed row ever leaked into the save, dropping the flag here would let
+            // it reach the blob looking exactly like an owned club.
+            isBorrowed         = c.isBorrowed,
         };
 
         /// <summary>A character copy with the stamina condition ZEROED — the pool never rides the
@@ -315,6 +319,8 @@ namespace Golfin.InventorySync
             totalSPEarned       = c.totalSPEarned,
             isOwned             = c.isOwned,
             isSelected          = false,
+            // asset_loans §3 — see CloneClub.
+            isBorrowed          = c.isBorrowed,
             conditionEnergy     = 0f,
             conditionUpdatedUtc = "",
         };

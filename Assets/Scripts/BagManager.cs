@@ -169,6 +169,15 @@ public class BagManager : MonoBehaviour
 
         if (ClubManager.Instance == null) return false;
 
+        // asset_loans §3 — a lent-out club cannot go into a bag. ClubManager.EquipClub refuses it
+        // too; refusing here as well is what keeps the bag UI from reporting a success it did not
+        // get (this method's `true` is what the bag modal closes on).
+        if (ClubManager.Instance.IsLentOut(clubId))
+        {
+            Debug.LogWarning($"[BagManager] '{clubId}' is out on loan — cannot add it to a bag.");
+            return false;
+        }
+
         // Remove from current bag if already equipped
         var playerClub = ClubManager.Instance.GetClubData(clubId);
         if (playerClub != null && playerClub.IsEquipped)

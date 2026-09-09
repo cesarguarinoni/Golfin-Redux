@@ -53,6 +53,26 @@ namespace Golfin.Roster
         [SerializeField]
         public bool isOwned = false;                 // Is this character owned by player? (Phase 2b: false = locked)
 
+        // ── asset_loans §3 — RUNTIME ONLY, NEVER PERSISTED ────────────────────
+        //
+        // Both flags are [NonSerialized] and that is the whole safety property, not a
+        // micro-optimisation. A loan is a fact about two accounts that the SERVER owns; the moment
+        // a client wrote one into its save it could disagree with the server about who is holding
+        // what, and a save restored onto a second device would resurrect a borrowed character the
+        // loan had already ended. `CharacterManager.SyncCharacterToSaveData` skips a borrowed row
+        // outright, `InventoryCodec` skips it again on the way to the blob, and these attributes
+        // are the third guard: even a code path that forgot both cannot serialise the flag.
+
+        /// <summary>This row is somebody ELSE's character, on loan to us. Playable and levellable
+        /// (the level lands on the owner's server row), but never saved and never uploaded.</summary>
+        [System.NonSerialized]
+        public bool isBorrowed;
+
+        /// <summary>Ours, but currently out on loan. Locked: cannot be selected, levelled, or lent
+        /// again until it comes back.</summary>
+        [System.NonSerialized]
+        public bool isLentOut;
+
         [SerializeField]
         public DateTime acquiredDate;
 
