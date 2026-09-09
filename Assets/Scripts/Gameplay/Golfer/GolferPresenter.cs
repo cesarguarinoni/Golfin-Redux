@@ -237,15 +237,49 @@ namespace Golfin.Gameplay.Golfer
             }
             Vector3 palm = PalmNormal(side);
             if (palm == Vector3.zero) return;
-            Transform wrist = FindChild($"hand_{side}");
+            Transform wrist = IsHumanoid
+                ? HumanBone(side == "r" ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand)
+                : FindChild($"hand_{side}");
             Vector3 palmPos = wrist != null ? wrist.position : transform.position;
-            foreach (var fj in chain) WrapJoint(fj, slot.position, slot.up, palm, palmPos);
+            // §3.9.4: the cylinder is the REAL shaft, ClubStart -> ClubEnd, not the socket's own
+            // origin and up. Those coincide on PfGolfer_Test but not here: the club hangs off
+            // GripTarget through an authored ClubSlot pose, so slot.up is the slot's axis and the
+            // shaft the fingers must close on is the segment between the two markers.
+            ShaftSegment(slot, out var axisO, out var axisD);
+            foreach (var fj in chain) WrapJoint(fj, axisO, axisD, palm, palmPos);
         }
 
         /// <summary>Resolve every drivable finger joint on one hand, proximal to distal.</summary>
         FingerJoint[] WrapChain(string side)
         {
             var list = new List<FingerJoint>(12);
+
+            // SPEC §3.9.4: resolve through HumanBodyBones first, so the wrap works on ANY humanoid
+            // rig rather than only on Quaternius' bone names. That was the whole appeal of the
+            // muscle-space clip §3.8 tried and this keeps it, without depending on finger muscle
+            // axes the Mixamo auto-avatar never had configured.
+            //
+            // §3.9.4 also excludes the TRAIL LITTLE FINGER: in a real golf grip it does not grip
+            // the shaft at all — it rides on the gap between the lead index and middle fingers
+            // (reference/GOLF_GRIP_GEOMETRY.html). Wrapping it onto the cylinder is what drove a
+            // finger through the other hand. Seven fingers, not eight.
+            if (IsHumanoid)
+            {
+                bool right = side == "r";
+                var chains = right
+                    ? new[] { TrailIndex, TrailMiddle, TrailRing }                 // little finger EXCLUDED
+                    : new[] { LeadIndex, LeadMiddle, LeadRing, LeadLittle };
+                foreach (var chain in chains)
+                    for (int j = 0; j < 3; j++)
+                    {
+                        Transform joint = HumanBone(chain[j]);
+                        Transform end = j < 2 ? HumanBone(chain[j + 1])
+                                              : (joint != null && joint.childCount > 0 ? joint.GetChild(0) : null);
+                        if (joint != null && end != null) list.Add(new FingerJoint { Joint = joint, End = end });
+                    }
+                if (list.Count > 0) return list.ToArray();
+            }
+
             foreach (var f in Fingers)
                 for (int j = 1; j <= 3; j++)
                 {
@@ -256,6 +290,18 @@ namespace Golfin.Gameplay.Golfer
                 }
             return list.ToArray();
         }
+
+        // ── SPEC §3.9.4 — humanoid bone access for the contact wrap ────────────────────
+        bool IsHumanoid => anim != null && anim.avatar != null && anim.avatar.isHuman;
+        Transform HumanBone(HumanBodyBones b) => IsHumanoid ? anim.GetBoneTransform(b) : null;
+
+        static readonly HumanBodyBones[] LeadIndex   = { HumanBodyBones.LeftIndexProximal,  HumanBodyBones.LeftIndexIntermediate,  HumanBodyBones.LeftIndexDistal };
+        static readonly HumanBodyBones[] LeadMiddle  = { HumanBodyBones.LeftMiddleProximal, HumanBodyBones.LeftMiddleIntermediate, HumanBodyBones.LeftMiddleDistal };
+        static readonly HumanBodyBones[] LeadRing    = { HumanBodyBones.LeftRingProximal,   HumanBodyBones.LeftRingIntermediate,   HumanBodyBones.LeftRingDistal };
+        static readonly HumanBodyBones[] LeadLittle  = { HumanBodyBones.LeftLittleProximal, HumanBodyBones.LeftLittleIntermediate, HumanBodyBones.LeftLittleDistal };
+        static readonly HumanBodyBones[] TrailIndex  = { HumanBodyBones.RightIndexProximal,  HumanBodyBones.RightIndexIntermediate,  HumanBodyBones.RightIndexDistal };
+        static readonly HumanBodyBones[] TrailMiddle = { HumanBodyBones.RightMiddleProximal, HumanBodyBones.RightMiddleIntermediate, HumanBodyBones.RightMiddleDistal };
+        static readonly HumanBodyBones[] TrailRing   = { HumanBodyBones.RightRingProximal,   HumanBodyBones.RightRingIntermediate,   HumanBodyBones.RightRingDistal };
 
         /// <summary>
         /// Bend one finger joint until its bone's far end lies one finger-radius off the
@@ -357,16 +403,63 @@ namespace Golfin.Gameplay.Golfer
         /// </summary>
         void AimThumbDownShaft(string side, Transform slot)
         {
-            Transform root = FindChild($"thumb_01_{side}");
-            Transform tip  = FindChild($"thumb_04_leaf_{side}") ?? FindChild($"thumb_03_{side}");
+            bool right = side == "r";
+            Transform root = IsHumanoid ? HumanBone(right ? HumanBodyBones.RightThumbProximal : HumanBodyBones.LeftThumbProximal)
+                                        : FindChild($"thumb_01_{side}");
+            Transform tip = null;
+            if (IsHumanoid)
+            {
+                var distal = HumanBone(right ? HumanBodyBones.RightThumbDistal : HumanBodyBones.LeftThumbDistal);
+                tip = distal != null && distal.childCount > 0 ? distal.GetChild(0) : distal;
+            }
+            tip = tip ?? FindChild($"thumb_04_leaf_{side}") ?? FindChild($"thumb_03_{side}");
             if (root == null || tip == null) return;
 
+            ShaftSegment(slot, out var axisO, out var axisD);
             Vector3 a = tip.position - root.position;
-            Vector3 b = slot.up;                       // down the shaft, toward the head
+            Vector3 b = axisD;                         // down the shaft, toward the head
             if (a.sqrMagnitude < 1e-8f) return;
+
+            // §3.9.4 / GOLF_GRIP_GEOMETRY: the LEAD thumb does not lie on top of the grip, it sits
+            // at "1 o'clock" — 15-30 deg around the shaft toward the trail side, viewed down the
+            // shaft from the butt. Aiming it at dead top is the flat-thumb-on-a-bat look. The
+            // trail thumb keeps the plain down-shaft aim; it only rests on the shaft's lead side.
+            if (!right)
+            {
+                Vector3 up12 = Vector3.ProjectOnPlane(-PalmNormal("l"), axisD);   // 12 o'clock = away from the palm
+                if (up12.sqrMagnitude > 1e-8f)
+                {
+                    // +22.5 deg = the middle of the 15-30 deg window; sign taken so the roll goes
+                    // TOWARD the trail hand rather than away from it.
+                    Vector3 toTrail = Vector3.ProjectOnPlane(
+                        (HumanBone(HumanBodyBones.RightHand)?.position ?? transform.position) - root.position, axisD);
+                    float dir = Vector3.Dot(Vector3.Cross(up12, toTrail), axisD) >= 0f ? 1f : -1f;
+                    b = (Quaternion.AngleAxis(dir * ThumbClockDeg, axisD) * up12.normalized * 0.35f + axisD).normalized;
+                }
+            }
+
             float ang = Vector3.Angle(a, b);
             if (ang < 0.05f || ang > 90f) return;
             root.rotation = Quaternion.AngleAxis(ang, Vector3.Cross(a, b).normalized) * root.rotation;
+        }
+
+        /// <summary>"1 o'clock" for the lead thumb — the middle of the 15-30 deg window (§3.9.4).</summary>
+        const float ThumbClockDeg = 22.5f;
+
+        /// <summary>
+        /// The real shaft segment the fingers close on: ClubStart (butt) -> ClubEnd (head).
+        /// Falls back to the socket's own axis when the markers are absent, which is the
+        /// PfGolfer_Test case and byte-identical to the old behaviour there.
+        /// </summary>
+        void ShaftSegment(Transform slot, out Vector3 axisO, out Vector3 axisD)
+        {
+            axisO = slot.position; axisD = slot.up;
+            var s = FindChild("ClubStart");
+            var e = FindChild("ClubEnd");
+            if (s == null || e == null) return;
+            Vector3 d = e.position - s.position;
+            if (d.sqrMagnitude < 1e-10f) return;
+            axisO = s.position; axisD = d.normalized;
         }
 
         /// <summary>Perpendicular distance from a point to the shaft's centre line.</summary>
@@ -380,9 +473,24 @@ namespace Golfin.Gameplay.Golfer
         /// </summary>
         Vector3 PalmNormal(string side)
         {
-            Transform i = FindChild($"index_01_{side}"),
-                      p = FindChild($"pinky_01_{side}"),
-                      w = FindChild($"hand_{side}");
+            Transform i, p, w;
+            if (IsHumanoid)
+            {
+                bool right = side == "r";
+                i = HumanBone(right ? HumanBodyBones.RightIndexProximal  : HumanBodyBones.LeftIndexProximal);
+                p = HumanBone(right ? HumanBodyBones.RightLittleProximal : HumanBodyBones.LeftLittleProximal);
+                w = HumanBone(right ? HumanBodyBones.RightHand           : HumanBodyBones.LeftHand);
+                if (i != null && p != null && w != null)
+                {
+                    Vector3 acrossH = p.position - i.position;
+                    Vector3 alongH  = (i.position + p.position) * 0.5f - w.position;
+                    Vector3 nh = Vector3.Cross(alongH, acrossH);
+                    return nh.sqrMagnitude < 1e-10f ? Vector3.zero : nh.normalized;
+                }
+            }
+            i = FindChild($"index_01_{side}");
+            p = FindChild($"pinky_01_{side}");
+            w = FindChild($"hand_{side}");
             if (i == null || p == null || w == null) return Vector3.zero;
             Vector3 across = p.position - i.position;                          // index to pinky
             Vector3 along  = (i.position + p.position) * 0.5f - w.position;     // wrist to knuckles

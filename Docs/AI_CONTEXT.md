@@ -4,6 +4,49 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 (golfer_club_grip iter-7) — **the club goes where the landmarks say, and the clock is fixed**
+
+**The one fact the rig had been missing** (`reference/GOLF_GRIP_GEOMETRY.html`): a club is *not*
+held across the palm like a bat. In the lead hand it runs **diagonally through the fingers** — base
+of the little finger to the middle joint of the index — with the heel pad closed over the top, and
+the two hands **overlap**. §3.8 had fitted a line through the middle of a closed fist, which is a
+bat axis: ~25–30° off and shifted toward the wrist. That single error produced every symptom from
+iter-5 onward — the shaft between the index and middle fingers, the butt cap between the wrists.
+
+**Replaced the fit with two bones per hand.** Lead `LittleProximal → IndexIntermediate`, trail
+`LittleProximal → IndexProximal`, each offset palm-side by `t + r = 15.6 mm` (9 mm + 11.5 mm scaled
+by `s = 1.328/1.75`). The anchor rotation is then fully determined: align that line to the club's
++Y, then fix the roll by a palm rule — lead, back of the hand toward the head; trail, palm toward
+the lead thumb. **Both solve to `dot = 1.0000`.** No clip bake, no by-eye step, and the 35° stop
+retired with the bake that needed it.
+
+**Result: six of ten §3.9.6 rows pass**, including all three that encode the *shape* of a grip —
+`hands.overlap` 0.0064, `heelPad.onTop` 0.6654, `trailPalm.onThumb` 0.6553. The hands are placed and
+oriented like a golf grip. **The fingers are still open**: tips sit 31–50 mm from the axis against a
+15.5 mm contact target. The wrap runs (probed in edit mode: it moves the lead index tip 1.4081 →
+1.2683 m) but does not reach — `WrapJoint` hits its 80°-per-joint cap.
+
+**The determinism problem from iter-6 is closed.** `Time.captureDeltaTime = 1/60` for every measured
+run: three rig-on runs gave R = **0.0057 / 0.0054 / 0.0057**, a spread of **0.0003 m**, where
+identical runs previously spread 0.056 m. `grip.ikNoLegEffect` passes exactly against a rig-off
+baseline measured under the same clock.
+
+**Two lessons about where a measurement is taken, both mine.**
+1. **Hand space vs world space.** `palmLocal` / `shaftDirLocal` are in hand space, so measuring them
+   with the rig off is harmless. The *rule targets* — Head, the lead thumb — are world positions,
+   and with the rig off they are the clip's, which the lead hand then rotates 102° away from. The
+   trail rule solved `dot = 1.0000` and evaluated at **−0.4189** until they were sampled rig-on.
+2. **Update vs LateUpdate.** The contact wrap runs in `LateUpdate`; a coroutine resumes during
+   `Update`. The harness was measuring the Animator's output before the fingers closed. Fixed — and
+   it changed nothing, which is the useful part: it ruled out a measurement artefact and left a real
+   reach problem.
+
+Also retired: the muscle-space pose (`Hands` layer, mask, clip) — deleted, not disabled. `shaftRadius`
+and `fingerRadius` were the *unscaled* real-world numbers, a 37 % error on a 1.328 m character.
+
+`STATUS = READY_FOR_SELF_REVIEW`. Profile `iOS-Full-GPS`. Blade orientation is §3.9.7, untouched.
+
+---
 ## 2026-09-10 (golfer_club_grip iter-6) — **the fingers close, and the avatar is why they cannot close further**
 
 **Built.** A one-frame Humanoid muscle clip (40 finger muscles) on an Override `Hands` layer with a

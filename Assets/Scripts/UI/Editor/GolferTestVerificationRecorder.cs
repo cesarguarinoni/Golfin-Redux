@@ -246,7 +246,19 @@ namespace Golfin.EditorTools
         /// assemblies when a compile fails, and it kept them here twice while runs quietly executed
         /// the previous solver and I read the results as if they were the new one.
         /// </summary>
-        public const string SolverVersion = "finger-pose-v1";
+        public const string SolverVersion = "landmarks-v1";
+
+        // ── SPEC §3.9.1 — real grip geometry, scaled to this character ──────────────────
+        // reference/GOLF_GRIP_GEOMETRY.html: t = finger half-thickness 9 mm, r = grip radius
+        // 11.5 mm, both real-world, scaled by s = characterHeight / 1.75. Remy is the 1.328 m
+        // stand-in, so s = 0.7589 and the shaft centre sits (t + r) = 15.6 mm off the finger
+        // bone axis on the palm side.
+        public const float CharacterHeightM = 1.328f;
+        public const float GripScale        = CharacterHeightM / 1.75f;      // 0.758857
+        public const float FingerHalfThickM = 0.009f  * GripScale;           // 0.006830
+        public const float GripRadiusM      = 0.0115f * GripScale;           // 0.008727
+        public const float PalmOffsetM      = FingerHalfThickM + GripRadiusM;// 0.015557
+        public const float ButtPastHeelM    = 0.013f  * GripScale;           // 0.009865
 
         int _hole;
         readonly StringBuilder _log = new StringBuilder();
@@ -397,8 +409,13 @@ namespace Golfin.EditorTools
         // §3.7 Rule 2 put the shaft where a FORMULA said a palm is. A loose mocap fist has no
         // tunnel there, so at full resolution the shaft ran between the index and middle fingers.
         // §3.8.3 replaces the formula: the shaft goes where the POSED fingers actually leave room.
-        float _rCurlL = float.NaN, _rCurlR = float.NaN;
+        float _rCurlL = float.NaN, _rCurlR = float.NaN;   // §3.8.3 legacy — no longer asserted
         Vector3 _shaftDirLocalL, _shaftDirLocalR;
+        // ── §3.9.6 accumulators ────────────────────────────────────────────────────────
+        float _axisWorstL = float.NaN, _axisWorstR = float.NaN;
+        float _heelPadDot = float.NaN, _trailPalmDot = float.NaN;
+        float _overlapWorst = float.NaN, _interpenWorst = float.NaN;
+        float _thumbClockDeg = float.NaN, _buttPastHeel = float.NaN;
         float _fingersClosedWorstL = float.NaN, _fingersClosedWorstR = float.NaN;  // worst |dist - band centre|
         float _fingersClosedMinL = float.NaN, _fingersClosedMaxL = float.NaN;
         float _fingersClosedMinR = float.NaN, _fingersClosedMaxR = float.NaN;
@@ -460,64 +477,60 @@ namespace Golfin.EditorTools
         }
 
         /// <summary>§3.8.3 finger tunnel: knuckles, tips, the fitted axis through the four midpoints.</summary>
-        struct Tunnel
+        /// <summary>
+        /// §3.9.1 — the shaft axis inside one hand, from TWO LANDMARKS. No fit.
+        ///
+        /// <para>A club is not held across the palm like a bat. In the lead hand it runs
+        /// DIAGONALLY THROUGH THE FINGERS — base of the little finger to the middle joint of the
+        /// index finger — with the heel pad closed over the top. §3.8.3 fitted a line through the
+        /// middle of a closed fist, which is a bat axis: ~25-30 deg off and shifted to the wrist.
+        /// That is why the shaft came out between the index and middle fingers, and the 36/54 deg
+        /// "roll correction" iter-6 stopped on was that error being measured.</para>
+        /// </summary>
+        struct Landmark
         {
             public bool ok;
-            public Vector3[] knuckles, tips;   // 4 each, world
-            public Vector3 centre, dir;        // world: mean of the four midpoints, and the fit direction
-            public float rCurl;
+            public Vector3 A, B;               // world, already offset palm-side by (t + r)
+            public Vector3 dir;                // butt -> head
+            public Vector3 n;                  // palm-side unit normal at the hand
             public Vector3 palmLocal, shaftDirLocal;
         }
 
-        /// <summary>
-        /// §3.8.3. Per hand: for index/middle/ring/little take the knuckle f1 and the tip
-        /// f3 + (f3 − f2), form the midpoint, and fit a line through the four midpoints (principal
-        /// axis). That line is where a closed hand actually leaves a hole for a shaft.
-        /// </summary>
-        static Tunnel FingerTunnel(Animator anim, Transform hand, bool left)
+        static Landmark LandmarkAxis(Animator anim, bool left)
         {
-            var t = new Tunnel { ok = false };
-            if (anim == null || hand == null || anim.avatar == null || !anim.avatar.isHuman) return t;
-            var f1 = left ? LeftF1 : RightF1;
-            var f2 = left ? LeftF2 : RightF2;
-            var f3 = left ? LeftF3 : RightF3;
+            var lm = new Landmark { ok = false };
+            if (anim == null || anim.avatar == null || !anim.avatar.isHuman) return lm;
+            var hand   = anim.GetBoneTransform(left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+            var little = anim.GetBoneTransform(left ? HumanBodyBones.LeftLittleProximal : HumanBodyBones.RightLittleProximal);
+            var index1 = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexProximal  : HumanBodyBones.RightIndexProximal);
+            var index2 = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexIntermediate : HumanBodyBones.RightIndexIntermediate);
+            var middle1= anim.GetBoneTransform(left ? HumanBodyBones.LeftMiddleProximal : HumanBodyBones.RightMiddleProximal);
+            if (hand == null || little == null || index1 == null || middle1 == null) return lm;
 
-            var kn = new Vector3[4]; var tp = new Vector3[4]; var mid = new Vector3[4];
-            for (int i = 0; i < 4; i++)
-            {
-                var b1 = anim.GetBoneTransform(f1[i]);
-                var b2 = anim.GetBoneTransform(f2[i]);
-                var b3 = anim.GetBoneTransform(f3[i]);
-                if (b1 == null || b2 == null || b3 == null) return t;
-                kn[i] = b1.position;
-                // tip: extend the distal bone by its own length (the leaf, whether or not the FBX has *4)
-                tp[i] = b3.position + (b3.position - b2.position);
-                mid[i] = 0.5f * (kn[i] + tp[i]);
-            }
+            // palm-side normal, sign toward the finger curl
+            Vector3 n = Vector3.Cross(index1.position - hand.position, little.position - hand.position);
+            if (n.sqrMagnitude < 1e-10f) return lm;
+            n.Normalize();
+            var midInt = anim.GetBoneTransform(left ? HumanBodyBones.LeftMiddleIntermediate : HumanBodyBones.RightMiddleIntermediate);
+            if (midInt != null && Vector3.Dot(n, midInt.position - middle1.position) < 0f) n = -n;
 
-            Vector3 c = (mid[0] + mid[1] + mid[2] + mid[3]) * 0.25f;
-            // principal axis of the four midpoints — power iteration on the covariance matrix,
-            // seeded along the spread of the points so it cannot start orthogonal to the answer.
-            Vector3 dir = (mid[3] - mid[0]);
-            if (dir.sqrMagnitude < 1e-10f) return t;
-            dir.Normalize();
-            for (int it = 0; it < 32; it++)
-            {
-                Vector3 acc = Vector3.zero;
-                for (int i = 0; i < 4; i++) { Vector3 d = mid[i] - c; acc += d * Vector3.Dot(d, dir); }
-                if (acc.sqrMagnitude < 1e-14f) break;
-                dir = acc.normalized;
-            }
+            // LEAD: little MCP -> index PIP (diagonal through the fingers).
+            // TRAIL: little MCP -> index MCP (along the base crease, barely diagonal).
+            Transform bBone = left ? (index2 != null ? index2 : index1) : index1;
+            lm.A = little.position + n * PalmOffsetM;
+            lm.B = bBone.position  + n * PalmOffsetM;
+            Vector3 d = lm.B - lm.A;
+            if (d.sqrMagnitude < 1e-10f) return lm;
+            lm.dir = d.normalized;
+            lm.n = n;
 
-            float DistToAxis(Vector3 p) { Vector3 d = p - c; return (d - dir * Vector3.Dot(d, dir)).magnitude; }
-            float sum = 0f;
-            for (int i = 0; i < 4; i++) { sum += DistToAxis(kn[i]); sum += DistToAxis(tp[i]); }
-
-            t.ok = true; t.knuckles = kn; t.tips = tp; t.centre = c; t.dir = dir;
-            t.rCurl = sum / 8f;
-            t.palmLocal = hand.InverseTransformPoint(c);
-            t.shaftDirLocal = hand.InverseTransformDirection(dir);
-            return t;
+            // palmLocal = the point on that line nearest the middle-finger MCP
+            Vector3 v = middle1.position - lm.A;
+            Vector3 onLine = lm.A + lm.dir * Vector3.Dot(v, lm.dir);
+            lm.palmLocal     = hand.InverseTransformPoint(onLine);
+            lm.shaftDirLocal = hand.InverseTransformDirection(lm.dir);
+            lm.ok = true;
+            return lm;
         }
 
         /// <summary>Distance from a point to the infinite line through a with direction d (unit).</summary>
@@ -533,8 +546,8 @@ namespace Golfin.EditorTools
         }
 
         /// <summary>
-        /// §3.8.5. One sample of everything that makes a grip a grip, against the REAL club axis.
-        /// Called at address, t = 0.6 s and impact; each row keeps its worst value.
+        /// SPEC 3.9.6. One sample of everything that makes a grip a grip, against the REAL club
+        /// axis. Called at address, t = 0.6 s and impact; each row keeps its worst value.
         /// </summary>
         void SampleFingerGrip(Animator anim, Transform clubStart, Transform clubEnd, float shaftRadius, string label)
         {
@@ -547,111 +560,154 @@ namespace Golfin.EditorTools
 
             var handL = anim.GetBoneTransform(HumanBodyBones.LeftHand);
             var handR = anim.GetBoneTransform(HumanBodyBones.RightHand);
-            var tunL = FingerTunnel(anim, handL, true);
-            var tunR = FingerTunnel(anim, handR, false);
-            var sb = new StringBuilder("§3.8.5 " + label + " |");
+            var lmL = LandmarkAxis(anim, true);
+            var lmR = LandmarkAxis(anim, false);
+            var sb = new StringBuilder("3.9.6 " + label + " |");
 
-            void Hand(bool left, Tunnel tun, Transform hand)
+            // axis.landmarks - is the real shaft ON the landmark line, at BOTH landmarks?
+            void Axis(bool left, Landmark lm)
             {
-                if (!tun.ok) { sb.Append(left ? " lead: NO FINGER BONES" : " trail: NO FINGER BONES"); return; }
-                if (left) { _rCurlL = tun.rCurl; _shaftDirLocalL = tun.shaftDirLocal; }
-                else      { _rCurlR = tun.rCurl; _shaftDirLocalR = tun.shaftDirLocal; }
+                if (!lm.ok) { sb.Append(left ? " lead: NO BONES" : " trail: NO BONES"); return; }
+                float dA = PointToAxis(lm.A, sa, sd);
+                float dB = PointToAxis(lm.B, sa, sd);
+                float worst = Mathf.Max(dA, dB);
+                if (left) { if (float.IsNaN(_axisWorstL) || worst > _axisWorstL) _axisWorstL = worst; }
+                else      { if (float.IsNaN(_axisWorstR) || worst > _axisWorstR) _axisWorstR = worst; }
+                sb.Append(left ? " leadAxis A=" : " trailAxis A=").Append(F(dA)).Append(" B=").Append(F(dB));
+            }
+            Axis(true, lmL); Axis(false, lmR);
 
-                // fingers.closed — every tip a grip's distance from the shaft axis
+            // fingers.closed - SEVEN fingers. The trail little finger does not grip the shaft.
+            void Fingers(bool left, HumanBodyBones[][] chains)
+            {
                 float lo = float.PositiveInfinity, hi = float.NegativeInfinity;
-                for (int i = 0; i < 4; i++)
+                foreach (var ch in chains)
                 {
-                    float dd = PointToAxis(tun.tips[i], sa, sd);
-                    if (dd < lo) lo = dd; if (dd > hi) hi = dd;
+                    var d2 = anim.GetBoneTransform(ch[1]);
+                    var d3 = anim.GetBoneTransform(ch[2]);
+                    if (d2 == null || d3 == null) continue;
+                    Vector3 tip = d3.position + (d3.position - d2.position);
+                    float dd = PointToAxis(tip, sa, sd);
+                    if (dd < lo) lo = dd;
+                    if (dd > hi) hi = dd;
                 }
-                if (left)  { if (float.IsNaN(_fingersClosedMinL) || lo < _fingersClosedMinL) _fingersClosedMinL = lo;
-                             if (float.IsNaN(_fingersClosedMaxL) || hi > _fingersClosedMaxL) _fingersClosedMaxL = hi; }
-                else       { if (float.IsNaN(_fingersClosedMinR) || lo < _fingersClosedMinR) _fingersClosedMinR = lo;
-                             if (float.IsNaN(_fingersClosedMaxR) || hi > _fingersClosedMaxR) _fingersClosedMaxR = hi; }
+                if (float.IsInfinity(lo)) return;
+                if (left) { if (float.IsNaN(_fingersClosedMinL) || lo < _fingersClosedMinL) _fingersClosedMinL = lo;
+                            if (float.IsNaN(_fingersClosedMaxL) || hi > _fingersClosedMaxL) _fingersClosedMaxL = hi; }
+                else      { if (float.IsNaN(_fingersClosedMinR) || lo < _fingersClosedMinR) _fingersClosedMinR = lo;
+                            if (float.IsNaN(_fingersClosedMaxR) || hi > _fingersClosedMaxR) _fingersClosedMaxR = hi; }
+                sb.Append(left ? " | leadTips=[" : " | trailTips=[").Append(F(lo)).Append("..").Append(F(hi)).Append("]");
+            }
+            Fingers(true,  new[] { LeadIdx, LeadMid, LeadRng, LeadLit });
+            Fingers(false, new[] { TrailIdx, TrailMid, TrailRng });
 
-                // shaft.inTunnel — the axis must sit between the palm plane and the fingertips
-                var i1 = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexProximal : HumanBodyBones.RightIndexProximal);
-                var p1 = anim.GetBoneTransform(left ? HumanBodyBones.LeftLittleProximal : HumanBodyBones.RightLittleProximal);
-                float palmSigned = float.NaN, tipGap = float.NaN;
-                if (i1 != null && p1 != null && hand != null)
+            // heelPad.onTop / trailPalm.onThumb - the two palm rules, at address
+            if (label == "address")
+            {
+                var head = anim.GetBoneTransform(HumanBodyBones.Head);
+                if (lmL.ok && head != null && handL != null)
                 {
-                    Vector3 nrm = Vector3.Cross(i1.position - hand.position, p1.position - hand.position);
-                    if (nrm.sqrMagnitude > 1e-10f)
-                    {
-                        nrm.Normalize();
-                        if (Vector3.Dot(nrm, tun.centre - hand.position) < 0f) nrm = -nrm;   // point out of the palm
-                        // the shaft's closest approach to the palm centre, measured off the palm plane
-                        Vector3 pc = tun.centre;
-                        Vector3 onAxis = sa + sd * Vector3.Dot(pc - sa, sd);
-                        palmSigned = Vector3.Dot(onAxis - hand.position, nrm);
-                    }
-                    // distance from the shaft axis to the line through the fingertips
-                    Vector3 td = tun.tips[3] - tun.tips[0];
-                    if (td.sqrMagnitude > 1e-10f) tipGap = LineToLine(sa, sd, tun.tips[0], td.normalized);
+                    Vector3 toHead = (head.position - handL.position).normalized;
+                    _heelPadDot = Vector3.Dot(-lmL.n, toHead);
+                    sb.Append(" | heelDot=").Append(F(_heelPadDot));
                 }
-                if (left)  { if (float.IsNaN(_tunnelPalmMinL) || palmSigned < _tunnelPalmMinL) _tunnelPalmMinL = palmSigned;
-                             if (float.IsNaN(_tunnelPalmMaxL) || palmSigned > _tunnelPalmMaxL) _tunnelPalmMaxL = palmSigned;
-                             if (float.IsNaN(_tunnelTipMinL) || tipGap < _tunnelTipMinL) _tunnelTipMinL = tipGap; }
-                else       { if (float.IsNaN(_tunnelPalmMinR) || palmSigned < _tunnelPalmMinR) _tunnelPalmMinR = palmSigned;
-                             if (float.IsNaN(_tunnelPalmMaxR) || palmSigned > _tunnelPalmMaxR) _tunnelPalmMaxR = palmSigned;
-                             if (float.IsNaN(_tunnelTipMinR) || tipGap < _tunnelTipMinR) _tunnelTipMinR = tipGap; }
-
-                sb.Append(left ? " lead" : " trail")
-                  .Append(" rCurl=").Append(F(tun.rCurl))
-                  .Append(" tipDist=[").Append(F(lo)).Append("..").Append(F(hi)).Append("]")
-                  .Append(" palmSigned=").Append(F(palmSigned))
-                  .Append(" tipGap=").Append(F(tipGap)).Append(" |");
+                var leadThumb = anim.GetBoneTransform(HumanBodyBones.LeftThumbIntermediate);
+                if (lmR.ok && leadThumb != null && handR != null)
+                {
+                    Vector3 toThumb = (leadThumb.position - handR.position).normalized;
+                    _trailPalmDot = Vector3.Dot(lmR.n, toThumb);
+                    sb.Append(" trailPalmDot=").Append(F(_trailPalmDot));
+                }
             }
 
-            Hand(true, tunL, handL);
-            Hand(false, tunR, handR);
+            // hands.overlap - trail little MCP rides the lead index/middle gap
+            {
+                var tl = anim.GetBoneTransform(HumanBodyBones.RightLittleProximal);
+                var li = anim.GetBoneTransform(HumanBodyBones.LeftIndexProximal);
+                var lm2 = anim.GetBoneTransform(HumanBodyBones.LeftMiddleProximal);
+                if (tl != null && li != null && lm2 != null)
+                {
+                    float stTrail = Vector3.Dot(tl.position - sa, sd);
+                    float stGap = Vector3.Dot(0.5f * (li.position + lm2.position) - sa, sd);
+                    float err = Mathf.Abs(stTrail - stGap);
+                    if (float.IsNaN(_overlapWorst) || err > _overlapWorst) _overlapWorst = err;
+                    sb.Append(" | overlapErr=").Append(F(err));
+                }
+            }
 
-            // hands.noOverlap — closest approach of any lead finger joint to any trail finger joint
-            if (tunL.ok && tunR.ok)
+            // noInterpenetration - excluding the trail little finger, which IS the intended contact
             {
                 var jl = new System.Collections.Generic.List<Vector3>();
                 var jr = new System.Collections.Generic.List<Vector3>();
-                for (int i = 0; i < 4; i++)
-                {
-                    foreach (var b in new[] { LeftF1[i], LeftF2[i], LeftF3[i] })
-                    { var tr = anim.GetBoneTransform(b); if (tr != null) jl.Add(tr.position); }
-                    foreach (var b in new[] { RightF1[i], RightF2[i], RightF3[i] })
-                    { var tr = anim.GetBoneTransform(b); if (tr != null) jr.Add(tr.position); }
-                }
+                foreach (var ch in new[] { LeadIdx, LeadMid, LeadRng, LeadLit })
+                    foreach (var b in ch) { var tr = anim.GetBoneTransform(b); if (tr != null) jl.Add(tr.position); }
+                foreach (var ch in new[] { TrailIdx, TrailMid, TrailRng })
+                    foreach (var b in ch) { var tr = anim.GetBoneTransform(b); if (tr != null) jr.Add(tr.position); }
                 float mn = float.PositiveInfinity;
-                foreach (var a in jl) foreach (var b in jr) { float d2 = (a - b).sqrMagnitude; if (d2 < mn) mn = d2; }
-                mn = Mathf.Sqrt(mn);
-                if (float.IsNaN(_handsNoOverlapMin) || mn < _handsNoOverlapMin) _handsNoOverlapMin = mn;
-                sb.Append(" handGap=").Append(F(mn));
+                foreach (var a in jl) foreach (var b in jr) { float q = (a - b).sqrMagnitude; if (q < mn) mn = q; }
+                if (!float.IsInfinity(mn))
+                {
+                    mn = Mathf.Sqrt(mn);
+                    if (float.IsNaN(_interpenWorst) || mn < _interpenWorst) _interpenWorst = mn;
+                    sb.Append(" interpen=").Append(F(mn));
+                }
             }
 
-            // thumb.downShaft_l — the lead thumb lies along the shaft toward the head
-            var th1 = anim.GetBoneTransform(HumanBodyBones.LeftThumbProximal);
-            var th3 = anim.GetBoneTransform(HumanBodyBones.LeftThumbDistal);
-            if (th1 != null && th3 != null)
+            // thumb.downShaft_l with the CLOCK angle (3.9.4: 1 o clock, 15-30 deg toward the trail side)
             {
-                float ang = Vector3.Angle(th3.position - th1.position, sd);
-                if (float.IsNaN(_thumbDownShaftWorstL) || ang > _thumbDownShaftWorstL) _thumbDownShaftWorstL = ang;
-                sb.Append(" thumbAngle=").Append(F(ang)).Append(" deg");
+                var th1 = anim.GetBoneTransform(HumanBodyBones.LeftThumbProximal);
+                var th3 = anim.GetBoneTransform(HumanBodyBones.LeftThumbDistal);
+                if (th1 != null && th3 != null && lmL.ok)
+                {
+                    Vector3 thumb = th3.position - th1.position;
+                    float ang = Vector3.Angle(thumb, sd);
+                    if (float.IsNaN(_thumbDownShaftWorstL) || ang > _thumbDownShaftWorstL) _thumbDownShaftWorstL = ang;
+                    Vector3 up12 = Vector3.ProjectOnPlane(-lmL.n, sd);
+                    Vector3 tProj = Vector3.ProjectOnPlane(thumb, sd);
+                    if (up12.sqrMagnitude > 1e-8f && tProj.sqrMagnitude > 1e-8f)
+                    {
+                        _thumbClockDeg = Vector3.SignedAngle(up12.normalized, tProj.normalized, sd);
+                        sb.Append(" | thumbAng=").Append(F(ang)).Append(" clock=").Append(F(_thumbClockDeg)).Append(" deg");
+                    }
+                }
+            }
+
+            // buttCap.pastHeel - the butt shows about 13 mm * s beyond the heel edge
+            {
+                var little = anim.GetBoneTransform(HumanBodyBones.LeftLittleProximal);
+                if (little != null)
+                {
+                    float past = Vector3.Dot(little.position - clubStart.position, sd);
+                    if (label == "address") _buttPastHeel = past;
+                    sb.Append(" | buttPastHeel=").Append(F(past));
+                }
             }
 
             Mark(sb.ToString());
 
-            // §6 A4: two angles on the hands at every sample — down the shaft from the butt cap,
-            // and from the target side. Full-res PNGs; the Architect reviews these, not a crop of
-            // the gameplay frame, and at impact the gameplay camera is not even looking here.
+            // SPEC 6 A4: two angles on the hands at every sample.
             if (handL != null && handR != null)
             {
                 Vector3 hands = 0.5f * (handL.position + handR.position);
-                // End-on down the shaft the hands are compact, so 0.42 m frames them. Broadside
-                // they span both fists plus the grip, and 0.42 m put the camera INSIDE the hand —
-                // the first version of this returned a wall of skin. Pull back for that angle.
                 SceneCamShot(hands, -sd, 0.42f, label + "_downshaft");
                 Vector3 side = Vector3.Cross(sd, Vector3.up);
                 if (side.sqrMagnitude < 1e-6f) side = Vector3.right;
                 SceneCamShot(hands, side.normalized, 0.90f, label + "_targetside");
             }
         }
+
+        static readonly HumanBodyBones[] LeadIdx  = { HumanBodyBones.LeftIndexProximal,  HumanBodyBones.LeftIndexIntermediate,  HumanBodyBones.LeftIndexDistal };
+        static readonly HumanBodyBones[] LeadMid  = { HumanBodyBones.LeftMiddleProximal, HumanBodyBones.LeftMiddleIntermediate, HumanBodyBones.LeftMiddleDistal };
+        static readonly HumanBodyBones[] LeadRng  = { HumanBodyBones.LeftRingProximal,   HumanBodyBones.LeftRingIntermediate,   HumanBodyBones.LeftRingDistal };
+        static readonly HumanBodyBones[] LeadLit  = { HumanBodyBones.LeftLittleProximal, HumanBodyBones.LeftLittleIntermediate, HumanBodyBones.LeftLittleDistal };
+        static readonly HumanBodyBones[] TrailIdx = { HumanBodyBones.RightIndexProximal,  HumanBodyBones.RightIndexIntermediate,  HumanBodyBones.RightIndexDistal };
+        static readonly HumanBodyBones[] TrailMid = { HumanBodyBones.RightMiddleProximal, HumanBodyBones.RightMiddleIntermediate, HumanBodyBones.RightMiddleDistal };
+        static readonly HumanBodyBones[] TrailRng = { HumanBodyBones.RightRingProximal,   HumanBodyBones.RightRingIntermediate,   HumanBodyBones.RightRingDistal };
+
+        /// <summary>3.9.6 retired grip.hands.order to a Mark - the overlap rule replaces it.</summary>
+        void MarkOrder(bool ok, string msg) => Mark("(retired) grip.hands.order " + (ok ? "in band" : "out of band") + " - " + msg);
+        /// <summary>3.9.6 retired grip.hands.apart to a Mark - a golf grip overlaps.</summary>
+        void MarkApart(bool ok, string msg) => Mark("(retired) grip.hands.apart " + (ok ? "in band" : "out of band") + " - " + msg);
 
         /// <summary>Palm point in world space for a hand, using the baked local offset.</summary>
         Vector3 PalmWorld(Transform hand, bool left)
@@ -662,7 +718,16 @@ namespace Golfin.EditorTools
             return known ? hand.TransformPoint(pl) : hand.position;
         }
 
-        public void Begin(int hole) { _hole = hole; StartCoroutine(Sequence()); }
+        public void Begin(int hole)
+        {
+            _hole = hole;
+            // SPEC §3.9.5: foot slide varied 0.028 -> 0.084 m across identical runs in iter-6, so
+            // grip.ikNoLegEffect could not be trusted at ±0.010. A fixed capture step makes
+            // animation and physics advance the same amount per frame regardless of what the
+            // editor's frame rate happens to be while the run is unattended. Reset in Finish().
+            Time.captureDeltaTime = 1f / 60f;
+            StartCoroutine(Sequence());
+        }
 
         void Mark(string m) { _log.AppendLine(m); Debug.Log("[GolferVerify] " + m); }
 
@@ -1011,6 +1076,24 @@ namespace Golfin.EditorTools
                     {
                         var rigHands = golfer.GetComponentsInChildren<UnityEngine.Animations.Rigging.Rig>(true)
                                              .FirstOrDefault(r => r.gameObject.name == "Rig_Hands");
+
+                        // §3.9.2 says compute with Rig_Hands at 0. That is right for the LANDMARK
+                        // axis — palmLocal and shaftDirLocal are expressed in HAND space, so the
+                        // hand's world rotation cannot affect them. It is wrong for the two RULE
+                        // TARGETS: Head and the lead thumb are world positions, and with the rig off
+                        // they are the CLIP's, which the lead hand then rotates 102 deg away from.
+                        // Sampling them there is why the trail rule solved dot = 1.0000 and then
+                        // evaluated at -0.42 on the rigged pose. Captured rig-ON, before zeroing.
+                        Vector3 headW = Vector3.zero, leadThumbW = Vector3.zero;
+                        bool ruleTargetsOk = false;
+                        if (anim != null && anim.avatar != null && anim.avatar.isHuman)
+                        {
+                            var hd = anim.GetBoneTransform(HumanBodyBones.Head);
+                            var lt = anim.GetBoneTransform(HumanBodyBones.LeftThumbIntermediate);
+                            if (hd != null && lt != null)
+                            { headW = hd.position; leadThumbW = lt.position; ruleTargetsOk = true; }
+                        }
+
                         float restore = rigHands != null ? rigHands.weight : 1f;
                         if (rigHands != null) rigHands.weight = 0f;
                         yield return null; yield return null;   // let the graph evaluate without layer 2
@@ -1034,72 +1117,102 @@ namespace Golfin.EditorTools
                                  (ok ? palm.ToString("F5") : "<no finger bones>") +
                                  " shaftRadius=" + F(PresenterShaftRadius(pres)));
 
-                            // ── §3.8.3 — the shaft goes where the POSED fingers leave a tunnel ──
-                            // This replaces the Rule 2 formula: measured from the finger bones with
-                            // the Hands pose layer on, not derived from a palm-normal guess.
-                            var tun = FingerTunnel(anim, handBone, left);
-                            if (!tun.ok) { Mark("§3.8.3 " + side + ": finger bones not found — cannot measure the tunnel"); return; }
+                            // ── SPEC 3.9.1 / 3.9.2 — landmarks, then a fully determined rotation ──
+                            // No fit and no clip bake. The axis comes from two bones; the roll comes
+                            // from a palm rule. There is nothing left to choose by eye, so the 35 deg
+                            // stop is retired with the bake that needed it.
+                            var lm = LandmarkAxis(anim, left);
+                            if (!lm.ok) { Mark("3.9.1 " + side + ": finger bones not found - cannot place the axis"); return; }
 
-                            // Is the §3.8.2 Hands layer actually driving these fingers? r_curl barely
-                            // moved when the muscle values were nearly doubled, and "the pose is too
-                            // open" and "the pose is not applied at all" look identical in r_curl.
+                            // (i) map the landmark line onto the club's +Y (the anchor parent's axis)
+                            Quaternion align = Quaternion.FromToRotation(lm.shaftDirLocal, Vector3.up);
+
+                            // (ii) fix the roll about the shaft by the palm rule for this hand.
+                            //      lead : back of the hand toward the head (2-2.5 knuckles visible)
+                            //      trail: palm toward the lead thumb (lifeline over the thumb)
+                            Vector3 ruleTargetW;
+                            string ruleName;
+                            if (!ruleTargetsOk) { Mark("3.9.2 " + side + ": rule targets unavailable (Head / LeftThumbIntermediate)"); return; }
+                            if (left)
                             {
-                                var lay = new StringBuilder();
-                                for (int li = 0; li < anim.layerCount; li++)
-                                    lay.Append(li).Append(':').Append(anim.GetLayerName(li))
-                                       .Append(" w=").Append(anim.GetLayerWeight(li).ToString("F2")).Append("  ");
-                                var sbF = new StringBuilder();
-                                var f1d = left ? LeftF1 : RightF1;
-                                var f3d = left ? LeftF3 : RightF3;
-                                string[] nm = { "index", "middle", "ring", "little" };
-                                for (int i = 0; i < 4; i++)
-                                {
-                                    var b1 = anim.GetBoneTransform(f1d[i]); var b3 = anim.GetBoneTransform(f3d[i]);
-                                    if (b1 != null && b3 != null)
-                                        sbF.Append(nm[i]).Append(" knuckle->tip=")
-                                           .Append(F(Vector3.Distance(b1.position, tun.tips[i]))).Append("  ");
-                                }
-                                Mark("§3.8.2 CHECK " + side + " | layers: " + lay + "| " + sbF);
+                                ruleTargetW = (headW - handBone.position).normalized;
+                                ruleName = "back-of-hand -> Head";
                             }
+                            else
+                            {
+                                ruleTargetW = (leadThumbW - handBone.position).normalized;
+                                ruleName = "palm -> lead thumb";
+                            }
+                            // The vector the rule wants pointed at the target, in HAND space. The
+                            // TARGET is fixed in the world and does NOT rotate with the hand — an
+                            // earlier version rotated both by the candidate, which makes the dot
+                            // product roll-invariant and returns an arbitrary angle (lead dot came
+                            // back -0.0021 and the hand sat 157 deg from the clip). Compare in the
+                            // anchor PARENT's frame, where the shaft is +Y.
+                            Vector3 ruleVecLocal = handBone.InverseTransformDirection(left ? -lm.n : lm.n);
+                            Vector3 targetInParent = Quaternion.Inverse(anchor.parent.rotation) * ruleTargetW;
+                            Vector3 tPerp = Vector3.ProjectOnPlane(targetInParent, Vector3.up);
+                            if (tPerp.sqrMagnitude < 1e-8f) { Mark("3.9.2 " + side + ": rule target is parallel to the shaft - roll undetermined"); return; }
+                            tPerp.Normalize();
 
-                            // Roll the baked hand frame so the tunnel lines up with the anchor's +Y
-                            // (the shaft). The correction is reported; > 35 deg means the pose or
-                            // the clip is wrong and this is a stop, not a nudge.
-                            // The SHAFT is the anchor PARENT's +Y (ClubSlot local +Y runs butt->head).
-                            // With targetRotationWeight = 1 the hand adopts the anchor's rotation, so
-                            // with anchor localRotation R the tunnel lands in parent space at
-                            // R * shaftDirLocal. We want that to be +Y, hence
-                            //     R = rLocal * Q,  Q = FromToRotation(shaftDirLocal, inverse(rLocal) * up)
-                            // An earlier version of this line pre-multiplied by inverse(rLocal) as
-                            // well, which measured a rotation that does not exist and reported a
-                            // false ">35 deg STOP". The VERIFY line below exists so that can never
-                            // pass silently again: it re-derives the result instead of trusting it.
-                            Vector3 tunnelDir = tun.shaftDirLocal;
-                            Vector3 wantInHand = Quaternion.Inverse(rLocal) * Vector3.up;
-                            if (Vector3.Dot(tunnelDir, wantInHand) < 0f) tunnelDir = -tunnelDir;   // an axis, not an arrow
-                            Quaternion roll = Quaternion.FromToRotation(tunnelDir, wantInHand);
-                            float rollDeg = Quaternion.Angle(Quaternion.identity, roll);
-                            Quaternion composed = rLocal * roll;
-                            Vector3 check = composed * tunnelDir;                 // must be +Y in parent space
-                            float checkErr = Vector3.Angle(check, Vector3.up);
+                            // search the 1 remaining DOF: roll about the shaft, 1 deg steps
+                            float bestRoll = 0f, bestDot = float.NegativeInfinity;
+                            for (float a = -180f; a < 180f; a += 1f)
+                            {
+                                Quaternion cand = Quaternion.AngleAxis(a, Vector3.up) * align;
+                                Vector3 v = Vector3.ProjectOnPlane(cand * ruleVecLocal, Vector3.up);
+                                if (v.sqrMagnitude < 1e-8f) continue;
+                                float dot = Vector3.Dot(v.normalized, tPerp);
+                                if (dot > bestDot) { bestDot = dot; bestRoll = a; }
+                            }
+                            Quaternion composed = Quaternion.AngleAxis(bestRoll, Vector3.up) * align;
 
-                            // §3.8.4 — lead palm width, and the trail station derived from it
-                            float palmWidth = float.NaN;
-                            var iP = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexProximal : HumanBodyBones.RightIndexProximal);
-                            var lP = anim.GetBoneTransform(left ? HumanBodyBones.LeftLittleProximal : HumanBodyBones.RightLittleProximal);
-                            if (iP != null && lP != null) palmWidth = Vector3.Distance(iP.position, lP.position);
+                            // self-check: does the landmark line land on +Y after composing?
+                            float checkErr = Vector3.Angle(composed * lm.shaftDirLocal, Vector3.up);
+                            // information only (3.9.2): how far this is from the clip's own hand
+                            float vsClip = Quaternion.Angle(rLocal, composed);
 
-                            Mark("§3.8.3 " + side +
-                                 " | r_curl=" + F(tun.rCurl) + " m (shaftRadius 0.012; > 0.018 too open, < 0.009 fingers through)" +
-                                 " | palmLocal=" + tun.palmLocal.ToString("F5") +
-                                 " | shaftDirLocal=" + tun.shaftDirLocal.ToString("F5") +
-                                 " | roll correction=" + F(rollDeg) + " deg" + (rollDeg > 35f ? "  *** > 35 deg: STOP ***" : "") +
-                                 " | VERIFY tunnel-after-compose vs +Y = " + F(checkErr) + " deg (must be ~0)" +
-                                 " | R_anchor_local composed(euler)=" + composed.eulerAngles.ToString("F3") +
+                            Mark("3.9.1 " + side +
+                                 " | A=" + handBone.InverseTransformPoint(lm.A).ToString("F5") +
+                                 " B=" + handBone.InverseTransformPoint(lm.B).ToString("F5") +
+                                 " (hand space) | palmLocal=" + lm.palmLocal.ToString("F5") +
+                                 " | shaftDirLocal=" + lm.shaftDirLocal.ToString("F5") +
+                                 " | WristTarget.localPosition = " + (-lm.palmLocal).ToString("F5") +
+                                 " | t+r=" + F(PalmOffsetM));
+                            Mark("3.9.2 " + side +
+                                 " | rule=" + ruleName + " dot=" + F(bestDot) + " roll=" + F(bestRoll) + " deg" +
+                                 " | R_anchor_local(euler)=" + composed.eulerAngles.ToString("F3") +
                                  " quat=(" + composed.x.ToString("F5") + ", " + composed.y.ToString("F5") +
                                  ", " + composed.z.ToString("F5") + ", " + composed.w.ToString("F5") + ")" +
-                                 " | WristTarget.localPosition = " + (-tun.palmLocal).ToString("F5") +
-                                 " | palmWidth=" + F(palmWidth));
+                                 " | VERIFY axis-after-compose vs +Y = " + F(checkErr) + " deg (must be ~0)" +
+                                 " | vs the clip's hand = " + F(vsClip) + " deg (information only)");
+
+                            // ── SPEC 3.9.3 — the hands OVERLAP ────────────────────────────────
+                            // The trail little-finger MCP must project onto the shaft at the same
+                            // station as the lead index/middle MCP gap: the trail pinky rides on
+                            // that gap. 3.8.4's "lead palm width + 4 mm" separated the hands, which
+                            // is a two-fists-on-a-pole grip. Computed on the trail pass, where both
+                            // hands' bones are posed and Rig_Hands is at weight 0.
+                            if (!left)
+                            {
+                                var csT2 = Tf("ClubStart"); var ceT2 = Tf("ClubEnd");
+                                var tlP = anim.GetBoneTransform(HumanBodyBones.RightLittleProximal);
+                                var liP = anim.GetBoneTransform(HumanBodyBones.LeftIndexProximal);
+                                var lmP = anim.GetBoneTransform(HumanBodyBones.LeftMiddleProximal);
+                                if (csT2 != null && ceT2 != null && tlP != null && liP != null && lmP != null)
+                                {
+                                    Vector3 sdir = (ceT2.position - csT2.position).normalized;
+                                    float stTrail = Vector3.Dot(tlP.position - csT2.position, sdir);
+                                    float stGap   = Vector3.Dot(0.5f * (liP.position + lmP.position) - csT2.position, sdir);
+                                    float delta   = stGap - stTrail;           // move the trail anchor by this
+                                    float newY    = anchor.localPosition.y + delta;
+                                    Mark("3.9.3 trail station | trail little MCP at " + F(stTrail) +
+                                         " m, lead index/middle gap at " + F(stGap) +
+                                         " m, delta = " + F(delta) +
+                                         " | GripAnchor_Trail.localPosition.y " + F(anchor.localPosition.y) +
+                                         " -> " + F(newY) + " (overlap, replaces 3.8.4's palm width + 4 mm)");
+                                }
+                            }
                         }
                         Bake("lead(L)",  alB, anim != null && anim.avatar != null && anim.avatar.isHuman
                                               ? anim.GetBoneTransform(HumanBodyBones.LeftHand) : null, true);
@@ -1187,12 +1300,13 @@ namespace Golfin.EditorTools
                         float alongL = Vector3.Dot(handL.position - slot.position, slot.up);
                         float alongR = Vector3.Dot(handR.position - slot.position, slot.up);
                         float leadNearerButt = alongR - alongL;
-                        Assert("grip.hands.order",
+                        // RETIRED by 3.9.6 (a golf grip overlaps) - reported as a Mark, asserted below.
+                        MarkOrder(
                                leadNearerButt >= 0.05f && leadNearerButt <= 0.12f,
                                "lead (left) is " + F(leadNearerButt) + " m nearer the butt cap than trail (right) at address " +
                                "(want 0.05–0.12 m; negative means trail is above lead; L station=" + F(alongL) + " R station=" + F(alongR) + ")");
                     }
-                    else Assert("grip.hands.order", false,
+                    else MarkOrder(false,
                                "handL=" + (handL != null) + " handR=" + (handR != null) + " slot=" + (slot != null) + " — cannot measure");
 
                     // Address sample for grip.hand.onShaft_l/_r (worst of 3 is asserted after shot).
@@ -1222,7 +1336,11 @@ namespace Golfin.EditorTools
                              " deg (want < 5)  palms apart=" + F(_apartWorst) + " m (want >= 0.045)");
                     }
 
-                    // §3.8.5 address sample — the finger grip itself
+                    // 3.9.6 address sample. AT END OF FRAME: the contact wrap runs in
+                    // GolferPresenter.LateUpdate, and a coroutine resumes during Update, so
+                    // sampling here measures the Animator's output BEFORE the fingers close.
+                    // That is why the tips read 0.043 m from a shaft the wrap targets at 0.0155.
+                    yield return new WaitForEndOfFrame();
                     SampleFingerGrip(anim, clubStart, clubEnd, PresenterShaftRadius(pres), "address");
                 }
 
@@ -1464,58 +1582,95 @@ namespace Golfin.EditorTools
                 }
 
                 if (!float.IsNaN(_apartWorst))
-                    Assert("grip.hands.apart", _apartWorst >= 0.045f,
+                    MarkApart(_apartWorst >= 0.045f,
                            "smallest palm-to-palm distance across 3 samples (address/0.6s/impact) = " +
                            F(_apartWorst) + " m (want >= 0.045). Two palms cannot occupy the same 4.5 cm; " +
                            "this is the number for \"one hand inside the other\".");
                 else
-                    Assert("grip.hands.apart", false, "no separation samples — hand bones not found");
+                    MarkApart(false, "no separation samples - hand bones not found");
 
-                // ── §3.8.5 — the four rows that would have failed iter-5 ──────────────────
-                // Band: a tip is a grip's distance from the shaft axis — touching it or just off
-                // it, never inside it. shaftRadius 0.012 -> [0.008, 0.024].
-                const float TipLo = 0.012f - 0.004f, TipHi = 0.012f + 0.012f;
-                void FingersClosed(string id, float mn, float mx)
+                // ── SPEC 3.9.6 — the rows read off how a club is actually held ────────────
+                // reference/GOLF_GRIP_GEOMETRY.html. These replace the 3.8.5 rows: shaft.inTunnel,
+                // hands.apart and hands.order are RETIRED, because they encoded a bat grip (axis
+                // across the palm) and two fists a palm width apart. A golf grip runs diagonally
+                // through the fingers and the hands OVERLAP.
+                void AxisRow(string id, float worst)
+                {
+                    if (float.IsNaN(worst)) { Assert(id, false, "no landmark samples - finger bones not found"); return; }
+                    Assert(id, worst < 0.006f,
+                           "worst distance from the real shaft to the landmark line across 3 samples = " +
+                           F(worst) + " m (want < 0.006 at BOTH landmarks). The line is little-finger MCP to " +
+                           "index PIP (lead) / index MCP (trail), offset palm-side by t + r = " + F(PalmOffsetM) +
+                           " m. If this fails the club is not lying where a hand can hold it.");
+                }
+                AxisRow("grip.axis.landmarks_l", _axisWorstL);
+                AxisRow("grip.axis.landmarks_r", _axisWorstR);
+
+                const float TipLo = GripRadiusM - 0.003f, TipHi = GripRadiusM + 0.010f;
+                void FingersClosed(string id, float mn, float mx, string who)
                 {
                     if (float.IsNaN(mn) || float.IsNaN(mx))
-                    { Assert(id, false, "no finger samples — finger bones not found on this rig"); return; }
+                    { Assert(id, false, "no finger samples - finger bones not found"); return; }
                     Assert(id, mn >= TipLo && mx <= TipHi,
-                           "fingertip distance to the shaft axis across 3 samples spans [" + F(mn) + " .. " + F(mx) +
-                           "] m; want every tip in [" + F(TipLo) + ", " + F(TipHi) + "] — below the floor is a finger " +
-                           "THROUGH the grip, above the ceiling is a hand not closed on it.");
+                           who + " fingertip distance to the shaft axis across 3 samples spans [" + F(mn) +
+                           " .. " + F(mx) + "] m; want every tip in [" + F(TipLo) + ", " + F(TipHi) +
+                           "] (r = " + F(GripRadiusM) + "). Below the floor is a finger THROUGH the grip; " +
+                           "above the ceiling is a hand not closed on it.");
                 }
-                FingersClosed("grip.fingers.closed_l", _fingersClosedMinL, _fingersClosedMaxL);
-                FingersClosed("grip.fingers.closed_r", _fingersClosedMinR, _fingersClosedMaxR);
+                FingersClosed("grip.fingers.closed_l", _fingersClosedMinL, _fingersClosedMaxL, "lead (4 fingers)");
+                FingersClosed("grip.fingers.closed_r", _fingersClosedMinR, _fingersClosedMaxR, "trail (3 fingers, little EXCLUDED)");
 
-                void InTunnel(string id, float pmin, float pmax, float tipMin)
-                {
-                    if (float.IsNaN(pmin) || float.IsNaN(tipMin))
-                    { Assert(id, false, "no tunnel samples — finger bones not found"); return; }
-                    bool ok = pmin >= 0.008f && pmax <= 0.024f && tipMin >= 0.006f;
-                    Assert(id, ok,
-                           "shaft axis vs the palm plane across 3 samples = [" + F(pmin) + " .. " + F(pmax) +
-                           "] m (want [0.008, 0.024]) and its closest approach to the fingertip line = " +
-                           F(tipMin) + " m (want >= 0.006). THIS is the \"shaft between the index and middle " +
-                           "fingers\" check — the axis has to sit in the hole the closed fingers leave.");
-                }
-                InTunnel("grip.shaft.inTunnel_l", _tunnelPalmMinL, _tunnelPalmMaxL, _tunnelTipMinL);
-                InTunnel("grip.shaft.inTunnel_r", _tunnelPalmMinR, _tunnelPalmMaxR, _tunnelTipMinR);
-
-                if (float.IsNaN(_handsNoOverlapMin))
-                    Assert("grip.hands.noOverlap", false, "no hand-gap samples — finger bones not found");
+                if (float.IsNaN(_heelPadDot))
+                    Assert("grip.heelPad.onTop", false, "no heel-pad sample at address");
                 else
-                    Assert("grip.hands.noOverlap", _handsNoOverlapMin >= 0.010f,
-                           "closest lead-finger joint to trail-finger joint across 3 samples = " +
-                           F(_handsNoOverlapMin) + " m (want >= 0.010). This is the row for \"a lead-hand finger " +
-                           "protrudes into the trail hand\"; the lead thumb under the trail palm is the only " +
-                           "intended contact and thumbs are excluded from this set.");
+                    Assert("grip.heelPad.onTop", _heelPadDot > 0.5f,
+                           "dot(back of the lead hand, toward the head) at address = " + F(_heelPadDot) +
+                           " (want > 0.5). This is the 2-2.5-knuckles check: the heel pad sits ON TOP of the " +
+                           "grip, so the back of the hand faces the golfer.");
+
+                if (float.IsNaN(_trailPalmDot))
+                    Assert("grip.trailPalm.onThumb", false, "no trail-palm sample at address");
+                else
+                    Assert("grip.trailPalm.onThumb", _trailPalmDot > 0.5f,
+                           "dot(trail palm normal, toward the lead thumb) at address = " + F(_trailPalmDot) +
+                           " (want > 0.5) - the lifeline crease covers the lead thumb.");
+
+                if (float.IsNaN(_overlapWorst))
+                    Assert("grip.hands.overlap", false, "no overlap sample - finger bones not found");
+                else
+                    Assert("grip.hands.overlap", _overlapWorst <= 0.008f,
+                           "worst station error between the trail little-finger MCP and the lead index/middle " +
+                           "MCP midpoint across 3 samples = " + F(_overlapWorst) + " m (want <= 0.008). The trail " +
+                           "pinky RIDES on the lead index/middle gap; a golf grip overlaps.");
+
+                if (float.IsNaN(_interpenWorst))
+                    Assert("grip.hands.noInterpenetration", false, "no interpenetration sample");
+                else
+                    Assert("grip.hands.noInterpenetration", _interpenWorst >= 0.008f,
+                           "closest lead finger joint to any trail finger joint (trail little finger EXCLUDED, " +
+                           "it is the intended contact) across 3 samples = " + F(_interpenWorst) +
+                           " m (want >= 0.008).");
 
                 if (float.IsNaN(_thumbDownShaftWorstL))
-                    Assert("grip.thumb.downShaft_l", false, "no thumb samples — thumb bones not found");
+                    Assert("grip.thumb.downShaft_l", false, "no thumb samples - thumb bones not found");
                 else
                     Assert("grip.thumb.downShaft_l", _thumbDownShaftWorstL < 35f,
-                           "worst angle between the lead thumb (thumb3 - thumb1) and the shaft direction toward " +
-                           "the head across 3 samples = " + F(_thumbDownShaftWorstL) + " deg (want < 35)");
+                           "worst angle between the lead thumb and the shaft toward the head across 3 samples = " +
+                           F(_thumbDownShaftWorstL) + " deg (want < 35). Clock angle about the shaft = " +
+                           F(_thumbClockDeg) + " deg from 12 o'clock (want 15-30 toward the trail side).");
+
+                if (float.IsNaN(_buttPastHeel))
+                    Assert("grip.buttCap.pastHeel", false, "no butt-cap sample at address");
+                else
+                    Assert("grip.buttCap.pastHeel", _buttPastHeel >= 0.008f && _buttPastHeel <= 0.020f,
+                           "heel landmark sits " + F(_buttPastHeel) + " m down-shaft of the butt cap at address " +
+                           "(want 0.008-0.020; the reference is 13 mm * s = " + F(ButtPastHeelM) +
+                           "). Half an inch of grip shows beyond the heel.");
+
+                Skip("grip.shaft.inTunnel_l", "RETIRED by 3.9.6 - encoded the bat axis 3.8.3 fitted");
+                Skip("grip.shaft.inTunnel_r", "RETIRED by 3.9.6 - encoded the bat axis 3.8.3 fitted");
+                Skip("grip.hands.apart", "RETIRED by 3.9.6 - a golf grip OVERLAPS; grip.hands.overlap replaces it");
+                Skip("grip.hands.order", "RETIRED by 3.9.6 - superseded by grip.hands.overlap");
 
                 // grip.ikNoLegEffect: foot slide within ±0.010 m of the RIG-OFF baseline measured
                 // under THIS harness ordering (§3.6 amended 2026-09-10). The old §9.8 numbers were
@@ -1897,10 +2052,12 @@ namespace Golfin.EditorTools
 
             // t = 0.6 s after commit
             while (Time.realtimeSinceStartup - t0 < 0.6f) yield return null;
+            yield return new WaitForEndOfFrame();   // after the LateUpdate wrap
             SampleAll("t=0.6s");
 
             // t ≈ 1.167 s after commit (GolferImpactDelayDriveSeconds from §9.2 baseline)
             while (Time.realtimeSinceStartup - t0 < 1.167f) yield return null;
+            yield return new WaitForEndOfFrame();   // after the LateUpdate wrap
             SampleAll("impact");
             // A4's hand close-ups are full-res CROPS of these same gameplay frames, not a new
             // capture path: CAPTURE RULE 0 / the 2026-05-13 lesson say CaptureCore is the only
@@ -2054,6 +2211,9 @@ namespace Golfin.EditorTools
 
         IEnumerator Finish()
         {
+            // §3.9.5: hand the editor its own clock back before anything else, so a run that
+            // fails an assertion cannot leave the Editor stepping at a fixed rate afterwards.
+            Time.captureDeltaTime = 0f;
             // §9.9(5) asks for the variant's numbers as golfer_invariants_mixamo.json — a separate
             // file, so the Quaternius baseline is not overwritten by the run it is compared against.
             string file = string.IsNullOrEmpty(_variant)

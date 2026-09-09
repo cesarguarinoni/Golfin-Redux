@@ -89,3 +89,11 @@ DIRTY:
 ?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_DECISION_FINGERS.md
 ?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_REVIEW_ITER5.md
 === end baseline ===
+
+=== iter-7 kickoff baseline 2026-09-09T22:21:10Z ===
+HEAD 6d6edd624cecca0d87b5a8a1f1a976853546a12a
+DIRTY:
+ M Docs/Specs/Active/golfer_club_grip/SPEC.md
+ M Docs/Specs/Active/golfer_club_grip/STATUS.md
+?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_DECISION_LANDMARKS.md
+=== end baseline ===
