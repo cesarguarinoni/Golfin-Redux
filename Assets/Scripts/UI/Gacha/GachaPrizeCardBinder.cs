@@ -214,11 +214,8 @@ namespace GolfinRedux.UI.Gacha
                     var type = TicketTypeCatalog.Get(id);
                     if (type == null) { Missing(record, "ticket"); return; }
 
-                    var icon = Golfin.CatalogArt.CatalogArtCache.Cached(type.IconUrl, type.IconUrl)
-                            ?? (string.IsNullOrWhiteSpace(type.IconSprite)
-                                    ? null
-                                    : Resources.Load<Sprite>("Art/Gacha/Tickets/" + type.IconSprite.Trim()))
-                            ?? Golfin.CatalogArt.CatalogArtCache.Cached(type.IconUrl);
+                    // One ladder — see GachaTicketArt (polish_regressions_0909 R3 audit).
+                    var icon = GachaTicketArt.Resolve(type);
 
                     card.InitializePrize(new BagClubCard.PrizeView(
                         icon,

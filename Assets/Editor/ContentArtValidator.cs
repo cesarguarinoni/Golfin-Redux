@@ -59,11 +59,22 @@ namespace Golfin.EditorTools
             /// withholds the row; a miss on a secondary column only degrades it.</summary>
             public readonly bool Primary;
 
-            public Column(string name, string folder, bool primary = false)
+            /// <summary>
+            /// The URL column paired with this sprite column, and the name the row's OWN art
+            /// would be filed under. Set together, they arm the "placeholder masks URL art"
+            /// check (polish_regressions_0909 R3) — see <see cref="ValidateCatalog"/>.
+            /// </summary>
+            public readonly string? UrlColumn;
+            public readonly Func<string, string>? OwnName;
+
+            public Column(string name, string folder, bool primary = false,
+                          string? urlColumn = null, Func<string, string>? ownName = null)
             {
                 Name = name;
                 Folder = folder;
                 Primary = primary;
+                UrlColumn = urlColumn;
+                OwnName = ownName;
             }
         }
 
@@ -115,7 +126,9 @@ namespace Golfin.EditorTools
             //
             // No placeholder policy: an unresolvable banner is withheld, not degraded.
             new CatalogSpec("gacha_banners", "Assets/Resources/Data/gacha_banners.csv", "bannerId", false,
-                new Column("artSprite", "Art/Gacha/Banners", primary: true)),
+                new Column("artSprite", "Art/Gacha/Banners", primary: true,
+                           urlColumn: "artUrl",
+                           ownName: GolfinRedux.UI.Gacha.GachaBannerArt.ConventionName)),
 
             new CatalogSpec("ticket_types", "Assets/Resources/Data/ticket_types.csv", "id", false,
                 new Column("iconSprite", "Art/Gacha/Tickets", primary: true)),
@@ -147,6 +160,12 @@ namespace Golfin.EditorTools
 
             public int PlaceholderRowCount =>
                 misses.Where(m => m.Verdict == "Placeholder").Select(m => m.Catalog + "/" + m.RowId).Distinct().Count();
+
+            /// <summary>Rows whose uploaded art is masked by somebody else's bundled sprite —
+            /// the R3 shape. A FAIL rather than a warning: the row renders the WRONG picture,
+            /// which no other verdict here describes.</summary>
+            public int MaskedRowCount =>
+                misses.Where(m => m.Verdict == "masked").Select(m => m.Catalog + "/" + m.RowId).Distinct().Count();
 
             public string ToText(int build)
             {
@@ -197,11 +216,15 @@ namespace Golfin.EditorTools
                 sb.AppendLine("  withheld    — primary sprite missing; the row is absent from every visible list (§4).");
                 sb.AppendLine("  degraded    — a secondary sprite is missing; the row renders, one slot is empty.");
                 sb.AppendLine("  Placeholder — clubs only; the row renders with the shared Placeholder sprite (§4 decision).");
+                sb.AppendLine("  masked      — FAIL. The row has uploaded art (a URL) but its sprite cell names");
+                sb.AppendLine("                ANOTHER row's bundled sprite, so the placeholder is drawn instead of");
+                sb.AppendLine("                the real art. Fix: GOLFIN/Content/Fetch URL Art, then re-run this.");
                 return sb.ToString();
             }
 
             public string Summary() =>
                 $"{WithheldRowCount} row(s) withheld, {PlaceholderRowCount} club row(s) on Placeholder, " +
+                $"{MaskedRowCount} row(s) with art MASKED by a placeholder, " +
                 $"{misses.Count} missing sprite reference(s) across {Catalogs.Length} catalogs" +
                 (errors.Count > 0 ? $", {errors.Count} catalog(s) unreadable" : "");
         }
@@ -266,6 +289,38 @@ namespace Golfin.EditorTools
                 {
                     if (!index.ContainsKey(column.Name)) continue;   // column absent from this CSV
                     string spriteName = Field(fields, index, column.Name);
+
+                    // ── "placeholder masks URL art" (polish_regressions_0909 R3) ──────────
+                    //
+                    // A row carrying real uploaded art whose sprite cell names SOMEBODY ELSE'S
+                    // bundled sprite. It resolves, so every check above is happy and the report
+                    // said "every sprite column resolves" — while at runtime the wrong picture
+                    // was drawn on every launch. That is the shape c5558a400 baked in and nothing
+                    // caught for a week: the exporter's job is to write the published artUrl into
+                    // the bundled CSV, and the moment it does, GachaBannerArt's step 1 goes quiet
+                    // and the placeholder wins forever.
+                    //
+                    // Checked BEFORE the resolve test, because the whole point is that it DOES
+                    // resolve. GachaBannerArt.Resolve no longer lets it mask the URL art, but the
+                    // repo state is still wrong and a re-export would still bake it — so it is a
+                    // FAIL here and in export_content.py --check, not a silent recovery.
+                    if (column.UrlColumn != null && column.OwnName != null
+                        && index.ContainsKey(column.UrlColumn)
+                        && !string.IsNullOrEmpty(Field(fields, index, column.UrlColumn))
+                        && !string.IsNullOrEmpty(spriteName)
+                        && !string.Equals(spriteName.Trim(), column.OwnName(rowId), StringComparison.Ordinal))
+                    {
+                        report.misses.Add(new Miss
+                        {
+                            Catalog = spec.Name,
+                            RowId = rowId,
+                            Column = column.Name,
+                            SpriteName = spriteName,
+                            Primary = column.Primary,
+                            Verdict = "masked",
+                        });
+                        continue;
+                    }
 
                     // An EMPTY name resolves to null at runtime exactly like a wrong one, so it is
                     // the same finding — the loaders early-return null on IsNullOrEmpty.

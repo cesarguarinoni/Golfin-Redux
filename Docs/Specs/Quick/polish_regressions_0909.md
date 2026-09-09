@@ -162,3 +162,53 @@ Done when: the two test banners render their uploaded art from `Resources/` on a
 with the network OFF (bundled), and a third banner published mid-session shows its URL art on
 the same launch with the network on (rebind), quoted with the log lines. Runbook step list updated
 to name the six catalogs.
+
+## Architect verification against HEAD `6b615123e` (2026-09-09) — NOT DONE yet
+
+| item | state | evidence |
+|---|---|---|
+| R1 | cause named, fix landed `1de7de78f` | not the animation: an unaffordable PULL opened the reveal, shook for the round trip, closed on `insufficient`. `GachaPullFlow.CanAfford`, both surfaces price themselves, 8 tests. **Cesar to confirm his wallet was empty/short when he saw it** — if he had tickets, R1 is still open. |
+| R2 | DONE `6b615123e` | `missions.daily` gone from `GameShimmerSites`, scene (161 deletions / 0 additions), controller; card fades via `FadeInPanel`; clip in media. |
+| R4 | DONE `fb1e4fc39` | bundler + validator know `gacha_banners`/`ticket_types`; `GachaBanner_TestA/TestB` bundled; `ArtCached` → carousel re-Binds the card naming the url (no rebuild). |
+| **R3** | **NOT DONE** | no commit, no log quotes, `_loop` never flipped, no delta-version / withheld-banner evidence. The R4 finding (art one launch late) is a *candidate* explanation for "not updating", not a proven one. |
+| **R0** | **NOT DONE** | the `2885/1` failure was never named. And HEAD now carries a NEW failing test: `LayeredPushTests.NoSingleFrameAdvancesMoreThanTwoFramesOfTravel` (from `98e2fd3d5`). |
+| Console sweep | NOT DONE | no per-screen Console count in any commit. |
+
+**R3 — CAUSE FOUND by the Architect (2026-09-09), and it is neither the loop commit nor polish, nor "one launch late" — Cesar: "it simply does not show", and that is exactly what the code does:**
+
+`GachaBannerArt.Resolve` (`Assets/Scripts/UI/Gacha/GachaBannerArt.cs` 44–46) is a three-step ladder:
+1. `CatalogArtCache.Cached(entry.ArtUrl, bundledUrl)` — returns URL art only if the URL DIFFERS from the one baked in this build's CSV ("re-uploaded"); `CatalogArt.cs` 92: `if (url == bundledUrl) return null;`
+2. `LoadBundled(entry.ArtSprite)` — "this build's own art"
+3. `CatalogArtCache.Cached(entry.ArtUrl)` — URL art, only if step 2 found nothing.
+
+Timeline of the bundled `gacha_banners.csv`:
+- `b42c8bff7` (08-31): `banner_test_a/b` have artSprite `GachaBanner_StandardClub1` (the shared placeholder) and **no artUrl**. In that build `bundledUrl` is empty ≠ the overlay's URL → step 1 returns the cached URL art → **the art shows**. This is the build Cesar saw it on.
+- `c5558a400` (09-02, `gps_profile_pack` "re-export"): the exporter baked the published `artUrl` into both rows; artSprite still the placeholder. From this build on, `url == bundledUrl` → step 1 null → step 2 loads `GachaBanner_StandardClub1`, which RESOLVES → the placeholder wins **forever**; step 3 never runs. The art cannot show on any launch. That is R3.
+
+So the ladder's assumption — "artSprite is this row's own bundled art" — is violated whenever a row carries a URL but its sprite cell names a placeholder (which is what an un-bundled catalog always looks like). R4's bundling hides it for the two test banners and for nothing else: the next banner published with art and exported before `Fetch URL Art` runs reproduces it exactly.
+
+Fix (R3, code):
+- `GachaBannerArt.Resolve` step 2 only counts when the bundled sprite is THIS row's own: `entry.ArtSprite == "GachaBanner_" + Pascal(bannerId minus "banner_")` (the convention `ContentArtFetcher` now writes, `ASSET_NAMING_CONVENTION.md` §5). A sprite cell naming another row's/placeholder art with a URL present falls through to step 3 — the URL art — and the placeholder is used only when no URL art is cached yet (never as a final answer). Log once per banner which step answered.
+- `ContentArtValidator` (`Validate Catalog Art`): a row with `artUrl` whose sprite cell is not its own convention name is a FAIL line ("placeholder masks URL art"), and `export_content.py --check` refuses that shape — so a re-export can never again bake a URL over a placeholder silently.
+- Test: entry with artUrl X, bundledUrl X, artSprite = placeholder, cache holds X → Resolve returns the cached URL sprite. Before the fix it returns the placeholder.
+- Proof on device (not the Editor): a build with the fix, a THIRD banner published with new art in the admin (Cesar does the publish), the art on screen the same session and after a relaunch; and the two test banners show TestA/TestB on a build made WITHOUT `Fetch URL Art` (artSprite reverted to the placeholder locally, not committed) — that is the case that was broken.
+
+**Correction of record (Cesar, 2026-09-09):** the banner art WAS published from the admin. Proof in the
+repo itself: `Assets/Resources/Data/gacha_banners.csv` carried the Supabase `artUrl` for `banner_test_a`
+and `banner_test_b` BEFORE R4 (`fb1e4fc39^`), and that column only reaches the CSV via the exporter,
+which reads the PUBLISHED catalog. What never happened was the **bundling** (`artSprite` still pointed
+at `GachaBanner_StandardClub1`), which is R4 — and why the admin now refuses a publish (nothing changed
+in the published rows; it is right). Any report line saying the art was "never published" is wrong;
+the two `artSprite` cells are now AHEAD of the catalog (`export --check` says CHANGED) and closing that
+is the importer → publish → export loop, Cesar's call.
+
+### Closing kickoff — what is still owed
+
+```
+Read Docs/Specs/Quick/polish_regressions_0909.md § "Architect verification" and close R3, R0 and the Console sweep.
+
+- R3: the cause is written in § "R3 — CAUSE FOUND" (the resolution ladder lets a placeholder artSprite mask URL art once the exporter bakes the same URL into the bundle — since c5558a400). Implement the fix there: own-name check in GachaBannerArt.Resolve step 2, validator + export --check FAIL for "placeholder masks URL art", the unit test, and the two on-device proofs (Cesar publishes the third banner). The `_loop` flip is no longer needed — do not spend time on it.
+- R0: name the `passed=2885 failed=1` test from c's sweep, and FIX `LayeredPushTests.NoSingleFrameAdvancesMoreThanTwoFramesOfTravel` — a failing test at HEAD is not a note, it is a red build.
+- Console sweep: every shell screen once through real navigation, count of errors/warnings per screen, before vs `36dc3d480`.
+- Then the push_arrival_hitch evidence owed in Docs/Specs/Quick/push_arrival_hitch_audit.md §4 (probe run, strips, A/B parallax clip, test run).
+```

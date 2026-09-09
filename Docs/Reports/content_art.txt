@@ -1,10 +1,10 @@
-content_art — build 2800   (GOLFIN/Content/Validate Catalog Art)
+content_art — build 2802   (GOLFIN/Content/Validate Catalog Art)
 
 WARNING-ONLY REPORT. A row whose data is published and whose art ships in a later
 build is a legitimate state: content_two_way §4 withholds it from every visible list
 instead of drawing a blank. This file records what THIS build withholds.
 
-  0 row(s) withheld, 0 club row(s) on Placeholder, 0 missing sprite reference(s) across 6 catalogs
+  0 row(s) withheld, 0 club row(s) on Placeholder, 0 row(s) with art MASKED by a placeholder, 0 missing sprite reference(s) across 6 catalogs
 
 ── characters  (12 row(s), 0 with missing art)
    every sprite column resolves.
@@ -28,6 +28,9 @@ verdicts:
   withheld    — primary sprite missing; the row is absent from every visible list (§4).
   degraded    — a secondary sprite is missing; the row renders, one slot is empty.
   Placeholder — clubs only; the row renders with the shared Placeholder sprite (§4 decision).
+  masked      — FAIL. The row has uploaded art (a URL) but its sprite cell names
+                ANOTHER row's bundled sprite, so the placeholder is drawn instead of
+                the real art. Fix: GOLFIN/Content/Fetch URL Art, then re-run this.
 
 ── fetched art (GOLFIN/Content/Fetch URL Art)
 build 2800 · 2 asset(s) added, 548.9 KB source → 1164.6 KB in build

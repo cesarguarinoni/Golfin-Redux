@@ -220,18 +220,19 @@ namespace GolfinRedux.UI.Gacha
             var type = TicketTypeCatalog.Get(entry.TicketType);
             if (type == null) return;
 
-            var sprite = Golfin.CatalogArt.CatalogArtCache.Cached(type.IconUrl, type.IconUrl)
-                      ?? LoadTicketSprite(type.IconSprite)
-                      ?? Golfin.CatalogArt.CatalogArtCache.Cached(type.IconUrl);
+            // ONE ladder, in GachaTicketArt (polish_regressions_0909 R3 audit). The three lines
+            // that used to live here were copied verbatim into GachaPrizeCardBinder and
+            // GeneralShopCard, and all three shared the same two defects: the bundled-url argument
+            // was the row's OWN url (so the "re-uploaded" rung returned null on every call ever),
+            // and the bundled sprite was loaded by name with no check that the name is this row's
+            // own art. See GachaTicketArt.
+            var sprite = GachaTicketArt.Resolve(type);
 
             if (sprite == null) return;   // keep the authored icon
 
             if (_ticketIconX1  != null) _ticketIconX1.sprite  = sprite;
             if (_ticketIconX10 != null) _ticketIconX10.sprite = sprite;
         }
-
-        private static Sprite? LoadTicketSprite(string? name)
-            => string.IsNullOrWhiteSpace(name) ? null : Resources.Load<Sprite>("Art/Gacha/Tickets/" + name!.Trim());
 
         // ── Guarantee lines ────────────────────────────────────────────────────
 

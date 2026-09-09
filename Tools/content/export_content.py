@@ -87,6 +87,7 @@ whole-file line-ending normalisation — expected, one-time, and reported.
 from __future__ import annotations
 
 import argparse
+import csv
 import os
 import sys
 from typing import Callable, Dict, List, Optional, Tuple
@@ -262,6 +263,160 @@ def drift_report(catalog: Catalog, published: List[dict], repo_root: str) -> Tup
     return out, len(missing)
 
 
+# ── "placeholder masks URL art" (polish_regressions_0909 R3) ──────────────────
+#
+# The failure this exists to make impossible, in full, because it cost a week and
+# `--check` reported "clean" the whole time:
+#
+#   A catalog row is published with uploaded art, so it carries an `artUrl`. Its
+#   sprite cell still names the SHARED PLACEHOLDER, because nobody has run
+#   `GOLFIN/Content/Fetch URL Art` to bundle the real file. THIS EXPORTER then does
+#   its job and writes the published `artUrl` into the bundled CSV (c5558a400,
+#   2026-09-02). From that commit on the client's `GachaBannerArt.Resolve` sees
+#   `url == bundledUrl`, so its "re-uploaded since this build" step goes quiet, the
+#   next step loads the placeholder, the placeholder RESOLVES, and the URL step is
+#   never reached. The uploaded art cannot appear on any launch. Cesar: "it simply
+#   does not show."
+#
+#   Every existing check was happy: the ids matched, the values matched the
+#   catalog, no file would change, and `Validate Catalog Art` said "every sprite
+#   column resolves" — because it does resolve. To the wrong picture.
+#
+# The client no longer lets the placeholder win, but the repo state is still wrong
+# and a re-export would still bake it, so this is a hard failure here as well.
+ART_MASK_RULES: Dict[str, Tuple[str, str, str, Callable[[dict], str]]] = {
+    # catalog: (id column, url column, sprite column, the row's OWN bundled name)
+    "gacha_banners": (
+        "bannerId", "artUrl", "artSprite",
+        lambda row: "GachaBanner_" + _pascal(_strip_prefix(row.get("bannerId") or "", "banner_")),
+    ),
+    # The KEY, not the id: ticket_types' id column is a bare enum ordinal ("0", "1")
+    # and would derive Ticket_0. Same rule as ContentArtFetcher's slot.
+    "ticket_types": (
+        "id", "iconUrl", "iconSprite",
+        lambda row: "Ticket_" + _pascal(row.get("key") or ""),
+    ),
+}
+
+
+def _pascal(value: str) -> str:
+    """`standard_club1` -> `StandardClub1`. Non-alphanumerics are separators.
+
+    Kept byte-identical to GachaBannerArt.Pascal and ContentArtFetcher.Pascal — three
+    tools must agree on one string, and this is the copy that cannot call the others.
+    """
+    out, boundary = [], True
+    for ch in value:
+        if not ch.isalnum():
+            boundary = True
+            continue
+        out.append(ch.upper() if boundary else ch.lower())
+        boundary = False
+    return "".join(out)
+
+
+def _strip_prefix(value: str, prefix: str) -> str:
+    return value[len(prefix):] if value.startswith(prefix) else value
+
+
+def masked_art_report(catalog: Catalog, repo_root: str) -> List[str]:
+    """Rows whose uploaded art is masked by another row's bundled sprite.
+
+    Reads the REPO CSV — the bytes that ship — rather than the published catalog,
+    because the masking is a property of what the build carries.
+    """
+    rule = ART_MASK_RULES.get(catalog.name)
+    if rule is None:
+        return []
+    id_col, url_col, sprite_col, own_name = rule
+
+    path = os.path.join(repo_root, catalog.csv_path)
+    if not os.path.exists(path):
+        return []
+
+    out: List[str] = []
+    with open(path, newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            url = (row.get(url_col) or "").strip()
+            sprite = (row.get(sprite_col) or "").strip()
+            if not url or not sprite:
+                continue
+            expected = own_name(row)
+            if sprite != expected:
+                out.append(
+                    f"{catalog.name}: '{row.get(id_col)}' has {url_col} but {sprite_col}="
+                    f"'{sprite}' — that is not this row's own art ('{expected}'), so the "
+                    f"placeholder MASKS the uploaded art at runtime. Fix: run "
+                    f"GOLFIN/Content/Fetch URL Art in Unity, commit the PNG + the sprite cell, "
+                    f"then re-run this."
+                )
+    return out
+
+
+# Every (url column, sprite column) pair in the tree, for the CONFLICT check below.
+# Enumerated from the client ladders rather than sampled — grep
+# `CatalogArtCache.Cached(` in Assets/Scripts to re-derive it.
+ART_SLOTS: Dict[str, Tuple[str, List[Tuple[str, str]]]] = {
+    "characters":    ("id",       [("portraitUrl", "portraitSprite"), ("fullUrl", "portraitFull")]),
+    "items":         ("id",       [("thumbnailUrl", "thumbnailSprite"), ("fullUrl", "fullSprite")]),
+    "balls":         ("id",       [("thumbnailUrl", "thumbnailSprite"), ("fullUrl", "fullSprite")]),
+    "clubs":         ("id",       [("portraitUrl", "portraitSprite"), ("fullUrl", "portraitFull"),
+                                   ("controlUrl", "controlSprite")]),
+    "gacha_banners": ("bannerId", [("artUrl", "artSprite")]),
+    "ticket_types":  ("id",       [("iconUrl", "iconSprite")]),
+}
+
+
+def conflicting_art_report(catalog: Catalog, repo_root: str) -> List[str]:
+    """One bundled sprite claimed by rows with DIFFERENT uploaded art.
+
+    The catalog-agnostic half of the R3 gate, and it is needed because the
+    convention rule above cannot apply everywhere: clubs SHARE art across their six
+    rarity rows on purpose (one `Driver-Mireo` for all six), so "this sprite is not
+    named after this row" is not a defect there. What is always a defect is one
+    bundled file standing in for two rows whose uploaded art DIFFERS — at most one
+    of them can be right, and the others are drawing somebody else's picture.
+
+    Rows that share a sprite AND share a url are left alone: that is the intended
+    sharing, and it is exactly what clubs do.
+    """
+    id_col, slots = ART_SLOTS.get(catalog.name, ("", []))
+    if not slots:
+        return []
+
+    path = os.path.join(repo_root, catalog.csv_path)
+    if not os.path.exists(path):
+        return []
+
+    out: List[str] = []
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        rows = list(csv.DictReader(fh))
+
+    for url_col, sprite_col in slots:
+        if not rows or url_col not in rows[0]:
+            continue
+        claims: Dict[str, Dict[str, List[str]]] = {}
+        for row in rows:
+            url = (row.get(url_col) or "").strip()
+            sprite = (row.get(sprite_col) or "").strip()
+            if not url or not sprite:
+                continue
+            claims.setdefault(sprite, {}).setdefault(url, []).append(str(row.get(id_col)))
+
+        for sprite, by_url in sorted(claims.items()):
+            if len(by_url) < 2:
+                continue
+            who = "; ".join(
+                f"{u.rsplit('/', 1)[-1]} <- {', '.join(ids)}" for u, ids in sorted(by_url.items())
+            )
+            out.append(
+                f"{catalog.name}.{sprite_col}: '{sprite}' is the bundled art for {len(by_url)} "
+                f"DIFFERENT uploaded files, so at most one of those rows draws its own art "
+                f"({who}). Fix: run GOLFIN/Content/Fetch URL Art in Unity."
+            )
+    return out
+
+
 def _sample(ids: List[str], limit: int = 12) -> str:
     """Name the ids — an unnamed count is not actionable."""
     head = ", ".join(ids[:limit])
@@ -391,6 +546,7 @@ def main() -> int:
     changed: List[str] = []
     warnings: List[str] = []
     drift: List[str] = []
+    masked: List[str] = []
     direction: List[str] = []   # content_two_way §3 — WHICH loop to run, per catalog
     csv_ahead = 0  # ids the CSV has and the catalog does not — an export cannot fix these
 
@@ -407,6 +563,12 @@ def main() -> int:
         lines, ahead = drift_report(catalog, published, args.repo_root)
         drift.extend(lines)
         csv_ahead += ahead
+
+        # R3 — checked on EVERY run, and independently of whether the file would
+        # change: the whole point is that the masked state looks clean to every
+        # other check here.
+        masked.extend(masked_art_report(catalog, args.repo_root))
+        masked.extend(conflicting_art_report(catalog, args.repo_root))
 
         text, warn = render_csv(catalog, published, args.repo_root)
         warnings.extend(warn)
@@ -448,6 +610,11 @@ def main() -> int:
         for d in drift:
             print(f"  {d}" if d.startswith("  ") else f"  {d}", file=sys.stderr)
 
+    if masked:
+        print("\nART MASKED BY A PLACEHOLDER (polish_regressions_0909 R3):", file=sys.stderr)
+        for m_ in masked:
+            print(f"  {m_}", file=sys.stderr)
+
     if args.check:
         # Two independent failure modes, reported separately so the message says
         # which one it is. Drift is checked even on a partial --catalogs run,
@@ -463,15 +630,18 @@ def main() -> int:
             print("\nCSV-vs-published VALUE differences — which loop to run:", file=sys.stderr)
             for d in direction:
                 print(f"  {d}", file=sys.stderr)
-        if changed or drift:
+        if changed or drift or masked:
             reasons = []
             if changed:
                 reasons.append(f"{len(changed)} stale file(s)")
             if drift:
                 reasons.append("CSV-vs-catalog drift")
+            if masked:
+                reasons.append(f"{len(masked)} row(s) whose art is MASKED by a placeholder")
             print(f"\n--check: FAILED — {' and '.join(reasons)}.", file=sys.stderr)
             return 1
-        print("\n--check: clean — no file would change and no catalog has drifted.")
+        print("\n--check: clean — no file would change, no catalog has drifted, "
+              "and no row's art is masked by a placeholder.")
         return 0
 
     if csv_ahead:

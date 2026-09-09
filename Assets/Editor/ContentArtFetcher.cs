@@ -209,7 +209,7 @@ namespace Golfin.EditorTools
             // GachaBanner_StandardClub1.png, which is exactly what that row's artSprite says.
             new CatalogSpec("gacha_banners", "Assets/Resources/Data/gacha_banners.csv", "bannerId",
                 new ArtSlot("artUrl", "artSprite", "Art/Gacha/Banners",
-                    f => "GachaBanner_" + BannerName(f("bannerId")))),
+                    f => GolfinRedux.UI.Gacha.GachaBannerArt.ConventionName(f("bannerId")))),
 
             // tickets — Ticket_{Pascal(key)}, and the KEY rather than the id because the id
             // column here is a bare enum ordinal ("0", "1"): deriving from it would produce
@@ -220,16 +220,10 @@ namespace Golfin.EditorTools
                     f => "Ticket_" + Pascal(f("key")))),
         };
 
-        /// <summary>`banner_standard_club1` → `StandardClub1`. The id minus its `banner_` prefix,
-        /// Pascal-cased — the same shape as <see cref="FirstName"/>, kept separate so the two
-        /// prefixes cannot be "tidied" into one helper that then strips the wrong one.</summary>
-        static string BannerName(string bannerId)
-        {
-            string bare = bannerId.StartsWith("banner_", StringComparison.Ordinal)
-                ? bannerId.Substring(7)
-                : bannerId;
-            return Pascal(bare);
-        }
+        // The banner rule is NOT spelled here. GachaBannerArt.ConventionName is the one
+        // definition (polish_regressions_0909 R3): this tool WRITES the name, ContentArtValidator
+        // CHECKS it, and GachaBannerArt.Resolve TRUSTS it to decide whether a bundled sprite is
+        // the row's own art or a placeholder masking its URL art. Three tools, one string.
 
         /// <summary>`char_zoe` → `Zoe`. The id minus its `char_` prefix, Pascal-cased.</summary>
         static string FirstName(string id)
