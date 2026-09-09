@@ -226,6 +226,49 @@ A fourth was a content defect, not a rendering one: with one caption spanning tw
 grades now, not three" sat over the *map* tip for half its window. Every beat now carries its own
 caption, so a caption can never outlive the frame it describes.
 
+## Post-ship fix (Cesar, on build 2833) — the card collapsed on the second hole load
+
+> *"When quitting and loading a new hole, the previous loading screen seems to be visible for a few
+> frames until the new one appears. This does not happen on the first loading."*
+
+**Verdict: RESOLVED** in `3496f452a`, after the task was closed out and after build 2833 shipped.
+**Build 2833 therefore carries this defect**; the fix is on `main` and in no binary yet.
+
+**It was not the previous screen's content.** Text and sprite are rebound synchronously and were
+correct from frame 0. What read as "the previous loading screen" was the previous tip's **size**,
+collapsing to nothing.
+
+`SwapTo` measures the incoming tip's natural height by releasing its `LayoutElement` pin, rebuilding
+and reading `LayoutUtility.GetPreferredHeight`. On a **fresh enable** the card's children have not
+laid out yet, so that reads ~0, and the tween eased the card from the previous tip's height down to
+zero over 0.25 s before the `ContentSizeFitter` snapped it to the true value. Sampled per frame with
+a throwaway probe driven through the real quit chain (gear → QUIT → CONFIRM → new hole):
+
+```
+show 2, frame 0    tip=Tip_ACCURACY  contentAlpha 0.234  prefH 870.5   rectH 870.5
+show 2, frame 7    tip=Tip_ACCURACY  contentAlpha 0.997  prefH 113.9   rectH 144.0
+show 2, frame 14   tip=Tip_ACCURACY  contentAlpha 1.000  prefH   0.0   rectH 144.0
+show 2, frame 16   tip=Tip_ACCURACY  contentAlpha 1.000  prefH  -1.0   rectH 1097.5
+```
+
+The first loading is clean because `Initialize()` calls `Show()` directly and never enters `SwapTo`.
+
+**Fix, two parts.** A fresh show hands the height to the fitter outright (`preferredHeight = -1`) —
+there is nothing to ease *from* and nothing valid to measure. And the tween is guarded on
+`to > 0.5f`, because **a measured height of zero means the measurement failed, never that the card
+is empty**.
+
+**Verified on the same repro after the fix:** show #2 sits at `prefH -1` / `rectH 1077.5` from frame
+0, and only the arrival fade animates. The tap-driven ease was re-measured to confirm it was not
+traded away: 1077.5 → 759.0 over 0.23 s, monotone, largest single-frame step 67.8 px. Gates
+re-run: EditMode **296 / 0**; Polish **161 / 0** with one unrelated self-skip
+(`CountUp_AllocatesOnlyWhenTheDrawnNumberChanges` skips itself when the editor frame clock swallows
+its 0.4 s tween — a 6.3 s frame after a domain reload).
+
+**Process note worth keeping.** My first hypothesis — that the card would ease *up* from the old
+height to the new one — was wrong in the half that mattered, and a fix built on it would have done
+nothing. The frame probe cost ten minutes and named the real mechanism. Recorded as Lesson AP.
+
 ## Findings for the Architect (not fixed here — out of scope)
 
 - ~~`Tip_LEVELUP` diagram quotes a wrong number.~~ **FIXED** — see § Fix 2 below.

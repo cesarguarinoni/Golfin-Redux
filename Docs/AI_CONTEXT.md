@@ -92,6 +92,18 @@ build: `build_bot_video.py --title` still defaults to a stale `"Loop v2 — Stag
 over the logo; captions landed on the `NOW LOADING` label (added `--caption-y-offset`, default 0);
 and the default caption size `h // 32` = **79 px** clips at ~33 characters on a 1170-wide frame.
 
+**Post-ship, on build 2833.** Cesar: *"when quitting and loading a new hole, the previous loading
+screen seems to be visible for a few frames."* Not the previous content — text and sprite rebind
+synchronously and were right from frame 0. It was the previous tip's **size**: `SwapTo` measures the
+incoming height by releasing its `LayoutElement` pin and rebuilding, and on a **fresh enable** the
+children have not laid out, so that reads ~0 and the tween eased the card down to nothing before the
+fitter snapped it back (`prefH 870.5 → 113.9 → 0.0`, then `-1 → 1097.5`). Clean on the first loading
+because `Initialize()` calls `Show()` directly and never enters `SwapTo`. A fresh show now hands the
+height to the fitter outright, and the tween is guarded on `to > 0.5f` — **a measured height of zero
+means the measurement failed, never that the card is empty**. Fixed in `3496f452a`; re-verified on
+the same repro and the tap ease re-measured (1077.5 → 759.0, monotone). **Build 2833 carries the
+defect; the fix is in no binary yet.** Lesson AP.
+
 **Open:** the `LegacyBootHome` loading screen never appeared on a signed-in dev boot
 (`Logo → Splash → Home`), so only the `HoleLoad` target was exercised.
 

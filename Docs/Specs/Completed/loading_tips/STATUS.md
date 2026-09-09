@@ -10,4 +10,7 @@ Recording it exposed a third defect, now fixed: NextTip advanced the sequencer T
 (tips 1,3,5,7 only) because UiMotion.Then's tail re-entered Run on the same handle. See
 IMPLEMENTER_REPORT.md § Daily-report video.
 Texts published: texts v50; export_content.py --check clean.
+Post-ship: Cesar found the card collapsing on the SECOND hole load in build 2833 (a fresh-enable
+height measured as 0 and eased to). Fixed in 3496f452a — see IMPLEMENTER_REPORT.md § Post-ship fix.
+Build 2833 carries the defect; the fix is on main and in no binary yet.
 Open: acceptance item 11 is PARTIAL — the LegacyBootHome loading screen never appears on a signed-in dev boot, so only the HoleLoad target was exercised.
