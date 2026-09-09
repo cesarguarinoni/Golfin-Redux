@@ -72,6 +72,14 @@ That page records which template silhouette each sprite inherited and what a ret
 The other 7 - KLYRO, MireO, FYLOE, GOLFIN, G&F, ROYAL SWING, TIFTO - are ORIGINAL hand-made art and
 must never be regenerated; several of them are the templates themselves.
 
+> **EXCEPTION (Cesar, 2026-09-09): `Full/Driver-Golfin.png` WAS regenerated.** Its head was a flat
+> triangular slab with no volume - a paddle, not a 460cc driver - plus a stub hosel and a wordmark
+> clipped to "GOL". Fixed by a W1 swap using the OLD `Driver-Golfin.png` as the first image (so the
+> stucco wall, patio, green, shaft, grip, lighting and framing carry over) and
+> `S_Controls_Driver_GOLFIN.png` as the second (the correct head shape and livery). Only the head
+> changed. The driver scene TEMPLATE is `Driver-GandF.jpg`, not this file, so nothing downstream
+> moved. The rest of GOLFIN, and the other six brands, still stand as never-regenerate.
+
 ## TeePit - COMPLETE, 13 of 13 new sprites committed (2026-08-28)
 
 **FIRST BRAND BUILT UNDER THE NEW SHAPE RULE.** Putter portrait + putter controls were already in

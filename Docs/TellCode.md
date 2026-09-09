@@ -7,6 +7,10 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **`asset_loans_polish`: DONE 2026-09-09 (`bddd1f974`; Architect verified against HEAD).** Loan UI on the polish atoms: `PendingSpend` on LEND/RETURN, `UiSelection.Bump` on the picked row, ribbon `Rise` + dim `Fade` (tick repaint proven flat), badge `UiSelection.Indicator` (0 px rest parity on all three cards), `StaggerRise` + `FadeInPanel` on the recipient list — no shimmer site (the ~200 ms rule). Two defects fixed inside: (1) first recipient row pinned off-viewport because `Destroy`ed placeholders still occupied the layout in the spawn frame — one-frame wait in `LoadRecipients` (a `StaggerRise`-under-a-LayoutGroup trap worth remembering); (2) club ribbon/dim 27.05 px left of the artwork (pre-existing from `asset_loans`, Cesar caught it on the build) — `MatchArtworkX` anchors them to the left-flush 537 px artwork. Scene diff 68 lines, no `m_IsActive` change; 2975 / 0 fail; 26-assertion invariant JSON + red-team review PASS. Scene-save trap recorded in the report: `rt.rect.width` in a builder evaluates layout canvas-wide and bakes anchor churn on ~157 objects — read serialized values instead. Notion 2228 Done.
+
+- **`asset_loans`: DONE 2026-09-09 (Architect verified against the repo, Cesar approved).** Lend a character/club to a followed player for 1/3/7 days; levels land on the LENDER's `golfin_progress` row (loan-aware `golfin_level_up`, borrower pays, `on_behalf_of` on the event), lender takes 20 % of round RP via `loan_ids` on `/points/earn-game` → `golfin_loan_split` (40 % cap, `loan_lender_share` deliberately NOT a `game_point_actions` row so it never ranks). Client `cdb2e6869`: `LoanService` (Golfin.Social) + `LoanSyncBehaviour` seam, borrowed rows runtime-only behind three blob guards, COMPARE+LEND rows 0.000 px off the LevelUp/Boost edges, ribbon + dim + card badge, lend modal, return popup. playlife `2add3a5`, migration applied, v71 live, texts v49 (31 rows). EditMode 2942 → 2975, 0 fail. Figma: Characters Screen / Clubs Screen loan frames (ids in the spec). **Still open, Cesar-only: the live two-account E2E** (report checklist #2 — lend, level, play a hole, return; SQL for progress / events / ledger). Three flagged deviations accepted: disabled = ColorTint not sprite swap (D-1), chips 56 tall (D-2), avatar placeholder — no remote-avatar loader exists in the client (D-3, a follow-up if wanted). Architect defaults still unblessed: 3 out / 3 in, 20 %, 40 % cap. UI fidelity lint NOT run (Figma MCP unavailable to Code). Notion 2210 Done; deferrals 2211–2218.
+
 - **Shot view (2026-09-07, Architect):** `shot_view_layout` + `shot_view_layout_followup` DONE (`b7727ac01`, Cesar approved) — ball anchor per scheme (Pendulum/Needle/FreeSwing 0.38, Flick 0.5), shared bottom baseline 170, pull 540/648, gauge top-right, pill capped at the baseline, confirm tiles recaptured. Open follow-ups in `GPS_BACKLOG.md`: Flick at the shared anchor with a shorter cone (Cesar asked "shouldn't we adjust Flick's camera too?" — yes, as a scheme change after `miss_grade_duff`), Pendulum tile labels hidden behind the club head. `miss_grade_duff` is with Code now.
 
 - **GPS→Unity build, status 2026-09-03 (Architect, Cowork session).** DONE and on main:
@@ -172,28 +176,54 @@
 
 ## 📋 SPEC_READY POINTERS
 
-- **`asset_loans` — SPEC_READY 2026-09-09 (Architect).** `Docs/Specs/Active/asset_loans/SPEC.md`. Character / club "scholarship" lending: LEND on both detail panels (Compare narrowed to 240, LendButton beside it), lend modal (followed players × 1/3/7 days), borrower can RETURN early, auto-expiry lazy on the server. Levels stay on the LENDER's `golfin_progress` row (loan-aware `golfin_level_up`, borrower pays), 20 % of the borrower's round RP goes to the lender via `loan_ids` on `/points/earn-game` + `golfin_loan_split`. New playlife `golfin_loans` table + `routers/loans.py`. Borrowed rows never enter the inventory blob. Figma frames designed 2026-09-09 (Characters Screen `14181:33450` / `14181:33672` / `14181:33894` / `14183:32758` / `14183:107541`; Clubs Screen `14183:107899` / `14183:108287` / `14183:108675` / `14185:34162`), nine renders + four icon PNGs in `reference/`, fidelity table in the spec. 29 strings via the importer. Decisions of record in the spec header; Notion 2210 (+ deferrals 2211–2218).
+- ~~`asset_loans_polish` — SPEC_READY 2026-09-09~~ **DONE 2026-09-09** (`bddd1f974`, full chain PASS, Cesar approved). Folder in `Docs/Specs/Completed/`. Do NOT re-dispatch.
+
+- **`flick_arrow_speed_retune` — DONE 2026-09-09 (`609efe9e6`, Architect review PASS; do not paste the kickoff below).** Awaiting Cesar's on-device feel check (starter Common, Flick, driver + putt). Spec moved to `Docs/Specs/Quick/Completed/flick_arrow_speed_retune.md`. Cesar: starter Commons (CC 6–7) get a 1.8 Hz Flick arrow — too fast. Halve the base, keep the F13 ladder shape: `BaseArrowSpeedHzAtCC0` 2.0 → 1.0, `ArrowSpeedHzPerCC` −0.03 → −0.012, `MinArrowSpeedHz` 0.5 → 0.4, in `ControlsConfig.Default` (runtime truth) + `controls.csv` mirror; new F17 entry in `PHYSICS_TUNING_CHANGELOG.md`. Pendulum/Needle/FreeSwing untouched.
 
   ```
-  Read Docs/Specs/Active/asset_loans/SPEC.md and implement it.
+  Read Docs/Specs/Quick/flick_arrow_speed_retune.md and implement it.
 
   Context:
-  - Adds character/club lending ("scholarship"): server table + router in playlife
-    (backend/routers/loans.py, migration 2026_09_09_golfin_loans.sql — paste the SQL in
-    chat for Cesar, migration before fly deploy), loan-aware golfin_level_up, RP split in
-    /points/earn-game. Client: LoanService (Social asmdef), borrowed runtime instances in
-    CharacterManager/ClubManager, LEND/RETURN on CharacterDetailPanel + ClubDetailPanel,
-    ON LOAN / BORROWED icons on both thumbnail cards, LoanModalController.
-  - Minimal diff. Reuse existing systems: ModalController chrome, GiftService/UserService
-    DTO pattern, PendingPointsOp queue (add `loans`), InventoryCodec (skip borrowed),
-    CharacterLevelUpDatabase.GetSPReward for the lender's SP catch-up, ClubManager.SetLevel.
-  - Figma is the truth (fidelity table + reference/ renders): Compare+Lend row mirrors the
-    LevelUp/Boost row (235+16+235); LoanRibbon over the portrait; LoanBadge on cards;
-    lend modal + return popup to the nodes. Work FIGMA_SCREEN_BUILD_PLAYBOOK.md §7.
-  - Strings: 29 rows EN+JA in LocalizationText.csv → import_content.py plan → --apply →
-    publish texts → export --check clean. Zero hardcoded literals.
-  - Out of scope: lender recall, offer/accept, admin Loans panel, durability sync,
-    borrower SP allocation, non-followed recipients, illustrated icon art.
+  - Flick timing arrow is too fast for low-Club-Control characters (starter Commons ≈1.8 Hz).
+    Retune F17: BaseArrowSpeedHzAtCC0 2.0 → 1.0, ArrowSpeedHzPerCC −0.03 → −0.012,
+    MinArrowSpeedHz 0.5 → 0.4. ControlsConfig.Default is runtime truth; controls.csv is the mirror.
+  - Add the F17 entry at the top of Docs/Physics/PHYSICS_TUNING_CHANGELOG.md in the F13 shape.
+  - Minimal diff. No ShotController logic change. Pendulum/Needle/FreeSwing constants untouched.
+  - Out of scope: clean-pass count, timing slab bands, other schemes.
+
+  When done: list changed files with a 1-line summary each, run the Golfin.Gameplay.Tests
+  assembly unfiltered, flag the on-device check (starter Common, Flick, driver + putt) for
+  Cesar, and update Docs/AI_CONTEXT.md.
+  ```
+
+- **`loading_tips` — SPEC_READY 2026-09-09 (Architect).** `Docs/Specs/Active/loading_tips/SPEC.md`. Loading-screen Pro Tips refresh: 7 outdated tips rewritten (grades PURE/GOOD/DUFF, Flick cone aim, hole-card map, tap-or-hold selector), 26 new tips covering every shipped system (schemes, stats/condition, level-up, clubs/balls, surfaces, missions/daily, tournaments, 1v1, leaderboard, RP, gacha, store, GPS check-in/social/wallet, graphics, repair kits), and `ProTipCard` moved from `string[] tipKeys` + index-matched `Sprite[]` to `Assets/Resources/Data/LoadingTips.csv` with two pools (first pool fixed order ×2 passes, persisted; then random general pool, no immediate repeat). Figma page `Loading` (4096:1181): the 34 AUTHORED components (section `Authored — OFFICIAL`) are the source — Cesar's pick 2026-09-09; all 34 sprites exported from Figma, no captures. Texts EN+JA through the importer; `TIP_TIMING` retired (Cesar deactivates in admin). Not a server catalog (deferred). Notion row filed by the Architect.
+
+  ```
+  Read Docs/Specs/Active/loading_tips/SPEC.md and implement it.
+
+  Context:
+  - Loading-screen Pro Tips: 7 existing TIP_* strings + Tip *.png are two systems out of date;
+    the spec rewrites them and adds 26 tips (§2.2, EN+JA given) and two pools (§2.1).
+  - ProTipCard keeps its hierarchy/crossfade/tap; it loses string[] tipKeys and the
+    index-matched Sprite[] for a name-keyed TipSprite[] + a TextAsset LoadingTips.csv;
+    new pure LoadingTipSequencer (+ EditMode tests) and PlayerPrefs LoadingTipStore.
+  - Strings: LocalizationText.csv EN+JA in the same commit -> import_content.py --catalogs
+    texts (plan, read verdicts) -> --apply -> publish texts -> export_content.py --check
+    clean. TIP_TIMING row -> false (never delete). No hardcoded .text literals.
+  - Art: export ALL 34 "Authored diagram" frames (§2.2 ids, Figma section "Authored — OFFICIAL")
+    at 1x / 806 px as Assets/Art/LoadingScreen/Tip_<NAME>.png; delete the 8 old Tip *.png.
+    Every row ships with a sprite — no text-only rows, no captures.
+  - Polish (§3.3a): tip swap = UiMotion.Fade out/in on a CanvasGroup over text+image (drop
+    CrossfadeToTip), card height eased with UiMotion.Tween, ButtonPressFeedback on the
+    ProTipCard object (it is an IPointerClickHandler, Rule 11's sweep missed it), Rise on
+    show, "TAP FOR NEXT TIP" looped UiMotion.Pulse (copy DailyMissionPillController.StartGlow).
+    Shared atoms only, no new motion code.
+  - Every loading screen opens on a NEW tip (Advance() in OnEnable, double-advance guarded);
+    general-pool draws exclude the last 5 keys shown (recentKeys ring, persisted).
+  - Minimal diff. LoadingScreenController, GameplaySceneLoader, ScreenManager,
+    ContentCatalogs untouched.
+  - Out of scope: loading_tips as a server content catalog / admin panel, tip analytics,
+    contextual pools.
 
   When done: list changed files with a 1-line summary each, run the acceptance
   tests in the spec, flag which need manual on-device verification, update
@@ -202,30 +232,15 @@
   ```
 
 
+- ~~`notice_panel_slide`~~ **DONE 2026-09-09** (Cesar approved on sight; `83f0867ea`, close-out `bea5bf1d5`). Folder in `Docs/Specs/Completed/`. Box slides out-left/in-right, finger drag + snap, 10 s cycle, timer holds while busy. Deviations accepted: `ResolveRelease` takes thresholds as params; release velocity measured in canvas px from the local point (correct on any canvas scale); editor-only `NoticeSlideDemoRecorder` added. Open: feel tuning on device (all values are Inspector fields). Notion 2221 Done; deferral 2222 (entry animation on Home open) stays.
+- ~~`asset_loans` — SPEC_READY 2026-09-09~~ **DONE 2026-09-09** (Cesar approved; `cdb2e6869` + `f58b91eba`, playlife `2add3a5` deployed v71, texts v49). Folder in `Docs/Specs/Completed/`. Do NOT re-dispatch.
+
+
 - ~~**`polish_regressions_0909`**~~ — **DONE 2026-09-09** (`Docs/Specs/Quick/Completed/polish_regressions_0909.md`; R1 `1de7de78f`, R2 `6b615123e`, R4 `fb1e4fc39`, R0 `b6ef935b6`, R3 `f7dc82f18`, console sweep `f7800caa8`, close-out `df000353f`). Architect-verified against HEAD: `GachaBannerArt.SpriteIsOwn` gates step 2, `ConventionName` is the one definition the fetcher/validator call, validator `masked` verdict + `export --check` convention/conflict rules, `GachaBannerArtLadderTests` ×5, `GachaTicketArt` replaces three copied dead ladders; EditMode 2911/2908/0. **Cesar's two production actions still open:** the on-device R3 proof (publish a third banner with art from the admin) and the importer → publish → export loop for the two `artSprite` cells now ahead of the catalog. Do NOT re-dispatch.
 - ~~**`push_arrival_hitch`**~~ — **DONE 2026-09-09** (`Docs/Specs/Quick/Completed/push_arrival_hitch.md` + `_audit.md`; code `98e2fd3d5`, evidence `52eb2f88c`…`ade94db61`, close-out `abc656981`). Verified: probe 87 pushes fail 0, `arriverOnTop` false on 0, `maxStepFrac` 0.1333 = (1/30)/0.25, parallax 1.0 on all 55 same-backdrop pushes; per-frame log dArriver == dLeaver every frame; P1 `Rebind x10` with a different first prize, `Opening GachaPrizes instant`. Small leftovers, not worth a kickoff: `paint(local) — instant (push)` runtime log lines, `arrivalFrameMs` before/after ×4 screens, rest parity vs b baselines. Do NOT re-dispatch.
 
 
-- **`store_history` — SPEC_READY 2026-09-08 (amended same day, before kickoff: §8 fixes the "+"-entry STORE grid gap — `PaintMotion.StaggerRise` must `ForceRebuildLayoutImmediate` the rows' parent before `Rise` captures rest positions; this kickoff is the current one).** `Docs/Specs/Active/store_history/SPEC.md`. The History chip on the Rewards Center STORE tab opens a Store History screen (Figma `13509:2978`) instead of the "coming soon" toast: the Gacha History shell cloned with STORE lit + `STORE HISTORY` title, purchase rows (BagClubCard tile via `GachaPrizeCardBinder` + NAME / AMOUNT / ACQUIRED / SOURCE: STORE / PRICE: n RP), category chips WIRED (client-side filter), scrollbar INSIDE the panel (Cesar — not the Figma's outside position), paged list + disk mirror + prepend-after-purchase copied from Gacha History, new playlife `GET /api/v1/shop/history` over `golfin_shop_purchases` (no migration). Six strings via the importer; `SHOP_HISTORY_COMING_SOON` retired (Cesar deactivates in admin). Decisions of record in the spec header.
-
-```
-Read Docs/Specs/Active/store_history/SPEC.md and implement it.
-
-Context:
-- Store History screen: GachaTabController.OnHistoryChipTapped STORE arm -> new ScreenId.StoreHistory (APPEND at the END of the enum - it is serialized). Prefab = duplicate of GachaHistoryScreen.prefab (title SHOP_HISTORY, GachaHistoryTabStrip._storeIsActive, controller swapped); row = duplicate of GachaHistoryRow.prefab bound by GachaPrizeCardBinder.Bind on the nested BagClubCard + 5 meta lines (line 6 + Col3 hidden). SCROLLBAR STAYS INSIDE MainPanel exactly where GachaHistoryScreen has it - not the Figma position.
-- Data: playlife shop.py GET /history = structural copy of gacha.py history() over golfin_shop_purchases (keyset `before`, next_before only on a full page, _missing_relation -> empty) + 6 tests; deploy + live curl. Client: Endpoints.ShopHistory, ShopHistoryPage/ShopPurchaseDto, ShopPurchaseService.FetchHistoryAsync (copy of GachaPullService.FetchHistoryRoutine), StoreHistoryRecord/StoreHistoryStore (copy of GachaHistoryStore shape, store_history.json), StoreHistoryStore.Prepend in ShopTransaction's Ok arm. GeneralShopModel.ParseCategory widened to internal.
-- Controller: copy GachaHistoryScreenController's paging (PageSize 12 / RowsPerFrame 3 / reference-identity PrependCount / PaintGate / FadeSwap) - COPY, DO NOT GENERALISE, GachaHistoryScreenController + its tests untouched. Chips wired the GeneralShopScreenController way (WireChip/RestyleChips, _activeCategory remembered), filter change = FadeSwap repaint, never shimmer.
-- Registration: ScreenManager (_storeHistoryScreen + the 4 GachaHistory sites), PersistentUIManager NAV_REWARDS_CENTER, LayeredPush, GameShimmerSites.StoreHistory + GamePolishBuilder site, ShellScene instance via a one-shot GOLFIN/ menu item (scene diff = instance + one ref; revert the stale MatchMakingModal overrides if they ride along).
-- Strings: SHOP_HISTORY, SHOP_HISTORY_AMOUNT/ACQUIRED/SOURCE/SOURCE_STORE/PRICE EN+JA in LocalizationText.csv -> import_content.py PLAN (STOP on CONFLICTS) -> --apply -> publish texts -> export --check clean. Zero new hardcoded .text literals.
-- BUG FIX (SPEC §8): entering the Rewards Center from the top-bar "+" leaves a card-sized gap under the first STORE card and the first card sits too high. Cause: GeneralShopScreenController.Rebuild instantiates cards under GridContent and staggers them the same frame; UiMotion.Rise captures restY on beat 0 BEFORE end-of-frame layout. Fix ONCE in PaintMotion.StaggerRise: LayoutRebuilder.ForceRebuildLayoutImmediate(rows[0].parent as RectTransform) before building rects/groups. No per-screen workaround, no delay frame. Verify via "+" from Home and from GachaHistory, and via bottom-nav Gacha -> STORE — all three identical.
-- Minimal diff. Reuse GachaPrizeCardBinder, LocalizedText, PaintGate, UiSelection.FadeSwap, GpsPaintMotion.StaggerRise, the existing Divider prefab.
-- Out of scope: non-store purchase sources (SOURCE fixed to STORE), `before` paging past 100 on the client, wiring the chips on Gacha History, sale marker, empty-state string, row tap, side arrows, generalising the gacha store/controller.
-
-When done: list changed files with a 1-line summary each, run the acceptance
-tests in the spec, flag which need manual on-device verification, update
-STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
-Docs/AI_CONTEXT.md.
-```
+- ~~`store_history`~~ **DONE 2026-09-09, approved by Cesar** — `Docs/Specs/Completed/store_history/`. Store History screen live (History chip on the STORE tab, chips wired, scrollbar inside the panel), `GET /api/v1/shop/history` deployed, §8 "+"-entry grid gap fixed once in `PaintMotion.StaggerRise`; three shared-seam fixes rode along (gacha-log Col1 for every prize kind, ticket card description, description autosize). Manual device pass carried to Notion row 2210. **Cesar step pending: deactivate `SHOP_HISTORY_COMING_SOON` in the admin.**
 
 - **`weekly_rotation_admin` — SPEC_READY, AMENDED 2026-09-08 evening (§3.1 pin columns, §3.1a year plan, §4.1 step 0 pins-first, seed = 52 rows from `reference/rotations_seed.csv`). The kickoff below is the RE-ISSUED one; an earlier same-day kickoff without the pins is superseded.** `Docs/Specs/Active/weekly_rotation_admin/SPEC.md`. Weekly STORE lineup + weekly GACHA banner authored in the admin as one unit: new catalog #21 `rotations` (window, quotas, seed), additive `rotationId` on `shop_catalog` + `gacha_banners`, `pityGroup` on banners; Rotations panel with deterministic generator (PREVIEW / MATERIALIZE / PUBLISH ROTATION in five-catalog order / calendar / ARCHIVE), validator R1–R4, ball price ladder, one playlife migration keying pity by group. No Unity C#. Plan: `Docs/Economy/MONETIZATION_PLAN.md` §1.2.
 
