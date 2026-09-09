@@ -2,6 +2,7 @@
 // the club card (Figma 14182:32786 / 14182:107182 / 14183:109305 / 14183:109319), which are the
 // same object at the same offset on both.
 #nullable enable
+using Golfin.UI.Polish;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,10 +27,15 @@ namespace Golfin.UI.Loans
         [SerializeField] private Sprite? iconLoanOutSmall;   // arrow UP — lent
         [SerializeField] private Sprite? iconLoanInSmall;    // arrow DOWN — borrowed
 
-        public void Clear()
-        {
-            if (badgeRoot != null) badgeRoot.SetActive(false);
-        }
+        /// <summary>Whether the badge was visible at the last <see cref="Apply"/>, and whether
+        /// there HAS been one. Together they are the "did this change?" that gates the fade: the
+        /// first paint of a card is not a change (fading a badge out on every card that has no loan
+        /// would animate the whole carousel on arrival), and a repaint that says the same thing is
+        /// not one either.</summary>
+        private bool _shown;
+        private bool _applied;
+
+        public void Clear() => Apply(false, false);
 
         /// <summary>
         /// Show the badge in one of its two states, or hide it.
@@ -39,7 +45,16 @@ namespace Golfin.UI.Loans
         public void Apply(bool lentOut, bool borrowed)
         {
             bool show = lentOut || borrowed;
-            if (badgeRoot != null) badgeRoot.SetActive(show);
+            bool changed = _applied && show != _shown;
+            _applied = true;
+            _shown = show;
+
+            // asset_loans_polish §3 — ALPHA IS THE STATE, not the active flag. `Indicator` leaves
+            // the object active at alpha 0, which renders identically to a deactivated badge and
+            // keeps the card's rest geometry to the pixel (the badge is anchored top-left with its
+            // own rect, so it was never in a layout flow to begin with).
+            if (badgeRoot != null)
+                UiSelection.Indicator(this, badgeRoot.transform, show, animate: changed);
             if (!show) return;
 
             if (glyph != null)

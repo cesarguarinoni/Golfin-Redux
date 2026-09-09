@@ -11,6 +11,7 @@ using Golfin.Net;
 using Golfin.Social;
 using Golfin.Telemetry;
 using Golfin.UI.Modals;
+using Golfin.UI.Polish;
 using Golfin.UI.Toast;
 using System.Collections.Generic;
 using TMPro;
@@ -72,10 +73,18 @@ namespace Golfin.UI.Loans
             Show();
         }
 
+        /// <summary>
+        /// The latch's reset. The IN-FLIGHT half is <see cref="PendingSpend"/>'s
+        /// (transaction_feedback §3) — it is the scope that disables RETURN and CANCEL, puts the
+        /// ellipsis on the RETURN label, and restores all three from every exit path.
+        ///
+        /// <para><c>spinner</c> stays serialized and stays on the prefab, inactive, for the same
+        /// reason as the lend modal's: the shared affordance needs no sprite, and removing a wired
+        /// object is a prefab edit this task does not need.</para>
+        /// </summary>
         private void SetPending(bool pending)
         {
             _pending = pending;
-            if (spinner != null) spinner.SetActive(pending);
             if (cancelButton != null) cancelButton.interactable = !pending;
             if (returnButton != null) returnButton.interactable = !pending;
         }
@@ -88,17 +97,25 @@ namespace Golfin.UI.Loans
 
         private IEnumerator ReturnRoutine(LoanDto loan)
         {
-            SetPending(true);
-
             ApiResult<LoanMutationDto>? result = null;
-            IEnumerator call = LoanService.Instance.Return(loan.Id, r => result = r);
-            while (call.MoveNext()) yield return call.Current;
+
+            // Scope BEFORE latch — see LoanModalController.ConfirmRoutine for why the other order
+            // hands back a dead button.
+            using (PendingSpend.Begin(returnButton, returnButtonText, cancelButton!))
+            {
+                _pending = true;
+
+                IEnumerator call = LoanService.Instance.Return(loan.Id, r => result = r);
+                while (call.MoveNext()) yield return call.Current;
+            }
+
+            // Restore first, then act on the verdict.
+            SetPending(false);
 
             if (result == null || !result.Success || result.Data == null)
             {
                 // Transport failure: say nothing about the loan, leave the popup open. The return
                 // is idempotent server-side, so a second tap is safe.
-                SetPending(false);
                 if (!string.IsNullOrEmpty(PointsSpendGate.OfflineMessage))
                     ToastController.Instance?.Show(PointsSpendGate.OfflineMessage);
                 yield break;
@@ -106,7 +123,6 @@ namespace Golfin.UI.Loans
 
             if (!result.Data.IsOk)
             {
-                SetPending(false);
                 ToastController.Instance?.Show(LocalizationManager.Get(result.Data.ErrorKey()));
                 yield break;
             }

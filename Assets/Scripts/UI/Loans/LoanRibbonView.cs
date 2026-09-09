@@ -5,6 +5,7 @@
 #nullable enable
 using System;
 using Golfin.Social;
+using Golfin.UI.Polish;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -39,12 +40,84 @@ namespace Golfin.UI.Loans
         [Header("Lender dim (full Left panel, UNDER the ribbon)")]
         [SerializeField] private GameObject? lentDim;
 
+        [Header("Motion (asset_loans_polish §3 — authored by LoanUiBuilder, alpha 1 at rest)")]
+        [SerializeField] private CanvasGroup? ribbonGroup;
+        [SerializeField] private CanvasGroup? dimGroup;
+
+        private Coroutine? _ribbonMotion;
+        private Coroutine? _dimMotion;
+
+        /// <summary>
+        /// The LOGICAL state, which is not the same question as <c>ribbonRoot.activeSelf</c>.
+        ///
+        /// <para>A fade-out owns the ribbon's active flag until it finishes, so during those 150 ms
+        /// the object is still active while the ribbon is on its way out. Asking the GameObject
+        /// would answer "visible" and swallow the entrance of a <see cref="Show"/> that lands in
+        /// that window; this flag answers the question the entrance actually asks.</para>
+        /// </summary>
+        private bool _shown;
+
         /// <summary>Hide everything. The state for an asset with no loan on it, which is almost
         /// every asset almost all the time.</summary>
         public void Clear()
         {
-            if (ribbonRoot != null) ribbonRoot.SetActive(false);
-            if (lentDim != null) lentDim.SetActive(false);
+            if (!_shown)
+            {
+                // Already hidden — and a no-op it must stay: Clear() is called on every repaint of
+                // every un-lent asset, and re-arming a fade there would run one per carousel step.
+                return;
+            }
+            _shown = false;
+
+            CanvasGroup? dim = Group(lentDim, ref dimGroup);
+            if (dim != null) UiMotion.Run(this, ref _dimMotion, UiMotion.Fade(dim, dim.alpha, 0f));
+
+            CanvasGroup? rib = Group(ribbonRoot, ref ribbonGroup);
+            if (rib == null)
+            {
+                if (ribbonRoot != null) ribbonRoot.SetActive(false);
+                if (lentDim != null) lentDim.SetActive(false);
+                return;
+            }
+
+            // BOTH objects are deactivated from the RIBBON's tail, not one tail each. The runner
+            // that drives these two tweens lives on this GameObject, so the moment the ribbon's
+            // tail deactivates it the dim's fade is settled to its own final value anyway — a
+            // second tail would only be a second place for the pair to disagree.
+            UiMotion.Run(this, ref _ribbonMotion, UiMotion.Then(UiMotion.Fade(rib, rib.alpha, 0f), () =>
+            {
+                if (lentDim != null) lentDim.SetActive(false);
+                if (ribbonRoot != null) ribbonRoot.SetActive(false);
+            }));
+        }
+
+        /// <summary>Settle both tweens before Unity throws the coroutines away (the
+        /// <c>UiMotion.Register</c> contract): leaving the screen mid-entrance leaves the ribbon at
+        /// rest, and leaving it mid-Clear leaves it hidden.</summary>
+        private void OnDisable()
+        {
+            UiMotion.Stop(this, ref _ribbonMotion);
+            UiMotion.Stop(this, ref _dimMotion);
+        }
+
+        /// <summary>
+        /// The object's CanvasGroup, preferring the prefab-authored reference.
+        ///
+        /// <para>The runtime add is the fallback for a panel built before this task — the two
+        /// ribbons live in a scene and two prefabs that are only rebuilt when somebody runs
+        /// <c>LoanUiBuilder</c>, and a null group there would silently cost the entrance rather
+        /// than announcing itself. A CanvasGroup adds no geometry, so rest parity holds either
+        /// way.</para>
+        /// </summary>
+        private static CanvasGroup? Group(GameObject? go, ref CanvasGroup? cached)
+        {
+            if (cached != null) return cached;
+            if (go == null) return null;
+            // `== null`, not `??`: GetComponent hands back a fake-null on a missing component.
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+            cached = cg;
+            return cg;
         }
 
         /// <summary>
@@ -56,6 +129,21 @@ namespace Golfin.UI.Loans
         public void Show(LoanDto? loan, bool asLender)
         {
             if (loan == null) { Clear(); return; }
+
+            // ENTRANCE ONLY ON HIDDEN -> VISIBLE. Show() is also the tick: the panel repaints this
+            // ribbon every second to move the time-left label on, and an entrance re-armed there
+            // would drop the bar in from above once a second for the life of the loan.
+            bool entering = !_shown;
+            _shown = true;
+
+            if (entering)
+            {
+                // A fade-out in flight owns both objects' active flags (its tail deactivates them).
+                // Settle it BEFORE re-activating, or the tail lands after this call and hides the
+                // ribbon we just showed.
+                UiMotion.Stop(this, ref _ribbonMotion);
+                UiMotion.Stop(this, ref _dimMotion);
+            }
 
             if (ribbonRoot != null) ribbonRoot.SetActive(true);
             if (lentDim != null) lentDim.SetActive(asLender);
@@ -74,6 +162,22 @@ namespace Golfin.UI.Loans
                 ribbonLabel.text = string.Format(LocalizationManager.Get(key),
                                                  other, FormatTimeLeft(loan.TimeLeft()));
             }
+
+            if (!entering) return;
+
+            // DOWN, NOT UP. `UiMotion.RiseRoutine` starts the rect at `restY - dy` and lerps to
+            // rest — "rect.anchoredPosition = new Vector2(x, restY - dy);" (UiMotion.cs:437) — so
+            // the default +RiseDy starts BELOW rest and rises. The ribbon sits at the TOP edge of
+            // the portrait: it reads as a bar dropping onto the artwork, which is `restY + 16`,
+            // which is dy = -RiseDy.
+            var rect = ribbonRoot != null ? ribbonRoot.transform as RectTransform : null;
+            if (rect != null)
+                UiMotion.Run(this, ref _ribbonMotion,
+                             UiMotion.Rise(rect, Group(ribbonRoot, ref ribbonGroup), dy: -UiMotion.RiseDy));
+
+            if (!asLender) return;
+            CanvasGroup? dim = Group(lentDim, ref dimGroup);
+            if (dim != null) UiMotion.Run(this, ref _dimMotion, UiMotion.Fade(dim, 0f, 1f));
         }
 
         private static string Name(LoanPartyDto? p) => p != null ? p.Name : "PLAYER";

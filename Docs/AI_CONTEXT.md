@@ -4,6 +4,53 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-09 — asset_loans_polish: **the loan UI moves the way the rest of the game moves** — DONE, approved by Cesar
+
+The four hand-rolled behaviours in the shipped `asset_loans` UI now go through the shared polish
+atoms. `PendingSpend` owns the in-flight state on both modals (LEND / RETURN read `…`, CANCEL dies
+with them, everything restores from every exit path — the hand-rolled spinner objects stay on the
+prefabs, inactive, and are never activated again). `UiSelection.Bump` on the picked recipient row.
+`UiMotion.Rise(dy: -RiseDy)` + a dim `Fade` for the ribbon's entrance, `Then(Fade, deactivate)` on
+Clear, and a logical `_shown` flag so the panel's once-a-second tick repaint can never re-trigger
+the entrance. `UiSelection.Indicator` on the card badge, animated only on a real state change.
+`GpsPaintMotion.StaggerRise` on the recipient list's arrival and `FadeInPanel` on its empty state.
+
+**Two defects were found and fixed, neither of them by the invariant JSON.**
+
+1. **The first recipient row was invisible** — at full alpha, four slots below where it belonged,
+   outside the viewport. `ClearRows()` calls `Destroy` on the four placeholder rows and Unity defers
+   `Destroy` to end of frame, so `StaggerRise`'s layout rebuild — and item 0's beat, which
+   `UiMotion.Run` fires synchronously — both measured a layout that still contained four corpses.
+   Rows 1..n were correct only by accident of timing. Fix: one frame between `ClearRows()` and the
+   spawn. Found by reading the recorded video's 14 s frame against the shipped capture, while the
+   JSON sat at 21/21 — the stagger's SHAPE was right, and nothing had asked where the rows WERE.
+2. **The club ribbon sat 27.05 px left of the club artwork** (Cesar, on sight, mid-task: "it spills
+   to the left and does not reach the right border"). Pre-existing from `asset_loans`. The club
+   `LeftPanel` is a `VerticalLayoutGroup` aligned `UpperLeft`, so the 537-wide artwork is left-flush
+   in a 482.9-wide panel and overflows 54.1 px right, while `BuildRibbon` centred the bar on the
+   PANEL — exactly `(537 − 482.9) / 2`. `MatchArtworkX` now gives the ribbon and the dim the
+   artwork's own anchoring. Measured `leftΔ = rightΔ = 0.000` after.
+
+**Gate:** `Docs/Specs/Completed/asset_loans_polish/asset_loans_polish_invariants.json` — 26 assertions,
+0 fail on FOUR independent hosts (implementer, self-reviewer, reviewer, red-team), every one a
+number sampled off the live object frame by frame, driven through real navigation with only the HTTP
+transport stubbed. Iteration 2 rewrote every motion assertion value-based after the self-reviewer
+failed the GATE — it was frame-rate dependent and gave fail=3 on its host; the fix it proposed
+(`Time.captureDeltaTime`) does not pin `unscaledDeltaTime` on this Unity build, which only measuring
+showed. Two gaps the red-team recorded as non-blocking were closed anyway (A13 roster ribbon flush,
+A14 RETURN pending), because both were the same shape as the defect Cesar rejected: a quantity
+nobody had measured. EditMode 2975 / 2971 passed / **0 failed** / 4
+skipped, the shipped `asset_loans` baseline exactly. Video: `videos/asset_loans_polish.mp4`.
+
+**Two things worth carrying forward.** (a) Reading `RectTransform.rect` in edit mode makes Unity
+evaluate layout for the whole canvas; every `LayoutGroup` in `ShellScene` then writes its children's
+rects, and the save baked 1367 lines of anchor churn across 157 unrelated objects. Use `sizeDelta`
+— the same number when the anchors are collapsed to a point, and it reads nothing. (b) Re-running
+`LoanUiBuilder` to add two components reshuffled 669 lines of fileIDs across the two modal prefabs
+(it recreated the buttons' `Text (TMP)` children), which is how scene overrides get orphaned; the
+components were added surgically instead and the final scene diff is 62 insertions / 6 deletions.
+
+---
 ## 2026-09-09 — flick_arrow_speed_retune: **Flick timing arrow halved at low Club Control** (F17)
 
 Quick spec `Docs/Specs/Quick/flick_arrow_speed_retune.md`. Cesar: *"The timing arrows in Flick

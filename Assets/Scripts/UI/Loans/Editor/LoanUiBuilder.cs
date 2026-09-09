@@ -641,6 +641,7 @@ namespace Golfin.UI.Loans.EditorTools
                     new Vector2(width, height));
             AddImage(dim, null, DimFill, Image.Type.Simple, raycast: false);
             IgnoreLayout(dim);
+            EnsureGroup(dim);
             dim.SetActive(false);
 
             GameObject ribbon = Child(leftPanel.transform, "LoanRibbon");
@@ -649,6 +650,7 @@ namespace Golfin.UI.Loans.EditorTools
                     new Vector2(width, 72f));
             AddImage(ribbon, Require<Sprite>(SpriteRibbon), RibbonFill, Image.Type.Simple, raycast: false);
             IgnoreLayout(ribbon);
+            EnsureGroup(ribbon);
 
             var hl = ribbon.GetComponent<HorizontalLayoutGroup>() ?? ribbon.AddComponent<HorizontalLayoutGroup>();
             hl.padding = new RectOffset(24, 24, 0, 0);
@@ -688,6 +690,8 @@ namespace Golfin.UI.Loans.EditorTools
             Wire(view, "iconLoanOutBig", Require<Sprite>(SpriteIconOutBig));
             Wire(view, "iconLoanInBig", Require<Sprite>(SpriteIconInBig));
             Wire(view, "lentDim", dim);
+            Wire(view, "ribbonGroup", ribbon.GetComponent<CanvasGroup>());
+            Wire(view, "dimGroup", dim.GetComponent<CanvasGroup>());
 
             ribbon.SetActive(false);
             Log.Append("  ribbon ").Append(width.ToString("0")).Append("x72 at top of ")
@@ -764,6 +768,44 @@ namespace Golfin.UI.Loans.EditorTools
         }
 
         /// <summary>Take an overlay OUT of its parent's layout flow. See BuildRibbon.</summary>
+        /// <summary>
+        /// The alpha channel <c>LoanRibbonView</c>'s entrance drives (asset_loans_polish §3).
+        ///
+        /// <para>AUTHORED AT ALPHA 1, so the REST state of both objects is bit-for-bit what it was
+        /// before the polish pass — a CanvasGroup contributes no geometry and no raycast change of
+        /// its own (both Images are already <c>raycastTarget: false</c>), and the motion is the only
+        /// thing that ever moves the alpha off 1.</para>
+        /// </summary>
+        /// <summary>
+        /// Re-anchor <paramref name="rt"/> horizontally onto <paramref name="artwork"/>'s own
+        /// resting geometry: the artwork's x anchors, a centre pivot, and x = width / 2.
+        ///
+        /// <para>Vertical anchoring is left exactly as <c>BuildRibbon</c> set it — the ribbon still
+        /// takes the PANEL's top edge and the dim the PANEL's height, which is deliberate (the dim
+        /// covers the info block under the artwork as well).</para>
+        /// </summary>
+        private static void MatchArtworkX(RectTransform rt, RectTransform artwork)
+        {
+            rt.anchorMin = new Vector2(artwork.anchorMin.x, rt.anchorMin.y);
+            rt.anchorMax = new Vector2(artwork.anchorMax.x, rt.anchorMax.y);
+            rt.pivot     = new Vector2(0.5f, rt.pivot.y);
+            // `sizeDelta.x`, NOT `rect.width`. With the x anchors collapsed to a point the two are
+            // the same number — but READING `rect` in edit mode makes Unity evaluate layout for the
+            // whole canvas, and every LayoutGroup in ShellScene then writes its children's
+            // anchoredPosition and sizeDelta. Saving after that wrote 1367 lines of anchor churn
+            // across 157 unrelated objects (project_scene_save_bakes_layout_churn). `sizeDelta` is
+            // the authored value and reads nothing.
+            rt.anchoredPosition = new Vector2(rt.sizeDelta.x * 0.5f, rt.anchoredPosition.y);
+        }
+
+        private static void EnsureGroup(GameObject go)
+        {
+            // `== null` rather than `??` (CLAUDE.md Basic Rules #4).
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+            cg.alpha = 1f;
+        }
+
         private static void IgnoreLayout(GameObject go)
         {
             var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
@@ -832,6 +874,32 @@ namespace Golfin.UI.Loans.EditorTools
             var clubImage = (RectTransform)leftPanel.Find("ClubImage");
             float ribbonWidth = clubImage != null ? clubImage.rect.width : leftPanel.rect.width;
             LoanRibbonView ribbon = BuildRibbon(leftPanel.gameObject, leftPanel, ribbonWidth);
+
+            // ⚠️ WIDTH FROM THE ARTWORK IS NOT ENOUGH — THE X HAS TO COME FROM IT TOO.
+            //
+            // Cesar, 2026-09-09: "On loan overlay is not correctly over the image in clubs (it
+            // spills to the left and does not reach the right border)." Measured in play mode:
+            // ribbon leftD = rightD = -27.050 px against ClubImage.
+            //
+            // The club LeftPanel is a VerticalLayoutGroup with childAlignment UpperLeft, so the
+            // 537-wide artwork sits LEFT-FLUSH in the 482.9-wide panel and overflows 54.1 px to
+            // the RIGHT. `BuildRibbon` centres its bar on the anchor panel, so a 537-wide bar
+            // centred on a 482.9-wide panel lands (537 - 482.9) / 2 = 27.05 px left of a 537-wide
+            // artwork that is left-flush. Same width, wrong origin.
+            //
+            // The fix is to give the bar and the dim the ARTWORK's horizontal anchoring rather
+            // than the panel's centre — left anchor, centre pivot, x = width / 2 — which is the
+            // resting geometry the layout group gives ClubImage itself. Expressed against the
+            // anchor rather than as a measured offset, because in EDIT MODE the group has not run
+            // and ClubImage's anchoredPosition is still 0: reading its live centre here would
+            // place the ribbon 268 px out. (The Roster panel is untouched: its LeftPanel has no
+            // layout group and its ribbon is already flush with the portrait at leftΔ 0.000.)
+            if (clubImage != null)
+            {
+                MatchArtworkX((RectTransform)ribbon.transform, clubImage);
+                RectTransform? clubDim = FindDeep(leftPanel, "LentDim");
+                if (clubDim != null) MatchArtworkX(clubDim, clubImage);
+            }
 
             Transform rightPanel = detail.transform.Find("RightPanel");
             RectTransform? buttonsPanel = FindDeep(rightPanel, "ButtonsPanel ") ?? FindDeep(rightPanel, "ButtonsPanel");

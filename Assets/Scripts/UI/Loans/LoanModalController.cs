@@ -9,6 +9,7 @@ using Golfin.Net;
 using Golfin.Social;
 using Golfin.Telemetry;
 using Golfin.UI.Modals;
+using Golfin.UI.Polish;
 using Golfin.UI.Toast;
 using TMPro;
 using UnityEngine;
@@ -224,17 +225,41 @@ namespace Golfin.UI.Loans
 
             ClearRows();
 
+            // ⚠️ ONE FRAME, BECAUSE `Destroy` IS DEFERRED TO END OF FRAME.
+            //
+            // The four placeholders are still children of the list for the rest of this frame, and
+            // the layout group still counts them. `GpsPaintMotion.StaggerRise` force-rebuilds that
+            // layout to learn each new row's REST position — and item 0's beat fires synchronously,
+            // in this same frame — so spawning and staggering here reads the first real row's rest
+            // slot as the one AFTER four dead placeholders and pins it there. Measured: row 0 at
+            // y = -448 (four 112 px slots down, outside the viewport) while rows 1 and 2, whose
+            // beats land on later frames, sat correctly at -112 and -224. The list drew with its
+            // first name missing.
+            //
+            // Rows 1..n were only ever right by accident of timing, so the fix is the frame, not a
+            // second layout rebuild: let the placeholders actually leave, THEN measure.
+            yield return null;
+            if (!IsVisible()) yield break;
+
             List<FollowedUserDto>? users = result != null && result.Success ? result.Data : null;
 
             if (users == null || users.Count == 0)
             {
-                if (emptyStateRoot != null) emptyStateRoot.SetActive(true);
+                if (emptyStateRoot != null)
+                {
+                    emptyStateRoot.SetActive(true);
+                    // §D4 — the empty card fades in with its data rather than replacing the
+                    // placeholder rows in one frame. FadeInPanel only moves alpha, so the
+                    // SetActive above is still what puts it on screen.
+                    Golfin.Gps.UI.GpsPaintMotion.FadeInPanel(this, emptyStateRoot, animate: true);
+                }
                 UpdateConfirmEnabled();
                 yield break;
             }
 
             if (emptyStateRoot != null) emptyStateRoot.SetActive(false);
 
+            var arrived = new List<Transform>(users.Count);
             foreach (FollowedUserDto user in users)
             {
                 if (user == null || string.IsNullOrEmpty(user.Id)) continue;
@@ -242,9 +267,18 @@ namespace Golfin.UI.Loans
                 if (row == null) continue;
                 row.Bind(user);
                 row.Clicked += OnRowClicked;
+                arrived.Add(row.transform);
             }
 
             if (recipientScroll != null) recipientScroll.verticalNormalizedPosition = 1f;
+
+            // §D6 — the list ARRIVED, so it staggers in, exactly as StoreHistoryScreenController
+            // staggers its first page (~358). Only these rows: the four `—` placeholders are the
+            // state this list is replacing, not a thing that arrives. StaggerRise reads
+            // `SuppressedByPush` itself and settles every row at alpha 1 when a push is on, so the
+            // guard is not repeated here.
+            if (arrived.Count > 0) Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, arrived);
+
             UpdateConfirmEnabled();
         }
 
@@ -278,6 +312,11 @@ namespace Golfin.UI.Loans
             foreach (LoanRecipientRow r in _rows)
                 if (r != null) r.SetSelected(ReferenceEquals(r, row));
 
+            // §D6 — the row that just BECAME selected bumps; the one that just lost the selection
+            // does not. The sprite swap in SetSelected stays as it is: that is the fidelity
+            // decision (a baked 3 px stroke, not an Outline), and this is the feel on top of it.
+            UiSelection.Bump(this, row.transform);
+
             UpdateConfirmEnabled();
         }
 
@@ -289,10 +328,21 @@ namespace Golfin.UI.Loans
                 confirmButton.interactable = !_pending && !string.IsNullOrEmpty(_selectedUserId);
         }
 
+        /// <summary>
+        /// The latch, and the rest state that goes with it.
+        ///
+        /// <para>The IN-FLIGHT half of this now belongs to <see cref="PendingSpend"/>
+        /// (transaction_feedback §3): the scope is what disables the two buttons and puts the
+        /// ellipsis on LEND, and — more to the point — what puts them BACK on every exit path.
+        /// This is left as the reset, which is all <see cref="Open"/> ever asked of it.</para>
+        ///
+        /// <para><c>confirmSpinner</c> is deliberately still serialized and still on the prefab,
+        /// inactive: the shared affordance is the button's own Disabled transition plus the
+        /// ellipsis, and deleting a wired object would be a prefab edit this task does not need.</para>
+        /// </summary>
         private void SetPending(bool pending)
         {
             _pending = pending;
-            if (confirmSpinner != null) confirmSpinner.SetActive(pending);
             if (cancelButton != null) cancelButton.interactable = !pending;
             UpdateConfirmEnabled();
         }
@@ -305,19 +355,34 @@ namespace Golfin.UI.Loans
 
         private IEnumerator ConfirmRoutine()
         {
-            SetPending(true);
-
             ApiResult<LoanMutationDto>? result = null;
-            IEnumerator call = LoanService.Instance.Lend(
-                _kind, _refId, _selectedUserId!, _days, _level, _idempotencyKey, r => result = r);
-            while (call.MoveNext()) yield return call.Current;
+
+            // THE SCOPE OPENS BEFORE THE LATCH, and the order is load-bearing. `PendingSpend`
+            // caches CONFIRM's pre-tap `interactable` and hands exactly that back on dispose;
+            // setting `_pending` first would run UpdateConfirmEnabled, cache "already disabled",
+            // and restore a dead LEND button after a refusal.
+            //
+            // CANCEL rides along in `alsoDisable`: the lend is being recorded server-side and
+            // closing the modal mid-flight would hide a loan that is about to land.
+            using (PendingSpend.Begin(confirmButton, confirmText, cancelButton!))
+            {
+                _pending = true;
+
+                IEnumerator call = LoanService.Instance.Lend(
+                    _kind, _refId, _selectedUserId!, _days, _level, _idempotencyKey, r => result = r);
+                while (call.MoveNext()) yield return call.Current;
+            }
+
+            // Restore FIRST, then act on the verdict (PendingSpend's ordering rule): restoring
+            // means putting back what was there before the tap, and everything below overwrites
+            // that with the new truth — a toast over a live modal, or a closed one.
+            SetPending(false);
 
             // TRANSPORT FAILURE IS NOT A REFUSAL. Nothing is said about the loan, the modal stays
             // open with the SAME idempotency key, and a second tap either succeeds or replays the
             // one that actually landed. Telling the player "couldn't lend" here would be a guess.
             if (result == null || !result.Success || result.Data == null)
             {
-                SetPending(false);
                 Toast(Golfin.EconomyRuntime.PointsSpendGate.OfflineMessage);
                 yield break;
             }
@@ -326,7 +391,6 @@ namespace Golfin.UI.Loans
 
             if (!data.IsOk)
             {
-                SetPending(false);
                 Toast(LocalizationManager.Get(data.ErrorKey()));
                 yield break;
             }

@@ -1,0 +1,112 @@
+=== iter-1 kickoff baseline 2026-09-09T07:04:00Z ===
+HEAD: f58b91eba75e63507b3acc055c32b832713851f1
+DIRTY:
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Tests/ShotControllerPuttModeTests.cs
+ M Docs/AI_CONTEXT.md
+ M Docs/Physics/PHYSICS_TUNING_CHANGELOG.md
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Diagnostics/roster_locked_overlay/
+?? Docs/Specs/Active/asset_loans_polish/
+?? Docs/Specs/Active/loading_tips/
+?? Docs/Specs/Quick/flick_arrow_speed_retune.md
+=== END baseline ===
+
+2026-09-09 07:05Z  Read SPEC + the four polish atoms. Quoted UiMotion.cs:437
+                   (`rect.anchoredPosition = new Vector2(x, restY - dy);`) — Rise starts
+                   BELOW rest, so a ribbon that DROPS IN needs dy = -RiseDy. SPEC's guess
+                   was right; its "24 px" prose is not (UiMotion.RiseDy is 16f).
+2026-09-09 07:15Z  Found confirmText / returnButtonText already serialized and already wired
+                   by LoanUiBuilder to the button's own TMP child — no new [SerializeField]
+                   needed for the PendingSpend labels. Wrote all four controller/view edits.
+2026-09-09 07:20Z  Compile clean via assets-refresh; type-get-json-schema on LoanRibbonView
+                   shows ribbonGroup + dimGroup live in the domain.
+2026-09-09 07:22Z  Ran `LoanUiBuilder.Build()` for the two CanvasGroups. It reshuffled 669
+                   lines of fileIDs in LoanModal.prefab + LoanReturnModal.prefab (recreated
+                   "Text (TMP)" children under new fileIDs) — reverted both prefabs, reloaded
+                   ShellScene from disk, and authored the four CanvasGroups surgically instead.
+                   Scene diff is now 56 lines: 4 CanvasGroups + 4 field wirings. Zero geometry,
+                   zero m_IsActive.
+2026-09-09 07:25Z  Wrote LoanPolishProbe (real navigation, stubbed socket, delayed POST).
+                   Run 1: 7 fail — probe read the INVENTORY copy of the modal while the
+                   ROSTER copy was on screen.
+2026-09-09 07:28Z  Run 2: 4 fail. Run 3: 1 fail. Every one of them an instrument fault
+                   (thresholds that measured the editor's frame rate; a sampling loop that
+                   started after the 0.09 s stagger had ended).
+2026-09-09 07:33Z  Run 4: 0 fail / 21. Then read the recorded video's 14 s frame and found a
+                   REAL defect the JSON had not been asked about: the first recipient row was
+                   missing from the list. Added A6b (per-row rect + alpha + in-viewport dump).
+2026-09-09 07:40Z  Run 5 measured it: row 0 at y=-448 (four 112 px slots down, outside the
+                   viewport) while rows 1-2 sat correctly. Cause: ClearRows() Destroys the four
+                   placeholders, Unity defers Destroy to end of frame, and StaggerRise's layout
+                   rebuild + item 0's synchronous beat both ran in that same frame — so row 0
+                   captured its "rest" slot behind four corpses and pinned itself there.
+                   Fix: one frame between ClearRows() and the spawn.
+2026-09-09 07:46Z  Run 6: 0 fail / 22, row 0 back at y=0.000 inVp=True. A/B crop against the
+                   shipped asset_loans capture is identical (MARTA / LUCAS / AIKO).
+2026-09-09 07:49Z  EditMode suite 2975 / 2971 passed / 0 failed / 4 skipped — the shipped
+                   asset_loans baseline exactly.
+2026-09-09 07:53Z  Re-recorded the demo (the first take filmed the defect), captioned it,
+                   verified one decoded frame per caption window. Editor left out of play
+                   mode, ShellScene saved and not dirty.
+
+=== iter-2 kickoff baseline 2026-09-09T08:20:00Z ===
+HEAD: 609efe9e628b2fc2e428ed533a14243ff94363ad
+DIRTY:
+ M Assets/Resources/Clubs/Full/Driver-Golfin.png
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/Loans/Editor/LoanUiBuilder.cs
+ M Assets/Scripts/UI/Loans/LoanBadgeView.cs
+ M Assets/Scripts/UI/Loans/LoanModalController.cs
+ M Assets/Scripts/UI/Loans/LoanReturnModalController.cs
+ M Assets/Scripts/UI/Loans/LoanRibbonView.cs
+ M Docs/AI_CONTEXT.md
+ M Docs/Reports/content_art.txt
+ M Docs/Specs/Active/club_art_batches/STATUS.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Scripts/UI/Loans/Editor/LoanPolishProbe.cs
+?? Assets/Scripts/UI/Loans/Editor/LoanPolishProbe.cs.meta
+?? Docs/Diagnostics/roster_locked_overlay/
+?? Docs/Specs/Active/loading_tips/
+=== END baseline ===
+
+2026-09-09 08:20Z  SELF_REVIEW_FAIL. The reviewer re-ran the probe on its own editor (~125 ms/frame)
+                   and got fail=3: A1/A1b/A2 could not resolve a 0.25 s entrance in two samples.
+                   Its diagnosis is right — the gate answered differently on two hosts. Its
+                   PROPOSED fix (apply A5's `Time.captureDeltaTime` lock to the entrance sampler)
+                   does not work, and I only found that out by measuring: with the lock set to
+                   1/120 the first alpha sample was still 0.347, and EaseOut(dt / 0.25) = 0.347
+                   solves to dt = 0.033 s — the editor's own frame time. `captureDeltaTime` does
+                   not pin `unscaledDeltaTime` on this host, so A5's earlier improvement came from
+                   the four warm-up frames, not from the clock.
+2026-09-09 08:24Z  PIPELINE_HARDENING §15 — audited the SHAPE rather than the three named sites.
+                   Every assertion that reads a motion TRACE is frame-rate dependent; six were
+                   (A1, A1b, A2, A4, A6, A11) and A11 still carried a first-sample FLOOR, the exact
+                   thing iter-1 claimed to have removed. Per-site verdict table in the report.
+2026-09-09 08:26Z  Rewrote them value-based and same-frame-anchored: `UiMotion.Run` drives a
+                   routine's first segment synchronously, so the arming call RETURNS with the rect
+                   already off rest and the group already off its rest alpha. No frame has to
+                   elapse for that, so no host can miss it. Added PRE_clock, which measures and
+                   records the effective dt so every trace can be read rather than assumed.
+2026-09-09 08:30Z  Re-audited the new thresholds against the reviewer's 125 ms host on paper and
+                   found two that would STILL fail there: a 0.99 alpha floor, when one 125 ms step
+                   of a 0.15 s Fade lands at 0.995. Floors are 0.999 now — "not at rest", not "well
+                   away from rest".
+2026-09-09 08:32Z  24 assertions, 0 fail. A1 firstSample=721.477 vs rest 710.400; A6 profile
+                   [0.218 0.000 0.000] in one frame; A5 firstSample=1.043 in the frame of the tap.
+                   Editor out of play mode, ShellScene saved and not dirty.
+
+2026-09-09 09:00Z  Red-team PASS -> ARCHITECT_REVIEW_PASS, with two gaps recorded as non-blocking:
+                   no numeric assertion for the ROSTER ribbon's flush ("reads flush by eye"), and
+                   A8 covering only the LEND modal's pending state. Both are the shape that
+                   produced Cesar's rejection — a quantity nobody measured — so they are closed
+                   rather than carried. Probe-only additions; nothing under test changed.
+2026-09-09 09:08Z  A13 roster ribbon: leftD=0.000 rightD=0.000 topD=0.000, dim leftD/rightD=0.000
+                   vs the 537x1483 portrait. It WAS flush; it is now measured to be.
+                   A14 RETURN pending: 'RETURN' -> '…' -> 'RETURN', both buttons dead and restored,
+                   spinner never activated, driven through the real RETURN button.
+                   26 assertions, 0 fail. Editor out of play mode, ShellScene not dirty.
