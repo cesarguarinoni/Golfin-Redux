@@ -132,6 +132,59 @@ namespace Golfin.UI.Polish.Tests
         }
 
         /// <summary>
+        /// loading_tips §3.3a — the SCENE objects the prefab audit structurally cannot see.
+        ///
+        /// <para>AuditPrefabs walks prefabs and counts <c>Button</c>s. ProTipCard is neither: it
+        /// lives in ShellScene and it is an <c>IPointerClickHandler</c>, so Rule 11's sweep
+        /// (game_polish_c) passed straight over it and a tap to change the tip gave no press
+        /// pulse for four months. There is no general "every IPointerClickHandler" rule to add —
+        /// most of them are scroll views and drag routers, where a press pulse would be wrong —
+        /// so the covered objects are ENUMERATED here, and this list is the place a future one
+        /// gets added.</para>
+        /// </summary>
+        static readonly (string Scene, string Object)[] TapTargets =
+        {
+            ("Assets/Scenes/ShellScene.unity", "ProTipCard"),
+        };
+
+        [Test]
+        public void EnumeratedTapTargets_HavePressFeedback()
+        {
+            // ButtonPressFeedback is Assembly-CSharp, which this assembly cannot reference —
+            // same reason PressFeedbackScope is reached through Probe at the top of this file.
+            Type feedback = Probe.Type("Golfin.UI.Polish.ButtonPressFeedback");
+            var missing = new List<string>();
+            foreach ((string scenePath, string objectName) in TapTargets)
+            {
+                UnityEngine.SceneManagement.Scene scene =
+                    UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                        scenePath, UnityEditor.SceneManagement.OpenSceneMode.Additive);
+                try
+                {
+                    GameObject? found = null;
+                    foreach (GameObject root in scene.GetRootGameObjects())
+                    {
+                        foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                            if (t.name == objectName) { found = t.gameObject; break; }
+                        if (found != null) break;
+                    }
+
+                    if (found == null) { missing.Add($"{objectName} not found in {scenePath}"); continue; }
+                    if (found.GetComponent(feedback) == null)
+                        missing.Add($"{scenePath} :: {objectName}");
+                }
+                finally
+                {
+                    UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+
+            Assert.That(missing, Is.Empty,
+                "Rule 11: a tappable scene object with no ButtonPressFeedback.\n" +
+                string.Join("\n", missing));
+        }
+
+        /// <summary>
         /// Every exclusion the audit uses must carry a REASON. §C1.2: "Exclusions are named, not
         /// assumed." An empty-string reason would exclude a button while telling nobody why.
         /// </summary>

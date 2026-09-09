@@ -4098,3 +4098,82 @@ actions. A property read looks like a read.
 is how scene overrides get orphaned. Both prefabs were reverted and the two `CanvasGroup`s added
 surgically with `SerializedObject`. Final scene diff: 62 insertions, 6 deletions. **Diff the YAML
 before trusting any authoring pass** — a >200-line diff for a few-node change means churn.
+
+---
+
+## Lesson AM — a Figma node export renders IN CANVAS CONTEXT, so it bakes whatever is behind it (`loading_tips`, 2026-09-09)
+
+Thirty-four tip diagrams were exported with `download_assets` and every one shipped an **opaque**
+10–27 px slate band down the left and right and **0 px** top and bottom. Cesar caught it on sight
+("thick on the sides, thin on top and bottom") from the first screenshot.
+
+The frame had no fill and neither did its parent. The band was the **tip card's own frosted panel**:
+the `Authored diagram` frame is 806 wide, its content frame is inset (`x=10, w=786`), and the export
+composited the card sitting behind it into that 10 px gutter. In Unity the sprite is then drawn back
+ON TOP of the real card, so you see a strip of stale card and it reads as a mismatched outline.
+
+**`download_assets` has no isolation switch. `get_screenshot` does: `contentsOnly: true`.** With it,
+the same node exports with `alpha 0` gutters — which is what the spec had asked for all along
+("transparent background"). Sister to `feedback_figma_export_assets_not_crop`: that lesson says
+export, don't crop; this one says the export still needs to be told to isolate.
+
+**And measure the defect before theorising about it.** Three wrong hypotheses (a frame fill, a
+`BACKGROUND_BLUR` on the card, a Figma authoring slip) died in under a minute each against a
+per-file alpha sample of all 34 edges. The blur hypothesis even "passed" a test — Figma served a
+byte-identical cached export, and identical `sizeBytes` was the tell.
+
+---
+
+## Lesson AN — `UiMotion.Then`'s tail runs TWICE, so never re-enter `Run` on the same handle from inside it (`loading_tips`, 2026-09-09)
+
+`NextTip` was `Run(ref _swap, Then(fadeOut, () => { SwapTo(_seq.Advance()); Run(ref _swap, fadeIn); }))`
+and **advanced the tip sequencer twice per tap**. The player walked 1, 3, 5, 7 and could not reach
+tips 2, 4, 6 or 8 at all.
+
+`Then(inner, after)` runs `after` in two places — at the routine's tail, and again from the
+finalizer it registers, because an interrupted sequence still owes its tail. Re-entering `Run` on
+the **same handle** from inside that tail settles the routine currently running it; the settle fires
+the finalizer; the finalizer runs the tail again. `DailyMissionPillController.StartGlow` documents
+the unbounded version of this (a self-re-arming tail took the Editor down twice); a tail that
+re-arms *once* is the same bug, just quiet.
+
+**Sequence with ONE routine that yields the sub-routines** — the idiom `GlowLoop` already uses:
+```csharp
+IEnumerator fadeOut = UiMotion.Fade(g, g.alpha, 0f);
+while (fadeOut.MoveNext()) yield return fadeOut.Current;
+Rebind();
+IEnumerator fadeIn = UiMotion.Fade(g, 0f, 1f);
+while (fadeIn.MoveNext()) yield return fadeIn.Current;
+```
+**That routine registers no finalizer**, which matters: `UiMotion.Run` settles a routine's
+*registered* final state when motion is off or outside play mode, so a finalizer-less routine handed
+to `Run` under the kill switch does **nothing at all** rather than landing instantly. Take the
+instant path explicitly on `!UiMotion.Enabled || !Application.isPlaying`.
+
+**Why no measurement caught it.** Both advances land in the same frame, so the alpha trace, the
+height trace and the press-feedback trace were all textbook-correct and only the second advance was
+ever drawn. It surfaced only when a video was asked to show the tutorial *in order* and the recorder
+logged which tip was on screen at each beat. **A trace of HOW something moved cannot see an error in
+WHAT it moved to** — log the identity, not just the animation.
+
+---
+
+## Lesson AO — `build_bot_video.py`'s caption defaults do not fit a 1170-wide portrait clip (`loading_tips`, 2026-09-09)
+
+Three caption defects in one build, all found by decoding a frame per caption window and looking:
+
+1. **`--title` defaults to `"Loop v2 — Stage F\nButton Press Feedback"`** — a stale default from the
+   loop-v2 era. Omit it and that gets burned over your first four seconds. Always pass `--title`.
+   Note the script *prepends* its own title card, so a title caption written by the recorder is a
+   second one.
+2. **Captions land on bottom-of-screen furniture.** They are anchored `h - text_h - h/12`, which on
+   the loading screen is exactly the `NOW LOADING` label. Added `--caption-y-offset` (default 0, so
+   nothing existing moves).
+3. **The default caption size is `h // 32` = 79 px at 2532 tall, which clips at ~33 characters** on a
+   1170-wide frame — both edges, silently. `feedback_portrait_video_captions_prewrap` says keep
+   lines ≤ 40 chars; that is not sufficient. Pass `--caption-fontsize 54 --caption-wrap 34`.
+
+Plus a content defect: a caption runs until the NEXT one opens, so leaving a beat un-captioned let
+"Six shot grades now, not three" sit over the *map* tip for half its window. **One caption per beat**
+is the only arrangement where a caption cannot outlive the frame it describes
+(`reference_caption_window_must_match_the_frame`).

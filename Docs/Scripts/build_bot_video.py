@@ -565,6 +565,11 @@ def main():
                     help="copy the raw recording's audio track into the captioned output. Off by "
                          "default because every recorder before gacha_reveal set "
                          "AudioInputSettings.PreserveAudio=false, so the raw mp4 had no audio to keep.")
+    ap.add_argument("--caption-y-offset", type=int, default=0,
+                    help="Extra pixels to raise the bottom-anchored captions. Default 0 keeps the "
+                         "historical position. Use it when a clip has its own bottom-of-screen "
+                         "furniture the caption would land on — the loading screen's NOW LOADING "
+                         "label and progress bar, for instance (loading_tips, 2026-09-09).")
     ap.add_argument("--title-seconds", type=float, default=3.6,
                     help="How long the centered title card stays on screen (seconds). Lower it for "
                          "short clips where the title would otherwise overlap the action (e.g. a 5s "
@@ -660,7 +665,7 @@ def main():
                 fh.write(text)
             is_title = (i == 0)
             fs = title_fontsize if is_title else fontsize
-            y = "(h-text_h)/2" if is_title else f"h-text_h-{max(80, h // 12)}"
+            y = "(h-text_h)/2" if is_title else f"h-text_h-{max(80, h // 12) + args.caption_y_offset}"
             draw.append(
                 f"drawtext=textfile='{esc(cap_file)}'"
                 f":fontfile='{esc(font)}'"

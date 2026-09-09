@@ -1,0 +1,40 @@
+# loading_tips §3.1 — bundled, client-only. NOT a server content catalog:
+# the tip TEXT is admin-editable through `texts`; only pool / order / active live here.
+# pool: first = the fixed-order tutorial pool (also a member of the general pool).
+# sprite: lookup NAME into ProTipCard.tipSprites, not a Resources path.
+# active=0: the system has not shipped yet (§2.3). Never delete a row.
+key,pool,order,sprite,active
+TIP_SWING,first,1,Tip_SWING,1
+TIP_ACCURACY,first,2,Tip_ACCURACY,1
+TIP_GRADES,first,3,Tip_GRADES,1
+TIP_VIEW,first,4,Tip_VIEW,1
+TIP_CLUB,first,5,Tip_CLUB,1
+TIP_FORECAST,first,6,Tip_FORECAST,1
+TIP_RARITIES,first,7,Tip_RARITIES,1
+TIP_CONTROLS,first,8,Tip_CONTROLS,1
+TIP_PENDULUM,general,9,Tip_PENDULUM,1
+TIP_TAPTIMING,general,10,Tip_TAPTIMING,1
+TIP_FREESWING,general,11,Tip_FREESWING,1
+TIP_OVERPOWER,general,12,Tip_OVERPOWER,1
+TIP_SPIN,general,13,Tip_SPIN,1
+TIP_FADEDRAW,general,14,Tip_FADEDRAW,1
+TIP_AUTOCLUB,general,15,Tip_AUTOCLUB,1
+TIP_STATS,general,16,Tip_STATS,1
+TIP_CONDITION,general,17,Tip_CONDITION,1
+TIP_LEVELUP,general,18,Tip_LEVELUP,1
+TIP_CLUBSTATS,general,19,Tip_CLUBSTATS,1
+TIP_BALLS,general,20,Tip_BALLS,1
+TIP_SURFACES,general,21,Tip_SURFACES,1
+TIP_MISSIONS,general,22,Tip_MISSIONS,1
+TIP_DAILY,general,23,Tip_DAILY,1
+TIP_TOURNAMENT,general,24,Tip_TOURNAMENT,1
+TIP_VERSUS,general,25,Tip_VERSUS,1
+TIP_LEADERBOARD,general,26,Tip_LEADERBOARD,1
+TIP_RP,general,27,Tip_RP,1
+TIP_GACHA,general,28,Tip_GACHA,1
+TIP_STORE,general,29,Tip_STORE,0
+TIP_GPS_CHECKIN,general,30,Tip_GPS_CHECKIN,1
+TIP_GPS_SOCIAL,general,31,Tip_GPS_SOCIAL,1
+TIP_GPS_WALLET,general,32,Tip_GPS_WALLET,1
+TIP_GRAPHICS,general,33,Tip_GRAPHICS,1
+TIP_REPAIR,general,34,Tip_REPAIR,0

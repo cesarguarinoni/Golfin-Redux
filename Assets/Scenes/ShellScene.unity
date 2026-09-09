@@ -41810,11 +41810,11 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2072892869}
+  m_Father: {fileID: 1974884068}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 489, y: -189.37001}
+  m_AnchoredPosition: {x: 441, y: -29.33}
   m_SizeDelta: {x: 882, y: 58.66}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &618841635
@@ -59491,11 +59491,11 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2072892869}
+  m_Father: {fileID: 1974884068}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 489, y: -242.70001}
+  m_AnchoredPosition: {x: 441, y: -82.66}
   m_SizeDelta: {x: 882, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &860714350
@@ -136552,6 +136552,83 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 6741303442594765005, guid: a48e8b582306344c5ab219e7677f1be1, type: 3}
   m_PrefabInstance: {fileID: 1973314234}
   m_PrefabAsset: {fileID: 0}
+--- !u!224 &1974884068
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1974884067}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 618841634}
+  - {fileID: 860714349}
+  m_Father: {fileID: 2072892869}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489, y: -201.37001}
+  m_SizeDelta: {x: 882, y: 82.66}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1974884067
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1974884068}
+  - component: {fileID: 1974884070}
+  - component: {fileID: 1974884069}
+  m_Layer: 0
+  m_Name: TipContent
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!225 &1974884069
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1974884067}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &1974884070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1974884067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 0
+  m_Spacing: 24
+  m_ChildForceExpandWidth: 1
+  m_ChildForceExpandHeight: 1
+  m_ChildControlWidth: 1
+  m_ChildControlHeight: 1
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
 --- !u!1 &1977102302
 GameObject:
   m_ObjectHideFlags: 0
@@ -144522,6 +144599,7 @@ GameObject:
   - component: {fileID: 2072892871}
   - component: {fileID: 2072892870}
   - component: {fileID: 2072892875}
+  - component: {fileID: 2072892876}
   m_Layer: 5
   m_Name: ProTipCard
   m_TagString: Untagged
@@ -144543,8 +144621,7 @@ RectTransform:
   m_Children:
   - {fileID: 590553820}
   - {fileID: 1157588255}
-  - {fileID: 618841634}
-  - {fileID: 860714349}
+  - {fileID: 1974884068}
   - {fileID: 923403311}
   m_Father: {fileID: 1921467785}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -144668,24 +144745,93 @@ MonoBehaviour:
   tapNextText: {fileID: 923403312}
   dividerImage: {fileID: 1157588256}
   tipSprites:
-  - {fileID: 21300000, guid: 28aa3a11244a5fa409d61ee388f88a1d, type: 3}
-  - {fileID: 21300000, guid: c984f09d984d6474fa13a2d74e96d57b, type: 3}
-  - {fileID: 21300000, guid: fa39e71db1b512746926f4009c9f48a2, type: 3}
-  - {fileID: 21300000, guid: 138e5778d6c6e89478eacebea4ffadef, type: 3}
-  - {fileID: 21300000, guid: cbb1fbba72e9265498850bec5b876d49, type: 3}
-  - {fileID: 21300000, guid: 02879563e1f454841bb4c79963031842, type: 3}
-  - {fileID: 21300000, guid: 8a0b32a9117c2f04e90721c87c2b4d45, type: 3}
+  - name: Tip_SWING
+    sprite: {fileID: 21300000, guid: d0e7b1c3b32a4b308274e82fecbe3781, type: 3}
+  - name: Tip_ACCURACY
+    sprite: {fileID: 21300000, guid: b0a50b4f9bf64888af4b73e8b3e53e09, type: 3}
+  - name: Tip_GRADES
+    sprite: {fileID: 21300000, guid: ec20a5f1a2af4e42960bed8bad272a7b, type: 3}
+  - name: Tip_VIEW
+    sprite: {fileID: 21300000, guid: 67514cc74a864c449848f3f325c7c460, type: 3}
+  - name: Tip_CLUB
+    sprite: {fileID: 21300000, guid: 31bbab75825e4ad5b4886d4012765729, type: 3}
+  - name: Tip_FORECAST
+    sprite: {fileID: 21300000, guid: c5de1e2029f5438091b32274a5f31006, type: 3}
+  - name: Tip_RARITIES
+    sprite: {fileID: 21300000, guid: 985855a6e10f43388ff2afacc850eb30, type: 3}
+  - name: Tip_CONTROLS
+    sprite: {fileID: 21300000, guid: 0837f6813ceb4de4848aa418cf14afd5, type: 3}
+  - name: Tip_PENDULUM
+    sprite: {fileID: 21300000, guid: 79825a0d2d224fdbbbb3877aabea77bc, type: 3}
+  - name: Tip_TAPTIMING
+    sprite: {fileID: 21300000, guid: 8f691efddea5493c9017e4744972c69f, type: 3}
+  - name: Tip_FREESWING
+    sprite: {fileID: 21300000, guid: 99e3d16d588b46978488b44cf9cba0c8, type: 3}
+  - name: Tip_OVERPOWER
+    sprite: {fileID: 21300000, guid: 40e1d35457e64d31b0c48e35b93946af, type: 3}
+  - name: Tip_SPIN
+    sprite: {fileID: 21300000, guid: b4a903d00caf4a97b33ccd920cfe10a2, type: 3}
+  - name: Tip_FADEDRAW
+    sprite: {fileID: 21300000, guid: c68751a0951946e4aae68a2729f82ab8, type: 3}
+  - name: Tip_AUTOCLUB
+    sprite: {fileID: 21300000, guid: d2ea7ced36da46c2bc2ec066d036d25b, type: 3}
+  - name: Tip_STATS
+    sprite: {fileID: 21300000, guid: c86c415f2c454852a281fd34f6c60592, type: 3}
+  - name: Tip_CONDITION
+    sprite: {fileID: 21300000, guid: 8c1749c8e3a44690af05e07b03883e86, type: 3}
+  - name: Tip_LEVELUP
+    sprite: {fileID: 21300000, guid: d5d2fde29c38419199ac23245a4c05d6, type: 3}
+  - name: Tip_CLUBSTATS
+    sprite: {fileID: 21300000, guid: 9a5ae499048a470d94643f5f6e67735f, type: 3}
+  - name: Tip_BALLS
+    sprite: {fileID: 21300000, guid: 04000e46c8c6494796eaaab268419534, type: 3}
+  - name: Tip_SURFACES
+    sprite: {fileID: 21300000, guid: 60e3b5f50a9c45359b30cafe2f545e90, type: 3}
+  - name: Tip_MISSIONS
+    sprite: {fileID: 21300000, guid: 4a1389863a8a4f95955c9398e1cf09a6, type: 3}
+  - name: Tip_DAILY
+    sprite: {fileID: 21300000, guid: 7c4f1f1bbea34bba9cb31625fab255e7, type: 3}
+  - name: Tip_TOURNAMENT
+    sprite: {fileID: 21300000, guid: fb36de10719542ebba10a229ebaef6b1, type: 3}
+  - name: Tip_VERSUS
+    sprite: {fileID: 21300000, guid: 16a9441c179e491f9ecdf63638db92ab, type: 3}
+  - name: Tip_LEADERBOARD
+    sprite: {fileID: 21300000, guid: 6f24f337ffad4066840e6b1ca3d7396f, type: 3}
+  - name: Tip_RP
+    sprite: {fileID: 21300000, guid: f60f3d0a992c41748a85cc7a1ae03b34, type: 3}
+  - name: Tip_GACHA
+    sprite: {fileID: 21300000, guid: 0e8d89f8def3440dba6dd33e0c74b411, type: 3}
+  - name: Tip_STORE
+    sprite: {fileID: 21300000, guid: 72ffab632f364e9cb85338efc9efa4c7, type: 3}
+  - name: Tip_GPS_CHECKIN
+    sprite: {fileID: 21300000, guid: 50e33d5330da4d1fa6bd7263a5e1f2e3, type: 3}
+  - name: Tip_GPS_SOCIAL
+    sprite: {fileID: 21300000, guid: 70103b6ae02948ae9feb4a39853ba57d, type: 3}
+  - name: Tip_GPS_WALLET
+    sprite: {fileID: 21300000, guid: 85518e97ccdc4602a58b1913f702af7b, type: 3}
+  - name: Tip_GRAPHICS
+    sprite: {fileID: 21300000, guid: eb5f2dbd46b645b0a001ec50a045c0b5, type: 3}
+  - name: Tip_REPAIR
+    sprite: {fileID: 21300000, guid: b69c35b91251494c94de8a3bd5571f3c, type: 3}
   tipImageDisplay: {fileID: 860714350}
-  tipKeys:
-  - TIP_SWING
-  - TIP_CLUB
-  - TIP_FORECAST
-  - TIP_RARITIES
-  - TIP_ACCURACY
-  - TIP_TIMING
-  - TIP_VIEW
+  tipsCsv: {fileID: 4900000, guid: 4a1ea7c300a484d4ca39a5bec1d91b42, type: 3}
+  tipContentGroup: {fileID: 1974884069}
   autoCycleInterval: 8
-  textFadeDuration: 0.3
+  tapPulsePeriod: 1.6
+--- !u!114 &2072892876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2072892868}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2073758601
 GameObject:
   m_ObjectHideFlags: 0
