@@ -1,0 +1,279 @@
+=== game_polish_a probe (push) 2026-09-09 00:54:41Z ===
+ok   ScreenManager
+tapping the real StartButton
+ok   Home
+--- push sweep: every ordered pair of the direction table ---
+note: route is on Home, expected ModeSelection — re-seating via ShowScreen (NOT a tap)
+ok   ModeSelection
+  measured ModeSelection -> HoleSelection dir=Forward W=1170 dur=0.250s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=78.9ms maxStep=13.3 % parallax=1 fails=0
+ok   HoleSelection
+  measured HoleSelection -> ModeSelection dir=Back W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=12ms maxStep=8.2 % parallax=1 fails=0
+ok   ModeSelection
+  measured ModeSelection -> MissionSelection dir=Forward W=1170 dur=0.250s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=59.9ms maxStep=13.3 % parallax=1 fails=0
+ok   MissionSelection
+  measured MissionSelection -> ModeSelection dir=Back W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=11.3ms maxStep=8.8 % parallax=1 fails=0
+ok   ModeSelection
+  measured ModeSelection -> TournamentHoleSelection dir=Forward W=1170 dur=0.256s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=21.3ms maxStep=9.3 % parallax=1 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> ModeSelection dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=13.4ms maxStep=7.7 % parallax=1 fails=0
+ok   ModeSelection
+  measured ModeSelection -> TournamentSelection dir=Forward W=1170 dur=0.258s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=17.7ms maxStep=10.3 % parallax=0.3 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> ModeSelection dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=12.2ms maxStep=8.2 % parallax=0.3 fails=0
+ok   ModeSelection
+  measured ModeSelection -> TournamentLeaderboard dir=Forward W=1170 dur=0.261s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=24.6ms maxStep=11.1 % parallax=0.3 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> ModeSelection dir=Back W=1170 dur=0.270s frames=16 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=11.6ms maxStep=9.2 % parallax=0.3 fails=0
+ok   ModeSelection
+note: route is on ModeSelection, expected HoleSelection — re-seating via ShowScreen (NOT a tap)
+ok   HoleSelection
+  measured HoleSelection -> ModeSelection dir=Forward W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=11.8ms maxStep=7.8 % parallax=1 fails=0
+ok   ModeSelection
+  measured ModeSelection -> HoleSelection dir=Back W=1170 dur=0.250s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=75.1ms maxStep=13.3 % parallax=1 fails=0
+ok   HoleSelection
+  measured HoleSelection -> MissionSelection dir=Forward W=1170 dur=0.253s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=17.7ms maxStep=8.0 % parallax=1 fails=0
+ok   MissionSelection
+  measured MissionSelection -> HoleSelection dir=Back W=1170 dur=0.250s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=73.7ms maxStep=13.3 % parallax=1 fails=0
+ok   HoleSelection
+  measured HoleSelection -> TournamentHoleSelection dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=12.1ms maxStep=7.0 % parallax=1 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> HoleSelection dir=Back W=1170 dur=0.267s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=73.2ms maxStep=13.3 % parallax=1 fails=0
+ok   HoleSelection
+  measured HoleSelection -> TournamentSelection dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=16.2ms maxStep=9.4 % parallax=0.3 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> HoleSelection dir=Back W=1170 dur=0.251s frames=14 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=82.6ms maxStep=13.3 % parallax=0.3 fails=0
+ok   HoleSelection
+  measured HoleSelection -> TournamentLeaderboard dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=12ms maxStep=7.0 % parallax=0.3 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> HoleSelection dir=Back W=1170 dur=0.259s frames=14 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=136.6ms maxStep=13.3 % parallax=0.3 fails=0
+ok   HoleSelection
+note: route is on HoleSelection, expected MissionSelection — re-seating via ShowScreen (NOT a tap)
+ok   MissionSelection
+  measured MissionSelection -> ModeSelection dir=Forward W=1170 dur=0.265s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=11.1ms maxStep=8.8 % parallax=1 fails=0
+ok   ModeSelection
+  measured ModeSelection -> MissionSelection dir=Back W=1170 dur=0.256s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=19.6ms maxStep=8.9 % parallax=1 fails=0
+ok   MissionSelection
+  measured MissionSelection -> HoleSelection dir=Forward W=1170 dur=0.266s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=77.4ms maxStep=13.3 % parallax=1 fails=0
+ok   HoleSelection
+  measured HoleSelection -> MissionSelection dir=Back W=1170 dur=0.253s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=17.3ms maxStep=7.8 % parallax=1 fails=0
+ok   MissionSelection
+  measured MissionSelection -> TournamentHoleSelection dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=13.7ms maxStep=6.8 % parallax=1 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> MissionSelection dir=Back W=1170 dur=0.261s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=19.3ms maxStep=13.3 % parallax=1 fails=0
+ok   MissionSelection
+  measured MissionSelection -> TournamentSelection dir=Forward W=1170 dur=0.266s frames=16 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=15.9ms maxStep=6.9 % parallax=0.3 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> MissionSelection dir=Back W=1170 dur=0.254s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=17.8ms maxStep=7.8 % parallax=0.3 fails=0
+ok   MissionSelection
+  measured MissionSelection -> TournamentLeaderboard dir=Forward W=1170 dur=0.267s frames=16 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=9.9ms maxStep=7.6 % parallax=0.3 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> MissionSelection dir=Back W=1170 dur=0.254s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=17.6ms maxStep=8.2 % parallax=0.3 fails=0
+ok   MissionSelection
+note: route is on MissionSelection, expected TournamentHoleSelection — re-seating via ShowScreen (NOT a tap)
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> ModeSelection dir=Forward W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=16.6ms maxStep=7.0 % parallax=1 fails=0
+ok   ModeSelection
+  measured ModeSelection -> TournamentHoleSelection dir=Back W=1170 dur=0.267s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=11.4ms maxStep=7.3 % parallax=1 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> HoleSelection dir=Forward W=1170 dur=0.266s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=79.9ms maxStep=13.3 % parallax=1 fails=0
+ok   HoleSelection
+  measured HoleSelection -> TournamentHoleSelection dir=Back W=1170 dur=0.266s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=12.6ms maxStep=6.9 % parallax=1 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> MissionSelection dir=Forward W=1170 dur=0.253s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=18.2ms maxStep=8.2 % parallax=1 fails=0
+ok   MissionSelection
+  measured MissionSelection -> TournamentHoleSelection dir=Back W=1170 dur=0.267s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=13.2ms maxStep=6.8 % parallax=1 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> TournamentSelection dir=Forward W=1170 dur=0.267s frames=16 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=17.9ms maxStep=6.9 % parallax=0.3 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> TournamentHoleSelection dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=14.2ms maxStep=6.8 % parallax=0.3 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> TournamentLeaderboard dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=9.6ms maxStep=8.3 % parallax=0.3 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> TournamentHoleSelection dir=Back W=1170 dur=0.258s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=14.4ms maxStep=13.3 % parallax=0.3 fails=0
+ok   TournamentHoleSelection
+note: route is on TournamentHoleSelection, expected TournamentSelection — re-seating via ShowScreen (NOT a tap)
+ok   TournamentSelection
+  measured TournamentSelection -> ModeSelection dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=14.1ms maxStep=9.0 % parallax=0.3 fails=0
+ok   ModeSelection
+  measured ModeSelection -> TournamentSelection dir=Back W=1170 dur=0.252s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=22.8ms maxStep=9.3 % parallax=0.3 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> HoleSelection dir=Forward W=1170 dur=0.266s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=74.2ms maxStep=13.3 % parallax=0.3 fails=0
+ok   HoleSelection
+  measured HoleSelection -> TournamentSelection dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=17.4ms maxStep=8.1 % parallax=0.3 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> MissionSelection dir=Forward W=1170 dur=0.260s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=21ms maxStep=9.8 % parallax=0.3 fails=0
+ok   MissionSelection
+  measured MissionSelection -> TournamentSelection dir=Back W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=16.3ms maxStep=7.4 % parallax=0.3 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> TournamentHoleSelection dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=11.8ms maxStep=7.9 % parallax=0.3 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> TournamentSelection dir=Back W=1170 dur=0.266s frames=16 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=11.6ms maxStep=9.6 % parallax=0.3 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> TournamentLeaderboard dir=Forward W=1170 dur=0.259s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=11.4ms maxStep=9.3 % parallax=1 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> TournamentSelection dir=Back W=1170 dur=0.253s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=17.8ms maxStep=9.4 % parallax=1 fails=0
+ok   TournamentSelection
+note: route is on TournamentSelection, expected TournamentLeaderboard — re-seating via ShowScreen (NOT a tap)
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> ModeSelection dir=Forward W=1170 dur=0.252s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=12.1ms maxStep=8.3 % parallax=0.3 fails=0
+ok   ModeSelection
+  measured ModeSelection -> TournamentLeaderboard dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=10.3ms maxStep=7.6 % parallax=0.3 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> HoleSelection dir=Forward W=1170 dur=0.262s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=80.8ms maxStep=13.3 % parallax=0.3 fails=0
+ok   HoleSelection
+  measured HoleSelection -> TournamentLeaderboard dir=Back W=1170 dur=0.264s frames=16 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=11.7ms maxStep=7.8 % parallax=0.3 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> MissionSelection dir=Forward W=1170 dur=0.255s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=19.3ms maxStep=8.7 % parallax=0.3 fails=0
+ok   MissionSelection
+  measured MissionSelection -> TournamentLeaderboard dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=10.5ms maxStep=7.4 % parallax=0.3 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> TournamentHoleSelection dir=Forward W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=12ms maxStep=7.7 % parallax=0.3 fails=0
+ok   TournamentHoleSelection
+  measured TournamentHoleSelection -> TournamentLeaderboard dir=Back W=1170 dur=0.266s frames=16 chromeMin=1 onTop=True arriverChromeMax=1 arrivalFrame=11.2ms maxStep=8.0 % parallax=0.3 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> TournamentSelection dir=Forward W=1170 dur=0.266s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=17ms maxStep=7.4 % parallax=1 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> TournamentLeaderboard dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=10.2ms maxStep=8.0 % parallax=1 fails=0
+ok   TournamentLeaderboard
+note: route is on TournamentLeaderboard, expected TournamentSelection — re-seating via ShowScreen (NOT a tap)
+ok   TournamentSelection
+  measured TournamentSelection -> TournamentLeaderboard dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=9.8ms maxStep=8.3 % parallax=1 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> TournamentSelection dir=Back W=1170 dur=0.266s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=16.5ms maxStep=7.3 % parallax=1 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> Leaderboard dir=Forward W=1170 dur=0.265s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=68.7ms maxStep=13.3 % parallax=1 fails=0
+ok   Leaderboard
+  measured Leaderboard -> TournamentSelection dir=Back W=1170 dur=0.252s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=19.8ms maxStep=8.0 % parallax=1 fails=0
+ok   TournamentSelection
+note: route is on TournamentSelection, expected TournamentLeaderboard — re-seating via ShowScreen (NOT a tap)
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> TournamentSelection dir=Forward W=1170 dur=0.254s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=16.7ms maxStep=8.5 % parallax=1 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> TournamentLeaderboard dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=9.3ms maxStep=8.0 % parallax=1 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> Leaderboard dir=Forward W=1170 dur=0.266s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=60.6ms maxStep=13.3 % parallax=1 fails=0
+ok   Leaderboard
+  measured Leaderboard -> TournamentLeaderboard dir=Back W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=13.5ms maxStep=7.2 % parallax=1 fails=0
+ok   TournamentLeaderboard
+note: route is on TournamentLeaderboard, expected Leaderboard — re-seating via ShowScreen (NOT a tap)
+ok   Leaderboard
+  measured Leaderboard -> TournamentSelection dir=Forward W=1170 dur=0.253s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=16.2ms maxStep=7.9 % parallax=1 fails=0
+ok   TournamentSelection
+  measured TournamentSelection -> Leaderboard dir=Back W=1170 dur=0.265s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=61.7ms maxStep=13.3 % parallax=1 fails=0
+ok   Leaderboard
+  measured Leaderboard -> TournamentLeaderboard dir=Forward W=1170 dur=0.267s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=11.7ms maxStep=7.6 % parallax=1 fails=0
+ok   TournamentLeaderboard
+  measured TournamentLeaderboard -> Leaderboard dir=Back W=1170 dur=0.250s frames=13 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=76.8ms maxStep=13.3 % parallax=1 fails=0
+ok   Leaderboard
+note: route is on Leaderboard, expected GeneralShop — re-seating via ShowScreen (NOT a tap)
+ok   GeneralShop
+  measured GeneralShop -> GachaHistory dir=Forward W=1170 dur=0.253s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=43.3ms maxStep=13.3 % parallax=1 fails=0
+ok   GachaHistory
+  measured GachaHistory -> GeneralShop dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=21.7ms maxStep=8.0 % parallax=1 fails=0
+ok   GeneralShop
+  measured GeneralShop -> GachaPrizes dir=Forward W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=10.8ms maxStep=8.0 % parallax=1 fails=0
+ok   GachaPrizes
+  measured GachaPrizes -> GeneralShop dir=Back W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=20.3ms maxStep=7.0 % parallax=1 fails=0
+ok   GeneralShop
+note: route is on GeneralShop, expected GachaHistory — re-seating via ShowScreen (NOT a tap)
+ok   GachaHistory
+  measured GachaHistory -> GeneralShop dir=Forward W=1170 dur=0.252s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=22.5ms maxStep=8.1 % parallax=1 fails=0
+ok   GeneralShop
+  measured GeneralShop -> GachaHistory dir=Back W=1170 dur=0.250s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=36.1ms maxStep=13.3 % parallax=1 fails=0
+ok   GachaHistory
+  measured GachaHistory -> GachaPrizes dir=Forward W=1170 dur=0.258s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=10.8ms maxStep=13.3 % parallax=1 fails=0
+ok   GachaPrizes
+  measured GachaPrizes -> GachaHistory dir=Back W=1170 dur=0.250s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=37.7ms maxStep=13.3 % parallax=1 fails=0
+ok   GachaHistory
+note: route is on GachaHistory, expected GachaPrizes — re-seating via ShowScreen (NOT a tap)
+ok   GachaPrizes
+  measured GachaPrizes -> GeneralShop dir=Forward W=1170 dur=0.250s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=19.8ms maxStep=7.1 % parallax=1 fails=0
+ok   GeneralShop
+  measured GeneralShop -> GachaPrizes dir=Back W=1170 dur=0.251s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=13.5ms maxStep=7.1 % parallax=1 fails=0
+ok   GachaPrizes
+  measured GachaPrizes -> GachaHistory dir=Forward W=1170 dur=0.250s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=35.3ms maxStep=13.3 % parallax=1 fails=0
+ok   GachaHistory
+  measured GachaHistory -> GachaPrizes dir=Back W=1170 dur=0.266s frames=16 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=12.2ms maxStep=6.8 % parallax=1 fails=0
+ok   GachaPrizes
+A8: ScreenEntryMotion over the sweep — SkippedForPush=94 for 84 measured pushes (plus the in-pillar Ensure re-seats, which are pushes too), Risen=2 — the cross-pillar Ensure re-seats, which take the fade and are SUPPOSED to rise. A pushed screen that also rose would play two entrances in 0.25 s; none did.
+A1 -> Docs/Diagnostics/_capture/game_polish_a_invariants.json  measured=84 fail=0
+--- push sweep complete (84 pairs measured) ---
+note: route is on GachaPrizes, expected Home — re-seating via ShowScreen (NOT a tap)
+ok   Home
+SHOT home [screen=Home] -> Docs/Specs/Active/game_polish_a/screenshots/push_01_home__Home.png (3238 KB)
+tapping bottom-nav TEE (interactable=True) Home -> ModeSelection  [fade]
+TIMEOUT ModeSelection
+SHOT modeselection [screen=TournamentLeaderboard] -> Docs/Specs/Active/game_polish_a/screenshots/push_02_modeselection__TournamentLeaderboard.png (2687 KB)   *** ROUTE DRIFT: labelled 'modeselection' but the screen is TournamentLeaderboard ***
+note: route is on TournamentLeaderboard, expected ModeSelection — re-seating via ShowScreen (NOT a tap)
+ok   ModeSelection
+  card 'ModeCard(Clone)' mode='versus_1v1' route='matchmaking_1v1'
+  card 'ModeCard(Clone)' mode='practice' route='hole_select'
+  card state = Expanded
+tapping mode card PLAY -> Practice on 'ModeCard(Clone)' via the real 'ActionButton' ModeSelection -> HoleSelection  [PUSH expected]
+  measured ModeSelection -> HoleSelection dir=Forward W=1170 dur=0.251s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=77.1ms maxStep=13.3 % parallax=1 fails=0
+ok   HoleSelection
+SHOT holeselection [screen=HoleSelection] -> Docs/Specs/Active/game_polish_a/screenshots/push_03_holeselection__HoleSelection.png (2622 KB)
+tapping HoleSelection LeaderboardButton (interactable=True) HoleSelection -> Leaderboard  [fade]
+ok   Leaderboard
+SHOT leaderboard [screen=Leaderboard] -> Docs/Specs/Active/game_polish_a/screenshots/push_04_leaderboard__Leaderboard.png (2836 KB)
+note: leaderboard back — no active Back widget; ScreenManager.GoBack() (NOT a tap)
+ok   HoleSelection
+note: hole-selection back — no active Back widget; ScreenManager.GoBack() (NOT a tap)
+ok   ModeSelection
+  card 'ModeCard(Clone)' mode='versus_1v1' route='matchmaking_1v1'
+  card 'ModeCard(Clone)' mode='practice' route='hole_select'
+  card 'ModeCard(Clone)' mode='tournaments' route='tournaments'
+  card 'ModeCard(Clone)' mode='driving_range' route='none'
+  card 'ModeCard(Clone)' mode='missions' route='mission_select'
+  card state = Expanded
+tapping mode card PLAY -> Missions on 'ModeCard(Clone)' via the real 'ActionButton' ModeSelection -> MissionSelection  [PUSH expected]
+  measured ModeSelection -> MissionSelection dir=Forward W=1170 dur=0.254s frames=15 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=17.6ms maxStep=8.7 % parallax=1 fails=0
+ok   MissionSelection
+SHOT missionselection [screen=MissionSelection] -> Docs/Specs/Active/game_polish_a/screenshots/push_05_missionselection__MissionSelection.png (2546 KB)
+note: mission-selection back — no active Back widget; ScreenManager.GoBack() (NOT a tap)
+ok   ModeSelection
+note: TournamentSelection — no player path reachable from this harness; ShowScreen() for the REST-STATE capture only (NOT a tap, never measured)
+ok   TournamentSelection
+SHOT tournamentselection [screen=TournamentSelection] -> Docs/Specs/Active/game_polish_a/screenshots/push_06_tournamentselection__TournamentSelection.png (2726 KB)
+note: TournamentLeaderboard — no player path reachable from this harness; ShowScreen() for the REST-STATE capture only (NOT a tap, never measured)
+ok   TournamentLeaderboard
+SHOT tournamentleaderboard [screen=TournamentLeaderboard] -> Docs/Specs/Active/game_polish_a/screenshots/push_07_tournamentleaderboard__TournamentLeaderboard.png (2686 KB)
+note: TournamentHoleSelection — no player path reachable from this harness; ShowScreen() for the REST-STATE capture only (NOT a tap, never measured)
+ok   TournamentHoleSelection
+SHOT tournamentholeselection [screen=TournamentHoleSelection] -> Docs/Specs/Active/game_polish_a/screenshots/push_08_tournamentholeselection__TournamentHoleSelection.png (2527 KB)
+note: route is on TournamentHoleSelection, expected Home — re-seating via ShowScreen (NOT a tap)
+ok   Home
+tapping bottom-nav GACHA (interactable=True) Home -> GeneralShop  [fade]
+TIMEOUT GeneralShop
+SHOT generalshop [screen=GachaPrizes] -> Docs/Specs/Active/game_polish_a/screenshots/push_09_generalshop__GachaPrizes.png (2818 KB)   *** ROUTE DRIFT: labelled 'generalshop' but the screen is GachaPrizes ***
+tapping GeneralShop HistoryChip (interactable=True) GachaPrizes -> GachaHistory  [PUSH expected]
+  measured GachaPrizes -> GachaHistory dir=Forward W=1170 dur=0.253s frames=14 chromeMin=1 onTop=True arriverChromeMax=0 arrivalFrame=35.9ms maxStep=13.3 % parallax=1 fails=0
+ok   GachaHistory
+SHOT gachahistory [screen=GachaHistory] -> Docs/Specs/Active/game_polish_a/screenshots/push_10_gachahistory__GachaHistory.png (2927 KB)
+note: GachaPrizes — no player path reachable from this harness; ShowScreen() for the REST-STATE capture only (NOT a tap, never measured)
+ok   GachaPrizes
+SHOT gachaprizes [screen=GachaPrizes] -> Docs/Specs/Active/game_polish_a/screenshots/push_11_gachaprizes__GachaPrizes.png (2818 KB)
+note: route is on GachaPrizes, expected Home — re-seating via ShowScreen (NOT a tap)
+ok   Home
+tapping bottom-nav INVENTORY (interactable=True) Home -> Inventory  [fade]
+ok   Inventory
+SHOT inventory_tab0 [screen=Inventory] -> Docs/Specs/Active/game_polish_a/screenshots/push_12_inventory_tab0__Inventory.png (2996 KB)
+tapping inventory tab 1 ('BAGSTab')
+SHOT inventory_tab1 [screen=Inventory] -> Docs/Specs/Active/game_polish_a/screenshots/push_13_inventory_tab1__Inventory.png (3062 KB)
+tapping inventory tab 2 ('BALLSTab')
+SHOT inventory_tab2 [screen=Inventory] -> Docs/Specs/Active/game_polish_a/screenshots/push_14_inventory_tab2__Inventory.png (3237 KB)
+tapping inventory tab 3 ('ITEMSTab')
+SHOT inventory_tab3 [screen=Inventory] -> Docs/Specs/Active/game_polish_a/screenshots/push_15_inventory_tab3__Inventory.png (3268 KB)
+tapping inventory tab 0 ('CLUBSTab')
+note: route is on Inventory, expected Home — re-seating via ShowScreen (NOT a tap)
+ok   Home
+tapping bottom-nav CHARACTERS (interactable=True) Home -> Roster  [fade]
+ok   Roster
+SHOT roster [screen=Roster] -> Docs/Specs/Active/game_polish_a/screenshots/push_16_roster__Roster.png (3110 KB)
+tapping the real SettingsButton
+SHOT settings_open [screen=Roster] -> Docs/Specs/Active/game_polish_a/screenshots/push_17_settings_open__Roster.png (2505 KB)   *** ROUTE DRIFT: labelled 'settings_open' but the screen is Roster ***
+tapping bottom-nav HOME (interactable=True) Roster -> Home  [fade]
+ok   Home
+SHOT home_return [screen=Home] -> Docs/Specs/Active/game_polish_a/screenshots/push_18_home_return__Home.png (3237 KB)
+A1 -> Docs/Diagnostics/_capture/game_polish_a_invariants.json  measured=87 fail=0
+=== done: push pass complete ===

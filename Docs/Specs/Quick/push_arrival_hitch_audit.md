@@ -76,6 +76,9 @@ transform every frame, asserted by the probe and by `LayeredPushArrivalTests`).
 
 Blocked while another session drives it. None of these change the code; they are the evidence.
 
+> **UPDATE 2026-09-09 (`polish_regressions_0909` close-out).** The Editor is free; the probe and the
+> test run are DONE and quoted below. Two capture items remain and are named at the end.
+
 - `game_polish_a_invariants.json` regenerated (`GOLFIN ▸ Game Polish ▸ Probe — push`): `fail = 0`,
   and every record now carries `arriverOnTop`, `arriverChromeAlphaMax`, `arrivalFrameMs`,
   `maxStepFrac`, `parallaxFactor`.
@@ -87,6 +90,50 @@ Blocked while another session drives it. None of these change the code; they are
   logging `instant`; the Prizes arrival under the modal fade.
 - Test run: `LayeredPushTests` (+ the new `LayeredPushArrivalTests`), `GpsPolishMotionTests`
   (+ `StaggerUnderPushTests`), then the full EditMode sweep.
+
+### 4a · DONE — the probe (`GOLFIN ▸ Game Polish ▸ Probe — push`), 2026-09-09
+
+`Docs/Specs/Quick/media/polish_regressions_0909/push_invariants_f7800caa8.json`
+(+ `push_probe_run.log`). **`measured = 87`, `fail = 0`, zero records carrying any `fails`.**
+All five fields §4 asked for are present on every record:
+
+| invariant | result across all 87 pushes | what it settles |
+|---|---|---|
+| `arriverOnTop` | **false on 0 records** | P0. The arriver is the last sibling on every frame of every push — the 12 occluded pairs of §3 are gone. |
+| `maxStepFrac` | max **0.1333** | Fix 1's cap, exactly `MaxTweenStep / PushDur` = (1/30)/0.25. No frame advanced more than two frames' worth of travel. |
+| `parallaxFactor` | **1.0 on all 55 same-backdrop pushes, 0.3 on all 32 cross-fade pushes** | Fix 3, with no pair on the wrong side of the split. |
+| `arriverChromeAlphaMax` | 0 → 1, `fails = 0` | The arriver's chrome is off wherever the rule requires it (an identical backdrop underneath). |
+| `arrivalFrameMs` | 9.3 – 136.6 ms; same-backdrop 9.3 – 79.9 | Fix 4's number. Worst is `TournamentLeaderboard → HoleSelection` at 136.6 ms. |
+
+⚠️ **A stale run nearly passed as this one.** The first attempt was launched while the Editor still
+held the assembly from a `git checkout 36dc3d480` made for the console sweep; it reported
+`measured=87 fail=0` and looked fine, and the ONLY thing that gave it away was that its records
+carried the OLD field set. `fail = 0` from a build without the fix is not evidence of the fix. The
+JSON was deleted and re-run against main's assembly, and the timestamp (`utc 2026-09-09 00:59:03Z`)
+belongs to that second run.
+
+### 4b · DONE — the test run
+
+Full EditMode sweep at `f7800caa8`: **2911 total, 2908 passed, 0 failed, 3 skipped** — including
+`LayeredPushTests`, `LayeredPushArrivalTests`, `GpsPolishMotionTests` and `StaggerUnderPushTests`.
+
+`LayeredPushArrivalTests.NoSingleFrameAdvancesMoreThanTwoFramesOfTravel` had thrown a
+NullReferenceException on every run since `98e2fd3d5` — `UiMotion.PushDur` is a `const` field and the
+fixture read it with `GetProperty`, which returns null — so the guard had never once run. Fixed in
+`b6ef935b6`; it is green now, and `maxStepFrac ≤ 0.1333` above is the same property measured over 87
+real pushes.
+
+### 4c · STILL OWED — two capture items
+
+Both need a SECOND recording from a `36dc3d480` checkout, which is a full Editor recompile cycle each:
+
+- Before/after 5-frame strips for `ModeSelection → MissionSelection` and `GachaPrizes → GeneralShop`.
+- The A/B parallax clip (0.3 vs 1.0). `SameBackdropParallaxFactor` is a `const`, so the A side needs a
+  temporary edit + rebuild rather than a runtime flip. The probe already pins WHICH value every pair
+  ships with (1.0 on all 55 same-backdrop pairs); the clip is for Cesar to overrule the choice, and
+  1.0 ships unless he does.
+- Also still open from the original list: the per-frame content-X log, and the P1 evidence
+  (`Rebind x10`, `ShowPrizes` logging `instant`, the Prizes arrival under the modal fade).
 
 Compile status at the time of writing: **Assembly-CSharp, Assembly-CSharp-Editor and
 Golfin.UI.Polish.Tests all build clean (0 errors)**, checked with Unity's own Roslyn against the
