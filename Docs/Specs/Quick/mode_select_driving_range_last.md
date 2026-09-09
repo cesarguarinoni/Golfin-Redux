@@ -98,9 +98,26 @@ the CSV row and says plainly that this Inspector value is *not* covered by the n
   appended (the `.csproj` is a snapshot): **Assembly-CSharp 0 errors, Assembly-CSharp-Editor 0
   errors, GolfinRedux.Tests.EditMode 0 errors.**
 
-**Not verified:** neither guard has been *executed by Unity* — the Editor is owned by another
-session, so the EditMode test has not been run and the build hook has not fired. Their logic was
-verified out-of-process as described above, but a real `tests-run` is still owed.
+**EditMode suite run in Unity (2026-09-10).** Both new tests executed and passed:
+
+```
+GolfinRedux.Tests.EditMode.ModesFallbackCsvTests.FallbackCsv_IsAVerbatimCopyOfTheBundledCsv  Passed
+GolfinRedux.Tests.EditMode.ModesFallbackCsvTests.FallbackCsv_IsWellFormed                    Passed
+```
+
+Named individually on purpose — a filtered run reports `FailedTests` for the filter only while
+`TotalTests` counts the whole mode, so "0 failed" alone would not prove they ran. The full
+unfiltered sweep is green: **2997 total, 2994 passed, 0 failed, 3 skipped** in 2m36s. The three
+skips are the pre-existing `HoleCompleteDriverTests` ignores (Stage C1 no-ops), unrelated to this
+task. `ModesOverlayTests` — which pins the bundled CSV's contents — passed all 11, so the order
+swap broke nothing.
+
+Unity also compiled all three assemblies itself: `ModesFallbackCsvTests`, both test methods,
+`ModesDatabaseCSV.FallbackCsv` and `ModesFallbackSync` are all present in
+`Library/ScriptAssemblies/`, confirming the hand-written `.cs.meta` files imported cleanly.
+
+Still not exercised: `ModesFallbackBuildHook` has not fired, because that needs an actual player
+build. Its logic is the same `Validate()` the passing test covers.
 
 ## Also worth knowing
 
