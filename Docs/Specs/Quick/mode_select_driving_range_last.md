@@ -22,8 +22,8 @@ Swapped the two:
 
 Nothing else moved: no titles, fees, rewards, targets or `locked` flags were touched.
 
-`ModesDatabaseCSV.AddFallbackModes()` (the hardcoded mirror used only when the CSV fails to
-load) got the same swap so it does not disagree with the CSV.
+The hardcoded fallback that mirrors the CSV got the same swap — and then got replaced
+outright; see below.
 
 ## Published, not just edited
 
@@ -49,15 +49,60 @@ Range (LOCKED). Bundled CSV agrees.
   refs): **0 errors**. The Editor was NOT touched — another session is driving it, so the
   Editor-free path (`reference_compile_check_without_unity`) was used instead of Unity MCP.
 
-## Known pre-existing drift, NOT fixed here (out of scope)
+## Follow-up in the same task — the fallback, and guards against it drifting again
 
-`AddFallbackModes()` disagrees with the CSV in three ways that predate this task and that this
-change deliberately left alone:
+Cesar: *"fix the fallback drift too"*, then *"and put guards so it does not keep drifting"*.
 
-- it omits `tournaments` entirely;
-- `missions` is `locked = true, target = "none"` there but `locked=false, target=mission_select`
-  in the CSV (stale since `missions_v1` unlocked the mode);
-- `missions.rewards` is 20 there vs 35 in the CSV.
+`AddFallbackModes()` — the path that runs when `Resources.Load` cannot produce modes.csv — was a
+hand-built list of five `ModeData` objects: a second, independent model of the same rows, kept in
+sync by whoever remembered. Nobody did. It had drifted three ways:
 
-The fallback only runs when `Resources.Load` of the CSV fails, so none of this is reachable in a
-shipped build — but it is worth a follow-up.
+- no `tournaments` row at all (declined on purpose in `tournaments_mode_card` SPEC §87 — "if the
+  CSV is missing we have bigger problems");
+- `missions` still `locked = true, target = "none"`, six weeks after `missions_v1` unlocked it;
+- `missions.rewards = 20` against the CSV's 35.
+
+Had it ever fired, the player would have been shown a game that does not exist: a Coming Soon
+Missions card and no Tournaments card.
+
+**Fixed by removing the duplication, not by re-typing it.** The fallback is now
+`ModesDatabaseCSV.FallbackCsv` — a verbatim copy of modes.csv as a string — parsed by
+`LoadFromCSV` itself. There are no longer any fields to keep in sync, only one string that either
+equals the file or does not. The copy was generated from the file, never transcribed. A side
+benefit: the fallback now honours the content overlay and the withhold rule, which the hardcoded
+list bypassed entirely.
+
+**Guards (both new):**
+
+| Guard | Where | Fires |
+|---|---|---|
+| `ModesFallbackCsvTests` | `Assets/Tests/EditMode/` | fast loop — line-by-line compare that names the drifted row, plus a well-formedness check (column count, unique ids, unique `order`) |
+| `ModesFallbackBuildHook` | `Assets/Scripts/UI/ModeSelect/Editor/` | `IPreprocessBuildWithReport` — **fails the build** on divergence, modelled on `LocalizationBuildHook` |
+
+And because a guard that only accuses gets skipped when the repair is hand-editing a string
+literal, `Tools ▸ Golfin ▸ Modes ▸ Sync Fallback CSV` regenerates it in one click
+(`Tools ▸ Golfin ▸ Modes ▸ Validate Fallback CSV` reports without writing).
+
+`VersusResultHandler`'s `_fallbackReward` tooltip pointed at `AddFallbackModes()`; it now points at
+the CSV row and says plainly that this Inspector value is *not* covered by the new guards.
+
+## Verification of the follow-up
+
+- Embedded copy proved **byte-identical** to modes.csv (1259 bytes both sides), using the same
+  markers and normalisation the C# guard uses.
+- Drift/repair round trip simulated against the real file: a CSV-only edit reads **DRIFTED** (build
+  would fail), `Sync()` repairs it, and the repair touches **exactly one line**. This proves the
+  Editor tool's anchors match the file as written.
+- Compile-checked with Unity's own Roslyn, in dependency order, each stage pointed at the freshly
+  built dll rather than the stale `Library/ScriptAssemblies` copy, and with the two NEW files
+  appended (the `.csproj` is a snapshot): **Assembly-CSharp 0 errors, Assembly-CSharp-Editor 0
+  errors, GolfinRedux.Tests.EditMode 0 errors.**
+
+**Not verified:** neither guard has been *executed by Unity* — the Editor is owned by another
+session, so the EditMode test has not been run and the build hook has not fired. Their logic was
+verified out-of-process as described above, but a real `tests-run` is still owed.
+
+## Also worth knowing
+
+`.cs.meta` files for the two new scripts were hand-written with fresh GUIDs (Lesson R: always
+commit the meta alongside the .cs). Unity will accept them on import.

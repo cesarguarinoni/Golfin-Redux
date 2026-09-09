@@ -93,21 +93,26 @@ namespace GolfinRedux.UI.ModeSelect
             var seen = new HashSet<string>();
             int overlaid = 0, deactivated = 0, withheld = 0;
 
+            // The bundled table: normally the Resources CSV, and <see cref="FallbackCsv"/> — a
+            // verbatim copy of that same file — when it cannot be loaded. Both go through the
+            // parse below, which is the whole point: the fallback is the same TEXT read by the
+            // same code, not a second hand-maintained model of it that can disagree field by
+            // field. See FallbackCsv for what that used to cost.
             TextAsset csv = Resources.Load<TextAsset>(CsvResourcePath);
-            if (csv == null)
+            string csvText = csv != null ? csv.text : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(csvText))
             {
-                Debug.LogError($"[ModesDatabaseCSV] Could not load CSV at Resources/{CsvResourcePath}.csv");
-                // Fallback: populate minimal hardcoded data so UI doesn't break in editor
-                AddFallbackModes();
-                return;
+                Debug.LogError($"[ModesDatabaseCSV] Could not load CSV at Resources/{CsvResourcePath}.csv " +
+                               "— parsing the embedded fallback copy instead.");
+                csvText = FallbackCsv;
             }
 
-            string[] lines = csv.text.Split('\n');
+            string[] lines = csvText.Split('\n');
             if (lines.Length < 2)
             {
-                Debug.LogError("[ModesDatabaseCSV] CSV has no data rows");
-                AddFallbackModes();
-                return;
+                Debug.LogError("[ModesDatabaseCSV] CSV has no data rows — parsing the embedded fallback copy instead.");
+                lines = FallbackCsv.Split('\n');
             }
 
             // Parse header into the index map ContentFields.Csv reads a bundled column by.
@@ -295,19 +300,43 @@ namespace GolfinRedux.UI.ModeSelect
             return cols.ToArray();
         }
 
-        private void AddFallbackModes()
-        {
-            // RP amounts below MIRROR modes.csv and must move with it — they are what the game runs on
-            // when the CSV fails to load, so a stale value here silently reinstates the pre-rebalance
-            // economy (RP_REBALANCE.md, applied 2026-08-12: versus 200→20, practice fee 100→10 /
-            // rewards 50→5, missions 200→20).
-            var versus = new ModeData { id = "versus_1v1",   title = "Multiplayer",    tagline = "1v1",                               description = "Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.", entryFee = 0, rewards = 20, locked = false, target = "matchmaking_1v1", order = 1, versusStrokeCapOverPar = 5 };
-            versus.rewardList.Add(new HoleReward(RewardType.Points, 20));
-            _modes.Add(versus);
-            _modes.Add(new ModeData { id = "practice",     title = "PRACTICE",      tagline = "Sharpen your skills.",              description = "Practice on any course.",             entryFee = 10, rewards = 5,   locked = false, target = "hole_select",    order = 2 });
-            _modes.Add(new ModeData { id = "driving_range",title = "DRIVING RANGE",  tagline = "Coming Soon.",                      description = "Practice long shots.",                entryFee = 0,   rewards = 0,   locked = true,  target = "none",           order = 4 });
-            _modes.Add(new ModeData { id = "missions",     title = "MISSIONS",       tagline = "Coming Soon.",                      description = "Complete challenges for rewards.",     entryFee = 0,   rewards = 20,  locked = true,  target = "none",           order = 3 });
-        }
+        /// <summary>
+        /// A VERBATIM copy of <c>Assets/Resources/Data/modes.csv</c>, parsed by
+        /// <see cref="LoadFromCSV"/> itself when <c>Resources.Load</c> cannot produce the real one.
+        ///
+        /// <para>
+        /// THIS REPLACES A HAND-BUILT LIST OF <see cref="ModeData"/> OBJECTS, and the reason is the
+        /// only thing worth remembering here. That list was a second, independent model of the same
+        /// five rows, so every CSV edit had to be mirrored into it by hand — and it silently was not.
+        /// By 2026-09-09 it claimed Missions was <c>locked</c> with <c>target=none</c> (six weeks
+        /// after missions_v1 unlocked it), paid 20 RP where the CSV pays 35, and had no
+        /// <c>tournaments</c> row at all. Had it ever fired, a player would have been shown a
+        /// fabricated game: a Coming Soon Missions card and no Tournaments card.
+        /// </para>
+        /// <para>
+        /// A copy of the TEXT cannot drift that way. There are no fields to keep in sync — only one
+        /// string, which is either equal to the file or not, and two guards answer that
+        /// mechanically: <c>ModesFallbackCsvTests</c> in the EditMode suite, and
+        /// <c>ModesFallbackBuildHook</c>, which FAILS THE BUILD when they diverge. Regenerate with
+        /// <c>Tools ▸ Golfin ▸ Modes ▸ Sync Fallback CSV</c> after editing modes.csv.
+        /// </para>
+        /// <para>
+        /// Parsing it through <see cref="LoadFromCSV"/> also means the fallback now honours the
+        /// content overlay and the withhold rule, which the hardcoded list bypassed entirely.
+        /// </para>
+        /// </summary>
+        /// <remarks>
+        /// Flush-left on purpose: a verbatim string keeps its own indentation, and the guards
+        /// compare this text to the file byte for byte.
+        /// </remarks>
+        public const string FallbackCsv =
+@"id,title,tagline,description,entryFee,rewards,locked,target,order,versusStrokeCapOverPar,reward1Type,reward1Amount,reward2Type,reward2Amount,reward3Type,reward3Amount,rewardsTextKey
+practice,PRACTICE,Sharpen your skills on any hole.,Practice your golf skills on any course. Choose a hole and tee off at your own pace — no pressure.,10,5,false,hole_select,2,0,,,,,,,
+versus_1v1,Multiplayer,1v1,""Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory."",0,20,false,matchmaking_1v1,1,5,Points,20,,,,,
+tournaments,TOURNAMENTS,Be the best and earn rewards,""Enter live tournaments, play the featured holes, and climb the leaderboard before time runs out. Finish high to claim your share of the prizes — every stroke counts."",0,0,false,tournaments,3,0,,,,,,,MODE_REWARDS_VARY
+driving_range,DRIVING RANGE,Coming Soon — practice your drives.,A dedicated driving range mode where you can practice long shots and experiment with different clubs.,0,0,true,none,5,0,,,,,,,
+missions,MISSIONS,Earn Reward Points by completing missions,Complete special challenges and objectives to earn bonus rewards and exclusive items.,0,35,false,mission_select,4,0,,,,,,,MODE_REWARDS_MISSIONS_AVG
+";
 
         public List<ModeData> GetAllModes()
         {

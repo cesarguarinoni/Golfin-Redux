@@ -28,8 +28,11 @@ namespace Golfin.UI.Modals
     /// </summary>
     public class VersusResultHandler : MonoBehaviour
     {
-        [Tooltip("Fallback reward if ModesDatabaseCSV is unavailable. Matches the hardcoded " +
-                 "fallback in ModesDatabaseCSV.AddFallbackModes() for 'versus_1v1'. " +
+        [Tooltip("Fallback reward if ModesDatabaseCSV is unavailable. Must match the " +
+                 "versus_1v1 row of Assets/Resources/Data/modes.csv, which reaches the " +
+                 "game through ModesDatabaseCSV.FallbackCsv. That copy is guarded " +
+                 "against drift; this Inspector value is NOT, so re-check it whenever " +
+                 "the row's reward changes. " +
                  "Rebalanced 200 → 20 with RP_REBALANCE.md (2026-08-12).")]
         [SerializeField] int _fallbackReward = 20;
 
