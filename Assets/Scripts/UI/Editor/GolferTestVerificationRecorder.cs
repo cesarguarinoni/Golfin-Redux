@@ -274,6 +274,14 @@ namespace Golfin.EditorTools
         float _gripWorstR = float.NaN;
         float _headAtBallM = float.NaN;
 
+        // -- golfer_club_grip 3.11.4 -- club.faceSquare -------------------------------
+        // The FINAL SHAPE has no IK, so the club's roll about the shaft IS the authored
+        // ClubSlot offset (3.11.3). These are that offset's verdict, measured at address.
+        float _faceAzErrDeg   = float.NaN;   // angle in PLAN between the face normal and the aim
+        float _faceEdgeAimDeg = float.NaN;   // angle between the leading edge and the aim (want 90)
+        float _faceRollFixDeg = float.NaN;   // roll about the shaft that would zero _faceAzErrDeg
+        float _faceLoftDeg    = float.NaN;   // face normal above the shaft-perpendicular plane
+
         // ── golfer_club_grip §3.7 — hand orientation and palm offset ────────────────────
         // grip.hand.onShaft_* used to measure the hand BONE ORIGIN (the wrist), so 0.0000 m was
         // scored by putting the shaft THROUGH the wrist while the palm sat beside the club. These
@@ -758,6 +766,346 @@ namespace Golfin.EditorTools
         /// <summary>3.9.6 retired grip.hands.apart to a Mark - a golf grip overlaps.</summary>
         void MarkApart(bool ok, string msg) => Mark("(retired) grip.hands.apart " + (ok ? "in band" : "out of band") + " - " + msg);
 
+        /// <summary>
+        /// golfer_club_grip 3.11.4 -- club.faceSquare. Is the blade square to the aim?
+        ///
+        /// <para>ON THE 90 deg. 3.11.4 asks for "the angle between the face normal and the aim,
+        /// 90 +/- 5". Taken literally of the NORMAL that is what an OPEN/SHUT face looks like --
+        /// a normal perpendicular to the aim points at the golfer's feet. The quantity that IS
+        /// exactly 90 deg on a square club is the LEADING EDGE against the aim, which is also
+        /// what 3.9.7 called "the blade orientation". Both are reported and BOTH are required:
+        /// faceEdgeVsAim is the spec's 90 +/- 5, and the plan azimuth error of the normal is the
+        /// same fact stated as 0 +/- 5, so the row cannot be passed by a club square in name
+        /// only.</para>
+        ///
+        /// <para>The loft (the normal's tilt out of the shaft-perpendicular plane) is reported
+        /// and deliberately NOT penalised -- a lofted face cannot be parallel to a horizontal
+        /// aim vector, and demanding that would be demanding a club with no loft.</para>
+        /// </summary>
+        void MeasureFaceSquare(string id, Transform slot, Component shot, string where)
+        {
+            Transform head = null; Vector3 faceLocal = Vector3.zero;
+            if (slot != null)
+            {
+                var kids = slot.GetComponentsInChildren<Transform>(true);
+                var drvHead = kids.FirstOrDefault(x => x.name == "ClubHead" && x.gameObject.activeInHierarchy);
+                var ptrHead = kids.FirstOrDefault(x => x.name == "Clubhead" && x.gameObject.activeInHierarchy);
+                if (drvHead != null) { head = drvHead; faceLocal = DriverFaceLocal; }
+                else if (ptrHead != null) { head = ptrHead; faceLocal = PutterFaceLocal; }
+            }
+            if (head == null || shot == null || slot == null)
+            {
+                Assert(id, false, "cannot measure at " + where + ": slot=" + (slot != null) +
+                       " activeHead=" + (head == null ? "<none>" : head.name) + " shot=" + (shot != null));
+                return;
+            }
+
+            float hAim = Heading(shot);
+            // the same aim vector stance.*.swingsDownTheAim compares the swing direction with
+            Vector3 aimDir = new Vector3(Mathf.Cos(hAim), 0f, Mathf.Sin(hAim));
+            Vector3 fN = head.TransformDirection(faceLocal).normalized;
+            float loft = 90f - Vector3.Angle(fN, slot.up);     // slot +Y is butt -> head
+
+            Vector3 fPlan = Vector3.ProjectOnPlane(fN, Vector3.up);
+            if (fPlan.sqrMagnitude < 1e-8f)
+            {
+                Assert(id, false, "at " + where + " the face normal is vertical in plan (loft " +
+                       F(loft) + " deg) -- there is no azimuth to compare with the aim");
+                return;
+            }
+            fPlan = fPlan.normalized;
+            float azErr = Vector3.Angle(fPlan, aimDir);
+            Vector3 edge = Vector3.Cross(fN, Vector3.up);      // horizontal line lying in the face plane
+            float edgeAim = edge.sqrMagnitude < 1e-8f ? float.NaN : Vector3.Angle(edge.normalized, aimDir);
+
+            // -- the roll the 3.11.3 authoring pass bakes into the slot's local rotation --------
+            // SOLVED, not inferred from the azimuth error. The shaft is not vertical (it carries
+            // the lie angle), so a roll of theta about it does NOT move the PLAN azimuth by
+            // theta -- reading the azimuth error off as the roll would leave a residual that
+            // grows with the lie. Rolling the slot about its own local +Y by theta is the same
+            // as rotating the world face normal about the world shaft axis by theta, so the
+            // exact angle is found by scanning that one-parameter family.
+            Vector3 sWorld = slot.up;                      // world shaft axis, butt -> head
+            float rollFix = 0f, bestErr = float.MaxValue;
+            for (int i = 0; i <= 7200; i++)
+            {
+                float th = -180f + i * 0.05f;
+                Vector3 p = Vector3.ProjectOnPlane(Quaternion.AngleAxis(th, sWorld) * fN, Vector3.up);
+                if (p.sqrMagnitude < 1e-8f) continue;
+                float e = Vector3.Angle(p.normalized, aimDir);
+                if (e < bestErr) { bestErr = e; rollFix = th; }
+            }
+            Quaternion newLocal = slot.localRotation * Quaternion.AngleAxis(rollFix, Vector3.up);
+
+            // How far the VISIBLE head sits from the ball. club.headAtBall measures ClubEnd, which
+            // lies ON the roll axis and therefore cannot move when the slot is rolled; the head
+            // MESH is ~50 mm off that axis, so a large roll swings it by up to twice that. This is
+            // the number that says whether the club still looks like it is at the ball.
+            string headBall = "n/a";
+            var mfHead = head.GetComponent<MeshFilter>();
+            var ballTf = BallTransform();
+            if (mfHead != null && mfHead.sharedMesh != null && ballTf != null)
+            {
+                Vector3 cNow = head.TransformPoint(mfHead.sharedMesh.bounds.center);
+                // where that centre lands AFTER the solved roll
+                Vector3 cAfter = slot.position + Quaternion.AngleAxis(rollFix, sWorld) * (cNow - slot.position);
+                Vector3 b = ballTf.position;
+                float dNow   = Vector3.Distance(new Vector3(cNow.x, 0f, cNow.z),   new Vector3(b.x, 0f, b.z));
+                float dAfter = Vector3.Distance(new Vector3(cAfter.x, 0f, cAfter.z), new Vector3(b.x, 0f, b.z));
+                headBall = "head-mesh centre to ball in plan: now " + F(dNow) + " m, after the solved roll " + F(dAfter) + " m";
+            }
+
+            // WHICH POSE this was measured in. The putt solve reported a GripTarget world
+            // rotation bit-identical to the drive address, which is either (a) the two address
+            // clips genuinely sharing their hand keys, or (b) the putt pose never taking. The
+            // difference decides whether PutterSlot's authored roll is the right number, so it
+            // is logged rather than assumed. Also logs golfer-to-ball, because PuttGripOnGreen
+            // moves the BALL to the green without re-placing the GOLFER -- so every distance in
+            // that section is measured across the hole and means nothing.
+            {
+                var rootT = slot.root;
+                var gt = rootT.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == "GripTarget");
+                Animator hAnim = rootT.GetComponentsInChildren<Animator>(true)
+                                      .FirstOrDefault(a => a.avatar != null && a.avatar.isHuman);
+                Transform hl = hAnim != null ? hAnim.GetBoneTransform(HumanBodyBones.LeftHand)  : null;
+                Transform hr = hAnim != null ? hAnim.GetBoneTransform(HumanBodyBones.RightHand) : null;
+                var bt = BallTransform();
+                var st0 = hAnim != null ? hAnim.GetCurrentAnimatorStateInfo(0) : default;
+                Mark("3.11.3 POSE  [" + id + " @ " + where + "]" +
+                     " animator=" + (hAnim == null ? "<none>" : CurrentState(hAnim) +
+                        " normTime=" + F(st0.normalizedTime % 1f) +
+                        " inTransition=" + hAnim.IsInTransition(0)) +
+                     " | GripTarget.rotation=" + (gt == null ? "<none>" : gt.rotation.ToString("F5")) +
+                     " | LeftHand.rotation=" + (hl == null ? "<none>" : hl.rotation.ToString("F5")) +
+                     " | RightHand.rotation=" + (hr == null ? "<none>" : hr.rotation.ToString("F5")) +
+                     " | golfer=" + V(rootT.position) +
+                     " | ball=" + (bt == null ? "<none>" : V(bt.position)) +
+                     " | golfer-to-ball in plan=" + (bt == null ? "n/a" :
+                        F(Vector3.Distance(new Vector3(rootT.position.x, 0f, rootT.position.z),
+                                           new Vector3(bt.position.x, 0f, bt.position.z)))) + " m");
+            }
+
+            Mark("3.11.3 SOLVE [" + id + " @ " + where + "] slot=" + slot.name +
+                 " | slot.localRotation=" + slot.localRotation.ToString("F5") +
+                 " localEuler=" + V(slot.localEulerAngles) +
+                 " | slot.rotation(world)=" + slot.rotation.ToString("F5") +
+                 " | shaftWorld=" + V(sWorld) + " | aim=" + V(aimDir) +
+                 " | faceNormalWorld=" + V(fN) +
+                 " | faceNormalInSlot=" + V(Quaternion.Inverse(slot.rotation) * fN) +
+                 "\n    ROLL ABOUT THE SHAFT = " + F(rollFix) + " deg  (residual azimuth " + F(bestErr) + " deg)" +
+                 "\n    AUTHOR slot.localRotation = " + newLocal.ToString("F5") +
+                 "  localEuler = " + V(newLocal.eulerAngles) +
+                 "\n    " + headBall);
+
+            // the drive address is the run's gate; keep its numbers for the JSON header
+            if (id == "club.faceSquare")
+            { _faceAzErrDeg = azErr; _faceEdgeAimDeg = edgeAim; _faceRollFixDeg = rollFix; _faceLoftDeg = loft; }
+
+            bool sq = azErr <= 5f && !float.IsNaN(edgeAim) && Mathf.Abs(edgeAim - 90f) <= 5f;
+            Assert(id, sq,
+                   "at " + where + ": head=" + head.name + " slot=" + slot.name +
+                   " faceNormalLocal=" + V(faceLocal) +
+                   " | leading edge vs aim = " + F(edgeAim) + " deg (3.11.4 wants 90 +/- 5)" +
+                   " | face-normal azimuth error vs aim = " + F(azErr) + " deg (wants 0 +/- 5, the same fact)" +
+                   " | loft, the normal above the shaft-perpendicular plane = " + F(loft) +
+                   " deg, which is the club's loft and NOT an error" +
+                   " | SOLVED roll about the shaft that zeroes the azimuth = " + F(rollFix) +
+                   " deg (residual " + F(bestErr) + " deg) | slot.localEuler=" + V(slot.localEulerAngles));
+        }
+
+        /// <summary>
+        /// Cesar, iter-9: "The club is a bit too high for the hand pose. It should be a bit lower
+        /// so it looks inside the cupped hands and not above them."
+        ///
+        /// <para>Where the shaft SHOULD sit is the hollow of the two closed fists, so that is
+        /// measured rather than nudged by eye: the centre of each fist is the centroid of its
+        /// eight non-thumb MCP and PIP joints (index/middle/ring/little, proximal and
+        /// intermediate), and the seat is the midpoint of the two. Everything is then reported in
+        /// ClubSlot LOCAL space, where the numbers separate cleanly: local +Y is the shaft, so
+        /// <c>y</c> is the station along the club (which part of the grip the hands are on) and
+        /// <c>(x, z)</c> is the perpendicular miss -- the amount the shaft misses the fists by.</para>
+        ///
+        /// <para>Two ways to close that miss, both reported because they trade differently:
+        /// TRANSLATE slides the club sideways and carries the head with it, so club.headAtBall
+        /// pays for it; PIVOT swings the club about ClubEnd, which leaves the head exactly on the
+        /// ball and changes the shaft's lie instead. Neither is applied here -- the harness
+        /// measures, the prefab is authored.</para>
+        /// </summary>
+        void MeasureGripSeat(Transform slot, Transform clubStart, Transform clubEnd,
+                             Animator anim, Transform ballT)
+        {
+            if (slot == null || clubStart == null || clubEnd == null || anim == null ||
+                anim.avatar == null || !anim.avatar.isHuman)
+            { Mark("3.11-seat: cannot measure (slot/clubStart/clubEnd/humanoid animator missing)"); return; }
+
+            HumanBodyBones[] LeftFist = {
+                HumanBodyBones.LeftIndexProximal,  HumanBodyBones.LeftMiddleProximal,
+                HumanBodyBones.LeftRingProximal,   HumanBodyBones.LeftLittleProximal,
+                HumanBodyBones.LeftIndexIntermediate,  HumanBodyBones.LeftMiddleIntermediate,
+                HumanBodyBones.LeftRingIntermediate,   HumanBodyBones.LeftLittleIntermediate };
+            HumanBodyBones[] RightFist = {
+                HumanBodyBones.RightIndexProximal,  HumanBodyBones.RightMiddleProximal,
+                HumanBodyBones.RightRingProximal,   HumanBodyBones.RightLittleProximal,
+                HumanBodyBones.RightIndexIntermediate,  HumanBodyBones.RightMiddleIntermediate,
+                HumanBodyBones.RightRingIntermediate,   HumanBodyBones.RightLittleIntermediate };
+
+            bool Centre(HumanBodyBones[] set, out Vector3 c, out int found)
+            {
+                c = Vector3.zero; found = 0;
+                foreach (var b in set)
+                { var t = anim.GetBoneTransform(b); if (t != null) { c += t.position; found++; } }
+                if (found == 0) return false;
+                c /= found; return true;
+            }
+
+            // both called unconditionally: short-circuiting the || would leave the second
+            // count unassigned, and the count is what the failure message needs.
+            bool okL = Centre(LeftFist,  out var cL, out int nL);
+            bool okR = Centre(RightFist, out var cR, out int nR);
+            if (!okL || !okR)
+            { Mark("3.11-seat: finger bones not found (L=" + nL + "/8 R=" + nR + "/8)"); return; }
+
+            Vector3 seat = 0.5f * (cL + cR);
+            Vector3 seatLocal = slot.InverseTransformPoint(seat);
+            Vector3 lLocal = slot.InverseTransformPoint(cL);
+            Vector3 rLocal = slot.InverseTransformPoint(cR);
+            float miss = new Vector2(seatLocal.x, seatLocal.z).magnitude;
+
+            // TRANSLATE: shift the club perpendicular to its own shaft so the axis runs through
+            // the seat. localPosition lives in the PARENT's space, so the ClubSlot-space offset
+            // is rotated by the slot's own local rotation to get there.
+            Vector3 perpLocal = new Vector3(seatLocal.x, 0f, seatLocal.z);
+            Vector3 newLocalPos = slot.localPosition + slot.localRotation * perpLocal;
+            Vector3 perpWorld = slot.TransformVector(perpLocal);
+            Vector3 endAfter = clubEnd.position + perpWorld;
+            string headAfter = "n/a", headNow = "n/a";
+            if (ballT != null)
+            {
+                Vector3 b = ballT.position;
+                headNow = F(Vector3.Distance(new Vector3(clubEnd.position.x, 0f, clubEnd.position.z),
+                                             new Vector3(b.x, 0f, b.z)));
+                headAfter = F(Vector3.Distance(new Vector3(endAfter.x, 0f, endAfter.z),
+                                               new Vector3(b.x, 0f, b.z)));
+            }
+
+            // PIVOT about ClubEnd: swing the shaft onto the seat, head stays exactly on the ball.
+            Vector3 dirNow  = (clubStart.position - clubEnd.position).normalized;   // head -> butt
+            Vector3 dirWant = (seat - clubEnd.position).normalized;
+            Quaternion q = Quaternion.FromToRotation(dirNow, dirWant);
+            float pivotDeg = Quaternion.Angle(Quaternion.identity, q);
+            Quaternion newLocalRot = Quaternion.Inverse(slot.parent.rotation) * (q * slot.rotation);
+            Vector3 pivotedPos = clubEnd.position + q * (slot.position - clubEnd.position);
+            Vector3 newLocalPosPivot = slot.parent.InverseTransformPoint(pivotedPos);
+            float seatFromHead = Vector3.Distance(seat, clubEnd.position);
+            float startFromHead = Vector3.Distance(clubStart.position, clubEnd.position);
+
+            // ---- CLEARANCE: does the shaft pass THROUGH any finger? -------------------
+            // Cesar, iter-9: "it goes through the left hand's pinky. The club should not go
+            // through any fingers/hand". Seating the shaft on the midpoint of the two fist
+            // centres put it in the gap BETWEEN the hands -- each fist centre is ~23 mm off the
+            // axis on OPPOSITE sides -- so it grazes the inner edge of each fist. What matters
+            // is not the centroid but the LARGEST EMPTY TUBE: the axis position that maximises
+            // the minimum distance to every finger joint.
+            //
+            // Everything is done in the plane perpendicular to the shaft. In ClubSlot local
+            // space the axis IS the local Y axis, so a joint's clearance is just its (x, z)
+            // radius and a candidate axis shift is a 2-D offset in that same plane.
+            {
+                var joints = new List<(string name, Vector2 p, float y)>();
+                void Add(string label, HumanBodyBones b)
+                {
+                    var t = anim.GetBoneTransform(b);
+                    if (t == null) return;
+                    Vector3 l = slot.InverseTransformPoint(t.position);
+                    joints.Add((label, new Vector2(l.x, l.z), l.y));
+                }
+                foreach (var side in new[] { "L", "R" })
+                {
+                    bool L = side == "L";
+                    Add(side + ".Thumb1",  L ? HumanBodyBones.LeftThumbProximal      : HumanBodyBones.RightThumbProximal);
+                    Add(side + ".Thumb2",  L ? HumanBodyBones.LeftThumbIntermediate  : HumanBodyBones.RightThumbIntermediate);
+                    Add(side + ".Thumb3",  L ? HumanBodyBones.LeftThumbDistal        : HumanBodyBones.RightThumbDistal);
+                    Add(side + ".Index1",  L ? HumanBodyBones.LeftIndexProximal      : HumanBodyBones.RightIndexProximal);
+                    Add(side + ".Index2",  L ? HumanBodyBones.LeftIndexIntermediate  : HumanBodyBones.RightIndexIntermediate);
+                    Add(side + ".Index3",  L ? HumanBodyBones.LeftIndexDistal        : HumanBodyBones.RightIndexDistal);
+                    Add(side + ".Mid1",    L ? HumanBodyBones.LeftMiddleProximal     : HumanBodyBones.RightMiddleProximal);
+                    Add(side + ".Mid2",    L ? HumanBodyBones.LeftMiddleIntermediate : HumanBodyBones.RightMiddleIntermediate);
+                    Add(side + ".Mid3",    L ? HumanBodyBones.LeftMiddleDistal       : HumanBodyBones.RightMiddleDistal);
+                    Add(side + ".Ring1",   L ? HumanBodyBones.LeftRingProximal       : HumanBodyBones.RightRingProximal);
+                    Add(side + ".Ring2",   L ? HumanBodyBones.LeftRingIntermediate   : HumanBodyBones.RightRingIntermediate);
+                    Add(side + ".Ring3",   L ? HumanBodyBones.LeftRingDistal         : HumanBodyBones.RightRingDistal);
+                    Add(side + ".Pinky1",  L ? HumanBodyBones.LeftLittleProximal     : HumanBodyBones.RightLittleProximal);
+                    Add(side + ".Pinky2",  L ? HumanBodyBones.LeftLittleIntermediate : HumanBodyBones.RightLittleIntermediate);
+                    Add(side + ".Pinky3",  L ? HumanBodyBones.LeftLittleDistal       : HumanBodyBones.RightLittleDistal);
+                    Add(side + ".Hand",    L ? HumanBodyBones.LeftHand               : HumanBodyBones.RightHand);
+                }
+
+                // only joints beside the GRIP matter -- a fingertip 40 cm down the shaft is not
+                // touching anything. Keep those within the grip's own span.
+                var near = joints.Where(j => j.y > -0.13f && j.y < 0.19f).ToList();
+                var sbc = new StringBuilder("3.11-clear MEASURE (drive address) | " + near.Count +
+                                            " joints beside the grip, radius from the shaft axis (m):");
+                foreach (var j in near.OrderBy(j => j.p.magnitude))
+                    sbc.Append("\n    ").Append(j.name.PadRight(10)).Append(" r=").Append(F(j.p.magnitude))
+                       .Append("  (x=").Append(F(j.p.x)).Append(", z=").Append(F(j.p.y))
+                       .Append(", station y=").Append(F(j.y)).Append(")");
+
+                // The grip mesh is 0.02715 m across, so its surface is 0.0136 m from the axis;
+                // a joint closer than that is INSIDE the grip. Search the plane for the axis
+                // offset that maximises the minimum clearance, staying near the hands.
+                const float gripSurface = 0.0136f;
+                float curMin = near.Count == 0 ? float.NaN : near.Min(j => j.p.magnitude);
+                Vector2 best = Vector2.zero; float bestMin = curMin;
+                for (int a = 0; a < 360; a++)
+                    for (int m = 1; m <= 60; m++)      // up to 30 mm, 0.5 mm steps
+                    {
+                        float rad = a * Mathf.Deg2Rad, mag = m * 0.0005f;
+                        Vector2 s = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * mag;
+                        float mn = near.Min(j => (j.p - s).magnitude);
+                        if (mn > bestMin) { bestMin = mn; best = s; }
+                    }
+                // that offset, as a world direction, so "up" can be checked against Cesar's word
+                Vector3 shiftWorld = slot.TransformVector(new Vector3(best.x, 0f, best.y));
+                sbc.Append("\n    CURRENT worst clearance = ").Append(F(curMin))
+                   .Append(" m; the grip surface is ").Append(F(gripSurface))
+                   .Append(" m from the axis, so anything under that is INSIDE the club.")
+                   .Append("\n    BEST axis offset within 30 mm = (x=").Append(F(best.x))
+                   .Append(", z=").Append(F(best.y)).Append(") |shift|=").Append(F(best.magnitude))
+                   .Append(" m -> worst clearance ").Append(F(bestMin)).Append(" m")
+                   .Append("\n    that offset in world = ").Append(V(shiftWorld))
+                   .Append("  (worldY ").Append(F(shiftWorld.y)).Append(", positive is UP)");
+                if (near.Count > 0)
+                {
+                    var worstNow = near.OrderBy(j => j.p.magnitude).First();
+                    var worstAfter = near.OrderBy(j => (j.p - best).magnitude).First();
+                    sbc.Append("\n    worst joint now = ").Append(worstNow.name)
+                       .Append(" at ").Append(F(worstNow.p.magnitude))
+                       .Append(" m; after the offset the worst is ").Append(worstAfter.name)
+                       .Append(" at ").Append(F((worstAfter.p - best).magnitude)).Append(" m");
+                }
+                Mark(sbc.ToString());
+            }
+
+            Mark("3.11-seat MEASURE (drive address) | fist centres L=" + V(cL) + " R=" + V(cR) +
+                 " (bones L=" + nL + "/8 R=" + nR + "/8)" +
+                 "\n    seat in ClubSlot local = " + V(seatLocal) +
+                 "  [local +Y is the shaft: y = station along the club, (x,z) = the perpendicular MISS]" +
+                 "\n    lead fist local = " + V(lLocal) + "   trail fist local = " + V(rLocal) +
+                 "\n    PERPENDICULAR MISS = " + F(miss) + " m  (the shaft passes this far from the fists' hollow)" +
+                 "\n    shaft stations: ClubStart y=" + F(clubStart.localPosition.y) +
+                 "  ClubEnd y=" + F(clubEnd.localPosition.y) +
+                 "  -- the grip mesh spans about y = -0.110 .. +0.157, so a seat y inside that is ON the grip" +
+                 "\n    seat distance from the head = " + F(seatFromHead) +
+                 " m, ClubStart distance from the head = " + F(startFromHead) + " m" +
+                 "\n    OPTION TRANSLATE: ClubSlot.localPosition " + V(slot.localPosition) + " -> " + V(newLocalPos) +
+                 "  | world shift " + V(perpWorld) + " (worldY " + F(perpWorld.y) +
+                 ", negative is DOWN) | club.headAtBall " + headNow + " -> " + headAfter + " m" +
+                 "\n    OPTION PIVOT about ClubEnd (" + F(pivotDeg) + " deg, head stays on the ball): " +
+                 "ClubSlot.localRotation -> " + newLocalRot.ToString("F6") +
+                 " euler " + V(newLocalRot.eulerAngles) +
+                 ", localPosition -> " + V(newLocalPosPivot));
+        }
+
         /// <summary>Palm point in world space for a hand, using the baked local offset.</summary>
         Vector3 PalmWorld(Transform hand, bool left)
         {
@@ -802,6 +1150,21 @@ namespace Golfin.EditorTools
             Mark("SKIP  " + id + " — " + why);
         }
 
+        /// <summary>
+        /// 3.11.4. A row that is REPORTED BUT NOT GATED. Distinct from Skip (which means "does
+        /// not apply to this rig") and from Assert (which means "this is a gate"): the number is
+        /// real and is carried in the artifact, it simply does not decide the run. Counted as
+        /// neither pass nor fail so it can never read as a green tick.
+        /// </summary>
+        int _info;
+        void Info(string id, string detail)
+        {
+            _info++;
+            _json.Add("    {\"id\": \"" + id + "\", \"verdict\": \"INFO\", \"detail\": \"" +
+                      detail.Replace("\\", "/").Replace("\"", "'") + "\"}");
+            Mark("INFO  " + id + " - " + detail);
+        }
+
         static string F(float v) => v.ToString("F4", CultureInfo.InvariantCulture);
         static string V(Vector3 v) => "(" + F(v.x) + ", " + F(v.y) + ", " + F(v.z) + ")";
         static string FNull(float v) => float.IsNaN(v) ? "null" : F(v);
@@ -819,6 +1182,24 @@ namespace Golfin.EditorTools
             float t = Mathf.Clamp01(Vector3.Dot(p - a, ab) / len2);
             return Vector3.Distance(p, a + t * ab);
         }
+
+        // -- golfer_club_grip 3.11.3 -- the clubface, measured ONCE off the meshes ------
+        // Which local axis of the head mesh is the face normal is a fact about the art, so it is
+        // measured rather than assumed, and the measurement is recorded here (iter-9, from an
+        // area-weighted planar clustering of each head mesh, expressed in ClubSlot space):
+        //
+        //   GOLFIN_Driver / ClubHead : (-0.9120, -0.3607, -0.1951) -- the ONE genuinely flat
+        //     surface on the head: 13.3% of mesh area over a 51.7 mm radius, flat to 0.6 mm,
+        //     103 triangles. Every other cluster is curved (crown, sole and skirt read 4-26 mm
+        //     of deviation across the cluster). Its 21.1 deg tilt off the shaft-perpendicular
+        //     plane is the LOFT, not an error.
+        //   GOLFIN_Putter / Clubhead : (0, 0, -1) -- a flat 120 mm disc, 193 verts inside a 3 mm
+        //     slab; the +Z side is a small flange (31 verts), which is the back of the blade.
+        //
+        // Direction only, so it is transformed through the head transform rather than assumed to
+        // be identity under the slot.
+        static readonly Vector3 DriverFaceLocal = new Vector3(-0.9120f, -0.3607f, -0.1951f);
+        static readonly Vector3 PutterFaceLocal = new Vector3(0f, 0f, -1f);
 
         static Type FindType(string n) => AppDomain.CurrentDomain.GetAssemblies()
             .Select(a => { try { return a.GetType(n); } catch { return null; } }).FirstOrDefault(t => t != null);
@@ -1339,6 +1720,12 @@ namespace Golfin.EditorTools
                     else Assert("club.headAtBall", false,
                                "ClubEnd=" + (clubEnd != null) + " ballT=" + (ballT != null) + " — cannot measure");
 
+                    // -- 3.11.4 club.faceSquare: is the blade square to the aim at address? ----
+                    // With no IK, the club's roll about the shaft IS the authored ClubSlot offset,
+                    // so this row is the verdict on that one authored number (3.11.3). Measured
+                    // again on the putt address further down, for PutterSlot's own pose.
+                    MeasureFaceSquare("club.faceSquare", slot, shot, "drive address");
+
                     // grip.hands.order: lead (left) must be 0.05–0.12 m nearer the butt cap than trail (right)
                     if (slot != null && handL != null && handR != null)
                     {
@@ -1391,6 +1778,13 @@ namespace Golfin.EditorTools
                     // That is why the tips read 0.043 m from a shaft the wrap targets at 0.0155.
                     yield return new WaitForEndOfFrame();
                     SampleFingerGrip(anim, clubStart, clubEnd, PresenterShaftRadius(pres), "address");
+
+                    // 3.11-seat / 3.11-clear measure the POSED hands, so they belong after the
+                    // end-of-frame wait for exactly the reason the comment above gives: the pose
+                    // runs in GolferPresenter.LateUpdate and a coroutine resumes during Update.
+                    // Called before the wait, they reported the clip's raw fingers and would have
+                    // said the authored grip had changed nothing.
+                    MeasureGripSeat(slot, clubStart, clubEnd, anim, ballT);
 
                     // ── SPEC 3.10.1 — verify the palm normal instead of trusting it ───────────
                     // A +5 deg flex of the middle MCP about cross(bone, n_out) must move the tip
@@ -1478,6 +1872,7 @@ namespace Golfin.EditorTools
                            "fists are " + F(alongR - alongL) + " m apart along the shaft; one hand " +
                            "width is " + F(handWidth) + " m (a joined grip is about one hand width)");
                     Mark("grip: left fist " + F(gapL) + " m off the shaft line laterally");
+                }
 
         
             // ── 3. the golfer turns with the aim heading ───────────────────────────────
@@ -1534,6 +1929,16 @@ namespace Golfin.EditorTools
             }
 
             // ── does the hand actually WRAP the shaft, or just sit beside it? ──
+                // Quaternius-only, exactly like the block above it: every bone below is
+                // addressed by a Quaternius name (index_04_leaf_r ...). This guard was lost
+                // together with the brace that used to close the grip block, and losing the
+                // pair is what pulled sections 3 and 4 inside a branch that is FALSE on the
+                // Mixamo rig -- so stance.followsHeading, club.bothPresent, club.driverDefault,
+                // club.putterSwap, club.driverSwapBack and the whole putt-address measurement
+                // silently did not run there, and did not even appear as SKIP. The brace count
+                // still balanced, so it compiled and no reviewer saw the rows go missing.
+                if (slot != null && hasQuaterniusFingers)
+                {
                     //
                     // The assertions above all pass on a hand that is in the right PLACE with
                     // its fingers open — which is exactly what shipped and got rejected five
@@ -1656,38 +2061,38 @@ namespace Golfin.EditorTools
             {
                 if (!float.IsNaN(_gripWorstL) && !float.IsNaN(_gripWorstR))
                 {
+                    // 3.11.4 redefines this row back to the BONE ORIGIN ("bone origin to shaft
+                    // axis"), which is what it measures when the palm offset is unavailable. That
+                    // is no longer a warning -- with the hands left as the clip's there is no palm
+                    // solve to fall back FROM, and the bone origin is the definition the row now
+                    // carries. Which one produced the number is still stated, because they are
+                    // different numbers.
                     string palmNote = (_palmKnownL && _palmKnownR)
-                        ? " (PALM point per §3.7, palmLocal L=" + _palmLocalL.ToString("F4") + " R=" + _palmLocalR.ToString("F4") + ")"
-                        : " [WARNING: palm offset unavailable — this is the WRIST, the old meaning]";
-                    Assert("grip.hand.onShaft_l", _gripWorstL < 0.035f,
-                           "left palm worst dist to shaft segment across 3 samples (address/0.6s/impact) = " + F(_gripWorstL) + " m (want < 0.035 m)" + palmNote);
-                    Assert("grip.hand.onShaft_r", _gripWorstR < 0.035f,
-                           "right palm worst dist to shaft segment across 3 samples (address/0.6s/impact) = " + F(_gripWorstR) + " m (want < 0.035 m)" + palmNote);
+                        ? " (measured from the PALM point, palmLocal L=" + _palmLocalL.ToString("F4") +
+                          " R=" + _palmLocalR.ToString("F4") + ")"
+                        : " (measured from the hand BONE ORIGIN — the wrist — which is 3.11.4's definition for this row)";
+                    // 3.11.4: INFORMATIONAL, not gated. The hands are the clip's now, so this
+                    // says how far they drift from a club they are not reaching for -- expected
+                    // 1-4 cm mid-swing, invisible at the gameplay camera.
+                    Info("grip.hand.onShaft_l",
+                         "left palm worst dist to shaft segment across 3 samples (address/0.6s/impact) = " +
+                         F(_gripWorstL) + " m" + palmNote);
+                    Info("grip.hand.onShaft_r",
+                         "right palm worst dist to shaft segment across 3 samples (address/0.6s/impact) = " +
+                         F(_gripWorstR) + " m" + palmNote);
                 }
                 else
                 {
-                    Assert("grip.hand.onShaft_l", false, "no grip samples collected — ClubStart/ClubEnd or hand bones not found");
-                    Assert("grip.hand.onShaft_r", false, "no grip samples collected — ClubStart/ClubEnd or hand bones not found");
+                    Info("grip.hand.onShaft_l", "no grip samples collected — ClubStart/ClubEnd or hand bones not found");
+                    Info("grip.hand.onShaft_r", "no grip samples collected — ClubStart/ClubEnd or hand bones not found");
                 }
 
                 // ── §3.6 NEW — orientation and separation. These exist because four rounds of
                 // green POSITION numbers described a grip Cesar rejected on sight every time.
-                if (!float.IsNaN(_orientWorstL) && !float.IsNaN(_orientWorstR))
-                {
-                    Assert("grip.hand.orient_l", _orientWorstL < 5f,
-                           "left hand worst angle to its anchor across 3 samples (address/0.6s/impact) = " +
-                           F(_orientWorstL) + " deg (want < 5). With the anchor carrying the clip's own " +
-                           "address hand frame (§3.7 Rule 1), this staying small IS the hand keeping its " +
-                           "grip on the club through the swing.");
-                    Assert("grip.hand.orient_r", _orientWorstR < 5f,
-                           "right hand worst angle to its anchor across 3 samples (address/0.6s/impact) = " +
-                           F(_orientWorstR) + " deg (want < 5)");
-                }
-                else
-                {
-                    Assert("grip.hand.orient_l", false, "no orientation samples — GripAnchor_* or hand bones not found");
-                    Assert("grip.hand.orient_r", false, "no orientation samples — GripAnchor_* or hand bones not found");
-                }
+                Skip("grip.hand.orient_l", "RETIRED by 3.11 - hands are the clip's. It measured the hand against " +
+                     "GripAnchor_Lead, which 3.11.2 deletes along with the IK.");
+                Skip("grip.hand.orient_r", "RETIRED by 3.11 - hands are the clip's. It measured the hand against " +
+                     "GripAnchor_Trail, which 3.11.2 deletes along with the IK.");
 
                 if (!float.IsNaN(_apartWorst))
                     MarkApart(_apartWorst >= 0.045f,
@@ -1704,12 +2109,8 @@ namespace Golfin.EditorTools
                 // through the fingers and the hands OVERLAP.
                 void AxisRow(string id, float worst)
                 {
-                    if (float.IsNaN(worst)) { Assert(id, false, "no landmark samples - finger bones not found"); return; }
-                    Assert(id, worst < 0.006f,
-                           "worst distance from the real shaft to the landmark line across 3 samples = " +
-                           F(worst) + " m (want < 0.006 at BOTH landmarks). The line is little-finger MCP to " +
-                           "index PIP (lead) / index MCP (trail), offset palm-side by t + r = " + F(PalmOffsetM) +
-                           " m. If this fails the club is not lying where a hand can hold it.");
+                    Skip(id, "RETIRED by 3.11 - hands are the clip's. Measured value carried for the record: " +
+                         "worst shaft-to-landmark-line distance across 3 samples = " + FNull(worst) + " m.");
                 }
                 AxisRow("grip.axis.landmarks_l", _axisWorstL);
                 AxisRow("grip.axis.landmarks_r", _axisWorstR);
@@ -1717,69 +2118,37 @@ namespace Golfin.EditorTools
                 const float TipLo = GripRadiusM - 0.003f, TipHi = GripRadiusM + 0.010f;
                 void FingersClosed(string id, float mn, float mx, string who)
                 {
-                    if (float.IsNaN(mn) || float.IsNaN(mx))
-                    { Assert(id, false, "no finger samples - finger bones not found"); return; }
-                    Assert(id, mn >= TipLo && mx <= TipHi,
-                           who + " fingertip distance to the shaft axis across 3 samples spans [" + F(mn) +
-                           " .. " + F(mx) + "] m; want every tip in [" + F(TipLo) + ", " + F(TipHi) +
-                           "] (r = " + F(GripRadiusM) + "). Below the floor is a finger THROUGH the grip; " +
-                           "above the ceiling is a hand not closed on it.");
+                    Skip(id, "RETIRED by 3.11 - hands are the clip's. Measured value carried for the record: " + who +
+                         " fingertip distance to the shaft axis across 3 samples spans [" + FNull(mn) +
+                         " .. " + FNull(mx) + "] m.");
                 }
                 FingersClosed("grip.fingers.closed_l", _fingersClosedMinL, _fingersClosedMaxL, "lead (4 fingers)");
                 FingersClosed("grip.fingers.closed_r", _fingersClosedMinR, _fingersClosedMaxR, "trail (3 fingers, little EXCLUDED)");
 
-                if (float.IsNaN(_heelPadDot))
-                    Assert("grip.heelPad.onTop", false, "no heel-pad sample at address");
-                else
-                    Assert("grip.heelPad.onTop", _heelPadDot > 0.5f,
-                           "dot(back of the lead hand, toward the head) at address = " + F(_heelPadDot) +
-                           " (want > 0.5). This is the 2-2.5-knuckles check: the heel pad sits ON TOP of the " +
-                           "grip, so the back of the hand faces the golfer.");
+                Skip("grip.heelPad.onTop", "RETIRED by 3.11 - hands are the clip's. Measured value carried for the " +
+                     "record: dot(back of the lead hand, toward the head) at address = " + FNull(_heelPadDot) + ".");
 
-                if (float.IsNaN(_trailPalmThumbOut) || float.IsNaN(_trailPalmShaftOut))
-                    Assert("grip.trailPalm.onThumb", false, "no trail-palm sample at address");
-                else
-                    Assert("grip.trailPalm.onThumb",
-                           _trailPalmThumbOut > 0f && _trailPalmThumbOut < 0.025f * GripScale &&
-                           _trailPalmShaftOut > _trailPalmThumbOut,
-                           "SPEC 3.10.6 geometric: along the trail palm normal the lead thumb sits " +
-                           F(_trailPalmThumbOut) + " m outside the palm plane (want 0 .. " +
-                           F(0.025f * GripScale) + ") and the shaft sits " + F(_trailPalmShaftOut) +
-                           " m out (must be further than the thumb). Solve-rule dot = " + F(_trailPalmDot) +
-                           ". This is \"the lifeline covers the thumb\" as geometry; a palm facing " +
-                           "the wrong way cannot pass it, which a dot product could.");
+                Skip("grip.trailPalm.onThumb", "RETIRED by 3.11 - hands are the clip's. Measured values carried for " +
+                     "the record: lead thumb " + FNull(_trailPalmThumbOut) + " m outside the trail palm " +
+                     "plane, shaft " + FNull(_trailPalmShaftOut) + " m out, solve-rule dot " +
+                     FNull(_trailPalmDot) + ".");
 
-                if (float.IsNaN(_overlapWorst))
-                    Assert("grip.hands.overlap", false, "no overlap sample - finger bones not found");
-                else
-                    Assert("grip.hands.overlap", _overlapWorst <= 0.008f,
-                           "worst station error between the trail little-finger MCP and the lead index/middle " +
-                           "MCP midpoint across 3 samples = " + F(_overlapWorst) + " m (want <= 0.008). The trail " +
-                           "pinky RIDES on the lead index/middle gap; a golf grip overlaps.");
+                Skip("grip.hands.overlap", "RETIRED by 3.11 - hands are the clip's. Measured value carried for the " +
+                     "record: worst trail-pinky-to-lead-knuckle station error across 3 samples = " +
+                     FNull(_overlapWorst) + " m.");
 
-                if (float.IsNaN(_interpenWorst))
-                    Assert("grip.hands.noInterpenetration", false, "no interpenetration sample");
-                else
-                    Assert("grip.hands.noInterpenetration", _interpenWorst >= 0.008f,
-                           "closest lead finger joint to any trail finger joint (trail little finger EXCLUDED, " +
-                           "it is the intended contact) across 3 samples = " + F(_interpenWorst) +
-                           " m (want >= 0.008).");
+                Skip("grip.hands.noInterpenetration", "RETIRED by 3.11 - hands are the clip's. Measured value carried " +
+                     "for the record: closest lead-to-trail finger joint across 3 samples = " +
+                     FNull(_interpenWorst) + " m.");
 
-                if (float.IsNaN(_thumbDownShaftWorstL))
-                    Assert("grip.thumb.downShaft_l", false, "no thumb samples - thumb bones not found");
-                else
-                    Assert("grip.thumb.downShaft_l", _thumbDownShaftWorstL < 35f,
-                           "worst angle between the lead thumb and the shaft toward the head across 3 samples = " +
-                           F(_thumbDownShaftWorstL) + " deg (want < 35). Clock angle about the shaft = " +
-                           F(_thumbClockDeg) + " deg from 12 o'clock (want 15-30 toward the trail side).");
+                Skip("grip.thumb.downShaft_l", "RETIRED by 3.11 - hands are the clip's. Measured values carried for " +
+                     "the record: worst lead-thumb-to-shaft angle across 3 samples = " +
+                     FNull(_thumbDownShaftWorstL) + " deg, clock angle about the shaft = " +
+                     FNull(_thumbClockDeg) + " deg.");
 
-                if (float.IsNaN(_buttPastHeel))
-                    Assert("grip.buttCap.pastHeel", false, "no butt-cap sample at address");
-                else
-                    Assert("grip.buttCap.pastHeel", _buttPastHeel >= 0.008f && _buttPastHeel <= 0.020f,
-                           "heel landmark sits " + F(_buttPastHeel) + " m down-shaft of the butt cap at address " +
-                           "(want 0.008-0.020; the reference is 13 mm * s = " + F(ButtPastHeelM) +
-                           "). Half an inch of grip shows beyond the heel.");
+                Skip("grip.buttCap.pastHeel", "RETIRED by 3.11 - hands are the clip's. Measured value carried for the " +
+                     "record: heel landmark sits " + FNull(_buttPastHeel) +
+                     " m down-shaft of the butt cap at address.");
 
                 Skip("grip.shaft.inTunnel_l", "RETIRED by 3.9.6 - encoded the bat axis 3.8.3 fitted");
                 Skip("grip.shaft.inTunnel_r", "RETIRED by 3.9.6 - encoded the bat axis 3.8.3 fitted");
@@ -2249,6 +2618,18 @@ namespace Golfin.EditorTools
             Transform Fb(string n) => all.FirstOrDefault(x => x.name == n);
             var slot = Fb("ClubSlot");
 
+            // -- 3.11.3 the SECOND authored pose: PutterSlot's own roll, on the putt address ----
+            // Gated only when the putt address was actually reached; a face measured against the
+            // driver pose is not the number 3.11.3 asked for, and failing the run because a green
+            // could not be reached would be failing it for an unrelated reason.
+            var pslot = Fb("PutterSlot");
+            if (pslot != null && st == "Address_Putt")
+                MeasureFaceSquare("club.faceSquare.putt", pslot, shot, "putt address");
+            else
+                Skip("club.faceSquare.putt", "putt address not reached (animator='" + st +
+                     "', PutterSlot=" + (pslot != null) + ") -- PutterSlot's roll is not measured " +
+                     "against the driver pose.");
+
             if (slot == null || st != "Address_Putt")
             {
                 Mark("putt-grip §9.4 SKIPPED: animator='" + st + "' (wanted Address_Putt) slot=" +
@@ -2338,11 +2719,17 @@ namespace Golfin.EditorTools
                           ",\n  \"prefab\": \"" + (string.IsNullOrEmpty(_variant) ? "PfGolfer_Test" : _variant) + "\"" +
                           ",\n  \"pass\": " + _pass + ",\n  \"fail\": " + _fail +
                           ",\n  \"skip\": " + _skip +
+                          ",\n  \"info\": " + _info +
                           ",\n  \"footSlideLeftM\": " + F(_slideL) +
                           ",\n  \"footSlideRightM\": " + F(_slideR) +
                           ",\n  \"gripWorstL\": " + FNull(_gripWorstL) +
                           ",\n  \"gripWorstR\": " + FNull(_gripWorstR) +
                           ",\n  \"headAtBallM\": " + FNull(_headAtBallM) +
+                          // 3.11.4 -- the verdict on the one authored number in the FINAL SHAPE
+                          ",\n  \"faceEdgeVsAimDeg\": " + FNull(_faceEdgeAimDeg) +
+                          ",\n  \"faceAzimuthErrDeg\": " + FNull(_faceAzErrDeg) +
+                          ",\n  \"faceLoftDeg\": " + FNull(_faceLoftDeg) +
+                          ",\n  \"faceRollFixDeg\": " + FNull(_faceRollFixDeg) +
                           // §3.6 (2026-09-10): the rig-off baseline this run was measured against,
                           // in the artifact, so a foot-slide verdict can never again be read
                           // against numbers taken under a different harness ordering.
@@ -2356,7 +2743,10 @@ namespace Golfin.EditorTools
             Directory.CreateDirectory("Docs/Diagnostics/_capture");
             File.WriteAllText("Docs/Diagnostics/_capture/" + file, json);
             Debug.Log("[GolferVerify] ===== SUMMARY  pass=" + _pass + " fail=" + _fail + " skip=" + _skip +
-                      "  footSlide L=" + F(_slideL) + " R=" + F(_slideR) + " =====\n" + _log +
+                      " info=" + _info +
+                      "  footSlide L=" + F(_slideL) + " R=" + F(_slideR) +
+                      "  faceEdgeVsAim=" + FNull(_faceEdgeAimDeg) + " deg  rollFix=" + FNull(_faceRollFixDeg) +
+                      " deg =====\n" + _log +
                       "\nwrote Docs/Diagnostics/_capture/" + file);
             yield return Hold(0.5f);
             EditorApplication.isPlaying = false;

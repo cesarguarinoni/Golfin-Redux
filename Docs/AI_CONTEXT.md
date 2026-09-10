@@ -4,6 +4,77 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 (golfer_club_grip iter-9) — **the FINAL SHAPE: clip hands, club on the two-hand average**
+
+**32 PASS / 1 FAIL / 25 SKIP / 2 INFO, A0 = 0.** The one FAIL is `budget.tris` (36 510 vs 15 000),
+unchanged and out of scope. Eight iterations of IK, landmarks and a contact wrap are deleted:
+`Rig_Hands` with both `TwoBoneIKConstraint`s, both `GripAnchor_*` and both `WristTarget`s are gone,
+`RigBuilder.layers` = `[Rig_Grip]`, `forceGripPose` = false. The hands and fingers are the clip's at
+every frame. What survives is the club mount that has worked since iter-4: `GripTarget` as the
+`MultiParentConstraint` 0.5/0.5 average of the two hand bones, Maintain Offset off.
+
+**Two authored offsets, both solved by measurement.**
+
+| Slot | localPosition | localRotation |
+|---|---|---|
+| `ClubSlot` | `(0.03009, 0.07460, -0.09264)` | `(-0.144565, 0.882671, 0.433683, 0.109142)` |
+| `PutterSlot` | `(0.03073, 0.08187, -0.09457)` | `(0.450949, -0.651749, -0.192278, 0.578703)` |
+
+**The clubface axis is a fact about the art, so it was measured.** Area-weighted planar clustering
+of each head mesh: the driver's face is `(-0.9120, -0.3607, -0.1951)` — the *only* genuinely flat
+surface on the head (13.3 % of area over a 51.7 mm radius, **flat to 0.6 mm**, 103 triangles; crown,
+sole and skirt all deviate 4–26 mm), and its 21.1° tilt off the shaft-perpendicular plane is the
+loft. The putter's is `(0, 0, -1)`, a flat 120 mm disc, 193 verts against 31 on the flanged back.
+The meshes say `isReadable = false`, but the Editor keeps the CPU copy, so no importer setting
+had to be touched.
+
+**Two lessons worth keeping.**
+
+1. **The roll is not the azimuth error.** The plan-azimuth error was 174.34°; the roll that actually
+   squares the face is **147.55°**. The shaft carries the lie angle, so rolling about it by θ does
+   not move the plan azimuth by θ — taking the error as the roll leaves the face ~27° open. The
+   harness now scans the one-parameter family and reports the angle that zeroes it (residual 0.0000°).
+2. **A 180° flip is invisible to an edge-only test.** `club.faceSquare` gates the leading edge
+   (90 ± 5) **and** the normal's plan azimuth (0 ± 5). The starting state read edge 84.34° — a club
+   pointing 174° backwards came within 0.7° of passing on the edge alone, because flipping a club
+   end-for-end leaves its leading-edge angle unchanged.
+
+**The clip's fists have no tunnel — and now there is a number for it.** Cesar rejected the club
+twice by eye ("too high for the hand pose", then "goes through the left hand's pinky"). All 32
+finger/hand joints beside the grip were measured as radii from the shaft axis. The two fist centres
+sit ~23 mm off the axis on **opposite** sides, so seating the shaft on their midpoint threads it
+between the hands and clips four joints (worst `R.Ring3` at 0.0041 m, inside the 0.0136 m grip
+surface). Clearance then grows monotonically with distance — the max-min optimum is simply to leave
+the hands. There are exactly **two** non-intersecting placements: **down 31 mm** (worst clearance
+0.0205 m, authored) and **up ≥ 85 mm**, which is essentially the original "too high" pose, because
+going up drives the shaft through fingertips, then thumbs, then the wrist before it clears. The
+authored one is 3× closer to the hands than the state first rejected and is pinned symmetrically
+between `R.Ring2` and `L.Pinky2` at exactly 0.0205 m each. Solved offline from the measured joints,
+then verified live to four decimals. **An authored hand pose is the only thing that closes this
+properly** — it is the standing §3.11.5 backlog row.
+
+Both corrections were applied by **pivoting about the club head**, not translating: translating
+would have cost `club.headAtBall` 0.0085 → 0.0922 m, over the gate. `ClubStart`/`ClubEnd` lie on the
+pivot axis, so the head stayed on the ball at 0.0085 m through every move.
+
+**A pre-existing harness defect, found and fixed.** Harness sections 3 and 4 —
+`stance.followsHeading`, all four `club.*` swap rows, and the entire `PuttGripOnGreen` putt-address
+measurement — were nested inside `if (slot != null && hasQuaterniusFingers)`, false on the Mixamo
+rig. They had never run there and never appeared as SKIP, so no reviewer saw them missing; two lost
+braces still balanced, so it compiled. Confirmed pre-existing against the committed iter-8 artifact.
+Restoring both braces bought six rows, **all PASS** (25 → 31 before the club work landed), and was
+required — `PutterSlot`'s pose could not otherwise be measured at the putt address at all.
+
+**Numbers.** `club.headAtBall` 0.0085 m · `club.faceSquare` edge 89.9850° / azimuth 0.0000° ·
+`club.faceSquare.putt` edge 89.9826° · foot slide L 0.0387 / R 0.0056 against a rig-off baseline of
+L 0.0422 / R 0.0063 (Δ 0.0035 / 0.0007, band ±0.010) · `grip.hand.onShaft_l/_r` 0.1248 / 0.1377 m,
+informational and *expected to rise*, since they measure the wrist and the club moved to the fingers.
+Animation Rigging 1.3.1. Build profile restored to `iOS-Full-GPS`.
+
+Evidence: `Docs/Specs/Active/golfer_club_grip/evidence/final/` (three gameplay-camera frames at
+1170 × 2532 plus two scene-cam close-ups). `STATUS = READY_FOR_SELF_REVIEW`.
+
+---
 ## 2026-09-10 (golfer_club_grip iter-8) — **the sign was right; the two stations are coupled**
 
 **A0 = 0. 31 PASS / 9 FAIL — against iter-7's 33 / 7.** The count went the wrong way, and that is

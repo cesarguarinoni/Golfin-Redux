@@ -141,6 +141,23 @@ namespace Golfin.Gameplay.Golfer
                  "an unreachable target curling the fingers into claws.")]
         [SerializeField] float maxJointBend = 80f;
 
+        // ── iter-9b — the AUTHORED HELD GRIP (Cesar, 2026-09-10) ──────────────────────
+        // Separate from forceGripPose on purpose. ApplyGripPose / WrapJoint / JoinLeadHandToShaft
+        // are the PfGolfer_Test path and are not touched by any of this; a prefab opts into one
+        // or the other, never both.
+        [Tooltip("Seat both hands on the club: a capped wrist rotation puts each fist on the " +
+                 "shaft axis, then the fingers open or close onto the grip. Use INSTEAD of " +
+                 "forceGripPose, not alongside it.")]
+        [SerializeField] bool  heldGripPose = false;
+        [Tooltip("Most either wrist may be rotated to seat its fist on the shaft, degrees. " +
+                 "Cesar: bend the wrists SLIGHTLY.")]
+        [SerializeField] float wristSeatMaxDeg = 25f;
+        [Tooltip("Most one finger joint may FLEX by, degrees, in the held-grip solve.")]
+        [SerializeField] float heldCurlMaxDeg = 55f;
+        [Tooltip("Most one finger joint may EXTEND by, degrees. The clip's fists are tighter " +
+                 "than the grip, so the solve mostly opens them and this is the cap that matters.")]
+        [SerializeField] float heldOpenMaxDeg = 40f;
+
         static readonly string[] Fingers = { "index", "middle", "ring", "pinky" };
 
         /// <summary>
@@ -178,6 +195,219 @@ namespace Golfin.Gameplay.Golfer
 
             if (WrapLogRequested && _wrapLog != null)
             { WrapLogResult = _wrapLog.ToString(); WrapLogRequested = false; _wrapLog = null; }
+        }
+
+        // ── iter-9b — THE AUTHORED HELD GRIP ──────────────────────────────────────────
+        //
+        // WHY A SECOND POSE PATH RATHER THAN A FIX TO THE FIRST. The wrap (ApplyGripPose) solves
+        // each joint independently, proximal to distal, bisecting it until its OWN far end sits
+        // at contact distance. A proximal joint usually cannot get its knuckle there at all, so it
+        // takes the cap at 90 deg and every joint below it then starts already inside contact and
+        // applies 0 — one joint at the cap with its neighbours straight, which is a claw, not a
+        // hand. That path still belongs to PfGolfer_Test and is left exactly as it was.
+        //
+        // WHAT THIS ONE DOES DIFFERENTLY, and why it is a much smaller correction than it sounds.
+        // Measured at address on PfGolfer_MixamoNative (iter-9): the two fists sit 46.4 mm apart
+        // PERPENDICULAR to the shaft and only 37.7 mm along it — side by side ACROSS the club
+        // rather than threaded on it, which is why no placement of the club alone ever worked
+        // (above it, through the fingers, and below it were each rejected on sight). And at the
+        // fists' own centre the fingertips are 4-20 mm from the axis while contact is 20.4 mm:
+        // the clip's fists are TIGHTER than the grip. So the hands need OPENING onto the club,
+        // not closing around it.
+        //
+        // Two stages per hand, each one parameter:
+        //   1. a capped wrist rotation that swings the fist centre onto the shaft axis, which is
+        //      the only thing that can fix "side by side" (the fist centre is ~60-80 mm from the
+        //      wrist, so 20-25 deg moves it 20-30 mm — enough, and still slight);
+        //   2. per finger, ONE curl parameter shared across its three joints in natural
+        //      proportions, solved so the FINGERTIP lands on the grip surface. One parameter for
+        //      the whole finger is what stops a single joint taking a cap alone.
+
+        static readonly float[] HeldCurlRatio = { 0.40f, 0.35f, 0.25f };   // MCP, PIP, DIP
+
+        /// <summary>
+        /// Seat both hands on the club: wrists onto the shaft axis, then fingers onto the grip.
+        /// Public for the same reason ApplyGripPose is — an editor harness can pose and MEASURE.
+        /// </summary>
+        public void ApplyHeldGripPose()
+        {
+            if (!heldGripPose) return;
+            if (!IsHumanoid) return;
+
+            Transform club = (putterSocketRoot != null && putterSocketRoot.gameObject.activeInHierarchy)
+                           ? putterSocketRoot : driverSocketRoot;
+            Transform slot = club != null ? club.parent : null;   // the socket carries the shaft axis
+            if (slot == null) return;
+
+            Vector3 axisO = slot.position, axisD = slot.up;       // slot +Y is butt -> head
+            SeatHandOnShaft(false, axisO, axisD);
+            SeatHandOnShaft(true,  axisO, axisD);
+        }
+
+
+        /// <summary>
+        /// Where the grip should sit in this hand: one contact distance off the KNUCKLE ROW, on
+        /// the side the fingers curl toward.
+        ///
+        /// <para>NOT the middle of the fist, which was the first thing tried and is wrong for a
+        /// reason worth writing down: the fist centre is buried in the finger mass, so seating
+        /// the shaft there runs it THROUGH the knuckles — the measured result was MCP joints
+        /// 9-15 mm from the axis when the grip surface is at 13.6 mm. A curl cannot fix that,
+        /// because rotating a joint moves its children and not itself, so an MCP inside the grip
+        /// stays there whatever the fingers do. The wrist is the only thing that can place the
+        /// knuckle row, so the knuckle row is what it aims.</para>
+        /// </summary>
+        Vector3 GripSeatInHand(bool right, out int found)
+        {
+            Vector3 mcp = Vector3.zero; found = 0;
+            foreach (var chain in right ? TrailFingers : LeadFingers)
+            {
+                var t = HumanBone(chain[0]);             // proximal = the knuckle
+                if (t != null) { mcp += t.position; found++; }
+            }
+            if (found == 0) return Vector3.zero;
+            mcp /= found;
+            Vector3 n = PalmNormal(right ? "r" : "l");   // 3.10.1: points the way the fingers curl
+            if (n.sqrMagnitude < 1e-10f) return mcp;
+            return mcp + n.normalized * (shaftRadius + fingerRadius);
+        }
+
+        void SeatHandOnShaft(bool right, Vector3 axisO, Vector3 axisD)
+        {
+            Transform wrist = HumanBone(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+            if (wrist == null) return;
+
+            // ── 1. the wrist ─────────────────────────────────────────────────────────
+            Vector3 fist = GripSeatInHand(right, out int found);
+            if (found == 0) return;
+            Vector3 arm = fist - wrist.position;
+            float reach = arm.magnitude;
+            if (reach < 1e-5f) return;
+
+            // Where on the axis could this fist centre reach without moving the wrist? The fist
+            // travels on a sphere of radius `reach` about the wrist; intersect that with the
+            // shaft line. perp is the wrist's own distance from the axis.
+            float alongW  = Vector3.Dot(wrist.position - axisO, axisD);
+            Vector3 foot  = axisO + axisD * alongW;
+            float perp    = (wrist.position - foot).magnitude;
+
+            Vector3 target;
+            if (reach > perp)
+            {
+                float half = Mathf.Sqrt(reach * reach - perp * perp);
+                Vector3 p1 = foot + axisD * half, p2 = foot - axisD * half;
+                target = (p1 - fist).sqrMagnitude <= (p2 - fist).sqrMagnitude ? p1 : p2;
+            }
+            else
+            {
+                target = foot;      // the axis is out of this hand's reach; aim at the nearest point
+            }
+
+            Quaternion want = Quaternion.FromToRotation(arm, target - wrist.position);
+            float deg = Quaternion.Angle(Quaternion.identity, want);
+            if (deg > wristSeatMaxDeg && deg > 1e-4f)
+                want = Quaternion.SlerpUnclamped(Quaternion.identity, want, wristSeatMaxDeg / deg);
+            wrist.rotation = want * wrist.rotation;
+
+            // ── the TWIST, which FromToRotation leaves free and the hand badly needs ──────
+            // Aiming the grip seat at the shaft fixes WHERE the hand is, not which way it is
+            // rolled: FromToRotation returns the minimal rotation between two vectors, so the
+            // spin about the arm is whatever the clip happened to have. Measured symptom, trail
+            // hand: with the mean knuckle at its contact distance the individual knuckles still
+            // read 11.0 and 12.5 mm — a knuckle ROW lying across the shaft instead of along it,
+            // so the fingers meet the club side-on and no amount of curl can wrap them.
+            //
+            // A golf grip runs the shaft along the knuckle row, so that is the target. The twist
+            // is about the arm axis THROUGH the seat point, which leaves the seat exactly where
+            // the step above put it, and it spends whatever is left of the wrist budget.
+            {
+                Transform idx = HumanBone(right ? HumanBodyBones.RightIndexProximal  : HumanBodyBones.LeftIndexProximal);
+                Transform lit = HumanBone(right ? HumanBodyBones.RightLittleProximal : HumanBodyBones.LeftLittleProximal);
+                if (idx != null && lit != null)
+                {
+                    Vector3 twistAxis = (GripSeatInHand(right, out _) - wrist.position);
+                    if (twistAxis.sqrMagnitude > 1e-10f)
+                    {
+                        twistAxis.Normalize();
+                        Vector3 rowNow = Vector3.ProjectOnPlane(lit.position - idx.position, twistAxis);
+                        Vector3 rowWant = Vector3.ProjectOnPlane(axisD, twistAxis);
+                        if (rowNow.sqrMagnitude > 1e-10f && rowWant.sqrMagnitude > 1e-10f)
+                        {
+                            // the row is a LINE, not an arrow: take whichever end is nearer, so
+                            // the hand is never rolled the long way round to face the same way.
+                            if (Vector3.Dot(rowNow, rowWant) < 0f) rowWant = -rowWant;
+                            float twist = Vector3.SignedAngle(rowNow.normalized, rowWant.normalized, twistAxis);
+                            float budget = Mathf.Max(0f, wristSeatMaxDeg - Mathf.Min(deg, wristSeatMaxDeg));
+                            twist = Mathf.Clamp(twist, -budget, budget);
+                            if (Mathf.Abs(twist) > 1e-3f)
+                                wrist.rotation = Quaternion.AngleAxis(twist, twistAxis) * wrist.rotation;
+                        }
+                    }
+                }
+            }
+
+            // ── 2. the fingers ───────────────────────────────────────────────────────
+            Vector3 palm = PalmNormal(right ? "r" : "l");
+            if (palm.sqrMagnitude < 1e-10f) return;
+            foreach (var chain in right ? TrailFingers : LeadFingers)
+                CurlFingerOntoGrip(chain, axisO, axisD, palm);
+        }
+
+        /// <summary>
+        /// One curl parameter for the whole finger, split across its three joints in fixed
+        /// proportions and solved so the FINGERTIP sits one finger-radius off the grip surface.
+        /// Positive flexes, negative opens. Monotone in t (flexing carries the tip toward the
+        /// palm, hence toward a shaft lying in it), so a plain bisection is exact enough.
+        /// </summary>
+        void CurlFingerOntoGrip(HumanBodyBones[] chain, Vector3 axisO, Vector3 axisD, Vector3 palm)
+        {
+            var j = new Transform[3];
+            for (int k = 0; k < 3; k++) { j[k] = HumanBone(chain[k]); if (j[k] == null) return; }
+            Transform tip = j[2].childCount > 0 ? j[2].GetChild(0) : null;
+            if (tip == null) return;
+
+            var keep = new Quaternion[3];
+            for (int k = 0; k < 3; k++) keep[k] = j[k].localRotation;
+            float contact = shaftRadius + fingerRadius;
+
+            // The CLOSEST of the joints the curl can actually move, not just the fingertip.
+            // Targeting the tip alone lets a mid-joint dive inside the grip while the tip sits
+            // politely on the surface — which is what "the club goes through the finger" looks
+            // like. j[0] is excluded because a joint's own rotation does not move itself: the
+            // knuckle's place is the wrist's job (see GripSeatInHand).
+            float Apply(float t)
+            {
+                for (int k = 0; k < 3; k++) j[k].localRotation = keep[k];
+                for (int k = 0; k < 3; k++)
+                {
+                    Vector3 bone = (k < 2 ? j[k + 1].position : tip.position) - j[k].position;
+                    Vector3 bend = Vector3.Cross(bone, palm);
+                    if (bend.sqrMagnitude < 1e-10f) continue;
+                    j[k].rotation = Quaternion.AngleAxis(t * HeldCurlRatio[k], bend.normalized) * j[k].rotation;
+                }
+                return Mathf.Min(AxisDistance(tip.position, axisO, axisD),
+                       Mathf.Min(AxisDistance(j[1].position, axisO, axisD),
+                                 AxisDistance(j[2].position, axisO, axisD)));
+            }
+
+            // The caps are per JOINT, so the parameter's range is set by the biggest ratio.
+            float hi = heldCurlMaxDeg / HeldCurlRatio[0];      // most flexed
+            float lo = -heldOpenMaxDeg / HeldCurlRatio[0];     // most open
+
+            // SATURATION APPLIES THE CLAMP, it does not bail. Returning here left the finger at
+            // the clip's own pose -- which is the pose that was too tight in the first place, so
+            // the joints that most needed opening were exactly the ones the solve gave up on.
+            float dLo = Apply(lo);
+            if (dLo <= contact) return;                        // as open as the cap allows; keep it
+            float dHi = Apply(hi);
+            if (dHi >= contact) return;                        // as closed as the cap allows; keep it
+
+            for (int k = 0; k < 14; k++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (Apply(mid) > contact) lo = mid; else hi = mid;
+            }
+            Apply((lo + hi) * 0.5f);
         }
 
         /// <summary>
@@ -315,6 +545,16 @@ namespace Golfin.Gameplay.Golfer
         static readonly HumanBodyBones[] TrailIndex  = { HumanBodyBones.RightIndexProximal,  HumanBodyBones.RightIndexIntermediate,  HumanBodyBones.RightIndexDistal };
         static readonly HumanBodyBones[] TrailMiddle = { HumanBodyBones.RightMiddleProximal, HumanBodyBones.RightMiddleIntermediate, HumanBodyBones.RightMiddleDistal };
         static readonly HumanBodyBones[] TrailRing   = { HumanBodyBones.RightRingProximal,   HumanBodyBones.RightRingIntermediate,   HumanBodyBones.RightRingDistal };
+        // The WRAP omits the trail little finger on purpose (a Vardon grip rides it on the lead
+        // hand, not on the shaft). The held-grip pose seats both fists on the shaft directly, so
+        // it does use this one; the wrap's chain list is untouched.
+        static readonly HumanBodyBones[] TrailLittle = { HumanBodyBones.RightLittleProximal, HumanBodyBones.RightLittleIntermediate, HumanBodyBones.RightLittleDistal };
+
+        // DECLARED AFTER the four-name arrays above, and that is load-bearing: C# runs static
+        // field initialisers in declaration order, so listing these first would fill them with
+        // nulls and the held grip would silently pose nothing.
+        static readonly HumanBodyBones[][] LeadFingers  = { LeadIndex,  LeadMiddle,  LeadRing,  LeadLittle  };
+        static readonly HumanBodyBones[][] TrailFingers = { TrailIndex, TrailMiddle, TrailRing, TrailLittle };
 
         /// <summary>
         /// Bend one finger joint until its bone's far end lies one finger-radius off the
@@ -955,7 +1195,13 @@ namespace Golfin.Gameplay.Golfer
         {
             // AFTER the Animator has evaluated: LateUpdate runs past the animation phase, so this
             // overwrites the clip's fingers rather than being overwritten by them.
+            //
+            // Both are no-ops unless their own flag is set, and a prefab sets one or the other:
+            // forceGripPose is PfGolfer_Test's wrap, heldGripPose is the authored grip (iter-9b).
+            // Neither reads the club's transform back, so posing the hands here cannot move the
+            // club — Animation Rigging has already evaluated GripTarget inside the animator graph.
             ApplyGripPose();
+            ApplyHeldGripPose();
 
             if (_swinging || _shot == null) return;
             float h = _shot.CameraHeadingRadians;
