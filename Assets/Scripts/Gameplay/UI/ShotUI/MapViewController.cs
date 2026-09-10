@@ -661,6 +661,25 @@ namespace Golfin.Gameplay.UI.ShotUI
             _unitMode   = hudChip != null ? hudChip.UnitMode : HoleIndicatorWidget.DistanceUnit.Yards;
 
             BuildRuntimeObjects();
+
+            // THE MAP IS THE CAMERA. Every step below this line — the chrome hide, the marker
+            // placement, the screen projections — is decoration on a top-down view that only
+            // exists if _mapCam does, and each one degrades SILENTLY without it: there are two
+            // dozen `if (_mapCam == null) return;` guards in this file, PositionMapCamera's among
+            // them. Together they turn a missing camera into a half-open map — shot UI gone,
+            // world-space markers strewn across the normal camera, screen-space chips piled up
+            // where they were never projected — which is what Cesar photographed on 2026-09-10.
+            // Refuse the open instead. Nothing has been hidden yet at this point, so the player
+            // simply stays in the shot view and the log says why.
+            if (!MapCameraIsLive(out string camDiag))
+            {
+                Debug.LogError($"[MapView v2] Map camera is not live ({camDiag}) — refusing to open " +
+                               "rather than leaving a map with no camera. " + DescribeCameras());
+                DestroyRuntimeObjects();
+                _isOpen = false;
+                return;
+            }
+
             HideShotUIChrome();
             RepurposeShootButton(true);
             // map_view_v2 §8 — AFTER HideShotUIChrome, which would otherwise hide the slot it lives in.
@@ -772,7 +791,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             _mapCam.fieldOfView    = _currentFov;
             _mapCam.nearClipPlane  = _nearClip;
             _mapCam.farClipPlane   = _farClip;
-            _mapCam.depth          = 10f;
+            _mapCam.depth          = ResolveMapCameraDepth();
             _mapCam.cullingMask    = BuildCullMask();
             _mapCam.targetTexture  = null;  // EXPLICIT: no RT
             _mapCam.enabled        = true;
@@ -4361,6 +4380,69 @@ namespace Golfin.Gameplay.UI.ShotUI
             Debug.LogWarning($"[MapView v2] _shootButton was not wired — resolved '{resolved.name}' from " +
                              "its ClubButtonWidget. Re-wire the Inspector slot on MapViewController.");
             return _shootButton;
+        }
+
+        /// <summary>
+        /// A depth above every other camera drawing to the screen, never below the 10 this used to
+        /// hardcode.
+        ///
+        /// <para>10 was a guess about what everyone else's depth happens to be. It is right today,
+        /// and it is the kind of thing a new overlay camera, a scene revision or a different boot
+        /// order can quietly invalidate — at which point the map builds perfectly and renders
+        /// underneath the gameplay view, which reads to a player as "the camera never switched".
+        /// Deriving it costs one camera enumeration per open and cannot go stale.</para>
+        /// </summary>
+        private float ResolveMapCameraDepth()
+        {
+            float top = 10f;
+            foreach (var cam in FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (cam == null || cam == _mapCam) continue;
+                if (!cam.enabled || !cam.gameObject.activeInHierarchy) continue;
+                if (cam.targetTexture != null) continue;   // renders to an RT, not to the screen
+                if (cam.depth >= top) top = cam.depth + 1f;
+            }
+            return top;
+        }
+
+        /// <summary>
+        /// True when <see cref="_mapCam"/> will actually put a frame on screen: it exists, its
+        /// component and GameObject are on, it is not rendering into a texture, and nothing else
+        /// outranks it. <paramref name="reason"/> names the first failing condition.
+        /// </summary>
+        private bool MapCameraIsLive(out string reason)
+        {
+            if (_mapCam == null)                        { reason = "_mapCam is null";                 return false; }
+            if (!_mapCam.enabled)                       { reason = "camera component is disabled";    return false; }
+            if (!_mapCam.gameObject.activeInHierarchy)  { reason = "camera GameObject is inactive";   return false; }
+            if (_mapCam.targetTexture != null)          { reason = "camera has a targetTexture";      return false; }
+
+            foreach (var cam in FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (cam == null || cam == _mapCam) continue;
+                if (!cam.enabled || !cam.gameObject.activeInHierarchy || cam.targetTexture != null) continue;
+                if (cam.depth >= _mapCam.depth)
+                {
+                    reason = $"'{cam.name}' draws at depth {cam.depth}, at or above the map's {_mapCam.depth}";
+                    return false;
+                }
+            }
+            reason = null;
+            return true;
+        }
+
+        /// <summary>The full camera roster, so a failure reports the state that produced it rather
+        /// than needing a repro to diagnose.</summary>
+        private string DescribeCameras()
+        {
+            var sb = new System.Text.StringBuilder("Cameras: ");
+            foreach (var cam in FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (cam == null) continue;
+                sb.Append($"[{cam.name} enabled={cam.enabled} active={cam.gameObject.activeInHierarchy} ")
+                  .Append($"depth={cam.depth} rt={(cam.targetTexture != null)} scene={cam.gameObject.scene.name}] ");
+            }
+            return sb.ToString();
         }
 
         private void HideShotUIChrome()
