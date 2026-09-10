@@ -179,6 +179,8 @@ turn *Use File Scale* off — that multiplies by 100 (measured 132.8 m). Keep `u
 and put the correction in `globalScale` (Remy: `1.328 / 3.089 = 0.42992`, applied to the character
 **and every clip**). For roster models target R2 (≈1.75 m male / 1.65 m female) instead of 1.328 m.
 
+**Club grip — settled 2026-09-11 (`golfer_club_grip`, nine iterations):** the club mount that transfers to every roster model is `ClubRoot → GripTarget` driven by an Animation Rigging `MultiParentConstraint` averaging **both** hand bones (a single hand bone inherits one wrist's roll and points the shaft at the camera), with one authored `ClubSlot` / `PutterSlot` local pose per model solved for head-on-ball and face-square. **The hand pose does not transfer and is not procedural**: nine rounds of IK, landmark and contact-wrap code on the stand-in produced hands that were wrong at close range and invisible at game range. At the gameplay camera the clip's own hands read fine. So the roster brief (§2 / §4) gains one deliverable: **each model ships with an authored two-hand golf grip pose** (fingers closed on the actual grip, overlap grip, per `Docs/Specs/Active/golfer_club_grip/reference/GOLF_GRIP_GEOMETRY.html`) as a one-frame clip or bone-rotation asset, applied on a fingers-only layer — the artist does this in minutes with the club in hand; it is not Code's job.
+
 **Still open after the test:** the club's world orientation follows the clip's wrist roll, so the
 shaft reads wrong at address on the Mixamo-native rig (`sbs_address.jpg`). That is fixed by
 parenting the club to a grip target and pulling both hands onto the shaft with Animation Rigging
