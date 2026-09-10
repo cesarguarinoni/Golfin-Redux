@@ -290,13 +290,13 @@ green**, `telemetryLoans.test.ts` among them, then the OpenNext build, then wran
 
 | | |
 |---|---|
-| **Cloudflare Version ID** | iter-1 `476b78f6-fdf7-47e9-8c1d-acc4355e57a3`, **iter-2 `586b6c80-dfde-47a2-a938-19d1b12fdb7a`** (the median fix changes a number that renders on production, so it had to ship) |
+| **Cloudflare Version ID** | iter-1 `476b78f6-fdf7-47e9-8c1d-acc4355e57a3` · iter-2 `586b6c80-dfde-47a2-a938-19d1b12fdb7a` · **iter-2b `c5171f03-e999-4097-a0f4-e0a1050fd157`**. Each redo shipped because each changed something that renders on production. |
 | Worker | `golfin-admin` → `admin.golfin.world` (custom domain) |
 | Assets | 9 new or modified uploaded, 94 already there; startup 24 ms |
 | New binding | `env.PLAYLIFE_API_URL ("https://playlife-api.fly.dev")` |
 | § 2 Access check | `curl https://admin.golfin.world/` → **302** (Access is protecting it) |
-| § 23 stamp, built worker | `grep` of `api/version/route.js` → `df1f529fb` then `da3175337`, **no `-DIRTY`** either time |
-| § 23 stamp, **live site** | sidebar footer read **`df1f529fb`** after iter-1, **`da3175337`** after iter-2 — read in Cesar's Chrome, which carries the Access session, exactly as § 23 prescribes |
+| § 23 stamp, built worker | `grep` of `api/version/route.js` → `df1f529fb`, `da3175337`, `3080690e5`. **No `-DIRTY`** on any of the three. |
+| § 23 stamp, **live site** | sidebar footer read `df1f529fb`, then `da3175337`, then **`3080690e5`** — ⚠️ the first read after the last deploy showed the PREVIOUS commit and looked like a failed deploy; it was a cached page, and re-navigating with a throwaway query string showed the new one. Read — read in Cesar's Chrome, which carries the Access session, exactly as § 23 prescribes |
 
 **Verified on the live site, all three surfaces, no 500 anywhere:**
 
