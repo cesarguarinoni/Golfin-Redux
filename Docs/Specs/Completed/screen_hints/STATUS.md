@@ -1,5 +1,6 @@
-ARCHITECT_REVIEW_PASS
+DONE
 
+Approved by Cesar 2026-09-10 ("Done").
 Task: screen_hints
 Updated: 2026-09-10 16:05 JST by golfin-redteam-reviewer
 Iteration: iter-1. Verdict FORWARD_TO_REDTEAM — every acceptance row confirms PASS after
@@ -25,3 +26,4 @@ Figma: page `Tutorial` — overlay kit `14263:39325`, Roster `14263:109304`, Hom
 - 2026-09-10 15:41 JST — SELF_REVIEW_PASS. golfin-self-reviewer: FORWARD_TO_ARCHITECT. All 16 rows CONFIRM-PASS; prefab clone-provenance re-verified live (Background='Background - HoleCard', ModalSeparator='Divider', BackButton='ButtonCancel', NextButton='Button - Retry', tipSprites 34/34 non-null, no ModalBackdropDismiss); scene diff HEAD-clean; editor left in edit mode on ShellScene.
 - 2026-09-10 15:50 JST — READY_FOR_REDTEAM. golfin-reviewer: FORWARD_TO_REDTEAM. Independently re-verified: pixel scan of `roster_hint_1of4.png`, Figma A/B against all four `reference/` node renders (Roster 1/4, Home 1/2, In-game 1/6, Roster 4/4), per-element ## Figma fidelity table (13 rows, font weight + rendered size vs reference on every text row), Rule 21 lint re-run (fail=0/warn=1), live prefab sprite dump (`Background - HoleCard`/`Divider`/`ButtonCancel`/`Button - Retry`, DimBackground `<NONE>` intentional, ModalBackdropDismiss count 0 vs source 1, animateShow=1, sortingOrder=600, both button widths 450 via LayoutElement), scene diff HEAD-clean, real-entry wiring confirmed in `ScreenHintPresenter`/`GameplaySceneLoader`/`ControlsSubmenu`, all 17 acceptance rows re-walked with verify_en/ja.log evidence quoted.
 - 2026-09-10 16:05 JST — ARCHITECT_REVIEW_PASS. golfin-redteam-reviewer: adversarial gate. Re-ran the real-flow verify bot MYSELF (boot → Splash → real widgets → DONE, editor left clean, no scene/prefab drift): canonical re-shot fresh (md5 3924c57a → 342e604e, valid non-flipped 1170×2532 matching the node), and every behavioural acceptance row reproduced line-for-line. Re-derived by me: Rule 19 live sprite dump (all real source sprites, tipSprites 34/0-null), Rule 21 lint (0 FAIL/1 WARN = intentional scrim), LocalizedText keys (TIP_HEADER/HINT_BACK/HINT_CONTINUE — stale .text is cosmetic), CSV 36/18, real-entry wiring + no *Gate/Physics touch, localisation published (texts=54). Three break attempts (visual/geometric/spec-intent) all failed. No blocker. Advances to Cesar.
+- 2026-09-10 — DONE. Cesar approved after ARCHITECT_REVIEW_PASS; folder moved to Docs/Specs/Completed/.

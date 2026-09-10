@@ -4,7 +4,7 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## 2026-09-10 — screen_hints: **the Loading tips open as a modal on the first entry into each screen** — READY_FOR_SELF_REVIEW (Cesar: hint first — the stacking order question is closed)
+## 2026-09-10 — screen_hints: **the Loading tips open as a modal on the first entry into each screen** — **DONE** (self-review → reviewer → red-team PASS, Cesar approved 2026-09-10)
 
 First entry into a screen with a row in `Assets/Resources/Data/ScreenHints.csv` (36 rows, 18 screens) opens
 that screen's tips one at a time: `PRO TIP`, the tip's diagram + text (the loading card's own `TipContent`
