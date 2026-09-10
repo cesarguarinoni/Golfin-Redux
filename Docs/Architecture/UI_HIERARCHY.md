@@ -771,6 +771,114 @@ ExpandedContainer/TitleAreaExp/TitleHRowExp       (NEW — cloned component-for-
 every other card is instantiated at runtime. After any structural edit here, check that instance for
 orphans and stale overrides — see `tasks/lessons.md` Lesson AJ.
 
+## Asset loans (asset_loans / asset_loans_polish / asset_loans_offers — ShellScene, `Golfin.UI.Loans`)
+
+⚠️ The loans UI had **no entry here at all** before 2026-09-10, v1 included. This section documents
+the state after `asset_loans_offers`.
+
+A loan starts as an **offer**. The two predicates that shape every surface below:
+`IsLive` = "the borrower is playing it"; `IsLocked` = `offered | active` = "it is out of the
+lender's hands". `LoanService.Out` is filtered on **IsLocked**, so `IsLentOut` answers true for an
+un-accepted offer and every pre-existing lock holds with no new UI code.
+
+### Entry points on the existing detail panels
+
+```
+RosterScreen/DetailPanel/RightPanel                    (CharacterDetailPanel)
+├── CharacterNamePanel/CharacterNameText               (see § Name vs status icons below)
+├── StatusIconsRow                                     ⚠️ child of RightPanel, NOT of CharacterNamePanel
+│   ├── IconSelectedBig                                (48×48)
+│   └── IconLevelUpBig                                 (33×40)
+├── LoanRibbon                                         (LoanRibbonView — OFFERED reads the OFFER clock,
+│                                                       because the loan clock has not started yet)
+└── ButtonsPanel/…/LendButton                          LEND | RESCIND | RETURN, chosen by state
+
+InventoryScreen/…/ClubDetailPanel                      the same three states for clubs
+```
+
+**OFFERED is a narrowing of lent-out, not a sixth state beside it** — the asset is locked either
+way and every disable is shared. The only differences are the ribbon's sentence and the LEND slot,
+which becomes an **enabled RESCIND** where a lent asset has a disabled LEND. It is the one locked
+state with a live button, because taking the offer back is exactly what a locked-by-offer asset
+affords.
+
+### Home offer pill (`Golfin.UI.Home.LoanOfferPillController`)
+
+```
+Canvas/ScreensRoot/HomeScreen
+├── DailyMissionPill                                   (see § Home daily-mission pill)
+└── LoanOfferPill                                      (cloned object-for-object from the daily pill)
+    ├── Glow                                           (sprite GUID 086acc78ed8a34ce090a7cec8d2d5aea — the daily pill's)
+    ├── Panel                                          (sprite GUID 448cb5f34eebb4b38962e7959d0a11ed — the daily pill's)
+    └── Label                                          (TMP, fontSizeMax capped — see the trap below)
+```
+
+⚠️ **It is re-seated AFTER the daily pill**, so the vertical chain is notice → daily → offer and the
+order is load-bearing (`HomeScreenController`). Same computed-Y model as the daily pill; it does not
+sit in a layout group.
+
+⚠️ **The clone arrives with `enableAutoSizing` on, which makes `fontSize` an OUTPUT** — TMP
+overwrites it on the next layout. Cap `fontSizeMax`, never `fontSize`, or the label snaps back to
+the daily pill's 40 the moment a short lender name fits.
+
+### Modals (all built by `Assets/Scripts/UI/Loans/Editor/LoanUiBuilder.cs`)
+
+```
+Assets/Prefabs/UI/Modals/LoanModal.prefab              lend modal v2 — debounced search field,
+                                                       two sections, ONE selection across both
+Assets/Prefabs/UI/Modals/LoanOfferModal.prefab         recipient ACCEPT / DECLINE
+Assets/Prefabs/UI/Modals/LoanRescindModal.prefab       lender take-it-back confirm
+Assets/Prefabs/UI/Modals/LoanReturnModal.prefab        borrower early return (v1)
+```
+
+⚠️ `CloseAllModals` must enumerate the `ModalController` **base type**, not concrete types — naming
+them individually left the rescind popup open underneath three later screens.
+
+⚠️ The lend modal's `Content` VLG needs `childControlHeight = true`. It was `false` in v1, correct
+then because the children were fixed-height rows; in v2 they are `ContentSizeFitter` sections and
+`false` draws them on top of each other.
+
+⚠️ A TMP slot is a **line box** that already carries the font's leading and descent, while a Figma
+gap sits between boxes tight to their glyphs. The offer modal's node `gap: 6` converts to a Unity
+spacing of **0**. And a slot even slightly under the line box makes `Ellipsis` truncate the entire
+line away — `chars = 0`, rendering nothing while every property reads fine.
+
+### Settings ▸ User Profile ▸ LOAN OFFERS
+
+```
+SettingsScreen/SettingsPanel/SettingsList/UserProfileRow/UserProfileSubmenu
+└── LoanOffersRow                                      (124 tall; LoanOffersToggle)
+    ├── Texts/Title                                    (Rubik SemiBold 48 — the family size)
+    ├── Texts/Subtitle                                 (Rubik Regular 30 #BFD1E5)
+    └── Toggle                                         (S_LoanTogglePill 112×60, Simple not 9-sliced)
+        └── Knob                                       (S_LoanToggleKnob, x 58 ON / 6 OFF)
+```
+
+⚠️ **Every section-title Label in `SettingsList` is `fontSize = 48`.** Their `sizeDelta.y` is 40 —
+reading that field and calling it the font size shipped this row two sizes too small and cost a
+review round. See `tasks/lessons.md` Lesson BV.
+
+⚠️ The submenu has **no** EMAIL / ACCOUNT ID / DELETE ACCOUNT rows even though the Figma frame draws
+them; the row is appended last. Tracked in `Docs/Specs/Queued/settings_user_profile_rows/`.
+
+### Name vs status icons (`roster_name_overlaps_status_icons`, 2026-09-10)
+
+`CharacterNameText` is 489 px wide, `wrap = false`, `overflow = Overflow`, design `fontSize = 45` —
+and `StatusIconsRow` overlays its top-right corner, its left edge landing **418 px into the label's
+own rect**. `Golfin.Roster.NameIconFitter` reserves that strip in `margin.right` and lets TMP
+auto-size down (never below the floor), so a long surname clears the icons and a short one still
+renders at 45.
+
+⚠️ **The row is parented differently in the two places it appears**: under `RightPanel` on the
+detail panel, under `CharacterNamePanel` on the Compare panel. Any sweep of this shape must scope by
+**ancestor**, not by the label's immediate parent — scoping by parent silently misses the detail
+panel, the site the defect was reported on.
+
+⚠️ Callers toggle the icons with `SetActive` immediately before fitting, so the icon rects are one
+frame stale and the row has not collapsed. `Fit` force-rebuilds each icon row first — scoped to
+those rows, never `Canvas.ForceUpdateCanvases()`, which would rebuild every canvas and can bake
+anchor churn into the scene on a later save.
+
 ---
 
 ## Key Notes
