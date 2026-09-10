@@ -40,11 +40,20 @@ already records for `venues`. (2) An expanded row's button reads "Hide", so it d
 by-label match list and every index after it shifts by one; that silently pointed a screenshot at
 the wrong loan until the shooter grew a row-targeted step.
 
-**Deploying ahead of the migration was safe and was PROBED, not assumed:** against production with
-`golfin_loan_events` absent, PostgREST answers `PGRST205` and the timeline renders "not migrated"
-naming the file; `golfin_loan_admin` answers `PGRST202` and an action returns 503 naming it.
-Neither 500s. Production currently holds **zero** `golfin_loans` rows, so the panel is correct and
-empty, and the migration's backfill will have nothing to backfill.
+**Deploying ahead of the migration was safe and was PROBED, not assumed:** with
+`golfin_loan_events` absent, PostgREST answered `PGRST205` and the timeline rendered "not migrated"
+naming the file; `golfin_loan_admin` answered `PGRST202` and an action returned 503 naming it.
+Neither 500s.
+
+**The migration landed the same day, 11/11 checks green, and the trigger was then proven ON
+PRODUCTION** — four throwaway loans between two SYNTHETIC party ids (no real account touched, no
+asset locked, all rows deleted; both tables back to 0). offer→accept→force-return wrote
+`lender created→offered`, `borrower offered→active`, `admin active→returned` with the email and
+the note — that third line is the whole reason the transaction-local flag exists, since a forced
+return is the same transition a borrower's return makes. Both lazy-expiry clocks wrote `system`
+rows. All six refusals hit at the SQL layer: `not_found`, `note_required`, `admin_required`,
+`not_active`, `not_offered`, `bad_action`. Production still holds **zero** real loans, so the
+panel is correct and empty until someone lends something.
 
 Tests: dashboard **293 → 305**, backend **315 → 319**. 141 new DICT keys, all EN + JA.
 

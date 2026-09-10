@@ -71,8 +71,8 @@ transaction-local flag the trigger honours and writes its own row carrying the e
 
 | Item | Result | Justification |
 |---|---|---|
-| Migration applied by Cesar (verification output quoted); trigger proven on a real offer → accept → return; lazy expiry yields a `system` row; backfill count = loans count | **BLOCKED — Cesar** | I cannot run DDL (no Postgres connection string; PostgREST has no DDL path — `ADMIN_DASHBOARD_OPS.md` § 3.2). The SQL is written, **parse-checked with pglast v8.4** (10 statements + both plpgsql bodies parsed, not just the DDL around them), and is in the chat ready to paste. ⚠️ **Production currently holds ZERO `golfin_loans` rows** (`select id,status` → `rows: 0`), so check 6 will read `0 expected` and rows 7/8 will both be `0` — the backfill has nothing to backfill, and the trigger can only be proven by making a real offer afterwards. |
-| `golfin_loan_admin`: `note_required` / `not_found` / `not_active` / `not_offered` / `bad_action` each hit by a test; `force_return` sets `level_at_end` exactly as `return_loan`; `clear_cooldown` makes the pair lendable again | **PASS (three ways, one row deferred)** | **Refusals**, exercised end-to-end through the live route in mock mode: `not_active` → 409 `"only an ACTIVE loan can be force-returned"`, `not_offered` → 409, short note → 400 `"note (string, 3–500 chars) is required"`, unknown loan → 404, `nuke_it` → 400 `"action must be one of force_return, cancel_offer, clear_cooldown"`. **`level_at_end`** — the SQL is `coalesce(v_level, level_at_start)` where `v_level` is `select level from golfin_progress where user_id = v_row.lender_id and kind = v_row.kind and ref_id = v_row.ref_id`; `return_loan` (lines 1144-1147) is `levels.get((row["lender_id"], row["kind"], row["ref_id"]), row["level_at_start"])` over `_owner_levels`, which selects the same three columns from the same table. Same lookup, same fallback. **`clear_cooldown`** is pinned in `TestAdminClearCooldown` through the REAL `cooldown` path in `POST /loans`: refused before, `ok` after the rows look the way the function leaves them, with the declined row still present. **Deferred:** `note_required` and `bad_action` are refused by the TypeScript layer before the RPC is reached, so the SQL's own copies of those two guards are unexercised until the migration lands. They are belt-and-braces, not the gate. |
+| Migration applied by Cesar (verification output quoted); trigger proven on a real offer → accept → return; lazy expiry yields a `system` row; backfill count = loans count | **PASS** | **Applied by Cesar 2026-09-10, 11/11 green** — `events_table 1`, `status_trigger 1`, `admin_function 1`, `events_rls_on 1`, `events_zero_policies 0`, `backfill_covers_every_loan 0`, `loans_count 0`, `loans_with_events 0`, `admin_fn_revoked_from_anon 1`, `admin_fn_revoked_from_authenticated 1`, `trigger_honours_admin_flag 1`. Re-derived from the database rather than taken from the paste: `golfin_loan_events` now answers **200** (it was 404 an hour earlier) and the RPC answers `{"status":"not_found"}` instead of `PGRST202`. **The trigger was then proven on production** through a full lifecycle on four throwaway loans between two SYNTHETIC party ids (`…0000deadbeef` → `…0000cafebabe`), so no real account was touched and no real asset was ever locked — see § The trigger, proven. Rows 7/8 read `0 = 0` because production holds no loans, so the backfill correctly had nothing to backfill. |
+| `golfin_loan_admin`: `note_required` / `not_found` / `not_active` / `not_offered` / `bad_action` each hit by a test; `force_return` sets `level_at_end` exactly as `return_loan`; `clear_cooldown` makes the pair lendable again | **PASS** | **All five refusals now hit at the SQL layer itself**, on production, plus a sixth the spec did not list: `note_required` (a 1-char note), `admin_required` (an empty admin), `not_found` (an unknown id), `not_active` (force-returning an already-returned loan), `not_offered` (force-returning an offer), `bad_action` (`nuke_it`). The first three and `bad_action` were the ones deferred while the function did not exist; they are no longer deferred. The same six are refused a second time by the TypeScript layer with the same statuses mapped to 400/404/409 — exercised end-to-end through the live route in mock mode. **`level_at_end`** — the SQL is `coalesce(v_level, level_at_start)` over `select level from golfin_progress where user_id = lender_id and kind = kind and ref_id = ref_id`; `return_loan` (lines 1144-1147) is `levels.get((lender_id, kind, ref_id), level_at_start)` over `_owner_levels`, which selects the same three columns from the same table. Same lookup, same fallback — and the production run took the fallback branch and wrote `level_at_end = 42` from `level_at_start = 42`, as `return_loan` would. **`clear_cooldown`** moved `answered_at` **30 days** back on production with `status` still `rescinded`, and is pinned in `TestAdminClearCooldown` through the REAL `cooldown` path in `POST /loans`: refused before, `ok` after. |
 | Panel: every filter changes the query; CSV matches the table; each action → 200 → audit row → refetch; refusals toast | **PASS** | Ten filter combinations, each asserted on the returned ids: `status=returned` → 2, `rescinded` → 2, `offer_expired` → 1, `kind=club` → 3, `q=Cratilo` → 2 (lender on one, borrower on the other), `q=char_kai` → 2, `q=<uuid>` → 1, `q=zzzznotaplayer` → **0** (an empty table, not the unfiltered one), a date window → 4, `status=bogus` → **400**. **CSV matches the table byte for byte:** for `kind=club`, `csvIds == tableIds` → `true`, 3 rows + header, `filename="golfin_loans.csv"`. **Actions:** all three ran 200 through the real widgets (`loans_action_dialog.png` is the dialog mid-type; `loans_row_after_force_return.png` is the result). **Audit:** 5 rows, actions `loan_force_return` / `loan_cancel_offer` / `loan_clear_cooldown` / `loan_offers_set`, each with a real `before`/`after` — the `clear_cooldown` row shows `answered_at` moving `2026-09-10T04:44` → `2026-08-11T04:44` (30 days) with `status` still `declined`. |
 | Drawer tab: a user with 1 out + 1 in + 1 pending shows all three; the offers switch round-trips and audits | **PASS** | `screenshots/loans_drawer_tab.png` — ken: **PENDING OFFERS TO ANSWER (1)**, **LENT OUT (3)**, **BORROWED (1)**. The switch was flipped through the real button + note dialog: the tab re-rendered **OFF** with the red frame and the `not_accepting` explanation, and `loan_offers_set` landed in the audit log. |
 | Telemetry: `buildLoanFunnel` + `buildLoanLifecycle` unit-tested (empty, one full lifecycle, mixed statuses, pre-offers rows with null `offered_at`); the section renders in mock and live | **PASS** | 12 tests, **305 total** (was 293). All four named cases are present, plus a stringified payload, the top-5 cap, and a case proving the router's predicates are applied to the TIMESTAMPS rather than the status column (an `active` row past `ends_at` counts 0 in `activeNow` while still counting 2 under `byStatus.active`). Renders in mock (`loans_telemetry_section.png`) and in live against production (`fetchLoanLifecycle` → `{total: 0, pendingNow: 0, activeNow: 0}` — real zeros, no throw). |
@@ -80,6 +80,57 @@ transaction-local flag the trigger honours and writes its own row carrying the e
 | `lib/i18n.ts`: every new key en + ja; DICT lint clean; JA proof-read | **PASS** | **141 new keys**, scripted check: `missing/empty en or ja: none`, `{var} mismatch between en/ja: none`. `tsc --noEmit` exits **0** — `DictKey` is derived from `DICT`, so a `t("…")` for a key that does not exist is a compile error, which is the lint. Rendered HTML scanned for leaked keys on `/loans`, `/telemetry`, `/users` in **both** languages: clean, six for six. JA rendering read on the frames: `loans_panel_ja.png`, `loans_drawer_tab_ja.png`, `loans_telemetry_section_ja.png`. |
 | Deployed: `npm run deploy` output, Cloudflare deployment id, footer stamp read live; mock mode still boots with no service key | **SEE § Deploy** | Filled in below. |
 | Dashboard tests green (count before/after); backend tests green | **PASS** | Dashboard **293 → 305** (12 new, 13 files). Backend **315 → 319** (4 new). Both suites run clean; `npm run deploy` runs the dashboard suite itself and aborts on failure. |
+
+---
+
+## The trigger, proven — on production, 2026-09-10
+
+The spec asked for this on prod. It was run there, on **four throwaway loans between two
+SYNTHETIC party ids** (`00000000-0000-4000-8000-0000deadbeef` → `…0000cafebabe`) rather than on
+real accounts: no player's asset was ever locked, nothing appeared in anyone's client, and all
+four loans plus every event they produced were deleted at the end. `golfin_loans` and
+`golfin_loan_events` both held **0 rows before and 0 rows after** — quoted below.
+
+**A. offer → accept → admin force return.** Each step wrote exactly one row, with the actor the
+trigger inferred:
+
+```
+lender    created   -> offered
+borrower  offered   -> active
+admin     active    -> returned  [cesar.guarinoni@wonderwall-g.com] "Support 1188 - lender asked for it back"
+```
+
+That third line is the whole reason the transaction-local flag exists. A forced return is
+byte-for-byte the same transition a borrower's return makes, so without the flag it would read
+`borrower`. It reads `admin`, with the email and the note. `golfin_loan_admin` answered
+`{"status":"ok","action":"force_return","from_status":"active","to_status":"returned"}` and the
+row came back `status=returned`, `level_at_end=42` — the `level_at_start` fallback, because a
+synthetic lender has no `golfin_progress` row, which is exactly the branch `return_loan` takes in
+the same situation.
+
+Then, on that same loan: a repeat → `not_active`, the wrong verb (`cancel_offer` on a returned
+loan) → `not_offered`, and `nuke_it` → `bad_action`.
+
+**B. offer → admin cancel → clear the cooldown it started.** `answered_at` moved **30 days** back
+and `status` stayed `rescinded`, so the history is intact and the window is over:
+
+```
+lender    created   -> offered
+admin     offered   -> rescinded  [cesar.guarinoni@wonderwall-g.com] "Support 1189 - wrong recipient"
+admin     rescinded -> rescinded  [cesar.guarinoni@wonderwall-g.com] "Support 1189 - let them re-offer"
+```
+
+The third line is a status change of nothing, deliberately: `clear_cooldown` moves a timestamp
+rather than a status, and an admin touching a loan has to leave a trace either way.
+
+**C. the lazy expiry `routers/loans.py::_expire` performs → a `system` row, on both clocks.**
+
+```
+lender    created   -> offered        system  offered  -> offer_expired      (the 48 h offer clock)
+lender    created   -> active         system  active   -> expired            (the loan's own clock)
+```
+
+**Cleanup.** `golfin_loans now: 0 rows`, `golfin_loan_events now: 0 rows`.
 
 ---
 
@@ -164,7 +215,7 @@ as screenshot files — the Chrome capture wrote no path I could retrieve, and a
 cannot hand over is not evidence. Every file under `screenshots/` is a mock-mode frame and says
 so in its own banner.
 
-**Deploying before the migration is safe here, and that was checked rather than assumed.**
+**Deploying before the migration was safe, and that was checked rather than assumed** (the migration has since landed, so this section is now history — it is kept because it is the evidence that the ordering was safe).
 `ADMIN_DASHBOARD_OPS.md` § 3.2 says migration first because code referencing a missing object
 500s. Every read in this task degrades instead, and the degradation was probed **against
 production with the migration not applied**:
