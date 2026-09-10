@@ -4,6 +4,51 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 — loans_ops: **manage loans from the admin, and see whether lending is used** — READY_FOR_SELF_REVIEW (migration waiting on Cesar)
+
+The ops half of the loan system. A **Loans panel** cloned from the Gacha ops panel (status chips /
+kind / free-text / date, a paged log, Export CSV of the filtered set, a row expanding to its
+timeline and its action bar, a read-only Rules card), a **Loans tab** in the Users drawer reusing
+that same row verbatim plus the recipient's offers switch, and a **Loans section** in Telemetry.
+Deployed: dashboard Cloudflare version `476b78f6-fdf7-47e9-8c1d-acc4355e57a3` (footer stamp
+`df1f529fb` read live), API **v73 → v74**.
+
+**The timeline is written by a TRIGGER, not by the router**, because three different things flip a
+loan's status: the six endpoints, the lazy expiry inside `GET /loans` (which runs on whichever
+client reads first), and now an admin. A router-written timeline would have missed the other two.
+The actor is inferred from the transition — `active` is only reached by an accept, `rescinded` is a
+lender verb, the two `*expired` states are the clock — with one exception: **an admin's forced
+return is indistinguishable from a borrower's**, so `golfin_loan_admin` raises a
+transaction-local flag the trigger honours and writes its own row carrying the email and the note.
+That is why `routers/loans.py` needed only ONE addition, the read-only `GET /loans/rules` the
+Rules card reads so it can never drift from the constants.
+
+**Three actions, each needing a note that lands on the timeline AND in `admin_audit_log`.** Force
+return mirrors `return_loan` including `level_at_end`. Cancel offer is a rescind and therefore
+STARTS the pair's 24 h cooldown — the copy says so twice, and clearing it is the third action.
+Clear cooldown has no column to clear (the cooldown is DERIVED from `answered_at`), so it pushes
+the pair's rescinded/declined rows 30 days back: the history stays, the window is over.
+
+**The panel's one trap, in its own subtitle: expiry is LAZY.** An offer whose 48 h ran out
+yesterday still shows as OFFERED until a client reads it. Only the telemetry card's *pending now*
+/ *active now* apply the router's predicates to the timestamps rather than to the status column.
+
+**Two things found by building it.** (1) Mock state must live on `globalThis`: in dev the panel's
+GET and its POST are different route bundles, so a module-level array meant the drawer showed a
+loan the panel had just force-returned as still ACTIVE — the same lesson `lib/mockStore.ts`
+already records for `venues`. (2) An expanded row's button reads "Hide", so it drops out of a
+by-label match list and every index after it shifts by one; that silently pointed a screenshot at
+the wrong loan until the shooter grew a row-targeted step.
+
+**Deploying ahead of the migration was safe and was PROBED, not assumed:** against production with
+`golfin_loan_events` absent, PostgREST answers `PGRST205` and the timeline renders "not migrated"
+naming the file; `golfin_loan_admin` answers `PGRST202` and an action returns 503 naming it.
+Neither 500s. Production currently holds **zero** `golfin_loans` rows, so the panel is correct and
+empty, and the migration's backfill will have nothing to backfill.
+
+Tests: dashboard **293 → 305**, backend **315 → 319**. 141 new DICT keys, all EN + JA.
+
+---
 ## 2026-09-10 — screen_hints: **the Loading tips open as a modal on the first entry into each screen** — **DONE** (self-review → reviewer → red-team PASS, Cesar approved 2026-09-10)
 
 First entry into a screen with a row in `Assets/Resources/Data/ScreenHints.csv` (36 rows, 18 screens) opens

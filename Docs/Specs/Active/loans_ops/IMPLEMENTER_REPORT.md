@@ -131,9 +131,38 @@ for what these are.
 (memory: a 401 mid-run is not a failed deploy): `GET /api/v1/loans/rules` → **200** with the eight
 constants, `/api/v1/loans/rulez` → **404**, `POST /api/v1/loans/rules/accept` → **403**.
 
-**Dashboard — see the line below.**
+**Dashboard — DONE.** `npm run deploy` (which ran the suite first: **13 files, 305 tests, all
+green**, `telemetryLoans.test.ts` among them, then the OpenNext build, then wrangler).
 
-<!-- DEPLOY_ID -->
+| | |
+|---|---|
+| **Cloudflare Version ID** | **`476b78f6-fdf7-47e9-8c1d-acc4355e57a3`** |
+| Worker | `golfin-admin` → `admin.golfin.world` (custom domain) |
+| Assets | 9 new or modified uploaded, 94 already there; startup 24 ms |
+| New binding | `env.PLAYLIFE_API_URL ("https://playlife-api.fly.dev")` |
+| § 2 Access check | `curl https://admin.golfin.world/` → **302** (Access is protecting it) |
+| § 23 stamp, built worker | `grep` of `api/version/route.js` → `df1f529fb`, **no `-DIRTY`** |
+| § 23 stamp, **live site** | sidebar footer reads **`df1f529fb`** — read in Cesar's Chrome, which carries the Access session, exactly as § 23 prescribes |
+
+**Verified on the live site, all three surfaces, no 500 anywhere:**
+
+* `/loans` — renders with the **PRODUCTION — live PLAYLIFE database** banner, the seven status
+  chips, `No loans match these filters.` (production genuinely holds zero loans), and a Rules
+  card labelled **`from https://playlife-api.fly.dev`** showing 20% · 1 d / 3 d / 7 d · 3 · 3 ·
+  3 · 48 h · 24 h · 14 d — the deployed API's own constants, fetched at page load.
+* `/telemetry` → **Loans** — the tab is in the section nav; the funnel strip renders five stages
+  at `—(0)` with `No loan events in this range.`, and the lifecycle card renders `PENDING NOW 0`,
+  `ACTIVE NOW 0`, `ACCEPTED —`, `RETURNED EARLY —`, `RP TO LENDERS 0`, `No loans in this range.`
+  Rates are **em-dashes, not 0%** — "no data" rendered as "no data", which is the whole point of
+  the null-rate rule.
+* `/users` → ken → **Loans** — the tab renders `LOAN OFFERS ON` (read from the real
+  `profiles.golfin_loan_offers`), `PENDING OFFERS TO ANSWER (0)`, `LENT OUT (0)` with
+  `This player has never lent anything.`
+
+⚠️ Those three live surfaces were read **in the browser** and are quoted above rather than cited
+as screenshot files — the Chrome capture wrote no path I could retrieve, and a screenshot I
+cannot hand over is not evidence. Every file under `screenshots/` is a mock-mode frame and says
+so in its own banner.
 
 **Deploying before the migration is safe here, and that was checked rather than assumed.**
 `ADMIN_DASHBOARD_OPS.md` § 3.2 says migration first because code referencing a missing object
