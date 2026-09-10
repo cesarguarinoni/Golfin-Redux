@@ -1,0 +1,29 @@
+=== iter-1 kickoff baseline 2026-09-10T05:46:57Z ===
+HEAD: b5d98857ddaf9619f4e84932a891a8642e861962
+DIRTY:
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+ M Docs/Economy/MONETIZATION_PLAN.md
+ M Docs/Specs/Active/weekly_rotation_admin/SPEC.md
+ M Docs/Specs/Active/weekly_rotation_client/SPEC.md
+ M Docs/TellCode.md
+?? "Claude outputs/screen_hints_scrim_vs_blur.png"
+?? Docs/Specs/Active/economy_telemetry/SPEC.md
+?? Docs/Specs/Active/economy_telemetry/STATUS.md
+?? Docs/Specs/Active/loans_ops/SPEC.md
+?? Docs/Specs/Active/loans_ops/STATUS.md
+?? Docs/Specs/Active/screen_hints/HEARTBEAT.log
+?? Docs/Specs/Active/screen_hints/SPEC.md
+?? Docs/Specs/Active/screen_hints/STATUS.md
+?? Docs/Specs/Active/screen_hints/reference/figma_14263-109304_roster_hint_1of4.png
+?? Docs/Specs/Active/screen_hints/reference/figma_14263-109672_home_hint_1of2.png
+?? Docs/Specs/Active/screen_hints/reference/figma_14263-109883_ingame_hint_1of6.png
+?? Docs/Specs/Active/screen_hints/reference/figma_14266-109661_roster_hint_4of4_last.png
+?? Docs/Specs/Quick/hole_selection_first_card_gap.md
+=== end baseline ===
+05:46:58Z read SPEC + repo sites (ProTipCard, LoadingTipCatalog/Store, ModalController, SchemeConfirmModalController/Builder, TournamentResultPresenter, UiMotion, GameplaySceneLoader step 7, ControlsSubmenu, SettingsMenuItem, MapViewController input)
+05:46:58Z Unity Editor up (6000.3.9f1), ShellScene open & clean; MCP probes of Canvas children / TipContent subtree / PersistentUI done
+05:55:04Z wrote ScreenHints.csv, Catalog/Resolver/Store/Presenter/ModalController, Editor builder+menu, 2 hook lines, 3 test fixtures + LoadingTipCatalogTests prefab test, texts CSV rows; refreshing Unity
+06:00:50Z prefab built (GUID 954144599248046619417f0a9ed85cc2, 34 sprites, animateShow re-asserted); ShellScene instance @ Canvas idx10 + ScreenHintPresenter on PersistentUI; LabScaffold instance @ ShotUI_Canvas idx20 (above SchemeConfirmModal 19 / InGameSettingsModal 18); churn-free scene candidates built in scratchpad (118 / 103 added lines, zero foreign changes); running EditMode tests
+06:14:35Z verify bot EN run 1: behaviour correct on Home/Roster/Inventory/GeneralShop/Mode/Mission/stack/Settings; captures phantom (SnapPlayModeSafe needs WaitForEndOfFrame) and the hole load was tapped under the HoleSelection hint's scrim — bot fixed for both
+06:18:51Z verify bot EN run 2 + JA run complete: 44 EN snaps (1170x2532, realPlay sidecars), gameplay 1/6..6/6 over the tee, tee-idle 0.00s after CLOSE; JA frames captured
+06:27:09Z report + STATUS (READY_FOR_ARCHITECT_REVIEW: one deliberate FAIL — stacking order vs TournamentResultPresenter's 1.0 s settle); UI_HIERARCHY + AI_CONTEXT updated; lint fail 0; seen-state reset for Cesar; committing scoped (scenes staged from churn-free candidates)

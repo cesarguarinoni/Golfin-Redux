@@ -1,0 +1,41 @@
+# screen_hints §3.1 — which Loading tips open as a modal on the FIRST entry into each screen.
+# screen: a ScreenManager.ScreenId name, or Gameplay / SettingsControls (ScreenHintCatalog constants).
+# order: the n/X order within the screen. key: a LoadingTips.csv key — tip text, sprite and
+# active flag all come from there; a key that is active=0 is skipped and not counted.
+screen,order,key
+Home,1,TIP_RP
+Home,2,TIP_DAILY
+Roster,1,TIP_RARITIES
+Roster,2,TIP_STATS
+Roster,3,TIP_CONDITION
+Roster,4,TIP_LEVELUP
+Inventory,1,TIP_CLUBSTATS
+Inventory,2,TIP_BALLS
+Inventory,3,TIP_REPAIR
+ModeSelection,1,TIP_MISSIONS
+ModeSelection,2,TIP_TOURNAMENT
+ModeSelection,3,TIP_VERSUS
+HoleSelection,1,TIP_AUTOCLUB
+HoleSelection,2,TIP_SURFACES
+MissionSelection,1,TIP_MISSIONS
+MissionSelection,2,TIP_DAILY
+TournamentSelection,1,TIP_TOURNAMENT
+Leaderboard,1,TIP_LEADERBOARD
+TournamentLeaderboard,1,TIP_LEADERBOARD
+StaminaShopSelection,1,TIP_CONDITION
+GeneralShop,1,TIP_GACHA
+GeneralShop,2,TIP_STORE
+GachaPrizes,1,TIP_GACHA
+GpsHub,1,TIP_GPS_WALLET
+GpsHub,2,TIP_GPS_CHECKIN
+GpsHub,3,TIP_GPS_SOCIAL
+GpsRounds,1,TIP_GPS_CHECKIN
+GpsGift,1,TIP_GPS_SOCIAL
+GpsVote,1,TIP_GPS_SOCIAL
+Gameplay,1,TIP_SWING
+Gameplay,2,TIP_ACCURACY
+Gameplay,3,TIP_GRADES
+Gameplay,4,TIP_VIEW
+Gameplay,5,TIP_CLUB
+Gameplay,6,TIP_FORECAST
+SettingsControls,1,TIP_CONTROLS

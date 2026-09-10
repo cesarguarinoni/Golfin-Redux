@@ -163,36 +163,61 @@ namespace GolfinRedux.Tests.EditMode
                 Assert.That(AssetDatabase.GetAssetPath(csv), Is.EqualTo(CsvPath));
 
                 var sprites = (Array)cardType.GetField("tipSprites", priv)!.GetValue(card)!;
-                Assert.That(sprites.Length, Is.EqualTo(34), "§3.7 — one tipSprites entry per tip");
-
-                Type entry = sprites.GetType().GetElementType()!;
-                FieldInfo nameF = entry.GetField("name")!, spriteF = entry.GetField("sprite")!;
-
-                var byName = new Dictionary<string, Sprite>();
-                for (int i = 0; i < sprites.Length; i++)
-                {
-                    object e = sprites.GetValue(i)!;
-                    string n = (string)nameF.GetValue(e)!;
-                    var s = (Sprite)spriteF.GetValue(e)!;
-                    Assert.That(n, Is.Not.Null.And.Not.Empty, "tipSprites[" + i + "] has no name");
-                    Assert.That(s, Is.Not.Null, "tipSprites[" + i + "] (" + n + ") has no sprite");
-                    Assert.That(byName.ContainsKey(n), Is.False, "duplicate tipSprites name " + n);
-                    byName[n] = s;
-                }
-
-                var unwired = RowList().Select(Tips.Sprite).Where(n => !byName.ContainsKey(n)).ToArray();
-                Assert.That(unwired, Is.Empty, "CSV rows whose sprite is not on the card: " +
-                                               string.Join(", ", unwired));
-
-                // Name-keyed, so the file behind each name must be the one the CSV meant.
-                foreach (KeyValuePair<string, Sprite> kv in byName)
-                    Assert.That(Path.GetFileNameWithoutExtension(AssetDatabase.GetAssetPath(kv.Value)),
-                        Is.EqualTo(kv.Key), "tipSprites entry '" + kv.Key + "' points at the wrong file");
+                AssertSpriteTable(sprites, "ShellScene ProTipCard");
             }
             finally
             {
                 EditorSceneManager.CloseScene(scene, removeScene: true);
             }
+        }
+
+        /// <summary>The 34-entry name-keyed table, held to the CSV and to the files on disk.
+        /// Shared by the ShellScene card and the screen-hint modal prefab (screen_hints §3.3),
+        /// which carry the same table so the two surfaces show the same diagram for a key.</summary>
+        static void AssertSpriteTable(Array sprites, string who)
+        {
+            Assert.That(sprites.Length, Is.EqualTo(34), who + " — one tipSprites entry per tip");
+
+            Type entry = sprites.GetType().GetElementType()!;
+            FieldInfo nameF = entry.GetField("name")!, spriteF = entry.GetField("sprite")!;
+
+            var byName = new Dictionary<string, Sprite>();
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                object e = sprites.GetValue(i)!;
+                string n = (string)nameF.GetValue(e)!;
+                var s = (Sprite)spriteF.GetValue(e)!;
+                Assert.That(n, Is.Not.Null.And.Not.Empty, who + " tipSprites[" + i + "] has no name");
+                Assert.That(s, Is.Not.Null, who + " tipSprites[" + i + "] (" + n + ") has no sprite");
+                Assert.That(byName.ContainsKey(n), Is.False, who + " duplicate tipSprites name " + n);
+                byName[n] = s;
+            }
+
+            var unwired = RowList().Select(Tips.Sprite).Where(n => !byName.ContainsKey(n)).ToArray();
+            Assert.That(unwired, Is.Empty, who + " — CSV rows whose sprite is not on the table: " +
+                                           string.Join(", ", unwired));
+
+            // Name-keyed, so the file behind each name must be the one the CSV meant.
+            foreach (KeyValuePair<string, Sprite> kv in byName)
+                Assert.That(Path.GetFileNameWithoutExtension(AssetDatabase.GetAssetPath(kv.Value)),
+                    Is.EqualTo(kv.Key), who + " tipSprites entry '" + kv.Key + "' points at the wrong file");
+        }
+
+        [Test]
+        public void ScreenHintModalPrefab_CarriesTheSameThirtyFourSprites()
+        {
+            // screen_hints §3.3 — the table is wired on the PREFAB so both scene instances share it.
+            const string prefabPath = "Assets/Prefabs/UI/Modals/ScreenHintModal.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, "missing " + prefabPath + " — run GOLFIN > Build > Screen Hint Modal");
+
+            Type ctrlType = Tips.Find("Golfin.UI.Modals.ScreenHintModalController");
+            Component? ctrl = prefab!.GetComponentInChildren(ctrlType, includeInactive: true);
+            Assert.That(ctrl, Is.Not.Null, prefabPath + " has no ScreenHintModalController");
+
+            const BindingFlags priv = BindingFlags.Instance | BindingFlags.NonPublic;
+            var sprites = (Array)ctrlType.GetField("tipSprites", priv)!.GetValue(ctrl)!;
+            AssertSpriteTable(sprites, "ScreenHintModal.prefab");
         }
     }
 }

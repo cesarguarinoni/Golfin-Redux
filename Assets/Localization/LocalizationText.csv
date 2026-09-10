@@ -31,7 +31,7 @@ TIP_DAILY,"THE <color=#EEDC9A>DAILY MISSION</color> PAYS 30 RP. KEEP THE <color=
 TIP_TOURNAMENT,"<color=#EEDC9A>TOURNAMENTS</color> RUN ON THEIR OWN STAMINA POOL. IT NEVER REFILLS DURING THE EVENT, SO PACE YOUR ROUNDS",<color=#EEDC9A>トーナメント</color>は専用のスタミナプールで戦う。大会中は回復しないので配分を考えよう,true
 TIP_VERSUS,"<color=#EEDC9A>1V1</color>: ONE HOLE, ALTERNATE SHOTS, FIRST TO SINK WINS. TRAILING? YOU GET ONE SHOT TO TIE. A WIN PAYS <color=#EEDC9A>200 RP</color>",<color=#EEDC9A>1V1</color>：1ホール、交互にショット、先にカップインした方が勝ち。後攻には同点にする1打がある。勝てば<color=#EEDC9A>200 RP</color>,true
 TIP_LEADERBOARD,"<color=#EEDC9A>LEADERBOARDS</color> RANK REWARD POINTS EARNED. DAILY, WEEKLY AND MONTHLY RESET; <color=#EEDC9A>HISTORY</color> NEVER DOES",<color=#EEDC9A>リーダーボード</color>は獲得リワードポイント順。デイリー・ウィークリー・マンスリーはリセット、<color=#EEDC9A>ヒストリー</color>は永久,true
-TIP_RP,"<color=#EEDC9A>REWARD POINTS</color> ARE THE ONLY CURRENCY. EARN THEM ON EVERY HOLE, MISSION AND ROUND. THEY ARE NEVER FOR SALE",<color=#EEDC9A>リワードポイント</color>が唯一の通貨。ホール・ミッション・ラウンドで稼ごう。課金では買えない,true
+TIP_RP,"<color=#EEDC9A>REWARD POINTS</color> ARE THE GAME'S CURRENCY. EARN THEM ON EVERY HOLE, MISSION AND ROUND",<color=#EEDC9A>リワードポイント</color>がゲームの通貨。ホール・ミッション・ラウンドで稼ごう,true
 TIP_GACHA,"PULLS COST <color=#EEDC9A>TICKETS</color>, AND A <color=#EEDC9A>X10</color> IS CHEAPER THAN TEN SINGLES. EVERY BANNER SHOWS ITS RATES, PITY AND X10 GUARANTEE. DUPLICATES CONVERT TO RP",ガチャには<color=#EEDC9A>チケット</color>が必要。<color=#EEDC9A>10連</color>は単発10回より安い。各バナーに確率・天井・10連保証を表示。重複はRPに変換,true
 TIP_STORE,THE STORE LINEUP <color=#EEDC9A>ROTATES WEEKLY</color>. WATCH FOR NEW TAGS AND THE COUNTDOWN. <color=#EEDC9A>HISTORY</color> KEEPS YOUR PURCHASE LOG,ストアの品揃えは<color=#EEDC9A>週替わり</color>。NEWタグとカウントダウンに注目。<color=#EEDC9A>ヒストリー</color>に購入履歴が残る,true
 TIP_GPS_CHECKIN,"PLAYING FOR REAL? <color=#EEDC9A>CHECK IN</color> AT THE COURSE IN PLAYLIFE ROUNDS FOR +30 PTS, <color=#EEDC9A>CHECK OUT</color> FOR +15. GPS-VERIFIED ONLY",リアルゴルフの日は PLAYLIFE ラウンドでコースに<color=#EEDC9A>チェックイン</color>して+30 pts、<color=#EEDC9A>チェックアウト</color>で+15。GPS認証が必要,true
@@ -1215,3 +1215,6 @@ LOAN_ERR_COOLDOWN_FMT,You can offer to {0} again in {1},{1}後に{0}へ再オフ
 LOAN_ERR_OFFER_GONE,This offer is no longer available.,このオファーは無効になりました。,true
 LOAN_ERR_LIMIT_IN_SELF,You already have 3 loans.,すでに3つ借りています。,true
 LOAN_ERR_HAVE_IT,You already have this one.,すでに持っています。,true
+HINT_CONTINUE,CONTINUE,続ける,true
+HINT_CLOSE,CLOSE,閉じる,true
+HINT_BACK,BACK,戻る,true

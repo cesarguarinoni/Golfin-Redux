@@ -193,6 +193,11 @@ namespace Golfin.UI.GameplayTransition
             //    Null-safe and no-ops when there is no live controller, so the physics-lab
             //    and bot launchers that never run this loader keep working unchanged.
             Golfin.Gameplay.UI.ShotUI.TeeIdleGlowController.NotifyOtherInteraction();
+
+            //    screen_hints §3.5 — the shot view's first-entry hints open HERE, over the
+            //    revealed tee, never behind the loading screen. Null-safe static; the modal
+            //    restarts the tee-idle countdown again when the player closes it.
+            ScreenHintPresenter.NotifyScreenEntered(ScreenHintCatalog.GameplayScreen);
         }
 
 

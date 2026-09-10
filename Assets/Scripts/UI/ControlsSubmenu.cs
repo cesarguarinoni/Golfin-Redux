@@ -45,6 +45,10 @@ namespace Golfin.UI
         {
             Gameplay.UI.Controls.ControlSchemeService.OnSchemeChanged += OnSchemeChangedExternally;
             UpdateUI();
+
+            // screen_hints §3.5 — the accordion activates this object on expand, so this IS the
+            // "Settings › Controls entered" moment. Once per device; null-safe static.
+            GolfinRedux.UI.ScreenHintPresenter.NotifyScreenEntered(GolfinRedux.UI.ScreenHintCatalog.SettingsControlsScreen);
         }
 
         private void OnDisable()

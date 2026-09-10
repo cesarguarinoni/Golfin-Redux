@@ -4,6 +4,41 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 — screen_hints: **the Loading tips open as a modal on the first entry into each screen** — READY_FOR_ARCHITECT_REVIEW (one FAIL: stacking order vs the tournament result modal is an Architect call)
+
+First entry into a screen with a row in `Assets/Resources/Data/ScreenHints.csv` (36 rows, 18 screens) opens
+that screen's tips one at a time: `PRO TIP`, the tip's diagram + text (the loading card's own `TipContent`
+subtree, instantiated into the plate), an `n/X` counter when X > 1, gold CONTINUE that reads CLOSE on the last /
+only hint, silver BACK from hint 2 onwards — present or absent, never disabled. Once per device
+(`screenhints.state`, `GOLFIN ▸ Hints ▸ Reset seen`); a key already shown by another screen is skipped
+everywhere else; `active=0` tips are skipped and not counted (Inventory is 1/2). `ScreenHintModal.prefab` is a
+`CopyAsset` of `SchemeConfirmModal.prefab` with the same two-scene arrangement (ShellScene `Canvas`, LabScaffold
+`ShotUI_Canvas`, sorting 600). `ScreenHintPresenter` on `PersistentUI` listens to `ScreenChanged`;
+`GameplaySceneLoader` step 7 and `ControlsSubmenu.OnEnable` call `NotifyScreenEntered`. Texts: `HINT_CONTINUE /
+HINT_CLOSE / HINT_BACK` new, `TIP_RP` rewritten (no "ONLY" / "never for sale"), published **texts v54**,
+`--check` clean, bundled table rebuilt.
+
+**Verified by a bot, not by hand:** `GOLFIN ▸ Hints ▸ Run verify bot (EN|JA)` boots the real app, taps real
+widgets and the modal's own buttons, and writes `verify_<lang>.log` + 1170×2532 captures with `realPlay`
+sidecars. Home 1/2 → 2/2 → BACK → CLOSE, Roster 1/4…4/4 (plate eases 989 → 1097 px, counter bumps to 1.06,
+the gold label only changes at alpha 0), Inventory 1/2, GeneralShop CLOSE alone, MissionSelection nothing
+after ModeSelection, Settings › Controls above the overlay, shot view 1/6…6/6 over the revealed tee with the
+scrim as the top raycast hit and the tee-idle timer at 0.00 s after CLOSE, JA on Home + Roster. EditMode
+3042 / 0 fail; lint `fail 0`.
+
+**Two things worth knowing.** (1) `TournamentResultPresenter` waits 1.0 s before presenting, the hint waits
+one frame (Architect default c) — so on Home the hint opens FIRST and the result modal follows it; the spec
+asserts the opposite. Decision pending (accept, or make the hint wait past the settle on the four tournament
+screens). (2) The HoleSelection hints sit between Home and the first hole card; a bot that invokes the card's
+`onClick` under the scrim loads the hole under an open modal and the gameplay hint then waits forever — close
+them first, as a player must.
+
+**Bot-capture lessons, again:** `SnapPlayModeSafe` needs `yield return new WaitForEndOfFrame()` on the line
+before it (zero files otherwise); snapping inside a per-frame strip slows the game to ~6 fps, so keep the numeric
+trace snap-free and snap a separate pass. Replacing a cloned prefab's controller component drops its serialized
+`animateShow` — re-assert it in the builder.
+
+---
 ## 2026-09-10 — asset_loans_offers: **a loan becomes an OFFER, and anyone can be offered to** — ARCHITECT_REVIEW_PASS (awaiting Cesar)
 
 Loans v2. `POST /loans` no longer hands an asset over — it writes an `offered` row the recipient

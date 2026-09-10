@@ -458,6 +458,48 @@ UI changes.**
 
 ---
 
+### ScreenHintModal (ScreenHintModalController : ModalController — `Golfin.UI.Modals`)
+
+**Two instances of one prefab** (`Assets/Prefabs/UI/Modals/ScreenHintModal.prefab`,
+`954144599248046619417f0a9ed85cc2` — a `CopyAsset` of `SchemeConfirmModal.prefab`, built by
+`GOLFIN ▸ Build ▸ Screen Hint Modal`), placed exactly where `SchemeConfirmModal` is:
+
+| Scene | Parent | Why there |
+|---|---|---|
+| `ShellScene` | `Canvas`, right after `SchemeConfirmModal` | Same canvas as every full-screen modal; sorting 600 puts it over the Settings overlay (500) for the Controls hint. |
+| `LabScaffold` | `LabRoot/ShotUI_Canvas`, right after `SchemeConfirmModal` | The shot-view hints (`Gameplay`, 6 tips) open over the revealed tee; the scrim is the top raycast hit at the cone. |
+
+```
+ScreenHintModal                                  (root ACTIVE — Canvas overrideSorting=true, order 600, set in Awake)
+├── DimBackground                                (Image scrim α 0.92 — NO ModalBackdropDismiss: only CONTINUE / CLOSE close a hint)
+└── Panel                                        (INACTIVE at rest; VLG bottom 32 + ContentSizeFitter vertical + LayoutElement (the height-tween pin), 1086 wide)
+    ├── Background                               (Image `Background - HoleCard`, ignoreLayout — the OPAQUE plate, not the loading card's translucent one)
+    ├── TitleRow          h 119                  └── TitleText      (gold, Rubik-SemiBold 59) → TIP_HEADER
+    ├── SeparatorRow      h 2                    └── ModalSeparator (`Divider` 978×2)
+    ├── TipContent        VLG pad 48/48/12/0     ├── TipText        (the ShellScene ProTipCard/TipContent copy: Rubik-SemiBold 45, LocalizedText key = the tip, LayoutElement 990)
+    │                     spacing 24, CanvasGroup└── TipImage       (806 wide, preserveAspect, sprite by name from `tipSprites`; inactive when the tip has none)
+    ├── ButtonsRow        HLG pad 0/0/24/0       ├── BackButton     (450×120 `ButtonCancel` silver → HINT_BACK; SetActive(n > 1) — present or absent, never disabled)
+    │                     spacing 48             └── NextButton     (450×120 `Button - Retry` gold → HINT_CONTINUE, or HINT_CLOSE on the last / single hint)
+    └── Counter                                  (TMP clone of TitleText, SB(45), TopRight, anchored (−64, −36) from the plate's top-right, ignoreLayout; hidden when X = 1)
+```
+
+Opened only by `ScreenHintPresenter` (on ShellScene `PersistentUI`, next to `GameplaySceneLoader`):
+`ScreenManager.ScreenChanged` for real screens, `ScreenHintPresenter.NotifyScreenEntered(...)` from
+`GameplaySceneLoader.LoadCoroutine` step 7 (`"Gameplay"`) and `ControlsSubmenu.OnEnable`
+(`"SettingsControls"`). Which tips: `Assets/Resources/Data/ScreenHints.csv` → `ScreenHintResolver` (drops
+`active=0` tips and keys another screen already showed). Once per device: PlayerPrefs `screenhints.state`
+(`GOLFIN ▸ Hints ▸ Reset seen`).
+
+⚠️ **The HoleSelection hints open on the way to every first hole** — the hole card is under the scrim until
+they are closed. A bot that taps `ActionButton` through `onClick.Invoke()` bypasses the scrim, loads the hole
+under an open modal, and the gameplay hint then waits behind it forever (`ScreenHintVerifyBot` closes them first).
+
+⚠️ **Replacing the clone's controller drops `animateShow`.** `SchemeConfirmModal.prefab` carries `animateShow: 1`
+on its controller component; `DestroyImmediate` + `AddComponent` of the new controller resets it, so the builder
+re-asserts it through `SerializedObject`. `ModalPopTests`-style: check the prefab, not the class default.
+
+---
+
 ### Shot-input visibility gate (LabScaffold.unity — `ShotUI_Canvas`)
 
 `ShotInProgressUiGate` (on `ShotUI_Canvas`) is the single owner of "hide the shot controls while the
