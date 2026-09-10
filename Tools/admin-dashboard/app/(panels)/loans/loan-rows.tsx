@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useT } from "@/components/I18nProvider";
 import type { DictKey } from "@/lib/i18n";
 import { fmtDateTime } from "@/lib/format";
+import { actionsFor, clockLabel } from "@/lib/loanStatus";
 import type { LoanAdminAction, LoanAdminRow, LoanDetailResponse } from "@/lib/types";
 
 /**
@@ -75,36 +76,18 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
-/** What an admin may do to a loan in this status (§3.3). */
-export function actionsFor(status: string): LoanAdminAction[] {
-  if (status === "active") return ["force_return"];
-  if (status === "offered") return ["cancel_offer"];
-  if (status === "rescinded" || status === "declined") return ["clear_cooldown"];
-  return [];
-}
-
-/** The one clock line a row shows, chosen by status. */
+/**
+ * Format the clock line the shared module chose.
+ *
+ * The CHOICE — which string, which timestamp — lives in `lib/loanStatus.ts`
+ * because it is a judgement about status and clocks, and this component used to
+ * make its own with a `switch` whose `default` labelled a lender's rescind and
+ * a 48 h lapse as "answered". This function now only renders.
+ */
 function clockLine(loan: LoanAdminRow, t: T): string | null {
   const now = Date.now();
-  switch (loan.status) {
-    case "offered": {
-      if (!loan.offerExpiresAt) return null;
-      const past = Date.parse(loan.offerExpiresAt) < now;
-      return t(past ? "loans.offerExpiresPast" : "loans.offerExpires", {
-        rel: relativeOf(loan.offerExpiresAt, t, now),
-      });
-    }
-    case "active": {
-      if (!loan.endsAt) return null;
-      const past = Date.parse(loan.endsAt) < now;
-      return t(past ? "loans.endsPast" : "loans.ends", { rel: relativeOf(loan.endsAt, t, now) });
-    }
-    case "returned":
-    case "expired":
-      return loan.endedAt ? t("loans.ended", { rel: relativeOf(loan.endedAt, t, now) }) : null;
-    default:
-      return loan.answeredAt ? t("loans.answered", { rel: relativeOf(loan.answeredAt, t, now) }) : null;
-  }
+  const chosen = clockLabel(loan, now);
+  return chosen ? t(chosen.key, { rel: relativeOf(chosen.iso, t, now) }) : null;
 }
 
 function PartyLink({ id, name }: { id: string; name: string | null }) {
@@ -161,7 +144,7 @@ export function LoanCard({
   const kindKey = `loans.kind.${loan.kind}` as DictKey;
   const kindLabel = t(kindKey) === kindKey ? loan.kind : t(kindKey);
   const clock = clockLine(loan, t);
-  const actions = actionsFor(loan.status);
+  const actions = actionsFor(loan, Date.now());
 
   return (
     <li className="rounded-md border border-surface-800/70 bg-surface-900/60 px-2.5 py-2">

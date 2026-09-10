@@ -299,3 +299,89 @@ No silly output.
 
 **PASS.** Verdict `READY_FOR_REDTEAM`. No production writes; mock server on
 :3103 was killed (`PORT_FREE`).
+
+---
+
+# RED-TEAM REVIEW — loans_ops iter-2
+
+**Reviewer:** golfin-redteam-reviewer
+**Timestamp:** 2026-09-10 18:00 JST
+**Verdict:** ARCHITECT_REVIEW_FAIL — one concrete blocker (a fourth defect of the known shape).
+**Posture:** Non-Unity task; no scene/prefab/Figma/mesh, so Rules 16–21 have no subject. Primary job per PIPELINE_HARDENING §22: audit the shape ("a status/clock classified by an incomplete list; a row falls through or lands in the wrong bucket"), not just re-confirm the reviewer's PASS.
+
+## The blocker — `clockLine()` labels two statuses "answered" that nobody answered
+
+`app/(panels)/loans/loan-rows.tsx:86-108`. The row's one clock line is a `switch` on status with a `default` arm:
+
+```
+default:
+  return loan.answeredAt ? t("loans.answered", { rel: relativeOf(loan.answeredAt, t, now) }) : null;
+```
+
+`loans.answered` (i18n.ts:1989) = `"answered {rel}"` / JA `"回答 {rel}"`. The `switch` has explicit cases only for `offered`, `active`, `returned`, `expired`. That drops **three** statuses into `default` — `declined`, `rescinded`, `offer_expired` — and labels all three "answered". Only `declined` is an answer.
+
+- `offer_expired` — the 48h TTL lapsed; the recipient never answered. But `_expire` stamps `answered_at = offer_expires_at` (`routers/loans.py:357-358`), so the row DOES carry `answered_at` → the clock line renders **"answered 2d ago"** for an offer that was never answered.
+- `rescinded` — the LENDER withdrew; `answered_at` is the lender's action time (`routers/loans.py::_terminal_answer`, `golfin_loan_admin` cancel_offer) → renders **"answered 4h ago"**.
+
+**Self-verified** (verbatim copy of `relativeOf` + the `clockLine` switch + the real i18n strings, driven with mock fixtures 0007/0006/0004):
+
+```
+offer_expired  => clock line: "answered 2d ago"
+rescinded      => clock line: "answered 4h ago"
+declined       => clock line: "answered 3h ago"   <- the only correct one
+```
+
+Fixture `mock-loan-0007` is `offer_expired` with `answeredAt = h(-52)` (mockLoans.ts:189-192); `mock-loan-0006` is `rescinded` with `answeredAt = h(-4)`. Both render in the Loans panel (status filters "Offer expired" / "Rescinded") and in the Users-drawer "Offers that went nowhere" list, via `LoanCard` line 193.
+
+**Why this is a blocker, not a nitpick.** This is the FOURTH defect of the exact shape that has already burned this task three times — a status the code forgot to special-case, landing in a bucket that asserts the opposite of what happened. And it is in the single highest-damage spot: the ops panel exists to answer "why did that offer disappear?" (SPEC Goal, §3.3 subtitle), and for a lapsed offer it tells the operator "answered 2d ago" — implying the recipient responded when the offer simply timed out unseen. The codebase already KNOWS these are not answers: `telemetryLoans.ts:157-162` (the iter-2 F1 fix) documents in its own words that "`rescinded` … its `answered_at` is the lender's, not an answer" and "`offer_expired`'s is a 48h TTL running out, which is nobody answering." `clockLine` contradicts that sibling file. The green 19-test suite never exercises the clock LABEL for these statuses, and the reviewer's Angle-4 walk computed the `offer_expired` row rendering "2d ago" without noticing the word in front of it says "answered".
+
+### Required fix (fix the whole shape in one pass, §22 corollary — do not patch only offer_expired)
+
+Give `rescinded` and `offer_expired` their own clock labels instead of the "answered" default. Suggested:
+- add `case "rescinded":` → a `loans.rescinded` string ("rescinded {rel}", off `answered_at`).
+- add `case "offer_expired":` → a `loans.lapsed` string ("lapsed {rel}", off `answered_at`/`offer_expires_at`).
+- keep `default` for `declined` (and any future genuine-answer status) OR make `declined` its own explicit case and let `default` return `null`.
+- both new keys need EN + JA in `lib/i18n.ts`.
+- add a test that asserts the clock LABEL for all seven statuses (the enumerate-every-status test §22 asks for), so a status added later fails here rather than getting silently labelled "answered".
+
+## Shape audit — every classify-by-status/clock site (per §22; includes the sites that are fine)
+
+| Site | File:line | Keys on | Verdict |
+|---|---|---|---|
+| `ANSWERED_STATUSES` (median sample) | telemetryLoans.ts:164 | status | FINE — inclusion set {active,returned,expired,declined}; the 4 real answers, minimal |
+| `buildLoanFunnel` switch | telemetryLoans.ts:251-294 | event NAME | FINE — default is a deliberate ignore; answer/on/via defaults sum correctly |
+| `isLoanLive` | telemetryLoans.ts:336 | status+clock | FINE — mirrors router `_is_live` |
+| `isLoanPending` | telemetryLoans.ts:345 | status+clock | FINE — mirrors `_is_pending_offer`, incl. null-expiry-as-pending |
+| `borrowerSection` (drawer classifier) | telemetryLoans.ts:370-383 | status+clock (TOTAL) | FINE — the iter-2 fix; all 7 borrower statuses land in exactly one of offers/in/wentNowhere |
+| `loanAnchorMs` | telemetryLoans.ts:391 | timestamps | FINE |
+| lifecycle `accepted`/`declined` | telemetryLoans.ts:438-439 | status | FINE — accepted = active|returned|expired is complete; disjoint from declined |
+| lifecycle `ended`/`earlyReturns` | telemetryLoans.ts:441-446 | status+clock | FINE (attack #3) — early = returned & ended_at<ends_at, counted once; expired ran to term so never early; none missed, none double-counted |
+| `relativeOf` boundaries | loan-rows.tsx:26-45 | clock | FINE — "in 0d"/"0h"/"0m" all unreachable |
+| `STATUS_TONE` | loan-rows.tsx:47-55 | status | FINE — all 7 + fallback tint |
+| `statusLabel` | loan-rows.tsx:57-63 | status | FINE — unknown falls back to raw UPPER, not a literal key |
+| `actionsFor` | loan-rows.tsx:79-84 | status | FINE as an allow-list (see wart W1 below re: acting on stale rows) |
+| **`clockLine` default** | loan-rows.tsx:86-108 | status (switch+default) | **FAIL — offer_expired & rescinded mislabeled "answered"** |
+| panel status chips | loans-panel.tsx:229 + types.ts:1071 | status | FINE — `LOAN_STATUSES` has all 7 |
+| `fetchLoans` status/kind/date filters | loansData.ts:145-219 | status/clock | FINE (see note N1 re: mock/live q-uuid divergence) |
+| `fetchUserLoans` out + borrowerSection | loansData.ts:287-346 | status | FINE — `out` = every lender row all statuses; borrower via the total classifier |
+| `fetchLoanLifecycle` range | loansData.ts:357-423 | timestamps | FINE |
+| `loanMutations` refusals (mock + RPC map) | loanMutations.ts:105-125,170-172 | status | FINE — statuses map to 404/409 with the RPC's own string |
+| trigger INSERT actor | migration:74-76 | tg_op | FINE (attack #2) — the only INSERT into golfin_loans is `status:"offered"` (routers/loans.py:901); lender is always right |
+| trigger UPDATE `case new.status` | migration:79-88 | status | FINE — all 7 mapped, `else 'system'` is a safe catch-all; admin path diverted by the txn-local flag |
+| `golfin_loan_admin` action checks | migration:158-191 | status | FINE (attack #4) — flag set before the status checks is harmless: no update ⇒ trigger never fires, `set_config(...,true)` dies with the txn |
+| `clear_cooldown` pair filter | migration:181-187 | status+pair | FINE — directional `lender_id/borrower_id` filter matches `_cooldown_until`'s directional read (routers/loans.py:657-681); updates `answered_at` only, so the `update of status` trigger correctly does not fire |
+
+## Prior-rejection replay
+No `CESAR_REJECTION.md` in the folder (this task has not yet reached Cesar). The three prior in-pipeline defects of this shape (`medianHoursToAnswer` counting rescinds; the lapsed-`offered` drawer fall-through; the contradicting comments) are all GONE and re-verified: F1 inclusion set is complete (median 2h re-derived by hand: answered Δ = [2,2,3,2,2] → 2), and `borrowerSection` files all 7 borrower statuses once. The blocker above is a NEW fourth instance in a site none of the three earlier fixes touched.
+
+## Non-blocking observations (fix alongside, or note in the ops doc)
+- **W1** — `actionsFor("active")` offers "Force return" on an `active` row whose `ends_at` already passed (lazy-unswept), and `actionsFor("offered")` offers "Cancel offer" on a lapsed `offered` row. The clock line already flags both as past (`endsPast`/`offerExpiresPast`), and both RPC paths succeed (status column still matches), converting a should-be-`expired`/`offer_expired` row into `returned`/`rescinded`. Force-return is benign (both are terminal, asset returns). Cancel-on-lapsed is worse: it starts a spurious 24h cooldown for an offer that was already dead — the implementer's Open-Question #1 already surfaces the cancel→cooldown coupling; worth a line in the dialog copy for the lapsed case.
+- **N1** — `fetchLoans` mock branch matches `q` against `[id, refId, names]` only, while the live branch also matches a UUID against `lender_id`/`borrower_id`. A party-id search works on production but returns nothing in mock, so a mock-only screenshot can't prove that path. Test-fidelity gap, not a production defect.
+
+## Break-attempts that FAILED (i.e. the code held)
+- **Trigger actor wrong for some real transition?** No — walked every to_status; the only INSERT is an offer, every UPDATE status is mapped, admin diverted by the flag. Held.
+- **Admin flag leaking after an early refusal?** No — transaction-local, no write ⇒ no trigger, gone at commit. Held.
+- **Early return miscounted?** No — single increment on `returned & ended_at<ends_at`; expired never early. Held.
+- **A borrower row invisible in the drawer?** No — `borrowerSection` is total; all 7 land once. Held. (This is the exact hole from iter-2's own late catch; it is genuinely closed.)
+
+**STATUS → ARCHITECT_REVIEW_FAIL.** Routes back to the implementer. No production writes; no server started this pass (the blocker was proven with a verbatim-code repro against the on-disk fixtures).

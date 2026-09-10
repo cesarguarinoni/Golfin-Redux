@@ -2,13 +2,8 @@ import "server-only";
 import { isMockMode } from "./mode";
 import { MOCK_LOAN_RULES, mockLoansDb } from "./mockLoans";
 import { getSupabaseAdmin } from "./supabaseAdmin";
-import {
-  borrowerSection,
-  buildLoanLifecycle,
-  loanAnchorMs,
-  type LoanLifecycle,
-  type LoanRow,
-} from "./telemetryLoans";
+import { borrowerSection, loanAnchorMs, type LoanRow } from "./loanStatus";
+import { buildLoanLifecycle, type LoanLifecycle } from "./telemetryLoans";
 import type {
   LoanAdminRow,
   LoanDetailResponse,

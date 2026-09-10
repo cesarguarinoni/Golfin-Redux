@@ -1,7 +1,9 @@
 /**
  * The loans view for the Telemetry panel — PURE aggregation (loans_ops §2).
  *
- * No React, no Supabase, no clock unless one is handed in. Two folds:
+ * No React, no Supabase, no clock unless one is handed in. Two folds. Every
+ * judgement about a STATUS or a CLOCK lives in `lib/loanStatus.ts` — see that
+ * file's header for why they are all in one place. Two folds:
  *
  *   buildLoanFunnel     over `telemetry_events` rows — the seven `loan_*`
  *                       events the client already ships. This is the BEHAVIOUR
@@ -27,31 +29,24 @@
  * clock ran out yesterday is NOT active now, whatever the column says.
  */
 
+import {
+  ANSWERED_STATUSES,
+  isLoanLive,
+  isLoanPending,
+  loanAnchorMs,
+  type LoanRow,
+} from "./loanStatus";
+
+/** Re-exported so callers that want a row type and a fold from one import can
+ *  have it; the definitions live in `loanStatus.ts`. */
+export type { LoanRow };
+export { isLoanLive, isLoanPending, loanAnchorMs, ANSWERED_STATUSES };
+
 /** One `telemetry_events` row, narrowed to what this module reads. */
 export interface LoanEventRow {
   name?: unknown;
   payload?: unknown;
   user_id?: unknown;
-}
-
-/** One `golfin_loans` row, narrowed to what this module reads. Snake case:
- *  these are the table's own columns, handed over untouched. */
-export interface LoanRow {
-  id?: unknown;
-  lender_id?: unknown;
-  borrower_id?: unknown;
-  kind?: unknown;
-  days?: unknown;
-  status?: unknown;
-  offered_at?: unknown;
-  offer_expires_at?: unknown;
-  answered_at?: unknown;
-  starts_at?: unknown;
-  ends_at?: unknown;
-  ended_at?: unknown;
-  created_at?: unknown;
-  rp_to_lender?: unknown;
-  rp_to_borrower?: unknown;
 }
 
 export interface LoanFunnelStage {
@@ -152,21 +147,6 @@ export interface LoanLifecycle {
 }
 
 export const TOP_PARTIES = 5;
-
-/**
- * The statuses whose `answered_at` is the RECIPIENT's answer, and therefore the
- * only ones `medianHoursToAnswer` may sample.
- *
- * `rescinded` is deliberately absent: its `answered_at` is the lender's, not an
- * answer. `offered` has none yet, and `offer_expired`'s is a 48 h TTL running
- * out, which is nobody answering.
- */
-export const ANSWERED_STATUSES: ReadonlySet<string> = new Set([
-  "active",
-  "returned",
-  "expired",
-  "declined",
-]);
 
 function payloadOf(row: LoanEventRow): Record<string, unknown> {
   const raw = row.payload;
@@ -330,66 +310,6 @@ export function buildLoanFunnel(rows: LoanEventRow[]): LoanFunnel {
       stageOf("returned", returns),
     ],
   };
-}
-
-/** Router predicate `_is_live`: `status = 'active' and now() < ends_at`. */
-export function isLoanLive(row: LoanRow, nowMs: number): boolean {
-  if (String(row.status ?? "") !== "active") return false;
-  const ends = ms(row.ends_at);
-  return ends !== null && nowMs < ends;
-}
-
-/** Router predicate `_is_pending_offer`: `offered` and the offer clock has not
- *  run out. A missing `offer_expires_at` (a pre-offers row somehow still
- *  offered) is treated as pending — the router locks it, so should this. */
-export function isLoanPending(row: LoanRow, nowMs: number): boolean {
-  if (String(row.status ?? "") !== "offered") return false;
-  const expires = ms(row.offer_expires_at);
-  return expires === null || nowMs < expires;
-}
-
-/**
- * Which section of the Users drawer's Loans tab a row belongs in, from the
- * BORROWER's side. `null` means the player is not the borrower on it.
- *
- * ⚠️ TOTAL BY CONSTRUCTION, and it has to be. The first version listed the
- * three "went nowhere" statuses explicitly, which left a hole: an `offered`
- * row whose 48 h TTL has run out is not pending (so not in `offers`), not
- * accepted (so not in `in`), and its status is still literally `offered` (so
- * not in the went-nowhere list either). It appeared in NO section — and
- * because expiry is LAZY, that is not a rare state: the row keeps saying
- * `offered` until some client's `GET /loans` gets around to flipping it. It is
- * also the exact case the went-nowhere section was added for, so the hole was
- * in the one place it could do the most damage.
- *
- * A lapsed offer is therefore classified as went-nowhere on the strength of its
- * CLOCK rather than its column — which is what `_expire` will stamp it as
- * anyway, and the same "trust the timestamps, not the status" rule the
- * lifecycle card already follows.
- */
-export function borrowerSection(
-  row: LoanRow,
-  borrowerId: string,
-  nowMs: number
-): "offers" | "in" | "wentNowhere" | null {
-  if (str(row.borrower_id) !== borrowerId) return null;
-  if (isLoanPending(row, nowMs)) return "offers";
-  const status = String(row.status ?? "");
-  if (status === "active" || status === "returned" || status === "expired") return "in";
-  // Everything else this player was offered: declined, rescinded, lapsed — and
-  // an `offered` row that is no longer pending, which is a lapse the server has
-  // not swept yet.
-  return "wentNowhere";
-}
-
-/**
- * The moment a loan belongs to, for ranging. `offered_at` is the natural
- * anchor; rows that predate the offers migration have none and fall back to
- * `starts_at`, then `created_at`. Null when the row carries none of the three,
- * which is a row the caller should not range at all.
- */
-export function loanAnchorMs(row: LoanRow): number | null {
-  return ms(row.offered_at) ?? ms(row.starts_at) ?? ms(row.created_at);
 }
 
 /**

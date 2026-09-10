@@ -1986,6 +1986,14 @@ export const DICT = {
   "loans.offerExpires": { en: "offer expires {rel}", ja: "オファー期限 {rel}" },
   "loans.offerExpiresPast": { en: "offer lapsed {rel} — flips on next read", ja: "オファー失効 {rel} — 次回読み込み時に反映" },
   "loans.ended": { en: "ended {rel}", ja: "終了 {rel}" },
+  // Three separate labels rather than one "answered {rel}" for all of them.
+  // A rescind is the LENDER pulling the offer back and a lapse is a 48 h clock
+  // running out unseen; calling either "answered" told the operator the
+  // recipient had responded, on the panel that exists to explain why an offer
+  // disappeared. Only `declined` keeps "answered".
+  "loans.rescindedAt": { en: "pulled back {rel}", ja: "取り消し {rel}" },
+  "loans.lapsedAt": { en: "lapsed unanswered {rel}", ja: "未回答のまま失効 {rel}" },
+  "loans.changedAt": { en: "last changed {rel}", ja: "最終更新 {rel}" },
   "loans.answered": { en: "answered {rel}", ja: "回答 {rel}" },
   "loans.expand": { en: "Timeline & actions", ja: "履歴と操作" },
   "loans.collapse": { en: "Hide", ja: "閉じる" },

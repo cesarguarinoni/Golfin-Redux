@@ -1,7 +1,7 @@
 # IMPLEMENTER_REPORT — `loans_ops`
 
 **Iteration shape:** `loans:ops-panel-and-telemetry`
-**Iteration:** 2
+**Iteration:** 3
 **Canonical screenshot:** `screenshots/loans_row_after_force_return.png` (2880×1520)
 
 ---
@@ -183,6 +183,77 @@ character. Dashboard tests **307 → 312**.
 
 PostgREST `or=` escaping, page-boundary drops, and the `snapshot()` `??` chains were each checked
 and found sound; its reasoning matches the code as I read it. No change.
+
+---
+
+## Iteration 3 — red-team's blocker, and the shape behind it
+
+`golfin-redteam-reviewer` returned `ARCHITECT_REVIEW_FAIL` on **a fourth defect of the same
+shape**, and it was right.
+
+### The defect
+
+`clockLine()` in `loan-rows.tsx` was a `switch` on status with arms for `offered` / `active` /
+`returned` / `expired` and a **`default` reading "answered {rel}"**. Three statuses fell into that
+default and only one of them is an answer:
+
+| status | what the row rendered | truth |
+|---|---|---|
+| `declined` | answered 3h ago | ✅ the recipient answered |
+| `rescinded` | **answered 4h ago** | ❌ the LENDER pulled the offer back |
+| `offer_expired` | **answered 2d ago** | ❌ a 48 h clock ran out unseen |
+
+Both wrong labels are visible in the iter-1 screenshots I read and surfaced — `answered 2d ago`
+next to `OFFER EXPIRED`, `answered 4h ago` next to `RESCINDED`. I looked at those frames and did
+not see it, which is the "read the whole frame, not just your feature" lesson landing again. The
+green 19-test suite never asserted a clock LABEL, only the relative-time arithmetic behind it.
+
+It is the highest-damage spot for this bug: the panel exists to answer "why did that offer
+disappear?", and for a lapsed offer it told the operator the recipient had responded.
+
+### The shape, and what was done about it
+
+Four defects, one shape: **a status classified by an incomplete list, in a file that had no
+business making that judgement alone.**
+
+1. `medianHoursToAnswer` guarded by exclusion → counted `rescinded`.
+2. A lapsed `offered` row matched none of the drawer's three lists → rendered nowhere.
+3. Both shipped under comments asserting the opposite of the code.
+4. `clockLine`'s `default` → called a rescind and a lapse an answer.
+
+Fixing the fourth instance alone would have left the conditions for a fifth. Per
+`PIPELINE_HARDENING` § 22 the shape was fixed instead: **every judgement about a loan's status or
+its clocks now lives in one pure module, `lib/loanStatus.ts`** — `isLoanLive`, `isLoanPending`,
+`loanAnchorMs`, `ANSWERED_STATUSES`, `borrowerSection`, and the two that moved out of the React
+component, `clockLabel` and `actionsFor`. Its header names all four defects so the next reader
+knows why it exists. `telemetryLoans.ts` keeps the two folds and imports from it; `loan-rows.tsx`
+now only RENDERS the label the module chooses.
+
+`ALL_LOAN_STATUSES` is exported and **the tests iterate it**, so a status added later fails the
+suite instead of landing in a `default`. `lib/__tests__/loanStatus.test.ts` — 17 tests — asserts a
+per-status table for `clockLabel`, another for `actionsFor`, another for `borrowerSection`, and a
+cross-check that `ANSWERED_STATUSES` and `clockLabel` cannot drift apart about what an answer is.
+Restoring the old `default` arm turns **four** of them red, including that cross-check.
+
+### Two more things the same pass fixed
+
+* **`clockLabel` has a truthful fallback.** An unrecognised status now renders "last changed
+  {rel}" — never a claim about who acted. That is what let `rescinded` inherit "answered".
+* **`actionsFor` reads the clock, not just the column** (red-team's non-blocking wart W1). It took
+  a bare status, so a lapsed-but-unswept offer still showed **Cancel offer** — and the server's
+  guard is on the status column, so the action would have SUCCEEDED and started a 24 h cooldown on
+  a pair whose offer had already died on its own. Same for **Force return** on an `active` row past
+  `ends_at`. Both are now withheld once the clock has run out.
+
+Three new bilingual strings: `loans.rescindedAt` ("pulled back"), `loans.lapsedAt` ("lapsed
+unanswered"), `loans.changedAt` ("last changed"). The `DictKey` type caught all three as compile
+errors before they existed, which is the DICT lint doing its job.
+
+Verified in the running panel — all nine fixture rows now say something true:
+`RESCINDED → pulled back 4h ago`, `OFFER EXPIRED → lapsed unanswered 2d ago`,
+`DECLINED → answered 3h ago`, `OFFERED (lapsed) → offer lapsed 4h ago — flips on next read`.
+
+Dashboard tests **312 → 324**, 14 files. Backend 319 unchanged. `tsc --noEmit` exit 0.
 
 ---
 
