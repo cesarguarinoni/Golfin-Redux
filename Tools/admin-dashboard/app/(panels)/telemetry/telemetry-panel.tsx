@@ -747,6 +747,15 @@ export function TelemetryPanel() {
                   off: loanFunnel.settingOff.toLocaleString(),
                 })}
           </p>
+          {loanFunnel.modalOpens > 0 && (
+            <p className="text-[11px] text-zinc-400" title={t("tel.loans.ratesHint")}>
+              {t("tel.loans.rates", {
+                sent: pct(loanFunnel.sentRateOfOpens, 1),
+                accept: pct(loanFunnel.acceptRateOfSent, 1),
+                early: pct(loanFunnel.earlyReturnRateOfAccepted, 1),
+              })}
+            </p>
+          )}
           <p className="text-[11px] leading-relaxed text-zinc-600">{t("tel.loans.funnelHint")}</p>
         </div>
 

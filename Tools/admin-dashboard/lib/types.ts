@@ -1152,6 +1152,11 @@ export interface UserLoansResponse {
   in: LoanAdminRow[];
   /** Offers waiting on this user's answer (`offered`, clock running). */
   offers: LoanAdminRow[];
+  /** Offers TO this user that never became loans — declined, rescinded by the
+   *  lender, or lapsed. Kept out of `in` (which means "things they actually
+   *  held") but shown, because "why did that offer disappear?" is a real
+   *  support question and the drawer could not answer it (Cesar, 2026-09-10). */
+  wentNowhere: LoanAdminRow[];
   /** `profiles.golfin_loan_offers`. */
   offersEnabled: boolean;
   mock: boolean;

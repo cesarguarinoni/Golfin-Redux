@@ -85,13 +85,19 @@ export interface LoanFunnel {
   viaSearch: number;
   viaFollowed: number;
 
-  /** sent ÷ opens. */
-  sentRate: number | null;
-  /** accepted ÷ sent — the SPEC's definition, so a rescinded or still-pending
-   *  offer counts against the rate; an offer nobody answered is not a success. */
-  acceptRate: number | null;
-  /** early returns ÷ accepted. */
-  earlyReturnRate: number | null;
+  /** sent ÷ modal opens. */
+  sentRateOfOpens: number | null;
+  /** accepted ÷ SENT — the SPEC's definition, so a rescinded or still-pending
+   *  offer counts against the rate; an offer nobody answered is not a success.
+   *
+   *  ⚠️ NOT the same number as `LoanLifecycle.acceptRate`, which is accepted ÷
+   *  (accepted + declined) over the server's rows. Both are correct for their
+   *  own question and both render on the Loans section, so the names must not
+   *  collide — a reader who conflates them sees one figure disagreeing with
+   *  itself. Hence the `OfSent` suffix. */
+  acceptRateOfSent: number | null;
+  /** early returns ÷ accepted, over the CLIENT's events. */
+  earlyReturnRateOfAccepted: number | null;
   /** search ÷ sent. */
   viaSearchRate: number | null;
 
@@ -146,6 +152,21 @@ export interface LoanLifecycle {
 }
 
 export const TOP_PARTIES = 5;
+
+/**
+ * The statuses whose `answered_at` is the RECIPIENT's answer, and therefore the
+ * only ones `medianHoursToAnswer` may sample.
+ *
+ * `rescinded` is deliberately absent: its `answered_at` is the lender's, not an
+ * answer. `offered` has none yet, and `offer_expired`'s is a 48 h TTL running
+ * out, which is nobody answering.
+ */
+export const ANSWERED_STATUSES: ReadonlySet<string> = new Set([
+  "active",
+  "returned",
+  "expired",
+  "declined",
+]);
 
 function payloadOf(row: LoanEventRow): Record<string, unknown> {
   const raw = row.payload;
@@ -294,9 +315,9 @@ export function buildLoanFunnel(rows: LoanEventRow[]): LoanFunnel {
     settingOff,
     viaSearch,
     viaFollowed,
-    sentRate: rate(offersSent, modalOpens),
-    acceptRate: rate(accepted, offersSent),
-    earlyReturnRate: rate(earlyReturns, accepted),
+    sentRateOfOpens: rate(offersSent, modalOpens),
+    acceptRateOfSent: rate(accepted, offersSent),
+    earlyReturnRateOfAccepted: rate(earlyReturns, accepted),
     viaSearchRate: rate(viaSearch, offersSent),
     daysMix,
     kindMix,
@@ -392,12 +413,27 @@ export function buildLoanLifecycle(rows: LoanRow[], nowMs: number): LoanLifecycl
       }
     }
 
-    // Time-to-answer: only rows that carry both stamps, i.e. offers that were
-    // answered by a person. Lazy expiry stamps answered_at too, so the two
-    // expired states are excluded by name — a 48 h TTL is not an answer.
-    if (status !== "offer_expired" && status !== "offered") {
+    // Time-to-answer, over the statuses the RECIPIENT actually answered.
+    //
+    // ⚠️ AN INCLUSION LIST, NOT AN EXCLUSION ONE, and that is the whole fix.
+    // The first version excluded `offered` and `offer_expired` by name and let
+    // everything else through — which quietly counted `rescinded`. But
+    // `answered_at` on a rescinded row is when the LENDER pulled the offer
+    // back (`routers/loans.py::_terminal_answer` stamps it for decline AND
+    // rescind; so does `golfin_loan_admin`'s `cancel_offer`), and the
+    // recipient never answered at all. A card labelled "median time to answer"
+    // was averaging in the lender's change of mind.
+    //
+    // The four that ARE answers: `declined` is the recipient saying no, and
+    // `active` / `returned` / `expired` are the three states a loan can only
+    // reach THROUGH their accept.
+    if (ANSWERED_STATUSES.has(status)) {
       const offered = ms(row.offered_at);
       const answeredAt = ms(row.answered_at);
+      // `answered_at < offered_at` is not a clock bug — it is what
+      // `clear_cooldown` deliberately leaves behind, having pushed the pair's
+      // declined rows 30 days into the past. Dropping the sample is right:
+      // the row's answer moment is gone, and a negative would poison a median.
       if (offered !== null && answeredAt !== null && answeredAt >= offered) {
         hoursToAnswer.push((answeredAt - offered) / 3_600_000);
       }

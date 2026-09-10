@@ -281,6 +281,11 @@ export async function fetchLoanDetail(loanId: string): Promise<LoanDetailRespons
 
 const ACCEPTED_STATUSES = ["active", "returned", "expired"];
 
+/** Offered to them, never held by them. The complement of ACCEPTED_STATUSES and
+ *  a live `offered`, so between the three lists no row a borrower is party to is
+ *  invisible in the drawer. */
+const WENT_NOWHERE_STATUSES = ["declined", "rescinded", "offer_expired"];
+
 export async function fetchUserLoans(userId: string): Promise<UserLoansResponse> {
   const nowMs = Date.now();
 
@@ -295,6 +300,9 @@ export async function fetchUserLoans(userId: string): Promise<UserLoansResponse>
         (l) =>
           l.borrowerId === userId &&
           isLoanPending({ status: l.status, offer_expires_at: l.offerExpiresAt }, nowMs)
+      ),
+      wentNowhere: mine.filter(
+        (l) => l.borrowerId === userId && WENT_NOWHERE_STATUSES.includes(l.status)
       ),
       offersEnabled: mockLoansDb().offersEnabled[userId] ?? true,
       mock: true,
@@ -327,6 +335,9 @@ export async function fetchUserLoans(userId: string): Promise<UserLoansResponse>
     in: loans.filter((l) => l.borrowerId === userId && ACCEPTED_STATUSES.includes(l.status)),
     offers: loans.filter(
       (l) => l.borrowerId === userId && isLoanPending((byId.get(l.id) ?? {}) as LoanRow, nowMs)
+    ),
+    wentNowhere: loans.filter(
+      (l) => l.borrowerId === userId && WENT_NOWHERE_STATUSES.includes(l.status)
     ),
     offersEnabled: (profile.data as { golfin_loan_offers?: unknown } | null)?.golfin_loan_offers !== false,
     mock: false,

@@ -2078,6 +2078,12 @@ export const DICT = {
   "users.loans.out": { en: "Lent out", ja: "貸している" },
   "users.loans.in": { en: "Borrowed", ja: "借りている" },
   "users.loans.offers": { en: "Pending offers to answer", ja: "回答待ちのオファー" },
+  "users.loans.nowhere": { en: "Offers that went nowhere", ja: "成立しなかったオファー" },
+  "users.loans.nowhereHint": {
+    en: "Offers to this player that were declined, pulled back by the lender, or left to lapse. They never became loans, which is why they are not under Borrowed — but \"why did that offer disappear?\" is a real support question.",
+    ja: "このプレイヤー宛てのオファーのうち、辞退・貸し手による取り消し・期限切れとなったものです。貸し出しとしては成立していないため「借りている」には含めていませんが、「あのオファーはなぜ消えたのか」という問い合わせに答えるために表示しています。",
+  },
+  "users.loans.emptyNowhere": { en: "Every offer to this player was answered or is still open.", ja: "このプレイヤー宛てのオファーはすべて回答済みか、まだ有効です。" },
   "users.loans.emptyOut": { en: "This player has never lent anything.", ja: "このプレイヤーは何も貸したことがありません。" },
   "users.loans.emptyIn": { en: "This player has never accepted a loan.", ja: "このプレイヤーは貸し出しを受け取ったことがありません。" },
   "users.loans.emptyOffers": { en: "No offer is waiting on this player.", ja: "このプレイヤー宛ての保留中オファーはありません。" },
@@ -2099,6 +2105,14 @@ export const DICT = {
     en: "{players} players · {declined} declined · {rescinded} rescinded · {pill} pill opens · offers switched off {off}×",
     ja: "{players} 人 ・ 辞退 {declined} ・ 取り消し {rescinded} ・ ピル表示 {pill} ・ オファー受付オフ {off} 回",
   },
+  "tel.loans.rates": {
+    en: "{sent} of opens became an offer · {accept} of offers were accepted · {early} of accepted came back early",
+    ja: "モーダル表示の {sent} がオファーに ・ オファーの {accept} が承諾 ・ 承諾の {early} が早期返却",
+  },
+  "tel.loans.ratesHint": {
+    en: "The client's own view. The ACCEPTED card below is a different fraction on purpose — accepted ÷ answered over the server's rows, which ignores offers still waiting.",
+    ja: "クライアント側から見た数値です。下の「承諾率」カードは意図的に別の分母を使っています（サーバー側の行に対する 承諾 ÷ 回答済）。未回答のオファーは含みません。",
+  },
   "tel.loans.viaSearch": { en: "Sent to a searched name", ja: "検索した相手への送信" },
   "tel.loans.viaSearchHint": {
     en: "loan_offer_sent.via = search ÷ sent — offers that went to somebody the lender does not follow.",
@@ -2119,7 +2133,7 @@ export const DICT = {
   "tel.loans.kpi.rpLendersSub": { en: "{n} RP to borrowers", ja: "借り手への RP {n}" },
   "tel.loans.kpi.rpLendersHint": { en: "Sum of rp_to_lender / rp_to_borrower over the loans in range — the 20% split as it was actually paid.", ja: "期間内の貸し出しの rp_to_lender / rp_to_borrower の合計 — 実際に支払われた 20% の分配です。" },
   "tel.loans.median": { en: "Median time to answer", ja: "回答までの中央値" },
-  "tel.loans.medianHint": { en: "answered_at − offered_at over offers a person answered (accept, decline, rescind). Lapsed offers are excluded — a TTL is not an answer.", ja: "人が回答したオファー（承諾・辞退・取り消し）の answered_at − offered_at。失効したオファーは除外します（期限切れは回答ではありません）。" },
+  "tel.loans.medianHint": { en: "answered_at − offered_at over the offers the RECIPIENT answered (accepted, declined). A rescind is the lender withdrawing and a lapse is a TTL — neither is an answer, and both are excluded.", ja: "受け手が実際に回答したオファー（承諾・辞退）の answered_at − offered_at。取り消しは貸し手による取り下げ、失効は期限切れであり、いずれも回答ではないため除外します。" },
   "tel.loans.statusTitle": { en: "By status", ja: "ステータス別" },
   "tel.loans.col.status": { en: "Status", ja: "ステータス" },
   "tel.loans.col.count": { en: "Loans", ja: "件数" },

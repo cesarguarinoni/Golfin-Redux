@@ -1,7 +1,7 @@
 # IMPLEMENTER_REPORT — `loans_ops`
 
 **Iteration shape:** `loans:ops-panel-and-telemetry`
-**Iteration:** 1
+**Iteration:** 2
 **Canonical screenshot:** `screenshots/loans_row_after_force_return.png` (2880×1520)
 
 ---
@@ -80,6 +80,76 @@ transaction-local flag the trigger honours and writes its own row carrying the e
 | `lib/i18n.ts`: every new key en + ja; DICT lint clean; JA proof-read | **PASS** | **141 new keys**, scripted check: `missing/empty en or ja: none`, `{var} mismatch between en/ja: none`. `tsc --noEmit` exits **0** — `DictKey` is derived from `DICT`, so a `t("…")` for a key that does not exist is a compile error, which is the lint. Rendered HTML scanned for leaked keys on `/loans`, `/telemetry`, `/users` in **both** languages: clean, six for six. JA rendering read on the frames: `loans_panel_ja.png`, `loans_drawer_tab_ja.png`, `loans_telemetry_section_ja.png`. |
 | Deployed: `npm run deploy` output, Cloudflare deployment id, footer stamp read live; mock mode still boots with no service key | **SEE § Deploy** | Filled in below. |
 | Dashboard tests green (count before/after); backend tests green | **PASS** | Dashboard **293 → 305** (12 new, 13 files). Backend **315 → 319** (4 new). Both suites run clean; `npm run deploy` runs the dashboard suite itself and aborts on failure. |
+
+---
+
+## Iteration 2 — the review's fail list
+
+`golfin-reviewer` returned `ARCHITECT_REVIEW_FAIL` on iter-1 with one blocking bug, one design
+question and one cleanup. All three are addressed. Dashboard tests **305 → 307**; backend
+unchanged at 319; `tsc --noEmit` exit 0.
+
+### F1 (blocking) — `medianHoursToAnswer` counted rescinds. FIXED.
+
+The reviewer is right, and the code said so in its own hint string. `buildLoanLifecycle` guarded by
+EXCLUSION — `status !== "offer_expired" && status !== "offered"` — which let `rescinded` through.
+But `answered_at` on a rescinded row is when the **lender withdrew**: `routers/loans.py::_terminal_answer`
+stamps it for a decline AND a rescind, and `golfin_loan_admin`'s `cancel_offer` does the same. The
+recipient never answered. A card labelled **Median time to answer** was averaging in the lender's
+change of mind, and the tooltip admitted it — it read "(accept, decline, rescind)".
+
+The guard is now an **inclusion** list, `ANSWERED_STATUSES = {active, returned, expired, declined}`,
+exported so it is nameable and testable. The tooltip was rewritten in both languages to say a
+rescind and a lapse are not answers.
+
+**The old test pinned the bug**, asserting median 4 over a set whose rescinded row contributed 10 h.
+Corrected to 3.5, and two regression tests added. **Both were proven to fail against the old code**
+before the fix was kept — restoring the exclusion guard turns the suite red with exactly:
+
+```
+× buildLoanLifecycle > mixes statuses …        → expected 4 to be close to 3.5
+× buildLoanLifecycle > never counts a rescind as an answer → expected 11 to be close to 2
+```
+
+The second regression also pins that a rescind still counts everywhere ELSE (`total`, `byStatus`) —
+only the median ignores it. A third new test pins the `answered_at < offered_at` case that
+`clear_cooldown` deliberately creates: the sample is dropped rather than counted negative.
+
+On the mock fixture the number moved **2.5 h → 2 h**, hand-checked against the five real answers
+(2, 2, 3, 2, 2) with the 10 h rescind excluded.
+
+### F2 (design) — the drawer's BORROWED scope. DECIDED BY CESAR, IMPLEMENTED.
+
+The reviewer was right that this was asymmetric: LENT OUT showed every status while BORROWED showed
+only `active`/`returned`/`expired`, so "why did that offer disappear?" was unanswerable in the
+drawer. Cesar's call (2026-09-10): **widen it, as its own section.** BORROWED stays accepted-only so
+its count keeps meaning "things they actually held", and a fourth section — **Offers that went
+nowhere** — carries `declined` / `rescinded` / `offer_expired`, with a line explaining why they are
+not filed under BORROWED. Between the four sections no row the player is a party to is invisible.
+
+`UserLoansResponse` gains `wentNowhere`, filled in both the live and the mock branch. A mock fixture
+(`…mock-loan-0008`, WWtest → ken, declined) was added so the section renders with content rather
+than an empty state: `screenshots/loans_drawer_tab.png` now shows all four, **OFFERS THAT WENT
+NOWHERE (1)** among them.
+
+### F7 (cleanup) — the two `acceptRate`s. RENAMED AND WIRED.
+
+The reviewer found the collision I flagged for it was latent rather than live: the funnel's three
+rates were computed and tested but never rendered, so only the lifecycle's `acceptRate` reached the
+screen. Both halves are fixed rather than one:
+
+* **Renamed**, so the collision cannot revive: `sentRate` → `sentRateOfOpens`, `acceptRate` →
+  `acceptRateOfSent`, `earlyReturnRate` → `earlyReturnRateOfAccepted`. The doc comment on
+  `acceptRateOfSent` names the other one and says why the denominators differ.
+* **Wired**, because SPEC § 2 asks for exactly these three ("sent/open, accept/sent,
+  early-return/accepted") and they were the part of that line not on screen. They now render as a
+  line under the funnel bars, with a tooltip that points at the ACCEPTED card below and says its
+  fraction is deliberately different.
+
+### The three angles the reviewer cleared
+
+PostgREST `or=` escaping, page-boundary drops, and the `snapshot()` `??` chains were each checked
+and found sound; its reasoning matches the code as I read it. No change.
 
 ---
 

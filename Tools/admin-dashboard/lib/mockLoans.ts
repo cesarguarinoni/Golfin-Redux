@@ -148,6 +148,22 @@ const SEED_LOANS: LoanAdminRow[] = [
     endsAt: null,
     createdAt: h(-14),
   }),
+  // Declined by KEN — the row the drawer's fourth section exists for. Without
+  // one, "offers that went nowhere" renders empty for the fixture user and the
+  // section proves nothing.
+  row("00000000-mock-loan-0008", WWTEST, KEN, {
+    kind: "club",
+    refId: "club_iron7_klyro",
+    days: 1,
+    status: "declined",
+    offeredAt: h(-40),
+    offerExpiresAt: h(8),
+    answeredAt: h(-38),
+    startsAt: null,
+    endsAt: null,
+    levelAtStart: 3,
+    createdAt: h(-40),
+  }),
   // An offer nobody answered: lapsed at the 48 h mark.
   row("00000000-mock-loan-0007", WWTEST, APPLE, {
     kind: "club",
@@ -201,6 +217,10 @@ const SEED_EVENTS: Record<string, LoanEventDto[]> = {
   "00000000-mock-loan-0006": [
     ev("00000000-mock-loan-0006", h(-14), null, "offered", "lender"),
     ev("00000000-mock-loan-0006", h(-4), "offered", "rescinded", "lender"),
+  ],
+  "00000000-mock-loan-0008": [
+    ev("00000000-mock-loan-0008", h(-40), null, "offered", "lender"),
+    ev("00000000-mock-loan-0008", h(-38), "offered", "declined", "borrower"),
   ],
   "00000000-mock-loan-0007": [
     ev("00000000-mock-loan-0007", h(-100), null, "offered", "lender"),

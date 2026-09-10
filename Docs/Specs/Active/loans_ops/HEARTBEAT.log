@@ -19,3 +19,30 @@ DIRTY:
 2026-09-10T08:08:12Z iter-1 — API deployed v73→v74, /loans/rules live 200; live-mode degradation probed against prod (golfin_loan_events 404 + RPC PGRST202 both caught); 141 DICT keys en+ja clean; 12 screenshots captured; committing then deploying the dashboard
 2026-09-10T08:14:16Z iter-1 DONE — dashboard deployed (CF version 476b78f6-fdf7-47e9-8c1d-acc4355e57a3, footer stamp df1f529fb read live in Chrome); /loans, /telemetry#loans and the drawer Loans tab all verified on admin.golfin.world; report + STATUS written; STATUS=READY_FOR_SELF_REVIEW
 2026-09-10T08:20:27Z iter-1 — Cesar applied the migration (11/11 green); re-derived from the DB, then proved the trigger + all 3 actions + 6 refusals + both lazy-expiry clocks on production with 4 synthetic-party throwaway loans; cleaned up, both tables back to 0 rows; report rows 1 and 2 upgraded to PASS
+
+=== iter-2 kickoff baseline 2026-09-10T08:38:32Z ===
+HEAD: f00c234652e2dbd4adec1af0f28389e035d026dd
+DIRTY:
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+ M Docs/Economy/MONETIZATION_PLAN.md
+ M Docs/Specs/Active/loans_ops/HEARTBEAT.log
+ M Docs/Specs/Active/loans_ops/STATUS.md
+ M Docs/Specs/Active/weekly_rotation_admin/SPEC.md
+ M Docs/Specs/Active/weekly_rotation_client/SPEC.md
+ M Docs/TellCode.md
+ M Tools/admin-dashboard/app/(panels)/telemetry/telemetry-panel.tsx
+ M Tools/admin-dashboard/app/(panels)/users/loans-tab.tsx
+ M Tools/admin-dashboard/lib/__tests__/telemetryLoans.test.ts
+ M Tools/admin-dashboard/lib/i18n.ts
+ M Tools/admin-dashboard/lib/loansData.ts
+ M Tools/admin-dashboard/lib/mockLoans.ts
+ M Tools/admin-dashboard/lib/telemetryLoans.ts
+ M Tools/admin-dashboard/lib/types.ts
+?? "Claude outputs/screen_hints_scrim_vs_blur.png"
+?? Docs/Specs/Active/economy_telemetry/SPEC.md
+?? Docs/Specs/Active/economy_telemetry/STATUS.md
+?? Docs/Specs/Active/loans_ops/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/loans_ops/SELF_REVIEW.md
+?? Docs/Specs/Quick/hole_selection_first_card_gap.md
+=== end baseline ===
+2026-09-10T08:38:32Z iter-2 start — ARCHITECT_REVIEW_FAIL: F1 medianHoursToAnswer counted rescinds; F2 drawer IN scope (Cesar: widen, separate section); F7 dead funnel rates

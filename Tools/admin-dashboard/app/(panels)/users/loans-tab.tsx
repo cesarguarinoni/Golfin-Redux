@@ -13,8 +13,13 @@ import { LoanCard, NoteDialog } from "../loans/loan-rows";
  * `profiles.golfin_loan_offers` — so, like the Gacha and Missions tabs and
  * unlike Inventory, it carries no red notice.
  *
- * Three lists with the SAME row and the SAME action bar as the Loans panel
- * (`../loans/loan-rows.tsx`), plus the recipient's switch at the top. The tab
+ * FOUR lists with the SAME row and the SAME action bar as the Loans panel
+ * (`../loans/loan-rows.tsx`), plus the recipient's switch at the top. Between
+ * them no row this player is a party to is invisible: pending offers, what they
+ * lend (every status), what they held, and — added on Cesar's call 2026-09-10 —
+ * the offers to them that went nowhere. Borrowed stays accepted-only so its
+ * count keeps meaning "things they actually held"; the fourth section is where
+ * "why did that offer disappear?" gets answered. The tab
  * owns its two mutations rather than routing them through the drawer's
  * `runMutation`, because both need a NOTE — the drawer's confirm modals do
  * not take one, and a loan action without a reason is exactly what the audit
@@ -80,13 +85,17 @@ export function LoansTab({
   const list = (
     title: DictKey,
     rows: LoanAdminRow[],
-    emptyKey: DictKey
+    emptyKey: DictKey,
+    hintKey?: DictKey
   ) => (
     <section className="rounded-lg border border-surface-800 bg-surface-950 p-3">
       <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
         {t(title)}{" "}
         <span className="font-normal normal-case tracking-normal text-zinc-600">({rows.length})</span>
       </span>
+      {hintKey && (
+        <p className="mt-1 text-[10px] leading-relaxed text-zinc-600">{t(hintKey)}</p>
+      )}
       {rows.length === 0 ? (
         <p className="py-2 text-center text-[11px] text-zinc-600">{t(emptyKey)}</p>
       ) : (
@@ -166,6 +175,15 @@ export function LoansTab({
       {list("users.loans.offers", data.offers, "users.loans.emptyOffers")}
       {list("users.loans.out", data.out, "users.loans.emptyOut")}
       {list("users.loans.in", data.in, "users.loans.emptyIn")}
+      {/* Cesar, 2026-09-10: widen the drawer, but as its OWN section rather than
+          by folding these into Borrowed — a declined offer is not something the
+          player held, and the count above has to keep meaning what it says. */}
+      {list(
+        "users.loans.nowhere",
+        data.wentNowhere,
+        "users.loans.emptyNowhere",
+        "users.loans.nowhereHint"
+      )}
 
       {pending && pending.kind === "action" && (
         <NoteDialog

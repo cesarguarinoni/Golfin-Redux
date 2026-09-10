@@ -80,9 +80,9 @@ describe("buildLoanFunnel", () => {
     const f = buildLoanFunnel([]);
     expect(f.modalOpens).toBe(0);
     expect(f.offersSent).toBe(0);
-    expect(f.sentRate).toBeNull();
-    expect(f.acceptRate).toBeNull();
-    expect(f.earlyReturnRate).toBeNull();
+    expect(f.sentRateOfOpens).toBeNull();
+    expect(f.acceptRateOfSent).toBeNull();
+    expect(f.earlyReturnRateOfAccepted).toBeNull();
     expect(f.viaSearchRate).toBeNull();
     expect(f.players).toBe(0);
     expect(f.stages.map((s) => s.count)).toEqual([0, 0, 0, 0, 0]);
@@ -101,9 +101,9 @@ describe("buildLoanFunnel", () => {
     expect(f.pillOpens).toBe(1);
     expect(f.viaSearch).toBe(1);
     expect(f.viaFollowed).toBe(0);
-    expect(f.sentRate).toBe(1);
-    expect(f.acceptRate).toBe(1);
-    expect(f.earlyReturnRate).toBe(1);
+    expect(f.sentRateOfOpens).toBe(1);
+    expect(f.acceptRateOfSent).toBe(1);
+    expect(f.earlyReturnRateOfAccepted).toBe(1);
     expect(f.viaSearchRate).toBe(1);
     expect(f.daysMix).toEqual({ "3": 1 });
     expect(f.kindMix).toEqual({ character: 1 });
@@ -140,16 +140,16 @@ describe("buildLoanFunnel", () => {
     const f = buildLoanFunnel(rows);
     expect(f.modalOpens).toBe(4);
     expect(f.offersSent).toBe(2);
-    expect(f.sentRate).toBeCloseTo(0.5, 10);
+    expect(f.sentRateOfOpens).toBeCloseTo(0.5, 10);
     expect(f.answered).toBe(2);
     expect(f.accepted).toBe(1);
     expect(f.declined).toBe(1);
     // accept ÷ SENT, per SPEC §2 — not accept ÷ answered.
-    expect(f.acceptRate).toBeCloseTo(0.5, 10);
+    expect(f.acceptRateOfSent).toBeCloseTo(0.5, 10);
     expect(f.rescinded).toBe(1);
     expect(f.returns).toBe(1);
     expect(f.earlyReturns).toBe(0);
-    expect(f.earlyReturnRate).toBe(0);
+    expect(f.earlyReturnRateOfAccepted).toBe(0);
     expect(f.viaSearchRate).toBeCloseTo(0.5, 10);
     expect(f.settingOn).toBe(1);
     expect(f.settingOff).toBe(1);
@@ -258,9 +258,13 @@ describe("buildLoanLifecycle", () => {
     expect(l.acceptRate).toBeCloseTo(0.75, 10);
     expect(l.earlyReturns).toBe(1);
     expect(l.earlyReturnRate).toBeCloseTo(0.5, 10); // 1 early of 2 ended
-    // Answered rows carrying both stamps: a(1h) b(3h) c(5h) d(rescinded, 10h) f(4h)
-    // → sorted 1,3,4,5,10 → median 4. offer_expired is excluded by name.
-    expect(l.medianHoursToAnswer).toBeCloseTo(4, 10);
+    // Only the statuses the RECIPIENT answered: a(returned, 1h) b(expired, 3h)
+    // c(declined, 5h) f(active, 4h) → sorted 1,3,4,5 → median 3.5.
+    // d is `rescinded` — its answered_at is the LENDER's, not an answer — and e
+    // is `offer_expired`, a TTL. Both excluded. This assertion previously read
+    // 4, which was the bug: it was averaging the lender's change of mind into a
+    // card labelled "median time to answer".
+    expect(l.medianHoursToAnswer).toBeCloseTo(3.5, 10);
     expect(l.daysMix).toEqual({ "3": 4, "7": 1, "1": 1 });
     expect(l.kindMix).toEqual({ character: 5, club: 1 });
     expect(l.rpToLender).toBe(10);
@@ -272,6 +276,47 @@ describe("buildLoanLifecycle", () => {
     ]);
     expect(l.topBorrowers[0]).toEqual({ userId: "bob", displayName: null, count: 4 });
     expect(l.activeNow).toBe(1);
+  });
+
+  it("never counts a rescind as an answer", () => {
+    // The one that the first version got wrong. `routers/loans.py::_terminal_answer`
+    // stamps `answered_at` for a decline AND for a rescind, and `golfin_loan_admin`'s
+    // `cancel_offer` does the same — but a rescind is the LENDER withdrawing, and the
+    // recipient never answered. A card labelled "median time to answer" must not see it.
+    const declinedAfter2h = loan({
+      id: "d", status: "declined", starts_at: null, ends_at: null,
+      offered_at: h(-30), answered_at: h(-28),
+    });
+    const rescindedAfter20h = loan({
+      id: "r", status: "rescinded", starts_at: null, ends_at: null,
+      offered_at: h(-30), answered_at: h(-10),
+    });
+
+    // Alone, the decline is the only sample: 2 h.
+    expect(buildLoanLifecycle([declinedAfter2h], NOW).medianHoursToAnswer).toBeCloseTo(2, 10);
+    // Adding the rescind must not move it. (Before the fix it became 11.)
+    expect(
+      buildLoanLifecycle([declinedAfter2h, rescindedAfter20h], NOW).medianHoursToAnswer
+    ).toBeCloseTo(2, 10);
+    // And a rescind on its own is "no data", not a number.
+    expect(buildLoanLifecycle([rescindedAfter20h], NOW).medianHoursToAnswer).toBeNull();
+
+    // It still COUNTS as a loan everywhere else — only the median ignores it.
+    const l = buildLoanLifecycle([declinedAfter2h, rescindedAfter20h], NOW);
+    expect(l.total).toBe(2);
+    expect(l.byStatus).toEqual({ declined: 1, rescinded: 1 });
+  });
+
+  it("drops a sample whose answered_at precedes offered_at, as clear_cooldown leaves it", () => {
+    // `golfin_loan_admin('clear_cooldown')` pushes the pair's declined rows 30
+    // days into the past, which puts answered_at BEFORE offered_at. The row's
+    // answer moment is gone; a negative would poison the median, so it is dropped.
+    const cleared = loan({
+      id: "c", status: "declined", starts_at: null, ends_at: null,
+      offered_at: h(-30), answered_at: h(-30 - 24 * 30),
+    });
+    expect(buildLoanLifecycle([cleared], NOW).medianHoursToAnswer).toBeNull();
+    expect(buildLoanLifecycle([cleared], NOW).total).toBe(1);
   });
 
   it("tolerates pre-offers rows with a null offered_at", () => {

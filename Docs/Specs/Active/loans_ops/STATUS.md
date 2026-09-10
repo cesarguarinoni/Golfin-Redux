@@ -1,12 +1,21 @@
-READY_FOR_SELF_REVIEW
+ARCHITECT_REVIEW_FAIL
 
-loans_ops iter-1, 2026-09-10.
+loans_ops iter-1, architect review FAIL 2026-09-10 17:35 JST.
 
-Built: the Loans ops panel, the Users drawer Loans tab, the Telemetry Loans section, seven API
-routes, and the playlife migration + GET /loans/rules. API deployed v73 -> v74 and verified live.
-Dashboard deployed (id in IMPLEMENTER_REPORT.md).
+F1: buildLoanLifecycle's medianHoursToAnswer counts `rescinded` rows whose
+answered_at is the lender's rescind timestamp (SQL migration line 178,
+routers/loans.py:1076,1102), not the borrower's answer. Under a label reading
+"MEDIAN TIME TO ANSWER" the stat is measuring time-to-rescind for those rows.
+Fix by inclusion list (active, returned, expired, declined) + unit test.
 
-BLOCKED ON CESAR (not on the pipeline): the migration 2026_09_10_golfin_loan_events.sql needs to
-be pasted into the Supabase SQL editor. Until then the timeline reads "not migrated" naming the
-file and an admin action answers 503 naming it -- both probed against production, neither 500s.
-Everything else on the panel works today.
+F2 open for Cesar: drawer IN list scoped to accepted-only excludes declined /
+rescinded / offer_expired, so a "why did that offer disappear?" support case
+is not answerable from the drawer alone.
+
+F7 optional cleanup: LoanFunnel.acceptRate / sentRate / earlyReturnRate are
+computed but never rendered — wire or drop; rename to prevent denominator
+collision reviving.
+
+The other five acceptance items PASS.
+
+Next: golfin-implementer to fix F1 (blocking) + answer F2 to Cesar.
