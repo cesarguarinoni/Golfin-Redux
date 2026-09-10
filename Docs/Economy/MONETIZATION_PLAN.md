@@ -79,6 +79,52 @@ the paid track later: when cosmetics exist, the same rotation row can carry a co
 of the week — but cosmetic rows never enter the RP lineup quotas, and lineup rows never enter a
 paid SKU.
 
+### 1.3 IAP — the concrete catalogue and plumbing (added 2026-09-10)
+
+Real-money purchases are **direct SKUs only** (no gem wallet, §1). Everything below is
+cosmetic or utility; every SKU passes T1–T5. Product ids are stable strings shared by App
+Store Connect, Play Console and the `iap_products` catalog (admin two-way, like every other
+catalog) so a price-tier change is content, not a build.
+
+| Product id | Type | JPY tier | Grants (entitlement kind) |
+|---|---|---|---|
+| `outfit.<char>.<n>` | non-consumable | ¥480 | `cosmetic:outfit:<id>` |
+| `outfit.bundle.<char>` | non-consumable | ¥1,200 | 3 outfits of one character |
+| `finish.<type>.<name>` | non-consumable | ¥320 | club finish for one club type |
+| `finish.bundle.<name>` | non-consumable | ¥980 | that finish for all 7 types |
+| `balltrail.<name>` / `ballfx.<name>` | non-consumable | ¥160–¥320 | ball cosmetic |
+| `identity.<title\|frame\|bg>.<name>` | non-consumable | ¥120–¥320 | identity cosmetic |
+| `pass.<season>` | non-consumable (per season) | ¥980 | `pass:<season>` — paid track unlock, no level skips |
+| `playlife.pro.month` / `.year` | auto-renewing subscription | ¥480 / ¥3,800 | `pro` (GPS app only) |
+| `cosmetic.ticket.x1` / `.x10` | consumable | ¥160 / ¥1,500 | **only if C6 is approved** — cosmetic-pool gacha tickets |
+
+Never a product id: RP, Standard/Gold tickets, kits, stamina, level-ups, tournament entry,
+bag slots, characters, clubs, balls (T1/T2/T3).
+
+**Plumbing (one spec, `iap_plumbing`, after the beta reset):**
+- Client: Unity IAP (StoreKit 2 on iOS, Play Billing on Android) — purchase → the store
+  receipt/transaction goes to playlife `POST /iap/verify` (extend `routers/iap.py`, which exists
+  for the partner app) — the **server** validates with Apple / Google, writes
+  `golfin_entitlements (user_id, product_id, kind, ref_id, source, txn_id unique, granted_at,
+  revoked_at)` and a `golfin_pending_grants(kind='cosmetic')` row in one transaction; the client
+  applies the grant through the queue it already drains. No client-side grant, ever — the shop
+  rule (`shop_server_purchase`) applied to money.
+- Restore purchases (App Store requirement) = replay every transaction through the same
+  verify path; entitlements are idempotent by `txn_id`.
+- Refunds: Apple App Store Server Notifications v2 / Google RTDN webhook → `revoked_at` → the
+  next boot's grant drain removes the cosmetic (a `revoke` grant kind). Cosmetics only, so a
+  revoke never touches stats or RP.
+- Subscriptions (`pro`): status from the notification webhooks + a daily reconcile job; the GPS
+  app reads `entitlements.pro` on the profile.
+- Admin: `iap_products` catalog (id, kind, ref, tier per store, window, `min_build`), an
+  **Entitlements** tab in the Users drawer (grant / revoke, audited — support refunds), a
+  Revenue card (SKU sales, pass conversion, ARPPU) on the Telemetry panel.
+- Store compliance: JP 特定商取引法 display page linked from the store screen; no loot box for
+  money unless C6 (then 景表法 odds display via the existing RATES modal); parental-gate not
+  required for cosmetics but the age-rating questionnaire must declare IAP.
+- Gating: `content_settings.iap_enabled` kill switch; SKUs withheld on the client when the
+  referenced cosmetic cannot be rendered (the shop's withhold rule, verbatim).
+
 Guardrail on prestige: the rarest-looking cosmetics are **tournament/season-earned** (title + frame for a Major win, a Supreme-run finish). Paid cosmetics are good-looking, never the *best*-looking. That is what keeps "no P2W" believable to players, not just true.
 
 ---
@@ -148,11 +194,52 @@ G1+G2+G3 are one system: **sponsors buy reach, players get RP and prizes, GOLFIN
 |---|---|---|---|
 | **0 — now** | Nothing paid. Finish the RP sinks (durability wear, gacha pools, character unlock purchase flow) so the free economy is tight before money enters | — | 0 (as decided) |
 | **1 — Ads (rewarded)** | §2: LevelPlay + AdMob bidder, 3 placements, SSV → `earn_pts_v2`, `ad_placements` catalog + admin caps + kill switch, telemetry `ad_view` on the beta rail | None on content; ~1 spec. **Store policy: ads disclosure in listing + privacy labels (ATT prompt on iOS)** | Small, immediate |
+| **1b — Beta → launch reset** | §4b: `progress_epoch`, `golfin_reset_progress`, founder reward, admin Reset-epoch control, in-app notice two weeks ahead | Beta period over; RP decision made | 0 — but it is the gate for every paid SKU: nobody buys into an economy that is about to be wiped |
+| **1c — IAP plumbing** | §1.3: `iap_products` catalog, `/iap/verify`, `golfin_entitlements`, restore, refund webhooks, Entitlements admin tab, kill switch — shipped with **zero SKUs live** so the first cosmetic drop is a content publish | After 1b (never before the reset) | 0 until Phase 2 |
 | **2 — Cosmetics + Golf Pass** | C1–C5 direct SKUs. IAP plumbing: StoreKit 2 / Play Billing → playlife receipt validation (extend `iap.py`) → `golfin_entitlements` ledger (the tickets-ledger shape: server truth, client cache) → `golfin_pending_grants(kind='cosmetic')`. Cosmetic catalogs `cosmetics`, `cosmetic_skus` two-way with the admin (price tier, window, `min_build`, ref art by URL). Season pass = `seasons` + `pass_tracks` catalogs with a validator rule **paid track rows may only reference kind=cosmetic|title** | **Real cosmetic assets** (the gate Ken and Cesar set). Spec order: entitlements → cosmetic catalogs → store screen → pass | The business |
 | **3 — GPS B2B + Pro** | G1 tiers in the admin (venue row gains `tier`, `campaign_rp`, `sponsor_pool`), G2 campaign catalog, G3 exchange catalog + fulfilment ops panel, G5 Pro entitlement, G4 gifting **after §5.2** | GPS standalone shell decision (backlog: Unity thin-shell vs Flutter — reached) | Recurring, contract-based |
 | **4 — optional** | C6 cosmetic gacha; MAX as a second mediation if ad rev > $10k/mo | Legal review (景表法 odds display, no コンプガチャ) | Incremental |
 
 ---
+
+## 4b. Beta → launch: the progress reset (added 2026-09-10)
+
+The beta testers' accounts are the launch accounts — same Supabase auth, same profile, same
+PLAYLIFE ledger. What must NOT carry into launch is beta **progress**, above all the **hole
+system**: holes unlock sequentially (`SaveData.unlockedHoles` on the device, mirrored as
+`holes` in the `golfin_inventory` blob, admin grant kind `hole`), so a tester who has all 18
+holes open on day one of launch is playing a different game from a new player. The reset is a
+one-time, server-driven, whole-account event with a **founder reward** so testers feel paid, not
+punished.
+
+| Resets to launch state | Kept |
+|---|---|
+| Hole progression → hole 1 only, `playedHoles` cleared (client `HoleProgressionService` + blob `holes`) | Account, email, display name, golf profile, avatar colour |
+| Character levels / SP, club levels, durability (server `golfin_progress` + blob) | **The starter pick** (`starter_restore_gate` — must never re-ask) |
+| Inventory: clubs, balls, items, bags, tickets (ledger → 0), gacha pity, `appliedGrantIds` | Cosmetics and entitlements (there are none in beta — but the rule is set now) |
+| Missions campaign clears, daily streak, tournament history + claims | GPS/PLAYLIFE score history, badges, follows, gifts received |
+| **RP balance** — DECISION (see below) | Telemetry (that is the point of the beta) |
+
+**Mechanism (one spec, `beta_progress_reset`):** a `progress_epoch` integer in
+`content_settings` (server) and in `SaveData` (client). On boot, if the server epoch is greater
+than the saved one, the client calls `POST /user/progress-reset` → `golfin_reset_progress(user)`
+(security definer, idempotent per epoch, audited): rewrites the inventory blob to the starter
+shape, zeroes `golfin_tickets`, deletes `golfin_gacha_pity` rows, marks all pending grants
+applied, resets `golfin_progress` levels, and — per the RP decision — writes one ledger row
+`beta_reset` debiting the balance to 0 or leaving it. The client then rebuilds its `SaveData`
+from the server response exactly as a fresh install does (the `InventorySyncService` boot path)
+and stamps the new epoch. Admin: a **Reset epoch** control on the Users panel (typed
+confirmation, names the affected-account count) + per-user reset for support. Dry-run mode
+reports counts without writing. **Founder reward** granted by the same function: title
+`FOUNDER`, profile frame, and a fixed RP grant so testers are not below a new player who did
+the FTUE (proposal 500 RP; RP-only, nothing stat-carrying — T1 holds). Rotations are content,
+not player state — the year plan is untouched by the reset.
+
+**Decisions needed:** (1) RP: reset to 0 + founder grant (clean, recommended) vs keep beta RP
+(rewards the grind but launch leaderboards start unequal); (2) reset date = the launch build's
+`min_build` day, communicated in-app two weeks ahead via the notices system; (3) whether GPS
+visit RP earned during beta by partner-app users counts as "beta" — it is on the same ledger,
+so option (1) needs a cutoff by `points_transactions.created_at` and `reason`, not a blanket zero.
 
 ## 5. Things found while checking the current code against the rules
 
@@ -173,8 +260,26 @@ G1+G2+G3 are one system: **sponsors buy reach, players get RP and prizes, GOLFIN
 5. **Gift split order** for 30/20/50 and the `support_pts` decoupling (§5.2).
 6. **Course tier prices** — G1 numbers need a sales conversation with two or three courses first.
 7. **C6 cosmetic gacha**: on the table or off. Off is the cleaner store-listing story.
+8. **Beta reset** (§4b): RP to zero + founder grant, or keep; reset date; GPS-RP cutoff rule.
 
 ---
+
+## 7a. Measuring it — transaction markers + the Economy panel (added 2026-09-11, spec `economy_telemetry`)
+
+The ledger is the truth, so the markers go on the ledger: `points_transactions.meta` (additive
+jsonb — surface, category, item ref, rarity, rotation id, sale flag, build), written by every
+spend/earn function we own and backfilled from today's `description` prefixes. The client adds
+only what the ledger cannot see: `shop_view`, `shop_buy_tap`, `shop_buy_result` (with the
+**insufficient-funds shortfall** — the pricing signal), `lineup_rollover`, level-up and stamina
+results, and reserved `ad_*` names for Phase 1. One **Economy** admin panel reads three SQL views
+and shows, with the standard definitions: sink/source ratio (rule of thumb ≈ 1.0 with deliberate
+small imbalances, watch power-vs-casual divergence), net RP creation and RP in circulation
+(inflation curve), balance histogram (hoarding), days-to-afford at the live median net earn,
+spend mix by category, per-rotation sell-through, the buy funnel and wanted-but-couldn't table,
+gacha sinks, spender segments, DAU/stickiness, and pre-built Ads (opt-in, impressions/DAU,
+est. revenue) and IAP (paying users, conversion, ARPDAU, ARPPU, refund rate) cards that light
+up when Phases 1/1c land. Benchmarks the cards are read against: D1 ≈ 22 % median / 25–33 % top
+quartile, D7 ≈ 3.4–3.9 %, hybrid-casual ARPDAU $0.15–0.50, rewarded eCPM tier-1 $15–40.
 
 ## 7. Admin/ops surface (so none of this needs a build)
 
@@ -187,6 +292,12 @@ G1+G2+G3 are one system: **sponsors buy reach, players get RP and prizes, GOLFIN
 **原則：** お金で買えるのは「見た目」「誰でもプレイで得られる時間短縮」「他人への応援」のみ。**強さは絶対に売らない。** 全SKUは5つのテスト（ショットに影響するか／RPやチケットに変換されるか／大会の枠・優先権か／有償ランダムで性能物が出るか／無課金で到達不能か）にすべて「いいえ」で答えられる必要がある。
 
 **週替わりローテーション（2026-09-08追加、RPのみ）：** 毎週月曜09:00 JSTにストアのラインナップ（レアリティ別クォータでクラブ9本・ボール3種・ロックキャラ1体、価格は既存のRP価格帯＋新設のボール価格帯）とガチャの週替わりバナー（注目クラブをレアリティ内で排出率3倍、天井は週をまたいで継続）が入れ替わる。管理画面の「Rotations」パネルでクォータ・シード・期間を設定→プレビュー→生成→5カタログを一括公開、ビルド不要。直近4週に登場したものは除外、Supremeは既定で対象外（大会限定のまま）。**課金要素はいっさい含まない**。
+
+**ベータ終了時のリセット（2026-09-10追加）：** ベータテスターのアカウントはそのまま本番アカウントになるため、**ホール進行（順次アンロック）を含む進行状況をサーバー主導で一括リセット**する — ホールは1番のみ、キャラ・クラブのレベル、インベントリ、チケット、天井、ミッション達成、大会履歴をすべて初期化。残すもの：アカウント、表示名、ゴルフプロフィール、**初期キャラ選択**、GPSのスコア履歴・バッジ・フォロー。仕組みは `progress_epoch`（サーバー側の世代番号）と一回限りのサーバー関数、管理画面にリセット操作、2週間前にアプリ内お知らせ。テスターには「FOUNDER」称号＋フレーム＋固定RPを付与。**要決定：** RP残高をゼロにするか残すか（推奨：ゼロ＋FOUNDER付与）、リセット日、GPS来場RPの扱い。
+
+**IAP（2026-09-10具体化）：** 有償はコスメ／ユーティリティの直接SKUのみ（衣装 ¥480、クラブ仕上げ ¥320〜¥980、ボール演出 ¥160〜、称号・フレーム ¥120〜、ゴルフパス ¥980、PLAYLIFE Pro 月額¥480）。購入はストアのレシートをサーバー（playlife `/iap/verify`）で検証し、`golfin_entitlements` に記録してから既存の付与キューで配布 — クライアント側での付与は一切なし。復元・返金Webhook・管理画面のEntitlementsタブ・停止スイッチ込み。**ベータリセットの後に**基盤だけ先に出し（SKUゼロ）、最初のコスメはコンテンツ公開だけで販売開始できる状態にする。RP・チケット・キット・スタミナ・レベル・大会参加権・キャラ・クラブ・ボールは永遠にSKUにしない。
+
+**計測（2026-09-11追加、`economy_telemetry`）：** RP台帳の全取引に構造化マーカー（`meta`：画面・カテゴリ・アイテム・レアリティ・ローテーション・セール・ビルド）を付与し、クライアントは台帳に残らない行動（ショップ閲覧、購入タップ、**RP不足で買えなかった額**、週替わり切替）だけを送る。管理画面に「Economy」パネル：獲得／消費比（目安≈1.0）、RP純増と流通総量（インフレ曲線）、残高分布、目安入手日数、消費内訳、週替わりの売上、購入ファネルと「欲しいのに買えない」表、ガチャ消費、課金者セグメント、DAU。広告・IAPのカード（オプトイン率、表示/DAU、有料ユーザー率、ARPDAU、ARPPU）は先に枠を作り、各フェーズで数字が入る。
 
 **販売するもの（ゲーム）：** キャラ衣装（16体×2〜3種、¥480）、クラブ仕上げパック（799本個別ではなくクラブ種別ごと、所持クラブ全部に適用、¥320）、ボールの軌跡・エフェクト（20種のボール性能は不変）、称号・フレーム・背景、**ゴルフパス（¥980／シーズン、有償トラックはコスメと称号のみ、RP・チケット・キットは無償トラックのみ）**。有償ジェム通貨は作らない（P2Wへの橋渡しを断つ、資金決済法の前払式支払手段の負担を避ける）。**799クラブ・16キャラ・20ボール・RP・チケット・修理キット・スタミナ・大会参加権はいっさい販売しない。**
 

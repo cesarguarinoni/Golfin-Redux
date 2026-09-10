@@ -277,6 +277,7 @@ reset still works per key.
 - [ ] Mock mode exercises the full panel.
 - [ ] `npm run build` green; vitest green; backend suite green; deployment id + version stamp
       quoted; Access 302; `/health` and the four smoke routes 200.
+- [ ] Strings: this task adds NO player-facing keys (admin `DICT` en + ja only — every new string listed in the report). If the implementer finds a player-facing string is needed, it goes through the importer → admin publish and is listed in the report, never code-only.
 - [ ] `ECONOMY_MASTER.md` §3 gains the ball ladder line + a "weekly rotation" paragraph
       (Architect will review the wording — write it, flag it).
 

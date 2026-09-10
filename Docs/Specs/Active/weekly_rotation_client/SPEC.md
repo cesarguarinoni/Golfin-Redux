@@ -91,6 +91,31 @@ the gacha card's `ENDS IN` pill; header = the chip-row panel atom at 978×72.
   admitted by their own windows, never by the rotation row (two locks, neither trusts the
   other: a rotation row that goes missing must not hide or reveal a shop row).
 
+## 2a. Architecture context — polish atoms (Cesar 2026-09-10: "keep all new modals/screens up to par with our polish pass")
+
+Verified in the repo 2026-09-10: the STORE already paints through the polish pass —
+`GeneralShopScreenController.Rebuild` runs `Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, rows)`
+on the first paint of an entry (instant when `SuppressedByPush`, instant on a filter change), and
+BUY goes through `PendingSpend.Begin(card.BuyButton, card.BuyLabel)`. Everything this spec adds
+rides those atoms (`Assets/Scripts/UI/Polish/`); **no new motion code**, and every atom honours
+`UiMotion.Enabled` for free.
+
+| Element | Atom | Exact behaviour |
+|---|---|---|
+| Lineup header on first paint | `GpsPaintMotion.StaggerRise` | The header is **row 0** of the `rows` list handed to `StaggerRise` (it sits above the cards) so it rises 0.03 s before card 1; nothing separate |
+| Header title / countdown change at roll-over | `UiSelection.FadeSwap(this, headerGroup, repaint)` | `CanvasGroup` on `LineupHeader`; the roll-over rebinds title + countdown inside `repaint`. The countdown's once-per-second text tick does NOT fade — plain `.text` (a fade per second is noise) |
+| Countdown reaching zero → cards rebuild | existing `Rebuild` first-paint path | Set `_firstCardPaint = true` before the roll-over `Rebuild()` so the new lineup **stagger-rises** like a fresh entry instead of snapping (quote the log line `paint(local) … staggered`) |
+| `ShopBadge` appearing on a card | none beyond the card's own rise | The badge is a child of the card; it rises with the card. No independent pop — one motion per card (`design_consistency_audit` rule) |
+| `ShopBadge` on the gacha banner card | none | Part of the card's existing bind; the carousel owns motion |
+| Roll-over toast | existing `ToastController` | The toast already animates; nothing to add |
+| Header tap | no tap | The header is informational — **no `Button`, no `ButtonPressFeedback`**, so `PressFeedbackCoverageTests` stays unchanged (say so in the report) |
+| Cold fetch | none | The header binds from the bundled/overlaid catalog synchronously — no network wait, so no `ShimmerHost` / `GameShimmerSites` site (waits under ~200 ms never shimmer) |
+| Card BUY on a lineup row | `PendingSpend` (unchanged) | Already the shop's path; a `NEW` badge does not change it |
+
+Evidence the report owes: a frame strip (every 2 frames, 0.5 s) of the roll-over — header
+`FadeSwap`, cards stagger-rising, toast — and `UiMotion*` / `ScrollFeelTests` /
+`PressFeedbackCoverageTests` green.
+
 ## 3. STORE tab
 
 **3.1 Lineup header.** A `LineupHeader` row inserted by the existing shop builder script
@@ -142,7 +167,7 @@ with `{0}` = remaining pulls — never a third pill in the flow, it does not fit
 ticks the banner's `EndUtc` and already sorts by `SortOrder` (the weekly banner is 0, first).
 The RATES modal already shows the boosted `effectiveOdds`. Nothing else.
 
-## 5. Strings (importer: EN + JA same commit → PLAN → `--apply` → publish `texts` → `--check` clean)
+## 5. Strings (importer: EN + JA same commit → PLAN → `--apply` → **publish `texts` from the admin** → `--check` clean). No keys retired by this spec.
 
 | Key | EN | JA |
 |---|---|---|
@@ -183,7 +208,8 @@ Zero new hardcoded `.text` literals (grep quoted in the report).
       shop tests green, screenshot diff vs HEAD).
 - [ ] GACHA weekly banner shows `THIS WEEK`; a capped banner adds `N LEFT` right-aligned inside the banner edge; other banners show neither.
 - [ ] Per-element A/B crops vs `reference/figma_store_demo_14163-105654.png` and `figma_gacha_demo_14163-106259.png` for the header, the four badge placements and the price-box discount; ΔRGB table for the six badge fills.
-- [ ] Strings via importer; `--check` clean; zero `.text` literals.
+- [ ] Strings: all 8 keys present EN + JA in `LocalizationText.csv`, importer PLAN verdict quoted, `--apply`, **`texts` published from the admin (version quoted)**, `--check` clean; zero `.text` literals; no retired keys.
+- [ ] §2a: roll-over frame strip (header FadeSwap + staggered cards + toast); `_firstCardPaint` log line quoted; `UiMotion*`, `ScrollFeelTests`, `PressFeedbackCoverageTests` green and unchanged in count.
 - [ ] EditMode sweep green.
 
 ## Files this task touches

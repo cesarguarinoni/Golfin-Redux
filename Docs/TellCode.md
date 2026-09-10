@@ -7,6 +7,8 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **`asset_loans_offers`: DONE 2026-09-10 (`5bbe6e7b6`, playlife `fb5e9a8` v72, texts v53; Architect verified against HEAD, Cesar approved).** A loan starts as an OFFER (asset locked lender-side at once, nobody's roster until accept); anyone by display-name search + the followed list (`for_loans=1` filter); recipient Home pill + accept/decline modal; Settings › User Profile LOAN OFFERS toggle; rescind + 24 h pair cooldown, 3 pending per recipient, 48 h TTL, clock starts at accept. Live two-account E2E was RUN BY CODE against prod (both of Cesar's accounts, rows cleaned). 35 strings (one added: `LOAN_TIME_TO_ANSWER_HOURS_FMT`), `LOAN_TOAST_LENT` + `LOAN_ERR_NOT_FOLLOWING` retired. EditMode 3018 / 0 fail. Deviations D-1…D-7 in the report (notably: the Settings row shipped at 40/25 pt vs the node's 48/30 — check on device). **Next: `loans_ops` (Active, kickoff below).** Notion 2233 Done.
+
 - **`asset_loans_polish`: DONE 2026-09-09 (`bddd1f974`; Architect verified against HEAD).** Loan UI on the polish atoms: `PendingSpend` on LEND/RETURN, `UiSelection.Bump` on the picked row, ribbon `Rise` + dim `Fade` (tick repaint proven flat), badge `UiSelection.Indicator` (0 px rest parity on all three cards), `StaggerRise` + `FadeInPanel` on the recipient list — no shimmer site (the ~200 ms rule). Two defects fixed inside: (1) first recipient row pinned off-viewport because `Destroy`ed placeholders still occupied the layout in the spawn frame — one-frame wait in `LoadRecipients` (a `StaggerRise`-under-a-LayoutGroup trap worth remembering); (2) club ribbon/dim 27.05 px left of the artwork (pre-existing from `asset_loans`, Cesar caught it on the build) — `MatchArtworkX` anchors them to the left-flush 537 px artwork. Scene diff 68 lines, no `m_IsActive` change; 2975 / 0 fail; 26-assertion invariant JSON + red-team review PASS. Scene-save trap recorded in the report: `rt.rect.width` in a builder evaluates layout canvas-wide and bakes anchor churn on ~157 objects — read serialized values instead. Notion 2228 Done.
 
 - **`asset_loans`: DONE 2026-09-09 (Architect verified against the repo, Cesar approved).** Lend a character/club to a followed player for 1/3/7 days; levels land on the LENDER's `golfin_progress` row (loan-aware `golfin_level_up`, borrower pays, `on_behalf_of` on the event), lender takes 20 % of round RP via `loan_ids` on `/points/earn-game` → `golfin_loan_split` (40 % cap, `loan_lender_share` deliberately NOT a `game_point_actions` row so it never ranks). Client `cdb2e6869`: `LoanService` (Golfin.Social) + `LoanSyncBehaviour` seam, borrowed rows runtime-only behind three blob guards, COMPARE+LEND rows 0.000 px off the LevelUp/Boost edges, ribbon + dim + card badge, lend modal, return popup. playlife `2add3a5`, migration applied, v71 live, texts v49 (31 rows). EditMode 2942 → 2975, 0 fail. Figma: Characters Screen / Clubs Screen loan frames (ids in the spec). **Still open, Cesar-only: the live two-account E2E** (report checklist #2 — lend, level, play a hole, return; SQL for progress / events / ledger). Three flagged deviations accepted: disabled = ColorTint not sprite swap (D-1), chips 56 tall (D-2), avatar placeholder — no remote-avatar loader exists in the client (D-3, a follow-up if wanted). Architect defaults still unblessed: 3 out / 3 in, 20 %, 40 % cap. UI fidelity lint NOT run (Figma MCP unavailable to Code). Notion 2210 Done; deferrals 2211–2218.
@@ -175,6 +177,105 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
+- **`economy_telemetry` — SPEC_READY (2026-09-11). Independent of the rotation specs; can run in parallel (playlife + dashboard + a few Unity hooks).** `Docs/Specs/Active/economy_telemetry/SPEC.md`. Additive `points_transactions.meta` written by every spend/earn function we own (+ backfill), shop behaviour events (`shop_view`, `shop_buy_tap`, `shop_buy_result` with insufficient shortfall, `lineup_rollover`, level-up/stamina results, reserved `ad_*`), three SQL views, new `/economy` admin panel with inline-SVG charts (no chart lib) — health, spend mix, rotation sell-through, demand, gacha, players, Ads/IAP placeholders. Notion 2244; deferrals 2245–2247.
+
+```
+Read Docs/Specs/Active/economy_telemetry/SPEC.md and implement it.
+
+Context:
+- The ledger is the truth: add `meta jsonb` (nullable, additive, GIN) to points_transactions; new optional trailing `p_meta` overloads on spend_pts / earn_pts_v2 (old signatures keep working, routers unchanged); every function we own writes meta.surface + meta.category (+ ref/rarity/rotation_id/on_sale/build for the shop, banner/pool/pity for gacha, character/levels for level-up, tournament/stamina/loan/gift per SPEC §3); backfill block parses today's description prefixes. Partner-app writers untouched. FULL SQL IN CHAT for both migrations (meta + the three views v_economy_daily / v_economy_balances / v_rotation_sales).
+- Unity: TelemetryEventNames constants + RecordSafe hooks per SPEC §4 — shop_view, shop_filter_change, shop_buy_tap, shop_buy_result (status + shortfall + latency_ms), lineup_rollover seam, level_up_tap/result, stamina_buy_result; reserved ad_* names with NO call sites. Name-uniqueness test. No player-facing text.
+- Dashboard: app/(panels)/economy/ on the Telemetry panel skeleton (Section/Card/range control/mock mode); lib/economyData.ts reads the views; lib/economyMetrics.ts pure + vitest (sink/source ratio, net RP, circulation, histogram, days-to-afford at live median net earn, spend mix, rotation sell-through, funnel, wanted-but-couldn't, spender segments); components/charts/{BarSeries,StackedBars,Histogram,Sparkline} as inline SVG with <title> + data-table toggle — NO chart dependency; Ads/IAP cards render placeholders with "arrives with Phase N" hints; Users drawer Points tab shows meta; DICT en+ja; npm run deploy + §23 proofs.
+- Live E2E per SPEC §6.4: shop purchase, gacha pull, level-up → three meta rows quoted; one deliberate insufficient BUY → shop_buy_result with shortfall; all visible on the panel.
+- Minimal diff. Reuse telemetryData.scanEvents, telemetryGacha (link + reuse the funnel card), the Points panel row expander, PanelIcon.
+- Out of scope: cohort/LTV, alerting, per-player timeline, chart library, CSV export, the ads/IAP data sources themselves.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+checklist in SPEC §7 (quote the per-writer meta SQL, the telemetry_events rows,
+the vitest names, the deployment id + version stamp), flag which items need
+manual verification, update STATUS.md + IMPLEMENTER_REPORT.md in the spec
+folder, and update Docs/AI_CONTEXT.md.
+```
+
+
+- **`loans_ops` — SPEC_READY 2026-09-10 (Architect), NOW ACTIVE (offers closed the same day).** `Docs/Specs/Active/loans_ops/SPEC.md`. Loan telemetry (Telemetry panel "Loans" section: client funnel + server lifecycle + RP split) and admin ops (`golfin_loan_events` trigger-fed timeline, `golfin_loan_admin` — force return / cancel offer / clear cooldown, note required, audited; dashboard Loans panel + Users drawer Loans tab with the offers switch; read-only rules card off a new `GET /loans/rules`). No game UI, no game strings; dashboard strings en+ja in `lib/i18n.ts`. Notion 2242 (+2243 deferral; 2213 narrowed).
+
+  ```
+  Read Docs/Specs/Active/loans_ops/SPEC.md and implement it.
+
+  Context:
+  - Ops + telemetry for the loan system (asset_loans + asset_loans_offers, both Completed).
+    playlife: migration 2026_09_10_golfin_loan_events.sql (paste SQL in chat; apply before the
+    dashboard deploy) — trigger-fed golfin_loan_events, golfin_loan_admin(force_return |
+    cancel_offer | clear_cooldown) with a required note; GET /loans/rules. Dashboard: Loans
+    panel cloned from the Gacha ops panel, Users drawer Loans tab cloned from gacha-tab (+ the
+    offers switch), Telemetry "Loans" section from lib/telemetryLoans.ts (pure, unit-tested
+    like telemetryGacha.ts). Every mutation through writeAudit. Mock twins for every data fn.
+  - Minimal diff. routers/loans.py gets ONLY the rules endpoint. Read ADMIN_DASHBOARD_OPS.md
+    §2, §3.0–3.4, §4 first; deploy = npm run deploy + Cloudflare deployment id + footer stamp
+    (PIPELINE_HARDENING §23).
+  - Strings: lib/i18n.ts DICT en + ja for every key; DICT lint clean.
+  - Out of scope: tuning the loan constants from the admin, admin-created loans, level edits,
+    player notifications.
+
+  When done: list changed files with a 1-line summary each, run the acceptance
+  tests in the spec, flag which need manual on-device verification, update
+  STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+  Docs/AI_CONTEXT.md.
+  ```
+
+- **`screen_hints` — SPEC_READY 2026-09-10 (Architect).** `Docs/Specs/Active/screen_hints/SPEC.md`. First entry into each screen opens that screen's Loading tips as a modal (PRO TIP title, diagram, text, `n/X` counter when >1, gold CONTINUE → CLOSE on the last/single hint, silver BACK from hint 2 onwards — absent on hint 1). 18 screens incl. the shot view (six gameplay tips at `GameplaySceneLoader` step 7) and Settings › Controls. New `ScreenHints.csv` + `Assets/Scripts/UI/Hints/` + `ScreenHintModal.prefab` (CopyAsset of `SchemeConfirmModal.prefab`, two scene instances). Per-device PlayerPrefs `screenhints.state`. Figma page `Tutorial`: kit `14263:39325`, Roster `14263:109304`, Home `14263:109672`, In-game `14263:109883`, Roster 4/4 `14266:109661`; four renders in `reference/`. Strings: `HINT_CONTINUE` / `HINT_CLOSE` / `HINT_BACK` new + **`TIP_RP` rewritten** ("THE GAME'S CURRENCY…", no "ONLY" / "NEVER FOR SALE" — Cesar 2026-09-10, applies to the loading screen too). No retired keys. Notion 2238 (+ 2239–2241 deferrals).
+
+  ```
+  Read Docs/Specs/Active/screen_hints/SPEC.md and implement it.
+
+  Context:
+  - First entry into each screen opens that screen's Loading tips as a modal (1/X counter,
+    CONTINUE → CLOSE on the last/single hint, BACK from hint 2 onwards — absent on hint 1).
+    New: ScreenHints.csv + ScreenHintCatalog/Resolver/Store/Presenter under Assets/Scripts/UI/Hints/,
+    ScreenHintModal.prefab = CopyAsset of SchemeConfirmModal.prefab
+    (two instances: ShellScene Settings canvas + LabScaffold ShotUI_Canvas, same as
+    SchemeConfirmModal), content = the ShellScene ProTipCard/TipContent subtree copied.
+  - Hooks: ScreenManager.ScreenChanged (presenter on PersistentUI), GameplaySceneLoader
+    LoadCoroutine step 7 (one static call after FinishLoadingCoroutine), ControlsSubmenu.OnEnable.
+  - Polish atoms per §3.3a: animateShow Pop/Fade from the copy, ButtonPressFeedback on both
+    buttons, ProTipCard's SwapRoutine + preferredHeight tween copied for hint→hint (both ways),
+    UiMotion.Bump on the counter, Stop in OnDisable.
+  - Strings §2.3: HINT_CONTINUE / HINT_CLOSE / HINT_BACK (new) + TIP_RP rewrite, EN+JA,
+    through the importer → admin publish → --check clean. No retired keys.
+  - Minimal diff. Reuse LoadingTipCatalog / LoadingTipStore patterns; ScreenManager and
+    ProTipCard are not modified (TipSprite is already public).
+  - Out of scope: content catalog + admin panel, Settings "replay tutorial", per-scheme
+    gameplay hints, pausing the 1v1 clock, sharing seen-state with the loading pools.
+
+  When done: list changed files with a 1-line summary each, run the acceptance
+  tests in the spec, flag which need manual on-device verification, update
+  STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+  Docs/AI_CONTEXT.md.
+  ```
+
+- ~~`asset_loans_offers` — SPEC_READY 2026-09-10~~ **DONE 2026-09-10** (`5bbe6e7b6` + `9df47f9aa`, playlife `fb5e9a8` v72, texts v53, full chain + red-team PASS, live two-account E2E run by Code, Cesar approved). Folder in `Docs/Specs/Completed/`. Do NOT re-dispatch.
+
+- **`hole_selection_first_card_gap` — SPEC_READY 2026-09-09** (Quick, `Docs/Specs/Quick/hole_selection_first_card_gap.md`). Practice → Hole Selection shows a card-sized gap where the Hole 1 REPLAY card should be, on every fade re-entry (Home carousel PLAY). Cause: `RebuildCards` Destroys last visit's cards and `StaggerRise`s the new ones in the same frame; `ForceRebuildLayoutImmediate` counts the not-yet-destroyed corpses, item 0 fires synchronously and `Rise` pins Hole 1 at slot 19. NOT the Daily Mission pill. Fix: `SetActive(false)` each corpse before `Destroy`.
+
+  ```
+  Read Docs/Specs/Quick/hole_selection_first_card_gap.md and implement it.
+
+  Context:
+  - Bug: Hole Selection (Practice) hides the Hole 1 REPLAY card behind a card-sized gap on
+    re-entry via Home carousel PLAY. Root cause in HoleSelectionScreenController.RebuildCards:
+    same-frame Destroy + StaggerRise; the deferred-Destroy corpses are still in the
+    VerticalLayoutGroup when ForceRebuildLayoutImmediate measures, so card 0's Rise restY is slot 19.
+  - Fix = Option A only: child.gameObject.SetActive(false) before Destroy in the sweep, plus a
+    2-line comment naming the trap. Minimal diff. No scene/prefab edit, no new fields.
+  - Reuse: GpsPaintMotion.StaggerRise / UiMotion unchanged. Do NOT port the MissionSelection
+    rebind pool (Option B) — deferred.
+  - Out of scope: rebind pool, hardcoded filter-pill counts.
+
+  When done: list changed files with a 1-line summary each, run the acceptance
+  steps in the spec (1–5), flag which need manual on-device verification, and update
+  Docs/AI_CONTEXT.md.
+  ```
 
 - ~~`asset_loans_polish` — SPEC_READY 2026-09-09~~ **DONE 2026-09-09** (`bddd1f974`, full chain PASS, Cesar approved). Folder in `Docs/Specs/Completed/`. Do NOT re-dispatch.
 
@@ -229,7 +330,7 @@ which items need manual verification, update STATUS.md + IMPLEMENTER_REPORT.md
 in the spec folder, and update Docs/AI_CONTEXT.md.
 ```
 
-- **`weekly_rotation_client` — SPEC_READY (2026-09-08), start ONLY after `weekly_rotation_admin` is DONE and its first rotation is published.** `Docs/Specs/Active/weekly_rotation_client/SPEC.md`. `RotationCatalog` loader, `rotationId` on shop entries + banners, lineup header with a shared countdown formatter, `NEW` tags, `THIS WEEK` on the weekly banner, once-per-second roll-over at the boundary (RefreshNow → Reload → Rebuild → toast), `shop_catalog` + `rotations` added to the live re-apply allowlist (I5 exception, justified in the spec). Eight strings via the importer. **Figma made 2026-09-08:** `Badge` component set (NEW / SALE / DISCOUNT / LAST CHANCE / THIS WEEK / LIMITED / OWNED), `Countdown Pill`, `Lineup Header` on the Store page (section `14163:105273`), placement demos Store `14163:105654` / Gacha `14163:106259`; renders in the spec's `reference/`. Kickoff issued when the admin spec closes.
+- **`weekly_rotation_client` — SPEC_READY (2026-09-08), start ONLY after `weekly_rotation_admin` is DONE and its first rotation is published.** `Docs/Specs/Active/weekly_rotation_client/SPEC.md`. `RotationCatalog` loader, `rotationId` on shop entries + banners, lineup header with a shared countdown formatter, `NEW` tags, `THIS WEEK` on the weekly banner, once-per-second roll-over at the boundary (RefreshNow → Reload → Rebuild → toast), `shop_catalog` + `rotations` added to the live re-apply allowlist (I5 exception, justified in the spec). **§2a polish atoms (added 2026-09-10):** header is row 0 of the existing `StaggerRise`, roll-over = `UiSelection.FadeSwap` on the header + `_firstCardPaint = true` so the new lineup stagger-rises, badges ride their card, no ButtonPressFeedback (header is not a button), no shimmer (sync bind). Eight strings via the importer → admin publish. **Figma made 2026-09-08:** `Badge` component set (NEW / SALE / DISCOUNT / LAST CHANCE / THIS WEEK / LIMITED / OWNED), `Countdown Pill`, `Lineup Header` on the Store page (section `14163:105273`), placement demos Store `14163:105654` / Gacha `14163:106259`; renders in the spec's `reference/`. Kickoff issued when the admin spec closes.
 
 - **`flick_pull_mapping` — SPEC_READY (2026-09-07, Quick), run AFTER `flick_shot_view` closes (same files).** `Docs/Specs/Active/flick_pull_mapping/SPEC.md`. Flick power becomes rest-relative like the other three schemes: 0 % at touch (was 31.8 %), 40 px dead zone, `FlickPull100Px` 540 / `FlickPull120Px` 648, the cone BASE is 120 % (Flick had no 120 %), never on putts; `FlickHandleStartY01` 0.6818 → 0.8182; 100 %/120 % tick lines on the cone; `FlickPullMath` + inverse for the drawn club; three Flick tiles recaptured. Idle-cone alpha stays parked (Cesar).
 
