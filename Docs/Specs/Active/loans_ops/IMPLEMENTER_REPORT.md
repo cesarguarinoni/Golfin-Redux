@@ -361,33 +361,13 @@ green**, `telemetryLoans.test.ts` among them, then the OpenNext build, then wran
 
 | | |
 |---|---|
-| **Cloudflare Version ID** | iter-1 `476b78f6-fdf7-47e9-8c1d-acc4355e57a3` · iter-2 `586b6c80-dfde-47a2-a938-19d1b12fdb7a` · **iter-2b `c5171f03-e999-4097-a0f4-e0a1050fd157`**. Each redo shipped because each changed something that renders on production. |
+| **Cloudflare Version ID** | iter-1 `476b78f6-fdf7-47e9-8c1d-acc4355e57a3` · iter-2 `586b6c80-dfde-47a2-a938-19d1b12fdb7a` · iter-2b `c5171f03-e999-4097-a0f4-e0a1050fd157` · **iter-3 `70a0c4f4-f20f-4b6e-a31e-5aa6769b55f6`**. Each redo shipped because each changed something that renders on production. |
 | Worker | `golfin-admin` → `admin.golfin.world` (custom domain) |
 | Assets | 9 new or modified uploaded, 94 already there; startup 24 ms |
 | New binding | `env.PLAYLIFE_API_URL ("https://playlife-api.fly.dev")` |
 | § 2 Access check | `curl https://admin.golfin.world/` → **302** (Access is protecting it) |
-| § 23 stamp, built worker | `grep` of `api/version/route.js` → `df1f529fb`, `da3175337`, `3080690e5`. **No `-DIRTY`** on any of the three. |
-| § 23 stamp, **live site** | sidebar footer read `df1f529fb`, then `da3175337`, then **`3080690e5`** — ⚠️ the first read after the last deploy showed the PREVIOUS commit and looked like a failed deploy; it was a cached page, and re-navigating with a throwaway query string showed the new one. Read — read in Cesar's Chrome, which carries the Access session, exactly as § 23 prescribes |
-
-**Verified on the live site, all three surfaces, no 500 anywhere:**
-
-* `/loans` — renders with the **PRODUCTION — live PLAYLIFE database** banner, the seven status
-  chips, `No loans match these filters.` (production genuinely holds zero loans), and a Rules
-  card labelled **`from https://playlife-api.fly.dev`** showing 20% · 1 d / 3 d / 7 d · 3 · 3 ·
-  3 · 48 h · 24 h · 14 d — the deployed API's own constants, fetched at page load.
-* `/telemetry` → **Loans** — the tab is in the section nav; the funnel strip renders five stages
-  at `—(0)` with `No loan events in this range.`, and the lifecycle card renders `PENDING NOW 0`,
-  `ACTIVE NOW 0`, `ACCEPTED —`, `RETURNED EARLY —`, `RP TO LENDERS 0`, `No loans in this range.`
-  Rates are **em-dashes, not 0%** — "no data" rendered as "no data", which is the whole point of
-  the null-rate rule.
-* `/users` → ken → **Loans** — the tab renders `LOAN OFFERS ON` (read from the real
-  `profiles.golfin_loan_offers`), `PENDING OFFERS TO ANSWER (0)`, `LENT OUT (0)` with
-  `This player has never lent anything.`
-
-⚠️ Those three live surfaces were read **in the browser** and are quoted above rather than cited
-as screenshot files — the Chrome capture wrote no path I could retrieve, and a screenshot I
-cannot hand over is not evidence. Every file under `screenshots/` is a mock-mode frame and says
-so in its own banner.
+| § 23 stamp, built worker | `grep` of `api/version/route.js` → `df1f529fb`, `da3175337`, `3080690e5`, `8f823d7cb`. **No `-DIRTY`** on any of the four. |
+| § 23 stamp, **live site** | `GET /api/version` on admin.golfin.world, read in Cesar's Chrome, answers **`{"commit":"8f823d7cb","stamped":true}`** — the iter-3 commit. ⚠️ **The sidebar footer is not a reliable stamp: it is a CACHED page.** Twice it kept showing the previous commit after a deploy, which reads exactly like a silent failure, and the second time a `?cachebust=` query string did not clear it either. `/api/version` is `force-dynamic` and therefore uncached — it is the authoritative read, and the § 23 memory has been corrected to say so. |
 
 **Deploying before the migration was safe, and that was checked rather than assumed** (the migration has since landed, so this section is now history — it is kept because it is the evidence that the ordering was safe).
 `ADMIN_DASHBOARD_OPS.md` § 3.2 says migration first because code referencing a missing object

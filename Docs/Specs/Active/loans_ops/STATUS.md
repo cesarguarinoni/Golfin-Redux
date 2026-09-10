@@ -1,22 +1,23 @@
-ARCHITECT_REVIEW_FAIL
+READY_FOR_REDTEAM
 
-loans_ops iter-2, 2026-09-10 18:00 JST. Red-team gate.
+loans_ops iter-3, 2026-09-10.
 
-Blocker: a FOURTH defect of the known shape (a status the code forgot to
-special-case). `clockLine()` in app/(panels)/loans/loan-rows.tsx:86-108 drops
-`rescinded` and `offer_expired` into its `default` arm and labels both
-"answered {rel}" — but nobody answered either: offer_expired is a lapsed 48h
-TTL, rescinded is the lender withdrawing. Self-verified with a verbatim-code
-repro against fixtures 0007/0006: renders "answered 2d ago" / "answered 4h ago".
-The ops panel exists to answer "why did that offer disappear?"; for a lapsed
-offer it tells the operator the recipient answered. telemetryLoans.ts:157-162
-(the iter-2 F1 fix) already documents that these two are NOT answers — clockLine
-contradicts its sibling file. Green 19-test suite never exercises the clock label.
+Redo after the red-team FAIL. Its blocker was real: clockLine had a `default` arm reading
+"answered {rel}", so a lender rescind and a 48h lapse both rendered as the recipient answering,
+on the panel whose job is explaining why an offer disappeared.
 
-Fix the whole shape in one pass (§22): give rescinded + offer_expired their own
-clock labels (EN+JA), keep default for declined, add an enumerate-all-7 clock-
-label test. Two non-blocking warts (W1 stale-row actions, N1 mock/live q-uuid)
-noted in ARCHITECT_REVIEW.md.
+Fixed the SHAPE, not the instance. That was the FOURTH defect of one shape in this task -- a
+status classified by an incomplete list -- so per PIPELINE_HARDENING section 22 every judgement
+about a loan status or its clocks now lives in one pure module, lib/loanStatus.ts, whose header
+names all four. ALL_LOAN_STATUSES is exported and the tests ITERATE it, so a status added later
+fails the suite instead of landing in a default arm. Restoring the old default turns four tests
+red, including a cross-check that ANSWERED_STATUSES and clockLabel cannot drift apart.
 
-Full shape-audit table (every classify-by-status/clock site, incl. the fine
-ones) and break-attempts in ARCHITECT_REVIEW.md § RED-TEAM REVIEW.
+Also fixed from the same pass: red-team wart W1. actionsFor took a bare status, so a lapsed
+offerered row still showed Cancel offer -- and the server guards on the status column, so that
+action would have SUCCEEDED and started a 24h cooldown on a pair whose offer had already died.
+It now reads the clock.
+
+Dashboard 312 -> 324 tests (14 files), backend 319, tsc exit 0.
+Deployed: Cloudflare version 70a0c4f4-f20f-4b6e-a31e-5aa6769b55f6; GET /api/version on the live
+site answers {"commit":"8f823d7cb","stamped":true}.
