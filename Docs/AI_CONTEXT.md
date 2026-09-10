@@ -4,7 +4,7 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## 2026-09-10 — screen_hints: **the Loading tips open as a modal on the first entry into each screen** — READY_FOR_ARCHITECT_REVIEW (one FAIL: stacking order vs the tournament result modal is an Architect call)
+## 2026-09-10 — screen_hints: **the Loading tips open as a modal on the first entry into each screen** — READY_FOR_SELF_REVIEW (Cesar: hint first — the stacking order question is closed)
 
 First entry into a screen with a row in `Assets/Resources/Data/ScreenHints.csv` (36 rows, 18 screens) opens
 that screen's tips one at a time: `PRO TIP`, the tip's diagram + text (the loading card's own `TipContent`
@@ -28,8 +28,7 @@ scrim as the top raycast hit and the tee-idle timer at 0.00 s after CLOSE, JA on
 
 **Two things worth knowing.** (1) `TournamentResultPresenter` waits 1.0 s before presenting, the hint waits
 one frame (Architect default c) — so on Home the hint opens FIRST and the result modal follows it; the spec
-asserts the opposite. Decision pending (accept, or make the hint wait past the settle on the four tournament
-screens). (2) The HoleSelection hints sit between Home and the first hole card; a bot that invokes the card's
+asserted the opposite. Cesar decided "hint first" (2026-09-10) — the code as written. (2) The HoleSelection hints sit between Home and the first hole card; a bot that invokes the card's
 `onClick` under the scrim loads the hole under an open modal and the gameplay hint then waits forever — close
 them first, as a player must.
 
