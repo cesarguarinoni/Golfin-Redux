@@ -681,10 +681,6 @@ MonoBehaviour:
   shaftRadius: 0.0135751
   fingerRadius: 0.0068297
   maxJointBend: 80
-  heldGripPose: 1
-  wristSeatMaxDeg: 25
-  heldCurlMaxDeg: 55
-  heldOpenMaxDeg: 45
   addressHeadLocal: {x: 0.735, y: 0, z: -0.069}
 --- !u!114 &5819904696128760695
 MonoBehaviour:

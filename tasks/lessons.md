@@ -3758,3 +3758,22 @@ made **the opponent's difficulty a function of the player's equipment** (a Supre
 ~2.6× wider than a Common one at the same level). Fixed by solving sigma per swing against the live grader.
 The lesson on top of the lesson: *the number that will not converge is worth one more question.* Both times,
 stopping at "close enough, documented as a known deviation" would have shipped a real defect.
+
+
+## Lesson AS — a `ScriptableObject` (or MonoBehaviour) declared in a file NOT named after it saves with `m_Script: {fileID: 0}` and silently loses its type at the next domain reload (2026-09-10, `golfer_club_grip` stage 0)
+
+`HandHingeData : ScriptableObject` was declared inside `HandHingeModel.cs` next to the class that uses it.
+`CreateAsset` + `SaveAssets` succeeded, the asset loaded and posed both hands, the frames rendered — and after the
+test runner's domain reload `LoadAssetAtPath<HandHingeData>` returned **null**. On disk: `m_Script: {fileID: 0}`
+with only `m_EditorClassIdentifier` filled in. Unity binds a serialized script type to its `MonoScript` **by file
+name**; a class in the wrong file has no MonoScript, so the reference is written empty and the asset only "works"
+while the in-memory object from the same session is alive.
+
+**What does not detect it:** the create call, the first load, the tests (they capture their own data), a compile with
+0 errors, and the Console. **What does:** `grep m_Script <asset>` right after the first save — a `guid:` must be
+there — or any reload.
+
+**Rule:** one `ScriptableObject` / `MonoBehaviour` per file, file name = class name, no exceptions for "it is only
+30 lines of data". After creating any new `.asset`, grep its `m_Script` line for a `guid` before citing it.
+Sister lessons: [[feedback_unity_refresh_after_cs_edit]] (things that look loaded but are not), Lesson R (`.cs.meta`
+travels with the `.cs`).

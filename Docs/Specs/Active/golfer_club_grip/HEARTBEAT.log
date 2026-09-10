@@ -128,3 +128,24 @@ DIRTY:
 [2026-09-10T02:40:05Z] iter-9b: Cesar rejected all three placements ("below both hands" on the 31mm one) and chose AUTHOR A HAND POSE, adding "you can also bend the wrists slightly if needed". Root cause measured: fists 46.4mm apart PERPENDICULAR to the shaft vs 37.7mm along it - side by side across the club, not threaded on it. Also: "stop restoring profile in this machine. We will keep testing the golfer." -> switched back to iOS-Full-Golfer, memory project_pc_golfer_build_profile.md rewritten. Key geometric insight for the pose: at the fist-centroid seat the fingertips are 4-20mm from the axis while contact is 20.4mm, i.e. the clip fists are TIGHTER than the grip, so the pose OPENS them slightly - a small change, and the opposite of the bisect-to-cap wrap that made claws. New pose path only; ApplyGripPose/WrapJoint untouched.
 
 [2026-09-10T02:52:30Z] iter-9b: held-grip pose landing. Run 1 (fist-centre seat, tip objective): miss 0.0072, worst clearance 0.0036. Run 2 (GripSeatInHand = knuckle row + contact along the palm normal; curl objective = closest MOVABLE joint, j[0] excluded because a joint rotation does not move itself): miss 0.0026, worst 0.0062. Run 3 identical to run 2 - the C# default change was shadowed by the SERIALIZED prefab value (heldOpenMaxDeg stayed 30); real lesson, set it on the prefab. Run 4 (knuckle-row twist about the arm axis through the seat + heldOpenMaxDeg 45): miss 0.0032, worst 0.0073. VISUAL: the club now runs THROUGH BOTH HANDS with the trail hand curling round the grip - the thing Cesar asked for. Remaining: lead fingers still splay and some overlap the grip (worst 0.0073 vs grip surface 0.0136). shaftRadius corrected 0.008727 -> 0.013575, measured off the Grip mesh bounds (0.02715 across) - the old value would have seated every fingertip ~5mm inside the mesh.
+
+=== iter-10 (stage 0) kickoff baseline 2026-09-10T03:43:22Z ===
+HEAD: 82ed8ae651e224a572bb03809ec5e560fb49324d (82ed8ae65) branch golfer_3d_test
+NOTE: Library_broken_143700/ is a stale Unity Library backup directory that predates this
+NOTE: iteration (untracked). Listed exactly as git status reports it; nothing this stage writes to it.
+NOTE: the four Docs/ paths below are the Architect's §3.12 spec edits (ARCHITECT_DECISION_HINGE_MODEL.md,
+NOTE: SPEC.md, STATUS.md, GPS_BACKLOG.md, CHARACTER_3D_REMAKE_OPTIONS.md, ARCHITECT_CLOSEOUT.md) already in the tree at kickoff.
+DIRTY:
+ M Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/Specs/Active/golfer_club_grip/HEARTBEAT.log
+ M Docs/Specs/Active/golfer_club_grip/SPEC.md
+ M Docs/Specs/Active/golfer_club_grip/STATUS.md
+?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_CLOSEOUT.md
+?? Docs/Specs/Active/golfer_club_grip/ARCHITECT_DECISION_HINGE_MODEL.md
+ ?? Library_broken_143700/
+=== end baseline ===
+[2026-09-10T03:52:16Z] stage 0: iter-9b ApplyHeldGripPose/heldGripPose/GripSeatInHand/SeatHandOnShaft/CurlFingerOntoGrip + 4 fields + TrailLittle/LeadFingers/TrailFingers deleted from GolferPresenter (1222 -> 980 lines); 4 stale serialized fields stripped from PfGolfer_MixamoNative.prefab as a text edit (define ON; not a Unity save). Wrote HandHingeModel.cs (gated: capture/apply/measure), Tests/HandHingeModelTests.cs + Golfin.Gameplay.Golfer.Tests.asmdef, UI/Editor/HandHingeStage0Tool.cs (capture asset + fist test + 4 frames). Next: refresh, compile, version probe.
+[2026-09-10T03:55:42Z] stage 0: asset+frames+8/8 EditMode tests green (define ON) — then the asset failed to load after the test runner's domain reload: saved with m_Script {fileID: 0} because HandHingeData was declared inside HandHingeModel.cs (MonoScript binds by file name). Moved it to HandHingeData.cs, deleted the orphan asset, Version stage0-a -> stage0-b. Re-capturing next.
+[2026-09-10T03:57:16Z] stage 0: HandHingeData.cs split fixed the asset (m_Script guid 2e50a92d…, reloads 15/15 joints). Re-ran fist 65/85/40: numbers bit-identical to run 1 (deterministic). Tips 28.3-41.5 mm from the MCP plane (gate 8-20: OUT OF BAND on all 8), adjacent tips 17.4-26.1 mm (>=8 PASS), no crossing, min adjacent phalanx clearance 17.1 mm. Sweep 70/90/45 .. 90/100/60: 75/95/50 puts 7/8 tips in band (right index 21.8). Supplementary frames at 75/95/50 in evidence/stage0/supplementary_75_95_50/. Next: define-OFF pass (switch to iOS-Full-GPS, recompile, test, switch back).
+[2026-09-10T04:04:36Z] stage 0: define-OFF pass observed (iOS-Full-GPS: 143 defines, 0 members on all gated types, 1/1 test; back to iOS-Full-Golfer: 144 defines, Version stage0-b, 8/8). Report Stage 0 section written, STATUS -> STAGE_0_REVIEW, AI_CONTEXT updated. STOPPED at the gate; committing.

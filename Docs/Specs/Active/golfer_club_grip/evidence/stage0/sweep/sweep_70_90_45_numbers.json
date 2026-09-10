@@ -1,0 +1,15 @@
+{
+  "label": "sweep_70_90_45",
+  "flexDeg": {"mcp": 70.00000, "pip": 90.00000, "dip": 45.00000, "spread": 0, "thumbIntermediate": 30.00000, "thumbDistal": 20.00000},
+  "gate": {"tipToPalmPlaneMm": [8, 20], "adjacentTipSpacingMmMin": 8, "crossing": false},
+  "hands": [  {"hand": "left", "palmNormalWorld": [0.01726, -0.99983, 0.00717],
+   "fingers": [{"name": "index", "tipToPalmPlaneMm": 27.90, "pipToPalmPlaneMm": 29.45, "dipToPalmPlaneMm": 39.45, "tipInBand": false}, {"name": "middle", "tipToPalmPlaneMm": 24.43, "pipToPalmPlaneMm": 26.84, "dipToPalmPlaneMm": 37.36, "tipInBand": false}, {"name": "ring", "tipToPalmPlaneMm": 21.53, "pipToPalmPlaneMm": 24.06, "dipToPalmPlaneMm": 33.84, "tipInBand": false}, {"name": "little", "tipToPalmPlaneMm": 23.99, "pipToPalmPlaneMm": 27.32, "dipToPalmPlaneMm": 33.71, "tipInBand": false}],
+   "thumbTipToPalmPlaneMm": 91.73,
+   "adjacent": [{"pair": "index-middle", "tipSpacingMm": 23.76, "tipSpacingPass": true, "minSegmentMm": 22.14, "crossing": false}, {"pair": "middle-ring", "tipSpacingMm": 19.90, "tipSpacingPass": true, "minSegmentMm": 18.23, "crossing": false}, {"pair": "ring-little", "tipSpacingMm": 19.69, "tipSpacingPass": true, "minSegmentMm": 19.53, "crossing": false}],
+   "anyCrossing": false},
+  {"hand": "right", "palmNormalWorld": [-0.02155, -0.99975, 0.00530],
+   "fingers": [{"name": "index", "tipToPalmPlaneMm": 31.60, "pipToPalmPlaneMm": 29.60, "dipToPalmPlaneMm": 41.17, "tipInBand": false}, {"name": "middle", "tipToPalmPlaneMm": 21.89, "pipToPalmPlaneMm": 23.46, "dipToPalmPlaneMm": 34.81, "tipInBand": false}, {"name": "ring", "tipToPalmPlaneMm": 26.56, "pipToPalmPlaneMm": 26.34, "dipToPalmPlaneMm": 37.01, "tipInBand": false}, {"name": "little", "tipToPalmPlaneMm": 19.82, "pipToPalmPlaneMm": 25.00, "dipToPalmPlaneMm": 30.85, "tipInBand": true}],
+   "thumbTipToPalmPlaneMm": 92.60,
+   "adjacent": [{"pair": "index-middle", "tipSpacingMm": 26.35, "tipSpacingPass": true, "minSegmentMm": 21.98, "crossing": false}, {"pair": "middle-ring", "tipSpacingMm": 17.75, "tipSpacingPass": true, "minSegmentMm": 17.13, "crossing": false}, {"pair": "ring-little", "tipSpacingMm": 21.07, "tipSpacingPass": true, "minSegmentMm": 20.14, "crossing": false}],
+   "anyCrossing": false}]
+}

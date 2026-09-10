@@ -4,6 +4,28 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 (golfer_club_grip stage 0) — **hinge-model hand built; fist test at the gate**
+
+SPEC §3.12 (Architect, `ARCHITECT_DECISION_HINGE_MODEL.md`): the close-out is withdrawn, the grip is back in scope
+as a **staged** experiment — one stage per kickoff, frames + numbers + Cesar's verdict at every gate. Stage 0 = the fist
+test, edit mode, no club, no rig.
+
+**Delivered (STATUS `STAGE_0_REVIEW`, stage 1 NOT started):** iter-9b `ApplyHeldGripPose` deleted (one solver);
+`HandHingeModel.cs` / `HandHingeData.cs` (gated) — hinge + abduct axes captured **once from the rest pose, fixed in
+joint-local space**, pose = `rest * spread * flex`; `HandHinge_MixamoNative.asset`; `HandHingeModelTests` 8/8 with the
+define on and 1/1 with it off (the define-off recompile was actually observed this time: `SetActiveBuildProfile` alone
+does not recompile, `CompilationPipeline.RequestScriptCompilation()` after it does); `HandHingeStage0Tool`
+(menu `GOLFIN ▸ Golfer Test ▸ Hinge ▸ …`) renders the four full-res frames from a temp additive scene.
+
+**Numbers at the mandated 65/85/40:** adjacent tips 17–26 mm (PASS), no crossing (PASS), every finger in its own plane
+(sideways 0.000 mm), but tips **28–41 mm** from the MCP plane against the 8–20 mm band — a loose curl, not a fist. The
+band is reached at **75/95/50** (sweep in `evidence/stage0/sweep/`, supplementary frames alongside). Which triple is
+"a fist" is the gate decision; nothing above the hinge level was touched.
+
+**Lesson:** a `ScriptableObject` declared in a file not named after it saves with `m_Script: {fileID: 0}` and loses its
+type on the next domain reload — `HandHingeData` now has its own file. Profile left on `iOS-Full-Golfer` (Cesar's rule).
+
+---
 ## 2026-09-10 (golfer_club_grip iter-9) — **the FINAL SHAPE: clip hands, club on the two-hand average**
 
 **32 PASS / 1 FAIL / 25 SKIP / 2 INFO, A0 = 0.** The one FAIL is `budget.tris` (36 510 vs 15 000),

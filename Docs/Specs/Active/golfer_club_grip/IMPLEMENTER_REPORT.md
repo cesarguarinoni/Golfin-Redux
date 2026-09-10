@@ -262,3 +262,178 @@ from the acceptance run (11:05:17). Full evidence set in `evidence/final/`.
 
 ---
 STATUS → `READY_FOR_SELF_REVIEW`
+
+---
+
+# Stage 0 — the fist test (SPEC §3.12.6, iter-10, 2026-09-10)
+
+**Iteration shape:** `hinge-model:stage0-fist`. Scope: §3.12.2 mechanism + §3.12.6 stage 0 only. No club, no rig, no
+play mode, no anchors; the prefab's only change is the removal of four stale iter-9b fields. **STOPPED at the gate —
+stage 1 is not started.**
+
+## 0.1 What was built
+
+- **`ApplyHeldGripPose` is gone** (SPEC §3.12.7): the iter-9b path (`heldGripPose`, `wristSeatMaxDeg`, `heldCurlMaxDeg`,
+  `heldOpenMaxDeg`, `HeldCurlRatio`, `ApplyHeldGripPose`, `GripSeatInHand`, `SeatHandOnShaft`, `CurlFingerOntoGrip`) and
+  the three chain tables it alone used (`TrailLittle`, `LeadFingers`, `TrailFingers`) are deleted from
+  `GolferPresenter.cs` (1222 → 972 lines; 250 deletions, 4 insertions = the `LateUpdate` comment). `ApplyGripPose` /
+  `WrapJoint` / `JoinLeadHandToShaft` stay, untouched, for `PfGolfer_Test`. The four serialized fields were stripped from
+  `PfGolfer_MixamoNative.prefab` as a text edit (the define was ON; no Unity save of the prefab happened this stage).
+- **`HandHingeModel.cs`** (`Assets/Scripts/Gameplay/Golfer/`, `Golfin.Physics.Viewer` via the asmref, gated by
+  `GOLFIN_GOLFER_TEST` with an inert `#else` shell): `Capture(anim, right)` from the rest pose → per joint
+  `restLocalRotation`, `hingeAxisLocal = joint.InverseTransformDirection(cross(childDir, palmNormal))`,
+  `abductAxisLocal = joint.InverseTransformDirection(palmNormal)`, segment length; palm normal from
+  (Hand, IndexProximal, LittleProximal) with the sign fixed by `ThumbProximal − IndexProximal`; hand length axis and
+  across axis stored Hand-local. `Apply` = `rest * AngleAxis(spread, abduct) * AngleAxis(flex, hinge)` (spread at the MCP
+  only), thumb = `FromToRotation` aim on `ThumbProximal` (zero = rest) + fixed hinges on the other two. `Measure` = the
+  stage-gate numbers. A `LateUpdate` re-applies a serialized pose only when `applyEveryFrame` is set — it is **not** on
+  the prefab yet (stage 2's job).
+- **`HandHingeData.cs`** — the ScriptableObject, its own file. First saved from inside `HandHingeModel.cs` it wrote
+  `m_Script: {fileID: 0}` and could not be loaded after the next domain reload (Unity binds a ScriptableObject to its
+  MonoScript by file name). Caught when the sweep threw "Capture the asset first" after the test run; split, re-captured,
+  verified on disk `m_Script guid 2e50a92dfe102154a91946cf27451c14` = `HandHingeData.cs.meta`, reloads 15/15 joints.
+- **`HandHinge_MixamoNative.asset`** at `Assets/Art/3D/Characters/_Test/Resources/GolferTest/` (same Resources folder the
+  build gate moves out). Capture sanity, read off the asset: left `palmNormalHandLocal (−0.0072, −0.0173, −0.9998)`,
+  right `(0.0053, −0.0216, −0.9998)` (hand-local −Z, world −Y in the T-pose, i.e. the thumb side — mirror-consistent);
+  every finger hinge ≈ joint-local `(−1, 0, ±0.006)`, the thumb's `(−0.972, 0, ∓0.234)`; all 30 finger rest rotations
+  identity except the two `Thumb1`s. Capture is deterministic: run 1 and run 2 of the fist produced bit-identical
+  numbers.
+- **`HandHingeModelTests.cs`** + `Golfin.Gameplay.Golfer.Tests.asmdef` (Editor-only, references `Golfin.Physics.Viewer`).
+  Prefab opened with `PrefabUtility.LoadPrefabContents` — isolated, never an open scene, never saved.
+- **`HandHingeStage0Tool.cs`** (`Assets/Scripts/UI/Editor/`, whole file `#if`-gated): menu `GOLFIN ▸ Golfer Test ▸ Hinge ▸`
+  *Capture HandHinge_MixamoNative.asset* and *Stage 0 fist test*. The fist test instantiates the prefab into a
+  **temporary additive scene** at (0, 500, 0) with `RigBuilder` disabled, poses from the asset, measures, renders the four
+  frames with a throw-away `Camera.Render → RenderTexture` (the A4-sanctioned second-camera path; no `CaptureCore`, no
+  Game View), writes `<label>_numbers.json`, closes the temp scene. The open scene was never dirtied — `tests-run`'s
+  "all scenes saved" precondition passed three times afterwards.
+
+## 0.2 EditMode tests — define ON and OFF, both observed
+
+| Config | How it was observed | Result |
+|---|---|---|
+| `GOLFIN_GOLFER_TEST` **on** (`iOS-Full-Golfer`) | `Version` const read back = `stage0-b`; `HandHingeModel` 13 public statics | **8/8 PASS**: `A_IndexProximal90_MovesIntermediateTowardPalm_NotSideways` ×2 hands, `BC_Fist_60_80_40_TipsApart_AndPalmSide` ×2, `D_CaptureIsIdempotent` ×2 (same instance twice, after apply→rest, and a fresh instance — all equal to 1e-5), `PalmNormal_IsPalmar_ByTheThumb` ×2 |
+| `GOLFIN_GOLFER_TEST` **off** (`iOS-Full-GPS`) | `BuildProfile.SetActiveBuildProfile` + `RequestScriptCompilation`; domain reload observed in `Editor.log` (test asm 144 → **143** defines); `activeScriptCompilationDefines` lacks the define; `HandHingeModel`/`HandHingeData`/`GolferPresenter` all **0 declared members**; `HandHingeStage0Tool` type absent; project test count 2773 → **2766** | **1/1 PASS**: `DefineOff_ModelCompilesAsAnInertShell`; 0 `error CS` |
+| back **on** | profile restored to `iOS-Full-Golfer`, reload observed (143 → 144 defines), `Version = stage0-b`, asset reloads | **8/8 PASS** again |
+
+Unlike iter-9's A1 ("argued, not observed"), the define-off recompile was witnessed this time: the reason it did not
+show in iter-9 was that the profile switch alone does not recompile — `CompilationPipeline.RequestScriptCompilation()`
+after `SetActiveBuildProfile` does.
+
+## 0.3 The fist — 65 / 85 / 40, thumb 30 / 20, spread 0 (the mandated pose)
+
+Palm plane = through the four finger MCP joint centres, normal = the captured palm normal carried by the Hand bone;
+distances signed along it, positive on the palm side. (The palm *skin* is ~7–9 mm palm-side of the joint plane — the
+iter-9b finger half-thickness 6.83 mm is the nearest measured proxy — so a tip at *d* mm from the joint plane hovers
+roughly *d − 8* mm off the skin.)
+
+| Hand | Finger | tip → MCP plane | (PIP, DIP) | Gate 8–20 mm |
+|---|---|---|---|---|
+| left | index | **38.33** mm | 28.37, 42.76 | OUT |
+| left | middle | **35.93** | 25.83, 40.91 | OUT |
+| left | ring | **32.45** | 23.11, 37.19 | OUT |
+| left | little | **31.80** | 26.34, 35.54 | OUT |
+| left | thumb tip | 91.73 | — (rest aim; the T-pose thumb hangs 65 mm palm-side before any flex) | n/a |
+| right | index | **41.45** | 28.54, 45.07 | OUT |
+| right | middle | **33.87** | 22.53, 38.77 | OUT |
+| right | ring | **36.60** | 25.31, 40.54 | OUT |
+| right | little | **28.31** | 24.10, 32.49 | OUT |
+| right | thumb tip | 92.60 | — | n/a |
+
+| Hand | Pair | adjacent tip spacing (≥ 8) | min phalanx-to-phalanx | crossing |
+|---|---|---|---|---|
+| left | index–middle | **23.69** mm | 22.16 | none |
+| left | middle–ring | **20.08** | 18.37 | none |
+| left | ring–little | **19.55** | 19.54 | none |
+| right | index–middle | **26.07** | 21.97 | none |
+| right | middle–ring | **17.35** | 17.13 | none |
+| right | ring–little | **21.92** | 20.95 | none |
+
+Crossing = the MCP order along the across-axis flipping at PIP, DIP or tip; none anywhere. Source:
+`evidence/stage0/fist_65_85_40_numbers.json`.
+
+**Stage-0 gate, by the spec's letter:** spacing PASS, crossing PASS, EditMode tests PASS, **tip-to-palm-plane OUT OF BAND
+on all eight fingers** (28–41 mm against 8–20). The mechanism does what §3.12.1 says it must — every finger stays in its
+own plane (test (a) sideways = 0.000 mm on both hands), the fingers never fan or cross, and the curl is a monotone
+function of one triple — but 65/85/40 (190° total) is a loose curl, not a closed fist: the tips hang ~35 mm in front of
+the knuckle plane. Analytically the same: with these phalanx lengths (30 / 28 / 28 mm, index) the tip lands ~37 mm
+palm-side and ~39 mm back toward the wrist, which is exactly what was measured. **The band is reached at 75 / 95 / 50**
+(next section). Which triple defines "a fist" for the gate is the Architect's / Cesar's call; nothing above the hinge
+level was touched to chase the number.
+
+## 0.4 Supplementary — curl sweep, same model, numbers only (`evidence/stage0/sweep/`)
+
+tip → MCP plane, mm; L = index / middle / ring / little, R likewise. Spacing stayed 17.1–26.6 mm and crossing stayed
+`none` in every row.
+
+| MCP / PIP / DIP | left | right | in band |
+|---|---|---|---|
+| 65 / 85 / 40 (mandated) | 38.3 / 35.9 / 32.5 / 31.8 | 41.5 / 33.9 / 36.6 / 28.3 | 0 / 8 |
+| 70 / 90 / 45 | 27.9 / 24.4 / 21.5 / 24.0 | 31.6 / 21.9 / 26.6 / 19.8 | 1 / 8 |
+| **75 / 95 / 50** | 17.8 / 13.3 / 11.0 / 16.5 | 21.8 / 10.2 / 16.7 / 11.7 | **7 / 8** (right index 21.8) |
+| 80 / 95 / 50 | 14.1 / 9.3 / 7.2 / 13.9 | 18.1 / 6.0 / 13.1 / 9.0 | 5 / 8 |
+| 80 / 100 / 50 | 10.0 / 4.8 / 3.0 / 10.9 | 14.0 / 1.3 / 9.0 / 6.0 | 3 / 8 |
+| 85 / 100 / 55 | 5.0 / −0.6 / −2.2 / 7.3 | 9.1 / −4.4 / 4.1 / 2.1 | 1 / 8 |
+| 90 / 100 / 60 | 0.6 / −5.4 / −6.7 / 4.1 | 4.7 / −9.4 / −0.2 / −1.3 | 0 / 8 (tips through the joint plane) |
+
+Per-finger spread inside a row comes from the phalanx lengths differing per finger (right middle: 26.5 / 31.3 / 32.1 mm
+vs right little: 25.5 / 16.2 / 27.4 mm) — the §3.12.3 per-finger triples already anticipate that. Four supplementary
+frames at 75 / 95 / 50 are in `evidence/stage0/supplementary_75_95_50/` for the eye; they are **not** the mandated
+deliverable.
+
+## 0.5 Frames (full res, 1600 × 1600, greyscale variance 4500–5400; fabrication floor 5.0)
+
+Canonical screenshot: `evidence/stage0/fist_65_85_40_left_palm.png`
+
+| Frame | What it shows |
+|---|---|
+| `evidence/stage0/fist_65_85_40_left_palm.png` | left hand, camera on the palm side looking along −n, fingers up: four fingers curled toward the camera in parallel planes, even gaps, thumb at its rest pose |
+| `evidence/stage0/fist_65_85_40_left_back.png` | left hand from the back: knuckle row at the top, fingers curled away |
+| `evidence/stage0/fist_65_85_40_right_palm.png` | right hand, palm side — the mirror of the left |
+| `evidence/stage0/fist_65_85_40_right_back.png` | right hand, back |
+
+Every PNG was opened and looked at before being cited (fingers up, wrist down, not Y-flipped; ReadPixels from the RT
+came out upright on this D3D11 editor).
+
+## 0.6 Acceptance for this stage
+
+| Item | Result | Evidence |
+|---|---|---|
+| iter-9b deleted, one solver | PASS | `grep ApplyHeldGripPose\|heldGripPose` → 0 hits in `Assets/`; reflection: `GolferPresenter.ApplyHeldGripPose` null, `ApplyGripPose` present |
+| `HandHingeModel` per §3.12.2 | PASS | §0.1; axes read off the asset; test (a) sideways 0.000 mm |
+| EditMode tests (a)–(d), both hands, define ON | PASS | 8/8, §0.2 |
+| … define OFF | PASS | 1/1 with the recompile actually observed, §0.2 |
+| Fist frames, 4, full res | PASS | §0.5 |
+| Tips 8–20 mm from the palm plane | **FAIL at 65/85/40** (28–41 mm); in band at 75/95/50 | §0.3, §0.4 |
+| Adjacent tips ≥ 8 mm | PASS | 17.4–26.1 mm |
+| No finger crosses another | PASS | order preserved at PIP/DIP/tip, min phalanx clearance 17.1 mm |
+| Club / rig / anchors untouched | PASS | prefab diff = 4 deleted stale lines only |
+| Shipped code diff empty (A5) | PASS | new runtime files are `#if`-gated with inert shells; define-off build has 0 declared members on all three types; `git diff --stat HEAD -- Packages ProjectSettings` empty |
+| Profile (A6) | `iOS-Full-Golfer` left active on purpose — Cesar 2026-09-10: *"stop restoring profile in this machine"* (memory `project_pc_golfer_build_profile`); it was switched to `iOS-Full-GPS` only for the define-off pass and switched back |
+
+## Files modified or created (stage 0)
+
+Every uncommitted path outside `Docs/Specs/Active/golfer_club_grip/` is listed.
+
+| File | One-line summary |
+|---|---|
+| `Assets/Scripts/Gameplay/Golfer/GolferPresenter.cs` | iter-9b held-grip path deleted (§0.1); `LateUpdate` comment updated |
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab` | 4 stale serialized fields removed (text edit) |
+| `Assets/Scripts/Gameplay/Golfer/HandHingeModel.cs` (+ `.meta`) | NEW — the mechanism |
+| `Assets/Scripts/Gameplay/Golfer/HandHingeData.cs` (+ `.meta`) | NEW — the ScriptableObject, its own file |
+| `Assets/Scripts/Gameplay/Golfer/Tests/Golfin.Gameplay.Golfer.Tests.asmdef` (+ `.meta`), `Tests.meta` | NEW — Editor test assembly |
+| `Assets/Scripts/Gameplay/Golfer/Tests/HandHingeModelTests.cs` (+ `.meta`) | NEW — (a)–(d) + palm-sign test, define-off shell test |
+| `Assets/Scripts/UI/Editor/HandHingeStage0Tool.cs` (+ `.meta`) | NEW — capture + fist test + frames (menu items) |
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/HandHinge_MixamoNative.asset` (+ `.meta`) | NEW — the capture (data) |
+| `Docs/AI_CONTEXT.md` | stage-0 session entry |
+| `tasks/lessons.md` | ScriptableObject-in-the-wrong-file lesson |
+| `Docs/Specs/Active/golfer_club_grip/SPEC.md`, `ARCHITECT_DECISION_HINGE_MODEL.md`, `ARCHITECT_CLOSEOUT.md`, `Docs/GPS/GPS_BACKLOG.md`, `Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md` | **Pre-existing** — the Architect's §3.12 edits, in the tree at kickoff (HEARTBEAT.log iter-10 baseline `DIRTY:` block lists ` M Docs/GPS/GPS_BACKLOG.md`, ` M Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md`, ` M Docs/Specs/Active/golfer_club_grip/SPEC.md`, `?? …/ARCHITECT_CLOSEOUT.md`, `?? …/ARCHITECT_DECISION_HINGE_MODEL.md`); committed separately, first |
+| `Library_broken_143700/` | **Pre-existing** stale Library backup, untracked; in the baseline block as ` ?? Library_broken_143700/`; nothing here wrote to it |
+
+## What a reviewer should be sceptical about
+
+- **The palm plane is the joint plane, not the skin.** 8–20 mm from the MCP joint centres is ~0–12 mm off the palm
+  skin; if the gate meant skin contact the band itself, not the pose, is what to re-read.
+- **The thumb was not aimed** (rest aim, 30/20 on the two hinges), as the stage-0 row specifies. Its 92 mm number is
+  the T-pose thumb hanging down, not a defect of the hinge model; the aim is exercised from stage 1.
+- **Spread was 0**, so the abduct-axis sign convention (mirror-antisymmetric, documented in the file header) has been
+  captured but not visually exercised yet.
