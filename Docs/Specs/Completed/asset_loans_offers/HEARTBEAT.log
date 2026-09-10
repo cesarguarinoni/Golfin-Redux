@@ -1,0 +1,145 @@
+=== iter-1 kickoff baseline 2026-09-10T01:16:09Z ===
+HEAD: 46c4ce00575a472cd8c821a955c28f313271ba81
+DIRTY:
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+ M Docs/Economy/MONETIZATION_PLAN.md
+ M Docs/TellCode.md
+?? Docs/Specs/Active/asset_loans_offers/HEARTBEAT.log
+?? Docs/Specs/Active/asset_loans_offers/SPEC.md
+?? Docs/Specs/Active/asset_loans_offers/STATUS.md
+?? Docs/Specs/Active/asset_loans_offers/reference/Home_OfferModal_14261-107063.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Home_OfferPill_14261-32997.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Roster_LendModalV2_14261-109475.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Roster_Offered_14261-109119.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Settings_LoanOffers_14261-109878.png
+?? Docs/Specs/Quick/hole_selection_first_card_gap.md
+=== END baseline ===
+
+playlife HEAD at kickoff: 2add3a5bc3c2cfe9d64ccbbb731f68537745b123
+playlife DIRTY at kickoff:
+ M backend/routers/user.py
+?? backend/migrations/2026_08_31_content_gacha_seed.sql
+?? backend/migrations/2026_09_02_default_ball_guard.sql
+?? backend/migrations/2026_09_03_cleanup_test_rounds.sql
+?? backend/migrations/2026_09_03_golf_profile_prompted.sql
+?? backend/migrations/content_seed_texts.sql
+
+=== iter-1 kickoff baseline 2026-09-10T01:16:09Z ===
+GolfinRedux HEAD: 46c4ce00575a472cd8c821a955c28f313271ba81
+GolfinRedux DIRTY (porcelain --untracked-files=all):
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+ M Docs/Economy/MONETIZATION_PLAN.md
+ M Docs/TellCode.md
+?? Docs/Specs/Active/asset_loans_offers/HEARTBEAT.log
+?? Docs/Specs/Active/asset_loans_offers/SPEC.md
+?? Docs/Specs/Active/asset_loans_offers/STATUS.md
+?? Docs/Specs/Active/asset_loans_offers/reference/Home_OfferModal_14261-107063.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Home_OfferPill_14261-32997.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Roster_LendModalV2_14261-109475.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Roster_Offered_14261-109119.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Settings_LoanOffers_14261-109878.png
+?? Docs/Specs/Quick/hole_selection_first_card_gap.md
+playlife HEAD: 2add3a5bc3c2cfe9d64ccbbb731f68537745b123
+playlife DIRTY (porcelain --untracked-files=all):
+ M backend/routers/user.py
+?? backend/migrations/2026_08_31_content_gacha_seed.sql
+?? backend/migrations/2026_09_02_default_ball_guard.sql
+?? backend/migrations/2026_09_03_cleanup_test_rounds.sql
+?? backend/migrations/2026_09_03_golf_profile_prompted.sql
+?? backend/migrations/content_seed_texts.sql
+=== end baseline ===
+
+[01:27:34Z] Phase 1 server DONE — migration + loans.py (6 routes) + user.py + followers.py; full backend suite 315 passed.
+[01:40:40Z] Phase 2 client C# DONE — DTOs, LoanService (OffersIn/IsOffered/Accept/Decline/Rescind/SearchUsers), Endpoints, LoanSyncBehaviour, UserService+DTO, lend modal v2 search, ribbon OFFERED, both detail panels RESCIND, 4 new controllers (rescind/offer modal/pill/toggle), Home hook. 0 CS errors; all new types present in loaded assemblies.
+[01:44:40Z] Phase 4 strings DONE — 34 rows (33 add + 1 change to LOAN_NO_FOLLOWING), import PLAN 33/1/1167/0, --apply, content_publish texts v50->v51, re-export, --check CLEAN, content_version.txt texts=51.
+[02:24:47Z] Phase 3 authoring DONE — 4 new sprites baked (generator deterministic: the 4 shipped ones byte-identical), LoanUiBuilder extended (search field, 2 sections, rescind + offer modal prefabs, cloned Home pill, Settings row), scene saved. Rule 14 guardrail: inactive count 104->104, +11 GameObjects = exactly what was built. EditMode 3018 total / 3015 passed / 0 failed / 3 skipped (pre-existing). Suite before this task: 2997 (per AI_CONTEXT 2026-09-10) -> 3018 now = +21 (43-22 new LoanServiceTests).
+[02:47:25Z] Phase 5 capture DONE — LoanUiCaptureBot extended (offer payloads, /user/search + /user/detail stubs, 8 new offer states). 19 frames at 1170x2532 via real navigation. FOUR defects found and fixed by the capture, none by eye: (1) pill label auto-sized back to the daily's 40 (fontSize is an OUTPUT when autoSizing is on -> cap fontSizeMax); (2) offer-modal asset name rendered NOTHING (TMP chars=0, renderedW=-4294967000: Ellipsis + a slot 0.9px above the line box) -> TextSlot(size)=ceil(1.4*size) helper; (3) CloseAllModals named concrete types so the new rescind popup stayed open under 3 later frames -> enumerate ModalController; (4) lend-modal Content VLG childControlHeight=false made the two sections overlap -> true. Also: fine print said '1d 22h' where the node says '46h', rescind said '24h 0m'.
+
+=== iter-2 kickoff baseline 2026-09-10T04:20:40Z ===
+Reason: golfin-reviewer returned ARCHITECT_REVIEW_FAIL with one blocking fail (D-2, Settings row fontSize). Verified independently; the reviewer was right.
+GolfinRedux HEAD: 46c4ce00575a472cd8c821a955c28f313271ba81
+GolfinRedux DIRTY (porcelain --untracked-files=all):
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Prefabs/UI/Modals/LoanModal.prefab
+ M Assets/Prefabs/UI/Modals/LoanReturnModal.prefab
+ M Assets/Resources/Data/content_version.txt
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/EconomyRuntime/LoanSyncBehaviour.cs
+ M Assets/Scripts/Net/Endpoints.cs
+ M Assets/Scripts/Social/LoanDtos.cs
+ M Assets/Scripts/Social/LoanService.cs
+ M Assets/Scripts/Social/Tests/LoanServiceTests.cs
+ M Assets/Scripts/Social/UserDetailDto.cs
+ M Assets/Scripts/Social/UserService.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/Inventory/ClubDetailPanel.cs
+ M Assets/Scripts/UI/Loans/Editor/LoanUiBuilder.cs
+ M Assets/Scripts/UI/Loans/Editor/LoanUiCaptureBot.cs
+ M Assets/Scripts/UI/Loans/LoanModalController.cs
+ M Assets/Scripts/UI/Loans/LoanRibbonView.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
+ M Assets/Tests/EditMode/GpsAuthExtrasFlowTests.cs
+ M CLAUDE.md
+ M Docs/AI_CONTEXT.md
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+ M Docs/Economy/MONETIZATION_PLAN.md
+ M Docs/Scripts/make_loan_sprites.py
+ M Docs/Specs/Active/weekly_rotation_admin/SPEC.md
+ M Docs/Specs/Active/weekly_rotation_client/SPEC.md
+ M Docs/TellCode.md
+ M ProjectSettings/ProjectSettings.asset
+ M tasks/lessons.md
+ M tasks/todo.md
+?? Assets/Art/RosterScreen/S_LoanSearchField.png
+?? Assets/Art/RosterScreen/S_LoanSearchField.png.meta
+?? Assets/Art/RosterScreen/S_LoanSearchGlyph.png
+?? Assets/Art/RosterScreen/S_LoanSearchGlyph.png.meta
+?? Assets/Art/RosterScreen/S_LoanToggleKnob.png
+?? Assets/Art/RosterScreen/S_LoanToggleKnob.png.meta
+?? Assets/Art/RosterScreen/S_LoanTogglePill.png
+?? Assets/Art/RosterScreen/S_LoanTogglePill.png.meta
+?? Assets/Prefabs/UI/Modals/LoanOfferModal.prefab
+?? Assets/Prefabs/UI/Modals/LoanOfferModal.prefab.meta
+?? Assets/Prefabs/UI/Modals/LoanRescindModal.prefab
+?? Assets/Prefabs/UI/Modals/LoanRescindModal.prefab.meta
+?? Assets/Scripts/UI/Home/LoanOfferPillController.cs
+?? Assets/Scripts/UI/Home/LoanOfferPillController.cs.meta
+?? Assets/Scripts/UI/Loans/Editor/LoanSettingsLiveCheck.cs
+?? Assets/Scripts/UI/Loans/Editor/LoanSettingsLiveCheck.cs.meta
+?? Assets/Scripts/UI/Loans/LoanOfferModalController.cs
+?? Assets/Scripts/UI/Loans/LoanOfferModalController.cs.meta
+?? Assets/Scripts/UI/Loans/LoanOffersToggle.cs
+?? Assets/Scripts/UI/Loans/LoanOffersToggle.cs.meta
+?? Assets/Scripts/UI/Loans/LoanRescindModalController.cs
+?? Assets/Scripts/UI/Loans/LoanRescindModalController.cs.meta
+?? "Claude outputs/screen_hints_scrim_vs_blur.png"
+?? Docs/Specs/Active/asset_loans_offers/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/asset_loans_offers/HEARTBEAT.log
+?? Docs/Specs/Active/asset_loans_offers/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/asset_loans_offers/SPEC.md
+?? Docs/Specs/Active/asset_loans_offers/STATUS.md
+?? Docs/Specs/Active/asset_loans_offers/reference/Home_OfferModal_14261-107063.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Home_OfferPill_14261-32997.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Roster_LendModalV2_14261-109475.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Roster_Offered_14261-109119.png
+?? Docs/Specs/Active/asset_loans_offers/reference/Settings_LoanOffers_14261-109878.png
+?? Docs/Specs/Active/economy_telemetry/SPEC.md
+?? Docs/Specs/Active/economy_telemetry/STATUS.md
+?? Docs/Specs/Active/screen_hints/SPEC.md
+?? Docs/Specs/Active/screen_hints/STATUS.md
+?? Docs/Specs/Active/screen_hints/reference/figma_14263-109304_roster_hint_1of4.png
+?? Docs/Specs/Active/screen_hints/reference/figma_14263-109672_home_hint_1of2.png
+?? Docs/Specs/Active/screen_hints/reference/figma_14263-109883_ingame_hint_1of6.png
+?? Docs/Specs/Active/screen_hints/reference/figma_14266-109661_roster_hint_4of4_last.png
+?? Docs/Specs/Queued/loans_ops/SPEC.md
+?? Docs/Specs/Queued/loans_ops/STATUS.md
+?? Docs/Specs/Quick/hole_selection_first_card_gap.md
+playlife HEAD: cb0447ccd2ff7442fe6c7a1fd8559775d6f15bda
+playlife DIRTY (porcelain --untracked-files=all):
+?? backend/migrations/2026_08_31_content_gacha_seed.sql
+?? backend/migrations/2026_09_02_default_ball_guard.sql
+?? backend/migrations/2026_09_03_cleanup_test_rounds.sql
+?? backend/migrations/content_seed_texts.sql
+=== END baseline ===
+[04:25:36Z] iter-2 DONE — D-2 fixed and reclassified from deviation to defect (item 6): the siblings are fontSize=48, the 40 in the iter-1 rationale was their sizeDelta.y. Row now 48/30, TextSlot(48)=68 + TextSlot(30)=42, RowH 124; re-measured LoanOffersRow 1702-1826 on screen and LogOutRow still on screen. 19 frames re-captured (all report citations retargeted from the stale 11-59-* names to the live 13-14/13-15-* ones; the Figma reference citation pointed at a nonexistent screenshots/figma-reference.png and now points at reference/Roster_Offered_14261-109119.png). EditMode re-run UNDER the new define: 3018/3015/0/3, with CompilationPipeline confirming GOLFIN_POINTS_BACKEND=True on Assembly-CSharp, Assembly-CSharp-Editor and Golfin.Economy in both Editor and Player sets. UI lint re-run: 0 FAIL x4. Rule 13 gap closed: CLAUDE.md and ProjectSettings/ProjectSettings.asset added to the Files table (the reviewer guessed ProjectSettings belonged to economy_telemetry; it is this task's).

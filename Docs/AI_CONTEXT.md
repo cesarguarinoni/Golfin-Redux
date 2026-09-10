@@ -4,6 +4,108 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 — asset_loans_offers: **a loan becomes an OFFER, and anyone can be offered to** — ARCHITECT_REVIEW_PASS (awaiting Cesar)
+
+Loans v2. `POST /loans` no longer hands an asset over — it writes an `offered` row the recipient
+must ACCEPT or DECLINE. The asset **locks on the lender's side from the moment it is offered**
+while entering nobody's roster; the recipient sees a pill on Home, opens it, and takes it (the loan
+becomes exactly today's active loan, clock starting *then*) or turns it down. The follow gate is
+retired — anyone can be found by display name through `GET /user/search` — and what replaced it is
+the recipient's own **LOAN OFFERS** switch in Settings, plus three anti-spam bounds.
+
+**Two predicates now, and keeping them apart is the whole design.** `_is_live`
+(`status = 'active' and now() < ends_at`) is **unchanged** and still answers "is the borrower
+playing it" — `resolve_shares`, `golfin_level_up`'s borrower lookup and the client's `IsBorrowed`
+all read exactly what they read before. The new `_is_locked` (`status in ('offered','active')`)
+answers "is it out of the lender's hands", and both widened partial unique indexes plus
+`golfin_level_up`'s lender guard read that one. On the client the same split lands as one line:
+`LoanService.Out` is filtered on `IsLocked`, so `IsLentOut` answers true for an offer and **every
+existing lock — SelectCharacter, EquipClub, the level-up gate, both detail panels — holds with no
+new code.** `OffersIn` is deliberately a third list, never merged into `In`, so nothing an
+un-answered offer touches can reach `EnsureBorrowed`.
+
+**Server:** migration `2026_09_10_golfin_loan_offers.sql` (seven statuses, three offer timestamps,
+nullable `starts_at`/`ends_at`, the two lock indexes widened, a pending-pair unique index,
+`profiles.golfin_loan_offers`, and `golfin_level_up` re-replaced with **one** guard widened);
+`loans.py` gains `offers_in`, dual-clock lazy expiry, `not_accepting` / `pending_limit` /
+`pending_pair` / `cooldown`, and `accept` / `decline` / `rescind`; `for_loans=1` on `/user/search`
+and `/social/{id}/following`. **315 backend tests pass**, including a new `test_user.py`.
+
+**Client:** lend modal v2 with a debounced search over two sections and one selection; OFFERED +
+RESCIND on both detail panels; `LoanOfferPillController` cloned object-for-object from the daily
+mission pill; `LoanOfferModalController`; `LoanOffersToggle`. **EditMode 3018 / 3015 passed / 0
+failed / 3 skipped**, re-run under the new `GOLFIN_POINTS_BACKEND` define, `LoanServiceTests`
+22 → 43.
+
+**Strings published, not just edited:** 34 rows EN+JA, `texts` **v50 → v53** (a 35th key followed
+when the fine print read "1d 22h" against the node's "46h"; v52/v53 retired the two dead keys),
+`--check` clean, `content_version.txt` `texts=53`.
+
+**Six defects, only one of them found by reading the code.** The pill label auto-sized straight back
+to the daily pill's size (with `enableAutoSizing` on, `fontSize` is an *output*); the offer modal's
+asset name rendered **nothing at all** while every property said it was fine (`chars=0`,
+`renderedW=-4294967000` — `Ellipsis` with a slot 0.9 px above the font's line box truncates the
+whole line away); `CloseAllModals` named concrete types, so the new rescind popup sat open under
+three later captures; the lend modal's two sections drew on top of each other
+(`childControlHeight = false`, right in v1 when the children were fixed-height rows, wrong in v2
+when they are `ContentSizeFitter` sections). **The fifth was Cesar's, by eye:** the offer modal's
+two text lines were 6 px too far apart. Measured against the node rather than argued — 25 px built
+against 19 px in the render — and the cause is a conversion rule worth keeping: a Figma gap sits
+between boxes *tight to their glyphs*, while a TMP slot is a *line box* that already carries the
+font's leading and descent, so the node's `gap: 6` converts to a Unity spacing of **0**.
+
+**The sixth was the reviewer's, and it was right.** The Settings row shipped at fontSize 40 / 25,
+defended in the report as "the Settings screen's own conversion — its sibling rows render their
+48 px node labels at 40". That sentence was written without measuring, and it is false: **40 is
+those labels' `sizeDelta.y`, not their `fontSize`.** Every sibling section-title Label in
+`SettingsList` is `fontSize=48`, so the node and the family agreed all along and the only row that
+disagreed with both was mine — the "deviation" existed purely to defend the number. Now 48 / 30,
+`RowH` 124. The class is worth more than the instance: a measured number and a *plausible* number
+look identical in a report, and `40` was perfectly real — just a different property of the same
+objects. Any "the family already does X" claim has to name the property it read, and read it.
+
+**SHIPPED AND VERIFIED LIVE.** Migration applied (11/11 checks), API deployed **v71 → v72**, and the
+whole flow exercised against the deployed server with two real JWTs — both Cesar's own accounts, so
+no third party was involved and no second person was needed. Offer → lock → pending-pair → accept
+(clock starts at accept: `starts_at` 0.3s from now, `ends_at − starts_at` exactly 3.000 days, level
+pinned from offer time) → idempotent re-accept → rescind-is-not-a-recall → decline → 24h cooldown
+(and a RETURN correctly does NOT trigger one) → the setting hiding a player from search and refusing
+a direct offer. Every test row deleted afterwards, including the two `golfin_progress` rows the
+offers seeded — left in place they would have pinned real characters at a level the client never
+earned and produced a `level_conflict` on the next genuine level-up.
+
+The Settings toggle's "persists across relaunch" line got its own runner,
+`LoanSettingsLiveCheck` — **no stub**, because a stub that echoes a fixed row proves nothing about
+persistence. Entering play wipes `UserService.LastDetail`, so what the toggle paints came from a
+cold `GET /user/detail`: server False → knob x=6 / `#38597F`, server flipped to True → knob x=58 /
+`#2775DD`. Phase 2 retargets `Endpoints.RootUrl` at the discard port to force the real
+transport-failure branch, and the optimistic flip reverts with the server confirmed untouched.
+
+**Also fixed in passing: `gps_profile_prompt_server_flag` was half-shipped.** Its client half went
+live in `2c36f1569`; its server half was written the same day and never committed, so prod's
+`UpdateProfileRequest` had no such field and Pydantic dropped the key silently — a clean 200 that
+changed nothing, since 2026-09-03. Found while hunk-splitting `user.py`. Committed (`cb0447c`, with
+its untracked migration, verified applied) and deployed; the round trip now stamps, `false` does not
+clear the latch, and omitting the field leaves it alone.
+
+**The two dead keys are retired.** `LOAN_TOAST_LENT` and `LOAN_ERR_NOT_FOLLOWING` are
+`is_active=false` at texts v53 — read back from `content_rows`, not taken from the dashboard's own
+confirmation, because the first attempt looked successful and wasn't: the admin is React and
+`form_input` sets `.value` without firing `onChange`, so the drafts saved unchanged.
+
+**`GOLFIN_POINTS_BACKEND` is now in the iPhone defines** (Cesar's call, asked and answered
+2026-09-10). It had never shipped in a device build, which is why `points_device_checks` has been
+blocked since August — and it gates far more than loans: RP, shop, gacha, level-ups and mode fees
+all take the server path behind it. Defines are per-build-target, so this changes the iOS player
+only.
+
+**Outstanding — the ordering rule, and it is now binding rather than theoretical.** **The API and
+the client must ship together**: an old client against the new server makes LEND appear to bounce
+back instantly while the asset stays locked for 48 h. Until today that was academic, because every
+build in the field lacks `GOLFIN_POINTS_BACKEND` and so never starts `LoanSyncBehaviour`. Those
+builds are still safe — but the *next* build carries the define, so it must be the new client.
+
+---
 ## 2026-09-10 — mode_select_driving_range_last: **Driving Range drops to the bottom, and the CSV fallback stops lying** — DONE, approved by Cesar
 
 Driving Range is the only mode still locked, and it sat at `order=4` with playable Missions below it

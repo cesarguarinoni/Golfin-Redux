@@ -4212,3 +4212,71 @@ was four frames of a CSV.
 tip's height and ease *up* to the new one — plausible, wrong in the important half. The probe cost
 ten minutes and named the real mechanism. Sister to Lesson AJ and to
 `feedback_never_eyeball_brightness`: *reproduce and sample before explaining.*
+
+## Lesson AJ (2026-09-10, asset_loans_offers) — NEVER call `CompilationPipeline.RequestScriptCompilation()` from inside `script-execute`
+
+**What happened.** A compile check called `RequestScriptCompilation()` and then spun waiting for
+`EditorApplication.isCompiling` to clear. That request triggers a domain reload — which unloads the
+assembly the pending `script-execute` call is running in. The MCP bridge sees the call die, retries
+it (10 times), and each retry re-runs `RequestScriptCompilation()`. The Editor sat in a
+`[ScriptCompilation] Requested script compilation because: Requested through public api` loop for
+~5 minutes and the MCP plugin's hub came back stale, so every subsequent tool call failed with
+`Failed to invoke RequestCallTool after 10 retries` even though the bridge process was healthy and
+Unity's TCP connection to it was ESTABLISHED.
+
+**The rule.** From `script-execute`, `AssetDatabase.Refresh()` is the ONLY compile trigger. It
+imports and compiles without pulling the domain out from under the caller. Never
+`RequestScriptCompilation`, never `EditorUtility.RequestScriptReload`, never anything that forces a
+domain reload inside a call whose result you are waiting on.
+
+**The recovery, when it has already happened.** The bridge being up is not the same as the plugin
+being reachable — check both, and do not conclude "MCP is down". What actually restored it was
+`open -a "Unity"`: the plugin re-registers its hub on the Editor's next foreground tick, and Unity
+does not auto-refresh while it is in the background. Cheap, non-destructive, and it worked in
+seconds after five minutes of polling had not. Try it BEFORE reporting the transport down or
+restarting the Editor.
+
+**Diagnosis order that would have been faster:** (1) is the bridge process listening
+(`lsof -nP -iTCP:<port>`), (2) is Unity connected to it (same output, ESTABLISHED), (3) is the log
+still growing / CPU busy — if both are quiet the Editor is idle and the problem is the plugin's hub,
+not the transport, (4) `open -a "Unity"`.
+
+---
+
+## Lesson BV — a real number off the wrong property is not evidence (2026-09-10, `asset_loans_offers`)
+
+**Date:** 2026-09-10 · **Task:** `asset_loans_offers` iter-1 → iter-2 · **Caught by:** `golfin-reviewer` (blocking FAIL)
+
+**What happened.** The Settings LOAN OFFERS row was built at `fontSize` 40 / 25 where the Figma node
+said 48 / 30, and the implementer report defended the gap:
+
+> "the Settings screen's own conversion — its sibling rows render their 48 px node labels at 40"
+
+That sentence was written without measuring, and it is false. **40 is those labels' `sizeDelta.y`,
+not their `fontSize`.** Read back live, every sibling section-title Label in `SettingsList`
+(`UserProfileRow`, `SoundSettingsRow`, `GraphicsRow`, `ControlsRow`, `LanguageRow`, `TermsOfUseRow`,
+`PrivacyPolicyRow`, `FaqRow`, `AboutRow`, `ContactRow`, `LogOutRow`) is `fontSize=48`. The node and
+the family agreed all along; the only row disagreeing with both was the new one. The "deviation"
+existed purely to defend the number.
+
+**Why it got through the implementer's own checks.** It read as *more* rigorous than "I matched the
+node", because it cited local evidence — and the 40 was genuinely on those objects. A fabricated
+number is easy to catch; a real number read off the wrong property is indistinguishable from
+evidence at review speed. `sizeDelta` is the field most prone to this in Unity UI, because on a
+stretched rect it is an *offset*, not a size (see also the `sizeDelta` / `childControlHeight` notes
+in `Docs/Architecture/`).
+
+**The rule.**
+
+1. "The existing family already does X" is a **measurement**, not an argument. Before writing it:
+   enumerate the sibling objects, read the **named** property off each, and put the per-object
+   readout in the report. `fontSize`, not "size". `sizeDelta.y`, not "height".
+2. When the design source and the build disagree, the default is that **the build is wrong**. A
+   deviation is only real if the source can be shown wrong or inapplicable.
+3. **The tell:** a rationale that explains why the obvious value is wrong, unaccompanied by numbers.
+   Reaching for one is the moment to go measure, not the moment to write the sentence.
+
+**Sister rules.** Lesson on pointing the instrument at the subject (prove the harness measures the
+thing under test — this is its mirror: the instrument measured a real thing, just not that one) and
+the standing reviewer gate on font weight *and* rendered size vs the reference render, which is the
+gate this landed on.
