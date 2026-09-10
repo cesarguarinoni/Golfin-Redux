@@ -361,13 +361,13 @@ green**, `telemetryLoans.test.ts` among them, then the OpenNext build, then wran
 
 | | |
 |---|---|
-| **Cloudflare Version ID** | iter-1 `476b78f6-fdf7-47e9-8c1d-acc4355e57a3` · iter-2 `586b6c80-dfde-47a2-a938-19d1b12fdb7a` · iter-2b `c5171f03-e999-4097-a0f4-e0a1050fd157` · **iter-3 `70a0c4f4-f20f-4b6e-a31e-5aa6769b55f6`**. Each redo shipped because each changed something that renders on production. |
+| **Cloudflare Version ID** | iter-1 `476b78f6-fdf7-47e9-8c1d-acc4355e57a3` · iter-2 `586b6c80-dfde-47a2-a938-19d1b12fdb7a` · iter-2b `c5171f03-e999-4097-a0f4-e0a1050fd157` · iter-3 `70a0c4f4-f20f-4b6e-a31e-5aa6769b55f6` · **final `21888241-b1b3-4589-a3e4-9fd280cee1b8`**. Each redo shipped because each changed something that renders on production. |
 | Worker | `golfin-admin` → `admin.golfin.world` (custom domain) |
 | Assets | 9 new or modified uploaded, 94 already there; startup 24 ms |
 | New binding | `env.PLAYLIFE_API_URL ("https://playlife-api.fly.dev")` |
 | § 2 Access check | `curl https://admin.golfin.world/` → **302** (Access is protecting it) |
 | § 23 stamp, built worker | `grep` of `api/version/route.js` → `df1f529fb`, `da3175337`, `3080690e5`, `8f823d7cb`. **No `-DIRTY`** on any of the four. |
-| § 23 stamp, **live site** | `GET /api/version` on admin.golfin.world, read in Cesar's Chrome, answers **`{"commit":"8f823d7cb","stamped":true}`** — the iter-3 commit. ⚠️ **The sidebar footer is not a reliable stamp: it is a CACHED page.** Twice it kept showing the previous commit after a deploy, which reads exactly like a silent failure, and the second time a `?cachebust=` query string did not clear it either. `/api/version` is `force-dynamic` and therefore uncached — it is the authoritative read, and the § 23 memory has been corrected to say so. |
+| § 23 stamp, **live site** | `GET /api/version` on admin.golfin.world, read in Cesar's Chrome, answers **`{"commit":"cfab3a9cf","stamped":true}`** — which is HEAD, so the deployed Worker and the tree Cesar is signing off on are the same code. ⚠️ **The sidebar footer is not a reliable stamp: it is a CACHED page.** Twice it kept showing the previous commit after a deploy, which reads exactly like a silent failure, and the second time a `?cachebust=` query string did not clear it either. `/api/version` is `force-dynamic` and therefore uncached — it is the authoritative read, and the § 23 memory has been corrected to say so. |
 
 **Deploying before the migration was safe, and that was checked rather than assumed** (the migration has since landed, so this section is now history — it is kept because it is the evidence that the ordering was safe).
 `ADMIN_DASHBOARD_OPS.md` § 3.2 says migration first because code referencing a missing object

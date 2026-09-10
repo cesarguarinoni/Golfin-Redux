@@ -51,3 +51,4 @@ DIRTY:
 2026-09-10T08:54:55Z iter-2b — deployed CF version c5171f03-e999-4097-a0f4-e0a1050fd157, live stamp 3080690e5 verified (first read was a cached stale stamp; cache-busted). STATUS -> READY_FOR_REDTEAM
 2026-09-10T09:07:09Z iter-3 — red-team FAIL: clockLine's default arm labelled rescinded + offer_expired as 'answered'. Fixed the SHAPE not the instance: all status/clock judgement moved to lib/loanStatus.ts with ALL_LOAN_STATUSES-driven exhaustive tests; actionsFor now reads clocks too; 324 tests
 2026-09-10T09:09:33Z iter-3 — deployed CF 70a0c4f4-f20f-4b6e-a31e-5aa6769b55f6; /api/version says 8f823d7cb (footer was cached and stale AGAIN, even with cachebust — memory corrected to use the endpoint). STATUS -> READY_FOR_REDTEAM
+2026-09-10T09:18:34Z ARCHITECT_REVIEW_PASS — all three gates cleared. Final deploy CF 21888241-b1b3-4589-a3e4-9fd280cee1b8; /api/version = cfab3a9cf = HEAD. Awaiting Cesar's sign-off.
