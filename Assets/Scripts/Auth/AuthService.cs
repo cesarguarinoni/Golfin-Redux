@@ -228,7 +228,7 @@ namespace Golfin.Auth
         /// Phase 2b OAuth. MOCK transport delegates to the mock client (returns "coming soon" unless
         /// SimulateOAuthSuccess). LIVE transport opens the provider's consent page in the system browser;
         /// completion arrives asynchronously via <see cref="OnDeepLink"/> when Supabase redirects back to
-        /// <c>Config.oauthRedirect</c>. Only one OAuth attempt is tracked at a time.
+        /// <see cref="SupabaseConfig.OAuthRedirectForThisApp"/>. Only one OAuth attempt is tracked at a time.
         /// </summary>
         public void SignInWithOAuth(OAuthProvider provider, Action<AuthResult> onResult)
         {
@@ -279,7 +279,7 @@ namespace Golfin.Auth
 
             if (!OAuthCallbackParser.IsCallback(url, Config))
             {
-                Debug.LogWarning("[AuthService] Deep link did NOT match the configured oauthRedirect — ignored.");
+                Debug.LogWarning($"[AuthService] Deep link did NOT match this app's OAuth redirect ({Config.OAuthRedirectForThisApp}) — ignored.");
                 return;
             }
 

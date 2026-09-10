@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-09-10 14:38. Do not edit manually.
+> Auto-generated 2026-09-11 07:17. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -861,6 +861,14 @@ Assets/Scripts/UI/HUD/ClubContextPopulator.cs
 Assets/Scripts/UI/HUD/LabInventoryStub.cs
 Assets/Scripts/UI/HUD/PlayerContextPopulator.cs
 Assets/Scripts/UI/HUD/PuttPathPredictor.cs
+Assets/Scripts/UI/Hints/Editor/ScreenHintMenu.cs
+Assets/Scripts/UI/Hints/Editor/ScreenHintModalBuilder.cs
+Assets/Scripts/UI/Hints/Editor/ScreenHintVerifyBot.cs
+Assets/Scripts/UI/Hints/ScreenHintCatalog.cs
+Assets/Scripts/UI/Hints/ScreenHintModalController.cs
+Assets/Scripts/UI/Hints/ScreenHintPresenter.cs
+Assets/Scripts/UI/Hints/ScreenHintResolver.cs
+Assets/Scripts/UI/Hints/ScreenHintStore.cs
 Assets/Scripts/UI/HoleData.cs
 Assets/Scripts/UI/HoleDatabase.cs
 Assets/Scripts/UI/HoleDatabaseLoader.cs
@@ -1379,6 +1387,8 @@ Assets/Data/README_HOLES.md.meta
 | ClubContextPopulator | Assets/Scripts/UI/HUD/ClubContextPopulator.cs | Yes |  |
 | LabInventoryStub | Assets/Scripts/UI/HUD/LabInventoryStub.cs | Yes |  |
 | PlayerContextPopulator | Assets/Scripts/UI/HUD/PlayerContextPopulator.cs | Yes |  |
+| ScreenHintVerifyRunner | Assets/Scripts/UI/Hints/Editor/ScreenHintVerifyBot.cs | Yes |  |
+| ScreenHintPresenter | Assets/Scripts/UI/Hints/ScreenHintPresenter.cs | Yes |  |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | Yes |  |
 | SmokeTestMonoBehaviour | Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionSmokeRunner.cs | Yes |  |
 | HoleCardController | Assets/Scripts/UI/HoleSelection/HoleCardController.cs | Yes |  |
@@ -1819,6 +1829,8 @@ Assets/Data/README_HOLES.md.meta
 | VoteCardView | Assets/Scripts/UI/Gps/VoteCardView.cs | 16 |
 | VoteCreateModalController | Assets/Scripts/UI/Gps/VoteCreateModalController.cs | 6 |
 | GraphicsSubmenu | Assets/Scripts/UI/GraphicsSubmenu.cs | 7 |
+| ScreenHintModalController | Assets/Scripts/UI/Hints/ScreenHintModalController.cs | 9 |
+| ScreenHintPresenter | Assets/Scripts/UI/Hints/ScreenHintPresenter.cs | 2 |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | 3 |
 | HoleCardController | Assets/Scripts/UI/HoleSelection/HoleCardController.cs | 28 |
 | HoleProgressionDebug | Assets/Scripts/UI/HoleSelection/HoleProgressionDebug.cs | 1 |

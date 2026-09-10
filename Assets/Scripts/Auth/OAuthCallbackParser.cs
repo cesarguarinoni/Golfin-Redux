@@ -54,11 +54,16 @@ namespace Golfin.Auth
             return new CallbackInfo(type, error, errorCode, desc);
         }
 
-        /// <summary>True when the URL is our app's OAuth redirect (matches the configured scheme/host).</summary>
+        /// <summary>True when the URL is THIS app's OAuth redirect — the configured deep link on this
+        /// app's own scheme (<see cref="SupabaseConfig.OAuthRedirectForThisApp"/>). The game accepts only
+        /// <c>golfin://…</c>, the shell only <c>golfingps://…</c>; neither can receive the other's, because
+        /// neither claims the other's scheme.</summary>
         public static bool IsCallback(string url, SupabaseConfig config)
         {
-            if (string.IsNullOrEmpty(url) || config == null || string.IsNullOrEmpty(config.oauthRedirect)) return false;
-            return url.StartsWith(config.oauthRedirect, StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(url) || config == null) return false;
+            string expected = config.OAuthRedirectForThisApp;
+            if (string.IsNullOrEmpty(expected)) return false;
+            return url.StartsWith(expected, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>Parse using the current time for expiry.</summary>

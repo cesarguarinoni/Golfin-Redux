@@ -37,7 +37,7 @@ namespace Golfin.Auth
             => _runner.StartCoroutine(Post(WithEmailRedirect("/resend"), Json2("type", "signup", "email", email), null, onResult, expectSession: false));
 
         public void RequestPasswordReset(string email, Action<AuthResult> onResult)
-            => _runner.StartCoroutine(Post(AuthRedirectUrl.Append("/recover", _config.passwordResetRedirect), Json1("email", email), null, onResult, expectSession: false));
+            => _runner.StartCoroutine(Post(AuthRedirectUrl.Append("/recover", _config.PasswordResetRedirectForThisApp), Json1("email", email), null, onResult, expectSession: false));
 
         public void UpdateDisplayName(string accessToken, string displayName, Action<AuthResult> onResult)
             => _runner.StartCoroutine(Put("/user", "{\"data\":{\"display_name\":" + Quote(displayName) + "}}", accessToken, onResult));
@@ -65,7 +65,9 @@ namespace Golfin.Auth
         // Without an explicit redirect_to, Supabase falls back to the project Site URL
         // (admin.golfin.world) and the emailed link dead-ends on a Cloudflare Access block page.
         // Spec: Docs/Specs/Active/auth_email_redirect/SPEC.md.
-        private string WithEmailRedirect(string path) => AuthRedirectUrl.Append(path, _config.emailConfirmRedirect);
+        // The *ForThisApp forms carry ?app=<scheme> in the PLAYLIFE shell so the landing page
+        // hops back into the shell, not the game installed beside it (oauth_callback_per_app).
+        private string WithEmailRedirect(string path) => AuthRedirectUrl.Append(path, _config.EmailConfirmRedirectForThisApp);
 
         // ── HTTP ───────────────────────────────────────────────────────────────
         private IEnumerator Post(string path, string body, string bearer, Action<AuthResult> onResult, bool expectSession)

@@ -3,8 +3,10 @@ namespace Golfin.Auth
 {
     /// <summary>
     /// Builds the Supabase Auth (GoTrue) OAuth authorize URL. The app opens this in the system browser;
-    /// after the user signs in with Google/Apple, Supabase redirects back to <c>config.oauthRedirect</c>
-    /// with the session tokens in the URL fragment (parsed by <see cref="OAuthCallbackParser"/>).
+    /// after the user signs in with Google/Apple, Supabase redirects back to
+    /// <see cref="SupabaseConfig.OAuthRedirectForThisApp"/> — the configured deep link on THIS app's
+    /// scheme, so the callback cannot land in the other app installed beside it — with the session
+    /// tokens in the URL fragment (parsed by <see cref="OAuthCallbackParser"/>).
     /// Pure/static so it is unit-testable without a running player.
     /// </summary>
     public static class OAuthUrlBuilder
@@ -15,7 +17,7 @@ namespace Golfin.Auth
         /// <summary>GET {auth}/authorize?provider=&lt;p&gt;&amp;redirect_to=&lt;deep-link&gt;</summary>
         public static string Authorize(SupabaseConfig config, OAuthProvider provider)
         {
-            string redirect = System.Uri.EscapeDataString(config.oauthRedirect ?? "");
+            string redirect = System.Uri.EscapeDataString(config.OAuthRedirectForThisApp ?? "");
             return $"{config.AuthBaseUrl}/authorize?provider={ProviderKey(provider)}&redirect_to={redirect}";
         }
     }

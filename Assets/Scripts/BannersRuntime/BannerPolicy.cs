@@ -10,6 +10,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
+using Golfin.Auth;
 using Golfin.Tournaments;
 using GolfinRedux.UI;
 
@@ -94,17 +95,19 @@ namespace Golfin.Banners
         /// <see cref="TryGetInternalRoute"/> or it is refused, exactly as a host is.
         /// </para>
         /// </summary>
-        public const string InternalScheme = "golfin";
+        public const string InternalScheme = AppDeepLink.GameScheme;
 
         /// <summary>
-        /// gps_standalone_shell §D1/§D6 — the PLAYLIFE shell's own scheme, registered beside
-        /// <see cref="InternalScheme"/> in <c>iOSURLSchemes</c>.
+        /// gps_standalone_shell §D1/§D6 — the PLAYLIFE shell's own scheme, the ONLY one its
+        /// Info.plist claims (the game's claims only <see cref="InternalScheme"/>).
         ///
         /// <para>
         /// It exists because the shell is a SEPARATE app record (<c>com.nextinnovation.golfingps</c>)
         /// installed BESIDE the game on the same phone. iOS resolves a custom scheme to whichever
         /// app claims it, and with both installed, two apps claiming <c>golfin://</c> is undefined —
-        /// so the shell claims its own and the game keeps the one it has always had.
+        /// so the shell claims its own and the game keeps the one it has always had. The strings
+        /// live on <see cref="AppDeepLink"/>, which also decides which scheme the OAuth callback and
+        /// the confirm-email hop come back on; they are aliased here so the two cannot drift.
         /// </para>
         /// <para>
         /// BOTH are accepted HERE, in BOTH variants, on purpose: banner rows are written once in
@@ -113,7 +116,7 @@ namespace Golfin.Banners
         /// scheme decides which app OPENS; the route it names is the same surface either way.
         /// </para>
         /// </summary>
-        public const string StandaloneScheme = "golfingps";
+        public const string StandaloneScheme = AppDeepLink.StandaloneScheme;
 
         /// <summary>
         /// <c>golfin://gps</c> (and <c>golfingps://gps</c>) → <see cref="ScreenId.GpsHub"/>. The

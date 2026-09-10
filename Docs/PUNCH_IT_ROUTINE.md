@@ -29,6 +29,12 @@ product name `GOLFIN GPS`, version `1.0.0`, icon, the `golfingps://` URL scheme)
 build time by `StandaloneBuildPreprocessor` and **restored afterwards** — `ProjectSettings.asset`
 is byte-identical before and after, exactly like the build-number stamp.
 
+**Each app claims ONLY its own URL scheme** (`golfin://` the game, `golfingps://` the shell —
+`oauth_callback_per_app`, 2026-09-11). iOS hands a custom-scheme URL to whichever installed app
+claims it, so a shell that also claimed `golfin://` received the GAME's Google/Apple sign-in
+callback and signed itself in. The shell's runtime asks Supabase for `golfingps://auth-callback`
+(`AppDeepLink`), which must be on the Supabase redirect allow-list before a standalone build ships.
+
 ### Shipping several variants of the same commit
 
 App Store Connect requires the build number unique **per app**, and the build number is the commit

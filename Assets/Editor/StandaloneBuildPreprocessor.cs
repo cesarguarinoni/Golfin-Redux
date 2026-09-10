@@ -65,9 +65,25 @@ namespace Golfin.EditorTools
         public const string ProductName = "GOLFIN GPS";
         /// <summary>Must exceed the record's last shipped 0.7.6; the game keeps its own 1.5.7.</summary>
         public const string Version     = "1.0.0";
-        /// <summary>Claimed BESIDE the game's <c>golfin</c>, because both apps can be installed
-        /// on one phone and two apps claiming one scheme is undefined behaviour on iOS.</summary>
+        /// <summary>
+        /// The ONLY scheme the shell claims. Both apps can be installed on one phone, and iOS hands
+        /// a custom-scheme URL to whichever app claims it — two apps claiming one scheme is
+        /// undefined, in practice "the most recently installed". The first cut of this file ADDED
+        /// this scheme to the game's list, so the shell's Info.plist claimed <c>golfin</c> as well,
+        /// and every <c>golfin://auth-callback</c> Supabase sent — the game's own Google sign-in —
+        /// opened the GPS app instead (reported 2026-09-11; the game could not be logged into until
+        /// the shell was deleted). <see cref="StandaloneUrlSchemes"/> is therefore this scheme
+        /// INSTEAD OF the game's, not beside it.
+        ///
+        /// <para>Must equal <c>Golfin.Auth.AppDeepLink.StandaloneScheme</c>, the scheme the shell's
+        /// runtime asks Supabase to redirect to and accepts back. A copy, because an editor script
+        /// cannot read a player define (see HOW IT KNOWS above); <c>StandaloneUrlSchemeTests</c>
+        /// pins them together.</para>
+        /// </summary>
         public const string UrlScheme   = "golfingps";
+
+        /// <summary>What lands in the shell's Info.plist <c>CFBundleURLSchemes</c>: exactly one entry.</summary>
+        public static string[] StandaloneUrlSchemes => new[] { UrlScheme };
 
         /// <summary>
         /// R1 (round 2) — Cesar's icon: green gradient, white map pin with a golf ball on a tee.
@@ -113,7 +129,7 @@ namespace Golfin.EditorTools
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, BundleId);
             PlayerSettings.productName  = ProductName;
             PlayerSettings.bundleVersion = Version;
-            PlayerSettings.iOS.iOSUrlSchemes = WithScheme(_prevUrlSchemes, UrlScheme);
+            PlayerSettings.iOS.iOSUrlSchemes = StandaloneUrlSchemes;
             ApplyIcon();
 
             Debug.Log($"{Tag} applied — bundleId={BundleId} productName=\"{ProductName}\" " +
@@ -162,15 +178,6 @@ namespace Golfin.EditorTools
                 Debug.LogError($"{Tag} COULD NOT RESTORE identity ({e.GetType().Name}: {e.Message}). " +
                                $"Check ProjectSettings.asset before the next store build.");
             }
-        }
-
-        /// <summary>The scheme list with <paramref name="scheme"/> present exactly once.</summary>
-        internal static string[] WithScheme(string[] existing, string scheme)
-        {
-            var list = new List<string>(existing ?? Array.Empty<string>());
-            if (!list.Any(s => string.Equals(s, scheme, StringComparison.OrdinalIgnoreCase)))
-                list.Add(scheme);
-            return list.ToArray();
         }
 
         /// <summary>

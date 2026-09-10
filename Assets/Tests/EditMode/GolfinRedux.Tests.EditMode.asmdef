@@ -8,7 +8,8 @@
         "Golfin.Save",
         "Golfin.InventorySync",
         "Golfin.Economy",
-        "Golfin.Localization"
+        "Golfin.Localization",
+        "Golfin.Auth"
     ],
     "includePlatforms": [
         "Editor"

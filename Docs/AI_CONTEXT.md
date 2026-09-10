@@ -4,6 +4,31 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-11 — oauth_callback_per_app: **the Google/Apple sign-in landed in the OTHER app** — FIXED, one Cesar step gates the shell
+
+Reported from a phone with both the game and the GPS shell installed: logging into the game with
+Google went to the GPS app; the game could not be logged into until the shell was deleted.
+
+**Cause: the shell claimed the game's URL scheme.** `StandaloneBuildPreprocessor` ADDED `golfingps`
+to the game's `[golfin]` list ("registered beside", `gps_standalone_shell` §D6), so both apps
+claimed `golfin://`, both asked Supabase for `golfin://auth-callback`, and iOS handed the game's
+callback to the shell — whose `AuthService` accepted it and signed itself in while the game's 8 s
+watchdog timed out. The confirm-email landing page had the same hard-coded hop.
+
+**Fix (Quick spec `Docs/Specs/Quick/oauth_callback_per_app.md`):** each app claims ONLY its own
+scheme and every redirect it asks for comes back on it. `Golfin.Auth.AppDeepLink.Scheme` is the
+one define-keyed constant (`golfin` | `golfingps`); `SupabaseConfig.*ForThisApp` derive the three
+redirects from the authored fields (the game's values stay byte-identical); the preprocessor stamps
+`[golfingps]` alone (verified in-editor, `ProjectSettings.asset` byte-identical after restore);
+`confirm.golfin.world` reads `?app=golfingps` fail-closed — **deployed**, version `ed016f49`.
+`AppDeepLinkTests` + `StandaloneUrlSchemeTests` pin the plist scheme to the runtime scheme.
+Auth 52/52, EditMode 339/339, WireupTests 253/253.
+
+**Gate for Cesar:** `golfingps://auth-callback` must be added to the Supabase redirect allow-list
+BEFORE the next `punch it standalone`, or the shell's OAuth falls back to the Site URL. Then ship
+both apps — a stale shell on the phone still claims `golfin`. Lesson BX.
+
+---
 ## 2026-09-10 — map view: **the club button the map hides behind was never re-wired** — SHIPPED, one cause still open
 
 Reported from real play under Pendulum: entering map view showed a correctly framed top-down hole

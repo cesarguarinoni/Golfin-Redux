@@ -4320,3 +4320,33 @@ is all a bug report has.
 **Sister rules.** Lesson on deriving from the primary source rather than confirming the artifact
 that asserts it, and the standing rule that a real number off the wrong property is not evidence —
 this is the same failure one level up: a real mechanism, just not the one that fired.
+
+## Lesson BX — "registered BESIDE" is how two apps end up claiming one URL scheme (2026-09-11, `oauth_callback_per_app`)
+
+`gps_standalone_shell` §D6 decided the shell's scheme would be `golfingps://`, "registered beside
+`golfin://` in `iOSURLSchemes`", and `StandaloneBuildPreprocessor` did exactly that —
+`WithScheme(existing, "golfingps")` **added** the new scheme to the game's list. The shell's
+Info.plist therefore claimed `golfin` too, and the comment right above it said the opposite
+("two apps claiming one scheme is undefined behaviour on iOS"). Both apps asked Supabase for
+`golfin://auth-callback`; with both installed, a Google sign-in started in the game opened the
+shell, which parsed the tokens and signed itself in while the game's watchdog reported
+"Sign-in didn't complete". Cesar could not log into the game until he deleted the GPS app.
+
+**The shape.** One string — "which scheme does THIS binary own" — had three copies (the plist
+stamp, `SupabaseConfig.oauthRedirect`, the confirm-page hop) in three assemblies/repos, and the
+spec's word for the relationship ("beside") was ambiguous enough that the code chose the wrong
+reading. The PLIST list for a second app record must **replace** the first app's, never extend it,
+and every redirect the binary asks for must come back on that one scheme.
+
+**The rule.**
+1. A second app record gets its **own** scheme list; `iOSUrlSchemes = new[] { itsScheme }`. If a
+   design note says "beside", read it as "instead of" and say so in the code.
+2. Anything that names the scheme at runtime derives it from ONE define-keyed constant
+   (`AppDeepLink.Scheme`, the `AppVariantInfo` pattern), and the editor-side copy is pinned to it
+   by a test (`StandaloneUrlSchemeTests`) because an editor script cannot read a player define.
+3. A page that forwards auth tokens to a deep link picks the scheme from an **allow-list**
+   (`?app=golfingps` or nothing), never from the query string verbatim.
+4. The Supabase redirect allow-list is a **prerequisite** of shipping, not a follow-up: a
+   `redirect_to` that is not listed is silently replaced by the Site URL (the `auth_email_redirect`
+   ordering trap), so a fixed client shipped first turns "steals the other app's login" into
+   "has no login".

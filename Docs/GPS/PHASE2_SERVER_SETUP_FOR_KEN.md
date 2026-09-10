@@ -122,6 +122,11 @@ For the phone to come back into the game after Google/Apple sign-in, we'll give 
 **Authentication → URL Configuration → Redirect URLs**. Cesar will send you the exact text when the
 game side is ready.
 
+> **Update 2026-09-11:** there are now TWO apps and each has its own return address — both must be
+> on the list: `golfin://auth-callback` (the GOLFIN game) and `golfingps://auth-callback` (the
+> GOLFIN GPS app). The confirmation-email page needs `https://confirm.golfin.world/**` (already
+> requested in `auth_email_redirect`).
+
 ---
 
 ## What NOT to send / do

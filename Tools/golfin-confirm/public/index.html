@@ -57,19 +57,39 @@
 <script>
   (function () {
     var params = new URLSearchParams(window.location.search);
+
+    // Which app sent the email. Two apps install beside each other on one phone — the game
+    // (golfin://) and the GOLFIN GPS shell (golfingps://) — and iOS hands a custom-scheme URL to
+    // whichever app claims it, so the hop back has to name the app that started the flow. The
+    // shell's client tags its redirect_to with ?app=golfingps (Golfin.Auth.AppDeepLink); the game
+    // sends no tag. Fail-closed: anything that is not the shell's scheme is the game — this page
+    // forwards auth tokens, so it never deep-links to a scheme a query string made up.
+    var scheme = params.get("app") === "golfingps" ? "golfingps" : "golfin";
+    var appName = scheme === "golfingps" ? "GOLFIN GPS" : "GOLFIN";
+    var callback = scheme + "://auth-callback";
+
+    var btn = document.getElementById("open-btn");
+    if (scheme === "golfingps") {
+      // The game's markup and copy stay exactly as they were; only the shell rewrites them.
+      document.getElementById("msg-en").textContent = "Your GOLFIN account is ready. Return to GOLFIN GPS to continue.";
+      document.getElementById("msg-ja").textContent = "GOLFINアカウントの準備ができました。GOLFIN GPSに戻って続けましょう。";
+      btn.textContent = "Open GOLFIN GPS｜アプリを開く";
+      btn.setAttribute("href", callback);
+    }
     // Password-recovery variant: swap the copy, keep the same deep link.
     if (params.get("type") === "recovery") {
       document.getElementById("title-en").textContent = "Password reset link verified";
-      document.getElementById("msg-en").textContent = "Return to GOLFIN to set your new password.";
+      document.getElementById("msg-en").textContent = "Return to " + appName + " to set your new password.";
       document.getElementById("title-ja").textContent = "パスワード再設定リンクを確認しました";
-      document.getElementById("msg-ja").textContent = "GOLFINに戻って新しいパスワードを設定してください。";
+      document.getElementById("msg-ja").textContent = appName + "に戻って新しいパスワードを設定してください。";
     }
+
     var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (isMobile) {
       // Best-effort auto-open; the button stays as manual fallback.
       // Forward the auth fragment (tokens arrive in location.hash after Supabase verify).
-      var target = "golfin://auth-callback" + (window.location.hash || "");
-      document.getElementById("open-btn").setAttribute("href", target);
+      var target = callback + (window.location.hash || "");
+      btn.setAttribute("href", target);
       setTimeout(function () { window.location.href = target; }, 600);
     } else {
       document.getElementById("desktop-note").style.display = "block";
