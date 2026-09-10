@@ -56,7 +56,7 @@ line should name it outright. Needs a device repro with a console attached.
 Commits: `14933ac8f` (the button), `27213e6fc` (the camera guard).
 
 ---
-## 2026-09-10 — loans_ops: **manage loans from the admin, and see whether lending is used** — READY_FOR_SELF_REVIEW (migration waiting on Cesar)
+## 2026-09-10 — loans_ops: **manage loans from the admin, and see whether lending is used** — **DONE** (self-review → reviewer → red-team PASS, Cesar approved 2026-09-10)
 
 The ops half of the loan system. A **Loans panel** cloned from the Gacha ops panel (status chips /
 kind / free-text / date, a paged log, Export CSV of the filtered set, a row expanding to its
@@ -107,7 +107,28 @@ rows. All six refusals hit at the SQL layer: `not_found`, `note_required`, `admi
 `not_active`, `not_offered`, `bad_action`. Production still holds **zero** real loans, so the
 panel is correct and empty until someone lends something.
 
-Tests: dashboard **293 → 305**, backend **315 → 319**. 141 new DICT keys, all EN + JA.
+**Four defects of ONE shape surfaced across three iterations** — a loan status classified by an
+incomplete list. `medianHoursToAnswer` counted `rescinded`, whose `answered_at` is the LENDER
+withdrawing. A lapsed-but-unswept `offered` row matched none of the drawer's three borrower lists
+and rendered in no section at all. `clockLine`'s `default` arm labelled a rescind and a 48 h lapse
+as the recipient having "answered" — on the panel whose job is explaining why an offer disappeared,
+and visible in screenshots that were read without being seen. And each shipped under a comment
+asserting the opposite of what the code did.
+
+The gates caught two, the implementer caught one while writing the brief for the next reviewer
+(PIPELINE_HARDENING § 22's corollary earning its keep), and red-team caught the fourth. They stopped
+recurring only when the SHAPE was fixed rather than the instances: **every judgement about a loan's
+status or its clocks now lives in `lib/loanStatus.ts`**, whose header names all four, and whose
+tests iterate an exported `ALL_LOAN_STATUSES` rather than sampling — so a status added later fails
+the suite instead of landing in a `default`. Restoring any of the old versions turns four tests red.
+
+**A deploy-verification lesson too:** the sidebar footer stamp is a CACHED page and showed the
+previous commit twice after shipping, once even through a `?cachebust=`. Browse to `/api/version`
+instead — it is `force-dynamic` and uncached. The § 23 memory is corrected.
+
+Tests: dashboard **293 → 324** (14 files), backend **315 → 319**. 146 loans-scoped DICT keys, all
+EN + JA. Deployed: API v73 → v74; dashboard Cloudflare `21888241-b1b3-4589-a3e4-9fd280cee1b8`,
+`/api/version` = `cfab3a9cf`.
 
 ---
 ## 2026-09-10 — screen_hints: **the Loading tips open as a modal on the first entry into each screen** — **DONE** (self-review → reviewer → red-team PASS, Cesar approved 2026-09-10)
