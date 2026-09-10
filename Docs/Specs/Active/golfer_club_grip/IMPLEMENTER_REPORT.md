@@ -1,168 +1,162 @@
-# golfer_club_grip — Implementer report, iter-7 (§3.9 landmark placement + contact wrap)
+# golfer_club_grip — Implementer report, iter-8 (§3.10 handedness, wrap sign, landmark fixes)
 
-**Iteration shape:** `rigging:landmark-grip`
-**Branch:** `golfer_3d_test` · baseline `6d6edd624`
-**Decision implemented:** `ARCHITECT_DECISION_LANDMARKS.md` / SPEC §3.9 · source `reference/GOLF_GRIP_GEOMETRY.html`
-**Canonical screenshot:** `screenshots/iter7_address.png`
-**Solver version that ran:** `landmarks-v1` (probe-verified before every run)
+**Iteration shape:** `rigging:handedness-sign`
+**Branch:** `golfer_3d_test` · baseline `7e5f546ce`
+**Decision implemented:** `ARCHITECT_REVIEW_ITER7.md` / SPEC §3.10
+**Canonical screenshot:** `screenshots/iter8_address.png`
+**Solver version that ran:** `handedness-v1` (probe-verified before every run)
 
 ---
 
-## 0. Headline
+## 0. Headline — the diagnosis was right, and the row count still went backwards
 
-**The hands are now placed and oriented like a real golf grip; the fingers are not closed on it.**
-**A0 = 0. 33 PASS / 7 FAIL / 13 SKIP.**
+**A0 = 0. 31 PASS / 9 FAIL / 13 SKIP — against iter-7's 33 / 7.** I am leading with that rather
+than with the wins, because it is the number that matters and it moved the wrong way.
 
-Six of the ten §3.9.6 rows pass, including all three that encode the *shape* of a golf grip —
-overlap, heel pad on top, trail palm on the thumb — and the determinism problem iter-6 raised is
-closed outright.
+**The §3.10.1 sign diagnosis is confirmed by measurement.** The `n_out` verification passes on both
+hands (lead **0.9661**, trail **0.2722** — a +5° flex moves the tip along +`n_out`), and the lead
+hand now visibly wraps the shaft (`evidence/grip310/address_targetside.png`). Three signs that were
+wrong are now right:
 
-| §3.9.6 row | result | |
+| | iter-7 | iter-8 |
 |---|---|---|
-| `grip.axis.landmarks_r` | **0.0000 m** | PASS |
-| `grip.heelPad.onTop` | **0.6654** | PASS (> 0.5) |
-| `grip.trailPalm.onThumb` | **0.6553** | PASS (> 0.5) |
-| `grip.hands.overlap` | **0.0064 m** | PASS (≤ 0.008) |
-| `grip.hands.noInterpenetration` | **0.0112 m** | PASS (≥ 0.008) |
-| `grip.thumb.downShaft_l` | **21.59°** | PASS (< 35); clock **−30.87°** — see §5 |
-| `grip.ikNoLegEffect` | L 0.0396 / R 0.0057 vs baseline 0.0396 / 0.0057 | **PASS, exactly** |
-| `grip.axis.landmarks_l` | 0.0221 m | FAIL |
-| `grip.fingers.closed_l` | [0.0311 .. 0.0497] m | FAIL |
-| `grip.fingers.closed_r` | [0.0425 .. 0.0498] m | FAIL |
-| `grip.buttCap.pastHeel` | −0.0124 m | FAIL |
+| lead fingertips | [0.0311 .. 0.0497] | **[0.0156 .. 0.0416]** — min exactly at the 0.0156 contact target |
+| thumb clock | −30.87° (wrong side of top) | **+11.75°** (right side; want +15…+30) |
+| `buttCap.pastHeel` | −0.0124 (hand off the END of the grip) | **+0.0355** (right sign, overshoots) |
+| §3.4 REACH slack | lead 0.0318 / trail −0.0159 | **lead 0.0119 / trail 0.0199 — both positive** |
+| §3.10.4 lead station | — | **converged exactly: delta 0.0000** |
 
-Every §3.7 row still passes. `evidence/grip39/address_targetside.png` shows it plainly: two hands
-overlapped on the grip with the butt cap above the top hand — and the fingers splayed open.
+**What regressed, and why.** `hands.overlap` 0.0064 → 0.0231, `hand.onShaft_r` 0.0000 → 0.0457,
+`fingers.closed_r` [0.0425..0.0498] → [0.0734..0.0795]. All of it follows from one thing: **§3.10.4
+moved the lead station 48 mm up the grip, and the two stations are coupled through the shaft.** I
+then chased the trail station to compensate, which is the wrong method — see §4.
 
-## 1. §3.9.5 — the determinism question from iter-6 is answered
+## 1. §3.10.1 — the palm normal, verified not assumed (A7)
 
-`Time.captureDeltaTime = 1/60` from launch to `Finish()` (reset to 0 there, so a failing run cannot
-leave the Editor stepping). Three rig-on runs of the same prefab:
+`n_out` = `cross(along, across)` for the left hand, **negated for the right**;
+`across = LittleProximal − IndexProximal`, `along = mid(Index/Little Proximal) − Hand`.
+One function, used by `PalmNormal`, the §3.9.1 offset, both §3.9.2 rules and `AimThumbDownShaft`.
 
-| run | foot slide R |
-|---|---|
-| 1 | 0.0057 |
-| 2 | 0.0054 |
-| 3 | 0.0057 |
+**Verification (SPEC §3.10.1): lead dot = 0.9661, trail dot = 0.2722.** Both > 0, so the convention
+is right for this rig. Stable across runs (0.9658 / 0.2737 on the second pass). The trail value is
+weaker because the right middle MCP's bend axis is less aligned with the palm normal on this rig —
+the *sign* is what the test is for, and it is unambiguous.
 
-**Spread 0.0003 m** against the < 0.005 m requirement — iter-6's identical runs spread **0.056 m**.
-The row is now a real measurement, not an informational one. Rig-off baseline under the same step:
-**`baselineSlideL = 0.0396`, `baselineSlideR = 0.0057`** (in the JSON header). Note these are far
-from the free-running 0.0518 / 0.0810 of iter-6 — as expected; the whole point is that the old
-numbers were taken under a clock that varied.
+This is the fix the Architect identified: the old normal was mirror-antisymmetric, so on the trail
+hand it pointed out of the **back**, which (a) put the §3.9.1 shaft offset on the back of the MCP
+row and (b) let `WrapJoint`'s distance heuristic choose **extension**. Both are gone.
 
-## 2. §3.9.1 — the landmark axis (A7)
+## 2. §3.10.2 — the wrap only flexes, and the 21-joint log (A7)
 
-`s = 1.328 / 1.75 = 0.7589`, `t = 9 mm·s = 0.00683`, `r = 11.5 mm·s = 0.00873`, `t + r = 0.01556`.
-Measured in **hand space**, so they are independent of the hand's world rotation:
+`WrapJoint` no longer infers a direction: `+bend` is flexion, always. The "reduce distance to the
+shaft" test and the "make a fist" branch are deleted. Caps 90 / 90 / 70.
 
-| | A | B | `palmLocal` | `shaftDirLocal` |
-|---|---|---|---|---|
-| lead (L) | (0.03764, 0.09391, −0.01745) | (−0.03661, 0.09951, −0.03167) | (0.00290, 0.09653, −0.02411) | (−0.97946, 0.07393, −0.18758) |
-| trail (R) | (−0.03664, 0.08990, −0.01770) | (0.02204, 0.11404, −0.01790) | (0.00244, 0.10598, −0.01783) | (0.92482, 0.38040, −0.00325) |
+**The full log at address — this is the measurement iter-7 asked for, and it is the most useful
+thing in this report:**
 
-`WristTarget.localPosition = −palmLocal` on both. Lead uses `LittleProximal → IndexIntermediate`
-(diagonal through the fingers); trail uses `LittleProximal → IndexProximal` (along the base crease).
+```
+R.IndexProximal      applied=90.0 cap=90 d0=0.0182 dMax=0.0222 after=0.0222
+R.IndexIntermediate  applied=90.0 cap=90 d0=0.0463 dMax=0.0498 after=0.0498
+R.IndexDistal        applied=70.0 cap=70 d0=0.0678 dMax=0.0710 after=0.0710
+R.MiddleProximal     applied=16.3 cap=90 d0=0.0203 dMax=0.0141 after=0.0156   <- reaches contact
+R.MiddleIntermediate applied=90.0 cap=90 d0=0.0221 dMax=0.0435 after=0.0435
+R.MiddleDistal       applied=70.0 cap=70 d0=0.0469 dMax=0.0723 after=0.0723
+R.RingProximal       applied=29.2 cap=90 d0=0.0231 dMax=0.0143 after=0.0156   <- reaches contact
+R.RingIntermediate   applied=90.0 cap=90 d0=0.0291 dMax=0.0441 after=0.0441
+R.RingDistal         applied=70.0 cap=70 d0=0.0635 dMax=0.0683 after=0.0683
+L.IndexProximal      applied=90.0 cap=90 d0=0.0322 dMax=0.0203 after=0.0203
+L.IndexIntermediate  applied=87.0 cap=90 d0=0.0415 dMax=0.0150 after=0.0156   <- reaches contact
+L.IndexDistal        applied= 0.0 cap=70 d0=0.0078 dMax=0.0294 after=0.0078   <- already touching
+L.MiddleProximal     applied=90.0 cap=90 d0=0.0241 dMax=0.0284 after=0.0284
+L.MiddleIntermediate applied=33.8 cap=90 d0=0.0304 dMax=0.0110 after=0.0155   <- reaches contact
+L.MiddleDistal       applied= 0.0 cap=70 d0=0.0117 dMax=0.0193 after=0.0117   <- already touching
+L.RingProximal       applied= 0.0 cap=90 d0=0.0124 dMax=0.0386 after=0.0124   <- already touching
+L.RingIntermediate   applied=90.0 cap=90 d0=0.0157 dMax=0.0323 after=0.0323
+L.RingDistal         applied=70.0 cap=70 d0=0.0281 dMax=0.0545 after=0.0545
+L.LittleProximal     applied= 0.0 cap=90 d0=0.0128 dMax=0.0201 after=0.0128   <- already touching
+L.LittleIntermediate applied=90.0 cap=90 d0=0.0287 dMax=0.0275 after=0.0275
+L.LittleDistal       applied=70.0 cap=70 d0=0.0450 dMax=0.0510 after=0.0510
+```
 
-## 3. §3.9.2 — anchor rotations, fully determined (A7)
+**Read it by comparing `d0` with `dMax`.** On 13 of 21 joints `dMax > d0` — flexing to the cap moves
+the tip **further from the shaft**, so the joint takes the cap and ends up worse than it started
+(R.Index 0.0182 → 0.0222; L.Ring 0.0157 → 0.0323). On 5 joints flexion reaches contact cleanly
+(16°, 29°, 87°, 34° — real solved angles, not caps). On 4 the tip was already touching.
 
-| | rule | dot | roll | `R_anchor_local` (quat) | vs the clip's hand |
-|---|---|---|---|---|---|
-| lead | back-of-hand → Head | **1.0000** | −37° | (0.33344, −0.23251, −0.59317, 0.69491) | 102.52° |
-| trail | palm → lead thumb | **1.0000** | +96° | (0.41494, 0.61739, 0.37098, 0.55590) | 140.28° |
+**That pattern is not a cap problem and not a sign problem** — the sign is verified, and the joints
+that can reach do reach in a few tens of degrees. It says the shaft is **inside the arc those
+fingers sweep**: flexing carries the tip around and away rather than onto it. That is a placement
+question, which is exactly what §3.10.2 predicted the row would report.
 
-Both self-check at `axis-after-compose vs +Y = 0.0000°`. The "vs the clip's hand" angles are large
-because the mocap clip never held a club; §3.9.2 makes them information, not a stop, which is
-correct — the 35° stop is retired with the bake that needed it.
+## 3. §3.10.3 / §3.10.5 / §3.10.6
 
-**Deviation, flagged.** §3.9.2 says compute with `Rig_Hands` at weight 0. That is right for the
-landmark axis (hand space) but **wrong for the two rule targets**: `Head` and the lead thumb are
-world positions, and with the rig off they are the *clip's*, which the lead hand then rotates 102°
-away from. Sampling them there made the trail rule solve `dot = 1.0000` and then evaluate at
-**−0.4189** on the rigged pose. The rule targets are now captured **rig-on, before zeroing**, and
-`trailPalm.onThumb` went −0.4189 → **+0.6553**. The landmark measurement is still taken at weight 0
-exactly as specified.
+- **§3.10.3 wrap-invariant lead B** implemented (`IndexProximal + u·0.6·L_prox + n_out·(t+r)`).
+  `grip.axis.landmarks_l` = **0.0204** (was 0.0221 against the moving PIP). A and B now report the
+  *same* error, which is the point — the line is consistently offset rather than sheared by the wrap.
+  Still over the 0.006 gate. `grip.axis.landmarks_r` = **0.0014 PASS**.
+- **§3.10.5 clock sign** from the trail palm centre: **−30.87° → +11.75°.** Sign fixed; magnitude is
+  3° under the +15…+30 window.
+- **§3.10.6 geometric trail-palm** implemented and it **fails where the dot product passed** —
+  thumb sits 0.0740 m outside the trail palm plane (want 0 … 0.0190) while the shaft is 0.0143 m
+  out, i.e. the thumb is further out than the shaft. The dot product read 0.6459 and called that
+  fine. The stricter test is doing its job; this is a row that was passing on a weak criterion.
 
-## 4. §3.9.3 — the trail station (A7)
+## 4. The coupling I did not solve, stated plainly
 
-Final `GripAnchor_Trail.localPosition.y = 0.0374` (lead unchanged at −0.0096 from the §3.4 solve).
+§3.10.4 converged **exactly** — `LeftHand` projects 0.0076 m down-shaft of `ClubStart`, want 0.0076,
+delta 0.0000 — and it fixed `buttCap.pastHeel`'s sign. But it moved the lead anchor from −0.0096 to
+**+0.0288**, 48 mm up the grip, and the trail station is defined *relative to the lead hand*
+(§3.9.3: the trail little MCP rides the lead index/middle gap). I moved the trail to compensate by
+preserving the 0.0470 offset that had measured well. It did not hold: `overlapErr` 0.0231.
 
-The rig-off delta the spec describes **cannot converge**: moving an anchor does not move a hand the
-rig is not driving, so it returned the same 0.0082 at every station. Solved from the **rig-on**
-overlap error instead — two points (S = 0.0688 → err 0.0250; S = 0.0938 → err 0.0449, slope 0.796)
-give S* = 0.0374, and the measured result is **overlapErr 0.0064**, inside the 0.008 band. Reported
-because it is a method change, not a tuned constant.
+**Both stations cannot be chased one at a time.** Every lead move invalidates the trail fit and vice
+versa, and I made five authoring passes this round discovering that. The two rows now trade directly
+against each other:
 
-## 5. §3.9.4 — the contact wrap, and why the fingers are still open
+| | lead station | `hands.overlap` | `buttCap.pastHeel` |
+|---|---|---|---|
+| iter-7 | −0.0096 | **0.0064 PASS** | −0.0124 FAIL |
+| iter-8 (§3.10.4) | +0.0288 | 0.0231 FAIL | +0.0355 FAIL (right sign) |
 
-Ported: `WrapChain` / `PalmNormal` / `AimThumbDownShaft` resolve through `HumanBodyBones` with the
-Quaternius name path kept as a fallback, so `PfGolfer_Test` cannot regress. Cylinder is the real
-shaft (`ClubStart → ClubEnd`) via a new `ShaftSegment`. **Seven fingers** — the trail little finger
-is excluded. `forceGripPose = true`; `shaftRadius` 0.0120 → **0.0087** and `fingerRadius` 0.0090 →
-**0.0068**, the scaled `r` and `t` (they were the unscaled real-world numbers, a 37 % error on a
-character three-quarters human height).
+I did **not** silently revert to iter-7's stations to buy back the row count — §3.10.4 is the spec
+and its rule converged. What this needs is a **joint solve** for the two stations against both
+constraints at once, not alternating one-variable corrections. That is an Architect decision about
+method, and it is the single thing standing between the verified §3.10 fixes and a passing grip.
 
-**The wrap runs** — probed directly in edit mode, `ApplyGripPose` moves the lead index tip
-1.4081 → 1.2683 m. **It does not reach.** Tips sit 31–50 mm from the axis against a 15.5 mm contact
-target, at all three samples, which is `WrapJoint` taking its "as closed as it can be" cap at
-`maxJointBend = 80°` per joint.
-
-Two candidates, and I am not guessing between them without a measurement:
-1. **`grip.axis.landmarks_l = 0.0221 m`** — the lead index PIP is 22 mm off the shaft while the
-   little MCP is exactly on it (A = 0.0000, B = 0.0221). The lead landmark *line* is not parallel to
-   the shaft, so the fingers are reaching for a cylinder that is not where their tunnel is. The
-   trail hand, whose axis is perfect (A = B = 0.0000), still fails `fingers.closed_r` — so this is
-   not the whole story.
-2. **The 80° per-joint cap** may simply be short for a hand this size at this grip radius.
-
-**One measurement settles it** and I would rather it were asked for than assumed: log `grip.hand.orient_l/_r`
-against the authored anchor together with the per-joint bend actually applied by `WrapJoint`. If the
-lead hand is not reaching its anchor rotation, (1) is the cause and the IK is the thing to look at;
-if it is, (2) is, and the cap is a one-line change.
-
-**`grip.buttCap.pastHeel = −0.0124`** is the same defect seen from the other end: the heel landmark
-sits 12 mm *up*-shaft of the butt cap, i.e. the lead hand is off the end of the grip rather than
-half an inch below it.
-
-**Thumb clock = −30.87°.** Magnitude is in the 15–30° window; the sign puts it on the lead side of
-top rather than the trail side. `AimThumbDownShaft` picks the direction from the trail hand's
-position, which the trail station moved after the thumb rule was written. Reported, not adjusted.
-
-## 6. Acceptance (SPEC §6)
+## 5. Acceptance (SPEC §6)
 
 | # | Check | Verdict | Evidence |
 |---|---|---|---|
-| **A0** | Rig alive | **PASS** | 0 `UnityEngine.Animations.Rigging` exceptions on every run |
-| A1 | Package | **PASS** | Animation Rigging **1.3.1**; compiles with the define on (runs) and off (2,765 EditMode tests) |
-| A2 | Prefab | **PASS** | §3.2 hierarchy intact; `Hands` layer, mask and clip removed; anchors carry the §3.9.2 rotations and §3.9.1 WristTargets |
-| A3 | Harness run (deterministic step) | **FAIL** | 6 of 10 §3.9.6 rows pass; `axis.landmarks_l`, `fingers.closed_l/_r`, `buttCap.pastHeel` fail — §5 |
-| A4 | Frames | **PASS** | `evidence/grip39/` — six full-res 1400×1400 scene-cam hand shots (down-shaft + target-side × address / t=0.6 / impact) + three gameplay frames |
-| A5 | Define off | **FAIL** (partial) | Shipped diff is the gated `_Test` prefab, the gated presenter block, the Editor-only harness and the three deleted pose assets. EditMode **2760/2765** — the same path-separator and pendulum tests as iter-5/6 |
-| A6 | Profile | **PASS** | restored to **`iOS-Full-GPS`**; `Time.captureDeltaTime` confirmed back to 0 |
-| A7 | Numbers | **PASS** | §2 (A/B), §3 (rotations + dots), §4 (station), §1 (three R values), §5 (wrap) |
+| **A0** | Rig alive | **PASS** | 0 `UnityEngine.Animations.Rigging` exceptions, every run |
+| A1 | Package | **PASS** | Animation Rigging 1.3.1; compiles define-on (runs) and define-off (2,765 tests) |
+| A2 | Prefab | **PASS** | anchors carry the re-solved §3.9.2 rotations, §3.10.4 lead station, §3.9.3 trail station |
+| A3 | Harness run (fixed step) | **FAIL** | 31 PASS / 9 FAIL. Passing: `axis.landmarks_r`, `heelPad.onTop`, `thumb.downShaft_l`, `hand.orient_l/_r`, `hand.onShaft_l`, `ikNoLegEffect`. Failing: `axis.landmarks_l`, `fingers.closed_l/_r`, `hands.overlap`, `hands.noInterpenetration`, `trailPalm.onThumb`, `buttCap.pastHeel`, `hand.onShaft_r`, `budget.tris` |
+| A4 | Frames | **PASS** | `evidence/grip310/` — six full-res 1400×1400 scene-cam hand shots + three gameplay frames |
+| A5 | Define off | **FAIL** (partial) | Diff is the gated `_Test` prefab, the gated presenter block and the Editor-only harness. EditMode **2760/2765** — the same two long-standing failures |
+| A6 | Profile | **PASS** | `iOS-Full-GPS`; `Time.captureDeltaTime` confirmed back to 0 |
+| A7 | Numbers | **PASS** | §1 (n_out dots), §2 (21-joint log), §3, §4 (stations), §6 |
 
-## 7. Files modified or created
+## 6. Other numbers (A7)
+
+- **Anchor rotations re-solved with `n_out`**, both rules `dot = 1.0000`:
+  lead `(0.17575, −0.35814, −0.40300, 0.82367)` roll −47°; trail `(0.37027, 0.55049, 0.41557, 0.62222)` roll +83°.
+- **Stations:** lead **+0.0288** (§3.10.4), trail **+0.0758**.
+- **`grip.ikNoLegEffect` PASS** — L 0.0441 / R 0.0064 against a rig-off baseline of 0.0396 / 0.0057,
+  re-measured under the fixed step because the prefab's non-finger transforms changed.
+- `club.headAtBall` **0.0085 PASS**; `hand.orient_l/_r` **0.0000° / 0.0000°**.
+- §3.4 re-solved with the station fixed: `ClubSlot` local `(−0.03787, −0.04266, −0.09164)`,
+  euler `(347.542, 237.803, 313.704)`. **Not authored** — `club.headAtBall` already passes at
+  0.0085 m and authoring it would move `ClubStart` and re-open every station again. Architect's call.
+
+## 7. Files modified
 
 | path | 1-line summary |
 |---|---|
-| `Assets/Scripts/Gameplay/Golfer/GolferPresenter.cs` | §3.9.4: `WrapChain`/`PalmNormal`/`AimThumbDownShaft` resolve through `HumanBodyBones`, seven fingers, new `ShaftSegment` so the wrap closes on the real `ClubStart→ClubEnd` cylinder, lead thumb at 1 o'clock |
-| `Assets/Scripts/UI/Editor/GolferTestVerificationRecorder.cs` | §3.9.1 landmark axis replaces the four-midpoint fit; §3.9.2 rotation solve (rule targets rig-on) with self-check; §3.9.3 station; the eight §3.9.6 rows; §3.9.5 fixed timestep; end-of-frame sampling; `SolverVersion` → `landmarks-v1` |
-| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab` | anchor rotations + WristTargets + trail station 0.0374; `forceGripPose = true`; `shaftRadius`/`fingerRadius` scaled |
-| `Assets/Animations/Golfer/AnimatorController_Golfer_MixamoNative.controller` | `Hands` layer and its state machine removed |
-| `Assets/Animations/Golfer/ANIM_HandPose_GolfGrip.anim` (+`.meta`) | **deleted** — muscle-space pose superseded by §3.9 |
-| `Assets/Animations/Golfer/Mask_HandsOnly.mask` (+`.meta`) | **deleted** — same |
+| `Assets/Scripts/Gameplay/Golfer/GolferPresenter.cs` | §3.10.1 handedness-fixed `n_out` in `PalmNormal`; §3.10.2 `WrapJoint` flexes only, caps 90/90/70, 21-joint log hooks; `VerifyPalmNormal`; thumb `up12` uses `n_out` |
+| `Assets/Scripts/UI/Editor/GolferTestVerificationRecorder.cs` | `n_out` in `LandmarkAxis`; §3.10.3 wrap-invariant lead B; §3.10.4 lead-station mark; §3.10.5 clock sign from the trail palm; §3.10.6 geometric trail-palm assertion; `SolverVersion` → `handedness-v1` |
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab` | anchor rotations re-solved with `n_out`; lead station +0.0288; trail station +0.0758 |
 | `Docs/Specs/Active/golfer_club_grip/IMPLEMENTER_REPORT.md` | this report |
 | `Docs/Specs/Active/golfer_club_grip/STATUS.md` | `SPEC_READY` → `IMPLEMENTER_WORKING` → `READY_FOR_SELF_REVIEW` |
-| `Docs/Specs/Active/golfer_club_grip/HEARTBEAT.log` | iter-7 baseline + progress |
-| `Docs/Specs/Active/golfer_club_grip/evidence/grip39/` | nine frames |
+| `Docs/Specs/Active/golfer_club_grip/HEARTBEAT.log` | iter-8 baseline |
+| `Docs/Specs/Active/golfer_club_grip/evidence/grip310/` | nine frames |
 | `Docs/AI_CONTEXT.md` | session status |
-
-## 8. Two bugs of mine that the self-checks caught
-
-- **The §3.9.2 roll search rotated the rule vector *and* its target together**, which makes the dot
-  product roll-invariant: it returned an arbitrary angle (lead dot −0.0021, hand 157° from the clip).
-  The target is fixed in world space. Fixed, and both rules now solve to `dot = 1.0000`.
-- **Sampling ran during `Update`, the wrap runs in `LateUpdate`** — so the harness was measuring the
-  Animator's output before the fingers closed. Now sampled at end of frame. It turned out not to
-  change the tip numbers, which is itself the useful result: it ruled out a measurement artefact and
-  left a real reach problem (§5).

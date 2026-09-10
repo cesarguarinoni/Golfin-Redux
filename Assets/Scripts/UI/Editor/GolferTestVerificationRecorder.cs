@@ -246,7 +246,7 @@ namespace Golfin.EditorTools
         /// assemblies when a compile fails, and it kept them here twice while runs quietly executed
         /// the previous solver and I read the results as if they were the new one.
         /// </summary>
-        public const string SolverVersion = "landmarks-v1";
+        public const string SolverVersion = "handedness-v1";
 
         // ── SPEC §3.9.1 — real grip geometry, scaled to this character ──────────────────
         // reference/GOLF_GRIP_GEOMETRY.html: t = finger half-thickness 9 mm, r = grip radius
@@ -416,6 +416,9 @@ namespace Golfin.EditorTools
         float _heelPadDot = float.NaN, _trailPalmDot = float.NaN;
         float _overlapWorst = float.NaN, _interpenWorst = float.NaN;
         float _thumbClockDeg = float.NaN, _buttPastHeel = float.NaN;
+        float _trailPalmThumbOut = float.NaN, _trailPalmShaftOut = float.NaN;
+        float _nOutDotL = float.NaN, _nOutDotR = float.NaN;
+        float _leadStationNeeded = float.NaN;
         float _fingersClosedWorstL = float.NaN, _fingersClosedWorstR = float.NaN;  // worst |dist - band centre|
         float _fingersClosedMinL = float.NaN, _fingersClosedMaxL = float.NaN;
         float _fingersClosedMinR = float.NaN, _fingersClosedMaxR = float.NaN;
@@ -500,31 +503,46 @@ namespace Golfin.EditorTools
         {
             var lm = new Landmark { ok = false };
             if (anim == null || anim.avatar == null || !anim.avatar.isHuman) return lm;
-            var hand   = anim.GetBoneTransform(left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
-            var little = anim.GetBoneTransform(left ? HumanBodyBones.LeftLittleProximal : HumanBodyBones.RightLittleProximal);
-            var index1 = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexProximal  : HumanBodyBones.RightIndexProximal);
-            var index2 = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexIntermediate : HumanBodyBones.RightIndexIntermediate);
-            var middle1= anim.GetBoneTransform(left ? HumanBodyBones.LeftMiddleProximal : HumanBodyBones.RightMiddleProximal);
+            var hand    = anim.GetBoneTransform(left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+            var little  = anim.GetBoneTransform(left ? HumanBodyBones.LeftLittleProximal : HumanBodyBones.RightLittleProximal);
+            var index1  = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexProximal  : HumanBodyBones.RightIndexProximal);
+            var index2  = anim.GetBoneTransform(left ? HumanBodyBones.LeftIndexIntermediate : HumanBodyBones.RightIndexIntermediate);
+            var middle1 = anim.GetBoneTransform(left ? HumanBodyBones.LeftMiddleProximal : HumanBodyBones.RightMiddleProximal);
             if (hand == null || little == null || index1 == null || middle1 == null) return lm;
 
-            // palm-side normal, sign toward the finger curl
-            Vector3 n = Vector3.Cross(index1.position - hand.position, little.position - hand.position);
+            // SPEC 3.10.1 — ONE handedness-fixed normal, out of the PALM SURFACE.
+            // cross(along, across) is mirror-antisymmetric, so it points out of the palm on the
+            // left hand and out of the BACK on the right. Negate for the right hand; do NOT
+            // "fix" the sign from the finger curl afterwards, which is what the previous version
+            // did and what let a wrong normal survive three iterations looking plausible.
+            Vector3 across = little.position - index1.position;                    // index -> little
+            Vector3 along  = 0.5f * (index1.position + little.position) - hand.position;
+            Vector3 n = Vector3.Cross(along, across);
             if (n.sqrMagnitude < 1e-10f) return lm;
             n.Normalize();
-            var midInt = anim.GetBoneTransform(left ? HumanBodyBones.LeftMiddleIntermediate : HumanBodyBones.RightMiddleIntermediate);
-            if (midInt != null && Vector3.Dot(n, midInt.position - middle1.position) < 0f) n = -n;
+            if (!left) n = -n;
 
-            // LEAD: little MCP -> index PIP (diagonal through the fingers).
-            // TRAIL: little MCP -> index MCP (along the base crease, barely diagonal).
-            Transform bBone = left ? (index2 != null ? index2 : index1) : index1;
+            // LEAD: little MCP -> a WRAP-INVARIANT point standing in for the index PIP (3.10.3).
+            //   IndexIntermediate is a finger joint: it moves when the index curls, so measuring
+            //   grip.axis.landmarks_l against it compared a post-wrap bone with a pre-wrap solve
+            //   and read 22 mm of error that was mostly the wrap doing its job.
+            // TRAIL: little MCP -> index MCP, both MCPs, already invariant.
             lm.A = little.position + n * PalmOffsetM;
-            lm.B = bBone.position  + n * PalmOffsetM;
+            if (left)
+            {
+                float lProx = index2 != null ? Vector3.Distance(index2.position, index1.position) : 0f;
+                Vector3 u = (middle1.position - hand.position);
+                if (u.sqrMagnitude < 1e-10f) return lm;
+                u.Normalize();
+                lm.B = index1.position + u * (0.6f * lProx) + n * PalmOffsetM;
+            }
+            else lm.B = index1.position + n * PalmOffsetM;
+
             Vector3 d = lm.B - lm.A;
             if (d.sqrMagnitude < 1e-10f) return lm;
             lm.dir = d.normalized;
             lm.n = n;
 
-            // palmLocal = the point on that line nearest the middle-finger MCP
             Vector3 v = middle1.position - lm.A;
             Vector3 onLine = lm.A + lm.dir * Vector3.Dot(v, lm.dir);
             lm.palmLocal     = hand.InverseTransformPoint(onLine);
@@ -532,6 +550,7 @@ namespace Golfin.EditorTools
             lm.ok = true;
             return lm;
         }
+
 
         /// <summary>Distance from a point to the infinite line through a with direction d (unit).</summary>
         static float PointToAxis(Vector3 p, Vector3 a, Vector3 d)
@@ -615,8 +634,22 @@ namespace Golfin.EditorTools
                 if (lmR.ok && leadThumb != null && handR != null)
                 {
                     Vector3 toThumb = (leadThumb.position - handR.position).normalized;
-                    _trailPalmDot = Vector3.Dot(lmR.n, toThumb);
-                    sb.Append(" trailPalmDot=").Append(F(_trailPalmDot));
+                    _trailPalmDot = Vector3.Dot(lmR.n, toThumb);     // kept as the SOLVE rule
+                    // SPEC 3.10.6 — assert it as GEOMETRY: along the trail palm normal, the lead
+                    // thumb must sit just outside the palm plane, and the shaft further out again.
+                    // A palm facing the wrong way cannot pass this; a dot product can.
+                    var tI = anim.GetBoneTransform(HumanBodyBones.RightIndexProximal);
+                    var tL = anim.GetBoneTransform(HumanBodyBones.RightLittleProximal);
+                    if (tI != null && tL != null)
+                    {
+                        Vector3 palmPt = 0.5f * (tI.position + tL.position);
+                        _trailPalmThumbOut = Vector3.Dot(leadThumb.position - palmPt, lmR.n);
+                        Vector3 onAxis = sa + sd * Vector3.Dot(palmPt - sa, sd);
+                        _trailPalmShaftOut = Vector3.Dot(onAxis - palmPt, lmR.n);
+                    }
+                    sb.Append(" trailPalmDot=").Append(F(_trailPalmDot))
+                      .Append(" thumbOut=").Append(F(_trailPalmThumbOut))
+                      .Append(" shaftOut=").Append(F(_trailPalmShaftOut));
                 }
             }
 
@@ -666,7 +699,23 @@ namespace Golfin.EditorTools
                     Vector3 tProj = Vector3.ProjectOnPlane(thumb, sd);
                     if (up12.sqrMagnitude > 1e-8f && tProj.sqrMagnitude > 1e-8f)
                     {
+                        // SPEC 3.10.5 — "toward the trail side" is toward the TRAIL PALM CENTRE
+                        // projected off the shaft, not an arbitrary sign convention. Iter-7 read
+                        // -30.87 deg: right magnitude, wrong side of top, because the reference
+                        // direction was picked before the trail station was final.
                         _thumbClockDeg = Vector3.SignedAngle(up12.normalized, tProj.normalized, sd);
+                        var trI = anim.GetBoneTransform(HumanBodyBones.RightIndexProximal);
+                        var trL = anim.GetBoneTransform(HumanBodyBones.RightLittleProximal);
+                        if (trI != null && trL != null)
+                        {
+                            Vector3 toTrail = Vector3.ProjectOnPlane(
+                                0.5f * (trI.position + trL.position) - th1.position, sd);
+                            if (toTrail.sqrMagnitude > 1e-8f)
+                            {
+                                float trailSide = Vector3.SignedAngle(up12.normalized, toTrail.normalized, sd);
+                                if (trailSide < 0f) _thumbClockDeg = -_thumbClockDeg;   // + is toward the trail side
+                            }
+                        }
                         sb.Append(" | thumbAng=").Append(F(ang)).Append(" clock=").Append(F(_thumbClockDeg)).Append(" deg");
                     }
                 }
@@ -1342,6 +1391,65 @@ namespace Golfin.EditorTools
                     // That is why the tips read 0.043 m from a shaft the wrap targets at 0.0155.
                     yield return new WaitForEndOfFrame();
                     SampleFingerGrip(anim, clubStart, clubEnd, PresenterShaftRadius(pres), "address");
+
+                    // ── SPEC 3.10.1 — verify the palm normal instead of trusting it ───────────
+                    // A +5 deg flex of the middle MCP about cross(bone, n_out) must move the tip
+                    // along +n_out. If it does not, the sign convention is wrong for this rig and
+                    // that is reported, NOT silently flipped — a silent flip is how the original
+                    // handedness bug survived from §3.7 to iter-7 looking plausible all the way.
+                    if (pres != null)
+                    {
+                        var vm = pres.GetType().GetMethod("VerifyPalmNormal",
+                                     BindingFlags.Instance | BindingFlags.Public);
+                        if (vm != null)
+                        {
+                            _nOutDotL = (float)vm.Invoke(pres, new object[] { "l" });
+                            _nOutDotR = (float)vm.Invoke(pres, new object[] { "r" });
+                            Mark("3.10.1 n_out VERIFY | lead dot=" + F(_nOutDotL) +
+                                 " trail dot=" + F(_nOutDotR) +
+                                 "  (both must be > 0: a +5 deg flex moves the tip along +n_out)" +
+                                 ((_nOutDotL <= 0f || _nOutDotR <= 0f)
+                                    ? "  *** SIGN CONVENTION WRONG FOR THIS RIG - reported, not flipped ***" : ""));
+                        }
+                        else Mark("3.10.1 n_out VERIFY: VerifyPalmNormal not found on the presenter");
+                    }
+
+                    // ── SPEC 3.10.2 — the 21-joint wrap log, captured at end of frame ─────────
+                    {
+                        var pt = pres != null ? pres.GetType() : null;
+                        var reqF = pt?.GetField("WrapLogRequested", BindingFlags.Static | BindingFlags.Public);
+                        var resF = pt?.GetField("WrapLogResult",   BindingFlags.Static | BindingFlags.Public);
+                        if (reqF != null && resF != null)
+                        {
+                            reqF.SetValue(null, true);
+                            yield return new WaitForEndOfFrame();   // let LateUpdate run the wrap
+                            string log = (string)resF.GetValue(null);
+                            Mark("3.10.2 WRAP LOG (all joints, at address)\n" +
+                                 (string.IsNullOrEmpty(log) ? "  <empty - the wrap did not run>" : log.TrimEnd()));
+                        }
+                        else Mark("3.10.2 WRAP LOG: presenter hooks not found");
+                    }
+
+                    // ── SPEC 3.10.4 — where the lead station has to be ────────────────────────
+                    // buttCap.pastHeel was -12 mm: the lead hand hangs off the END of the grip.
+                    // The rule is the LeftHand bone projecting 10 mm*s below ClubStart.
+                    {
+                        var lh = anim.GetBoneTransform(HumanBodyBones.LeftHand);
+                        var alS = Fb("GripAnchor_Lead");
+                        if (lh != null && alS != null && clubStart != null && clubEnd != null)
+                        {
+                            Vector3 sdir = (clubEnd.position - clubStart.position).normalized;
+                            float stHand = Vector3.Dot(lh.position - clubStart.position, sdir);
+                            float want   = 0.010f * GripScale;
+                            float delta  = want - stHand;
+                            _leadStationNeeded = alS.localPosition.y + delta;
+                            Mark("3.10.4 lead station | LeftHand projects " + F(stHand) +
+                                 " m down-shaft of ClubStart, want " + F(want) +
+                                 " m, delta " + F(delta) +
+                                 " | GripAnchor_Lead.localPosition.y " + F(alS.localPosition.y) +
+                                 " -> " + F(_leadStationNeeded));
+                        }
+                    }
                 }
 
                 if (slot != null && hasQuaterniusFingers)
@@ -1628,12 +1736,18 @@ namespace Golfin.EditorTools
                            " (want > 0.5). This is the 2-2.5-knuckles check: the heel pad sits ON TOP of the " +
                            "grip, so the back of the hand faces the golfer.");
 
-                if (float.IsNaN(_trailPalmDot))
+                if (float.IsNaN(_trailPalmThumbOut) || float.IsNaN(_trailPalmShaftOut))
                     Assert("grip.trailPalm.onThumb", false, "no trail-palm sample at address");
                 else
-                    Assert("grip.trailPalm.onThumb", _trailPalmDot > 0.5f,
-                           "dot(trail palm normal, toward the lead thumb) at address = " + F(_trailPalmDot) +
-                           " (want > 0.5) - the lifeline crease covers the lead thumb.");
+                    Assert("grip.trailPalm.onThumb",
+                           _trailPalmThumbOut > 0f && _trailPalmThumbOut < 0.025f * GripScale &&
+                           _trailPalmShaftOut > _trailPalmThumbOut,
+                           "SPEC 3.10.6 geometric: along the trail palm normal the lead thumb sits " +
+                           F(_trailPalmThumbOut) + " m outside the palm plane (want 0 .. " +
+                           F(0.025f * GripScale) + ") and the shaft sits " + F(_trailPalmShaftOut) +
+                           " m out (must be further than the thumb). Solve-rule dot = " + F(_trailPalmDot) +
+                           ". This is \"the lifeline covers the thumb\" as geometry; a palm facing " +
+                           "the wrong way cannot pass it, which a dot product could.");
 
                 if (float.IsNaN(_overlapWorst))
                     Assert("grip.hands.overlap", false, "no overlap sample - finger bones not found");

@@ -168,11 +168,16 @@ namespace Golfin.Gameplay.Golfer
             Transform slot = club != null ? club.parent : null;   // the socket carries the shaft axis
             if (slot == null) return;
 
+            if (WrapLogRequested) _wrapLog = new System.Text.StringBuilder(2048);
+
             JoinLeadHandToShaft(slot);
             WrapHand("r", slot);
             WrapHand("l", slot);
             AimThumbDownShaft("l", slot);
             AimThumbDownShaft("r", slot);
+
+            if (WrapLogRequested && _wrapLog != null)
+            { WrapLogResult = _wrapLog.ToString(); WrapLogRequested = false; _wrapLog = null; }
         }
 
         /// <summary>
@@ -221,7 +226,7 @@ namespace Golfin.Gameplay.Golfer
         /// Resolved once (see <see cref="WrapChain"/>) so the per-frame solve neither looks bones
         /// up by name nor builds the names to look them up with.
         /// </summary>
-        struct FingerJoint { public Transform Joint, End; }
+        struct FingerJoint { public Transform Joint, End; public float Cap; public string Name; }
 
         FingerJoint[] _wrapR, _wrapL;
 
@@ -275,7 +280,14 @@ namespace Golfin.Gameplay.Golfer
                         Transform joint = HumanBone(chain[j]);
                         Transform end = j < 2 ? HumanBone(chain[j + 1])
                                               : (joint != null && joint.childCount > 0 ? joint.GetChild(0) : null);
-                        if (joint != null && end != null) list.Add(new FingerJoint { Joint = joint, End = end });
+                        // SPEC 3.10.2 caps: 90 proximal / 90 intermediate / 70 distal.
+                        if (joint != null && end != null)
+                            list.Add(new FingerJoint {
+                                Joint = joint, End = end,
+                                Cap = j == 2 ? 70f : 90f,
+                                Name = (right ? "R." : "L.") + chain[j].ToString()
+                                        .Replace("Left", "").Replace("Right", "")
+                            });
                     }
                 if (list.Count > 0) return list.ToArray();
             }
@@ -286,7 +298,8 @@ namespace Golfin.Gameplay.Golfer
                     Transform joint = FindChild($"{f}_{j:00}_{side}");
                     Transform end   = FindChild($"{f}_{(j + 1):00}_{side}")
                                    ?? FindChild($"{f}_{(j + 1):00}_leaf_{side}");
-                    if (joint != null && end != null) list.Add(new FingerJoint { Joint = joint, End = end });
+                    if (joint != null && end != null)
+                        list.Add(new FingerJoint { Joint = joint, End = end, Cap = maxJointBend, Name = $"{f}_{j:00}_{side}" });
                 }
             return list.ToArray();
         }
@@ -316,81 +329,103 @@ namespace Golfin.Gameplay.Golfer
         {
             float contact = shaftRadius + fingerRadius;
             Transform joint = fj.Joint, end = fj.End;
+            float cap = fj.Cap > 0f ? fj.Cap : maxJointBend;
 
             // EACH JOINT CURLS ABOUT ITS OWN AXIS, not one shared axis for the whole hand.
-            // The first version bent every joint about the knuckle line in world space, which
-            // looks right on paper and splays the hand open in practice: fingers sitting at
-            // different points along that line sweep through different planes, so they fan
-            // apart as they close. The flexion axis is perpendicular to the bone AND to the
-            // palm, which keeps every finger curling in its own parallel plane.
+            // Bending every joint about the knuckle line in world space looks right on paper and
+            // splays the hand open in practice: fingers at different points along that line sweep
+            // through different planes, so they fan apart as they close. The flexion axis is
+            // perpendicular to the bone AND to the palm, which keeps every finger curling in its
+            // own parallel plane.
             Vector3 bone = end.position - joint.position;
             if (bone.sqrMagnitude < 1e-10f) return;
             Vector3 bend = Vector3.Cross(bone, palm);
             if (bend.sqrMagnitude < 1e-10f) return;
             bend.Normalize();
 
+            // SPEC 3.10.2 — THE WRAP ONLY FLEXES.
+            //
+            // This used to pick its direction by "which rotation reduces the distance to the
+            // shaft", with a "make a fist" fallback when the club was far away. That heuristic
+            // returns EXTENSION whenever the shaft sits in or behind the finger plane, which is
+            // exactly what iter-7's frames show: fingers straight, hyperextended and fanned, not
+            // "as closed as an 80 degree cap allows". With a handedness-fixed n_out (3.10.1) the
+            // flexion direction is known, so there is nothing to infer: +bend is flexion, always.
+            // A finger that would have to EXTEND to reach the shaft is a placement error, and
+            // grip.fingers.closed_* is the row that says so.
             float d0 = AxisDistance(end.position, axisO, axisD);
-            if (d0 <= contact) return;                // already touching, leave it alone
-
-            // WHICH WAY THIS JOINT CURLS DEPENDS ON WHETHER THE CLUB IS IN THIS HAND AT ALL.
-            //
-            // "Bend toward the shaft" is the right rule while the shaft is inside the hand, and
-            // it is the rule that produced a real grip at address. It is catastrophic when the
-            // club is elsewhere: with the lead arm hanging at idle the club is half a metre away
-            // and roughly across the hand, so the direction that reduces distance to it is
-            // EXTENSION, and the hand solves itself flat open — the live harness on Hole 06
-            // measured the right middle finger tip-to-knuckle at 0.0873 m, straight, where a
-            // fist is about 0.04.
-            //
-            // Two other rules were tried and measured worse, so neither is worth revisiting.
-            // Taking the sign from the palm normal fails because that normal is built from an
-            // index-to-pinky vector and so flips with handedness: it wrecked the working case
-            // (worst fingertip 0.0323 -> 0.0843 m at address). Falling back to "make a fist"
-            // whenever contact is merely unreachable fails too, because a finger can be a
-            // centimetre short of a shaft it is properly wrapped around — that took the right
-            // pinky from 0.0323 to 0.1073 m.
-            //
-            // The regimes are simply distinguished by distance. No hand is 0.15 m across, so a
-            // shaft further away than that is not in this hand and the pose owes it nothing.
             Quaternion keep = joint.localRotation;
-            float sign;
-            if (d0 < ShaftIsInThisHand)
+
+            joint.rotation = Quaternion.AngleAxis(cap, bend) * joint.rotation;
+            float dMax = AxisDistance(end.position, axisO, axisD);
+            joint.localRotation = keep;
+
+            float applied;
+            if (d0 <= contact)
             {
-                joint.rotation = Quaternion.AngleAxis(5f, bend) * joint.rotation;
-                float dPlus = AxisDistance(end.position, axisO, axisD);
-                joint.localRotation = keep;
-                sign = dPlus < d0 ? 1f : -1f;                 // curl toward the club
+                applied = 0f;                                   // already touching
+            }
+            else if (dMax > contact)
+            {
+                applied = cap;                                  // cannot reach: as closed as it gets
+                joint.rotation = Quaternion.AngleAxis(cap, bend) * joint.rotation;
             }
             else
             {
-                float toPalm0 = Vector3.Distance(end.position, palmPos);
-                joint.rotation = Quaternion.AngleAxis(10f, bend) * joint.rotation;
-                float toPalm1 = Vector3.Distance(end.position, palmPos);
+                float lo = 0f, hi = cap;
+                for (int k = 0; k < 12; k++)
+                {
+                    float mid = (lo + hi) * 0.5f;
+                    joint.localRotation = keep;
+                    joint.rotation = Quaternion.AngleAxis(mid, bend) * joint.rotation;
+                    if (AxisDistance(end.position, axisO, axisD) > contact) lo = mid; else hi = mid;
+                }
+                applied = hi;
                 joint.localRotation = keep;
-                sign = toPalm1 < toPalm0 ? 1f : -1f;          // no club here: just close the fist
+                joint.rotation = Quaternion.AngleAxis(hi, bend) * joint.rotation;
             }
 
-            // Does the cap reach contact? If not, take the cap — a finger that cannot reach
-            // ends up as closed as it can be, not left where it started.
-            joint.rotation = Quaternion.AngleAxis(sign * maxJointBend, bend) * joint.rotation;
-            float dMax = AxisDistance(end.position, axisO, axisD);
-            joint.localRotation = keep;
-            if (dMax > contact)
-            {
-                joint.rotation = Quaternion.AngleAxis(sign * maxJointBend, bend) * joint.rotation;
-                return;
-            }
+            // SPEC 3.10.2 per-joint log — the play-mode measurement iter-7 asked for. Built only
+            // when the harness asks, so the normal path allocates nothing.
+            if (WrapLogRequested && _wrapLog != null)
+                _wrapLog.Append(fj.Name).Append(" applied=").Append(applied.ToString("F1"))
+                        .Append(" cap=").Append(cap.ToString("F0"))
+                        .Append(" d0=").Append(d0.ToString("F4"))
+                        .Append(" dMax=").Append(dMax.ToString("F4"))
+                        .Append(" after=").Append(AxisDistance(end.position, axisO, axisD).ToString("F4"))
+                        .Append('\n');
+        }
 
-            float lo = 0f, hi = maxJointBend;
-            for (int i = 0; i < 12; i++)
-            {
-                float mid = (lo + hi) * 0.5f;
-                joint.localRotation = keep;
-                joint.rotation = Quaternion.AngleAxis(sign * mid, bend) * joint.rotation;
-                if (AxisDistance(end.position, axisO, axisD) > contact) lo = mid; else hi = mid;
-            }
-            joint.localRotation = keep;
-            joint.rotation = Quaternion.AngleAxis(sign * hi, bend) * joint.rotation;
+        /// <summary>
+        /// SPEC 3.10.2 — set by the harness for one frame to capture the 21-joint wrap log.
+        /// Static so an editor harness can reach it without a reference to the instance.
+        /// </summary>
+        public static bool WrapLogRequested;
+        public static string WrapLogResult = "";
+        System.Text.StringBuilder _wrapLog;
+
+        /// <summary>
+        /// SPEC 3.10.1 verification: flex the middle MCP by +5 deg about cross(bone, n_out) and
+        /// confirm the fingertip moves along +n_out. Returns the dot; the caller reports it.
+        /// A negative dot means the sign convention is wrong for this rig — report, never flip
+        /// silently, because a silent flip is how the original bug survived three iterations.
+        /// </summary>
+        public float VerifyPalmNormal(string side)
+        {
+            bool right = side == "r";
+            Vector3 n = PalmNormal(side);
+            var mcp = HumanBone(right ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal);
+            var pip = HumanBone(right ? HumanBodyBones.RightMiddleIntermediate : HumanBodyBones.LeftMiddleIntermediate);
+            if (n == Vector3.zero || mcp == null || pip == null) return float.NaN;
+            Vector3 bone = pip.position - mcp.position;
+            Vector3 bend = Vector3.Cross(bone, n);
+            if (bend.sqrMagnitude < 1e-10f) return float.NaN;
+            Vector3 before = pip.position;
+            Quaternion keep = mcp.localRotation;
+            mcp.rotation = Quaternion.AngleAxis(5f, bend.normalized) * mcp.rotation;
+            Vector3 delta = pip.position - before;
+            mcp.localRotation = keep;
+            return delta.sqrMagnitude < 1e-12f ? float.NaN : Vector3.Dot(delta.normalized, n);
         }
 
         /// <summary>
@@ -476,16 +511,27 @@ namespace Golfin.Gameplay.Golfer
             Transform i, p, w;
             if (IsHumanoid)
             {
+                // SPEC §3.10.1 — ONE handedness-fixed normal, OUT OF THE PALM SURFACE.
+                //
+                // cross(along, across) is mirror-antisymmetric: with across = little - index it
+                // points out of the palm on the left hand and out of the BACK on the right. The
+                // old comment in WrapJoint already said this normal "flips with handedness" and
+                // worked around it with a distance heuristic instead of fixing it. Everything
+                // downstream inherited the flip — the trail shaft axis was offset onto the back of
+                // the MCP row, where no finger can reach, and the wrap chose extension. Negating
+                // for the right hand fixes all of it in one place.
                 bool right = side == "r";
                 i = HumanBone(right ? HumanBodyBones.RightIndexProximal  : HumanBodyBones.LeftIndexProximal);
                 p = HumanBone(right ? HumanBodyBones.RightLittleProximal : HumanBodyBones.LeftLittleProximal);
                 w = HumanBone(right ? HumanBodyBones.RightHand           : HumanBodyBones.LeftHand);
                 if (i != null && p != null && w != null)
                 {
-                    Vector3 acrossH = p.position - i.position;
-                    Vector3 alongH  = (i.position + p.position) * 0.5f - w.position;
+                    Vector3 acrossH = p.position - i.position;                     // index -> little
+                    Vector3 alongH  = (i.position + p.position) * 0.5f - w.position; // wrist -> knuckles
                     Vector3 nh = Vector3.Cross(alongH, acrossH);
-                    return nh.sqrMagnitude < 1e-10f ? Vector3.zero : nh.normalized;
+                    if (nh.sqrMagnitude < 1e-10f) return Vector3.zero;
+                    nh.Normalize();
+                    return right ? -nh : nh;
                 }
             }
             i = FindChild($"index_01_{side}");

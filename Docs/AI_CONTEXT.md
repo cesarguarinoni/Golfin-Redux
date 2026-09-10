@@ -4,6 +4,50 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 (golfer_club_grip iter-8) — **the sign was right; the two stations are coupled**
+
+**A0 = 0. 31 PASS / 9 FAIL — against iter-7's 33 / 7.** The count went the wrong way, and that is
+the headline.
+
+**The handedness diagnosis was correct and is now measured, not assumed.** `PalmNormal` was
+`cross(along, across)`, which is mirror-antisymmetric: it pointed out of the palm on the left hand
+and out of the **back** on the right. So the trail shaft offset landed behind the MCP row, and
+`WrapJoint`'s "which way reduces distance to the shaft" heuristic chose **extension** — the
+hyperextended fan in iter-7's frames. Negating for the right hand and making the wrap flex *only*
+fixed three signs at once:
+
+| | iter-7 | iter-8 |
+|---|---|---|
+| lead fingertips | [0.0311 .. 0.0497] | **[0.0156 .. 0.0416]** (min exactly at contact) |
+| thumb clock | −30.87° | **+11.75°** |
+| `buttCap.pastHeel` | −0.0124 | **+0.0355** |
+| reach slack | trail **−0.0159** | lead 0.0119 / trail 0.0199, **both positive** |
+
+A `+5°` flex test now verifies the normal instead of trusting it: lead dot **0.9661**, trail
+**0.2722**, stable across runs. That check exists because a silent sign flip is exactly how this bug
+survived from §3.7 to iter-7 looking plausible the whole way.
+
+**What regressed, and the real lesson.** §3.10.4 set the lead station from the butt cap — the rule
+converged *exactly* (delta 0.0000) — but it moved the lead anchor 48 mm up the grip, and the trail
+station is defined **relative to the lead hand**. The overlap fit died with it (0.0064 → 0.0231). I
+chased the trail to compensate; it did not hold. **Five authoring passes went into learning that the
+two stations cannot be solved one at a time** — every lead move invalidates the trail fit and back.
+They now trade directly: iter-7's station passes `hands.overlap` and fails `buttCap.pastHeel`;
+iter-8's does the reverse. This needs a joint solve, not alternating corrections.
+
+**The 21-joint wrap log is the most useful artefact this round.** Comparing `d0` with `dMax`: on 13
+of 21 joints flexing to the cap moves the tip *further* from the shaft, so the joint takes the cap
+and ends worse than it started; on 5 it reaches contact in a few tens of degrees (16°, 29°, 87°,
+34° — solved, not capped). Neither a cap problem nor a sign problem: the shaft is **inside the arc
+those fingers sweep**.
+
+**A stricter test earning its keep:** §3.10.6 replaced the trail-palm dot product with geometry, and
+it fails where the dot passed — the lead thumb sits 74 mm outside the trail palm plane while the
+shaft is 14 mm out. The dot read 0.6459 and called that a grip.
+
+`STATUS = READY_FOR_SELF_REVIEW`. Profile `iOS-Full-GPS`. Blade orientation still §3.9.7.
+
+---
 ## 2026-09-10 (golfer_club_grip iter-7) — **the club goes where the landmarks say, and the clock is fixed**
 
 **The one fact the rig had been missing** (`reference/GOLF_GRIP_GEOMETRY.html`): a club is *not*
