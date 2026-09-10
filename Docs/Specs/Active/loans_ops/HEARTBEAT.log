@@ -46,3 +46,4 @@ DIRTY:
 ?? Docs/Specs/Quick/hole_selection_first_card_gap.md
 === end baseline ===
 2026-09-10T08:38:32Z iter-2 start — ARCHITECT_REVIEW_FAIL: F1 medianHoursToAnswer counted rescinds; F2 drawer IN scope (Cesar: widen, separate section); F7 dead funnel rates
+2026-09-10T08:41:06Z iter-2 — F1/F2/F7 done; 307 dashboard + 319 backend tests; deployed CF version 586b6c80-dfde-47a2-a938-19d1b12fdb7a, live footer stamp da3175337 verified in Chrome; STATUS -> READY_FOR_ARCHITECT_REVIEW
