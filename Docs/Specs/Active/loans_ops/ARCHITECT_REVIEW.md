@@ -385,3 +385,81 @@ No `CESAR_REJECTION.md` in the folder (this task has not yet reached Cesar). The
 - **A borrower row invisible in the drawer?** No — `borrowerSection` is total; all 7 land once. Held. (This is the exact hole from iter-2's own late catch; it is genuinely closed.)
 
 **STATUS → ARCHITECT_REVIEW_FAIL.** Routes back to the implementer. No production writes; no server started this pass (the blocker was proven with a verbatim-code repro against the on-disk fixtures).
+
+---
+
+# RED-TEAM REVIEW — loans_ops iter-3
+
+**Reviewer:** golfin-redteam-reviewer
+**Timestamp:** 2026-09-10 18:15 JST
+**Verdict:** ARCHITECT_REVIEW_PASS — I tried the six named attacks plus a Rule-5 re-run and could not find a blocker.
+**Posture:** Non-Unity task (Next.js dashboard + FastAPI backend). No scene/prefab/Figma/mesh, so Rules 16–21 have no subject. iter-2's own blocker (the `clockLine` `default` arm) is the thing I re-attacked from every side this pass.
+
+## Everything I re-ran (not read) this pass
+
+| Check | Command | Result |
+|---|---|---|
+| loanStatus suite baseline | `npx vitest run loanStatus` | 17/17 green |
+| **Q1 repro** — restore old `default` arm | patched `clockLabel`, ran suite, `git checkout` | **exactly 4 red**, then 17/17 green again |
+| **Q3** — add an 8th status | pushed `"repossessed"` into `ALL_LOAN_STATUSES` | **3 table tests red**, then 17/17 green again |
+| Full dashboard suite | `npx vitest run` | 14 files, **324/324** |
+| tsc | `npx tsc --noEmit -p tsconfig.json` | exit **0** |
+| Backend suite | `pytest backend/tests -q` | **319 passed** (iter-3 touched no backend file) |
+| Live rules | `curl …/api/v1/loans/rules` | 8 constants, match the Rules card |
+| Prod loan tables | PostgREST count (read-only, service key) | `golfin_loans */0`, `golfin_loan_events */0` — table exists, 0 rows, **no writes by me** |
+| Deployed == reviewed | `git diff --stat 8f823d7cb HEAD -- Tools/admin-dashboard/` | **empty** — the follow-up commit is docs-only; the deployed stamp `8f823d7cb` is the code under review |
+
+## Q1 — the repro is honest
+
+Restored `clockLabel`'s `default → at(row.answeredAt, "loans.answered")` (dropping the explicit `declined`/`rescinded`/`offer_expired` cases). Suite went red on exactly four:
+`clockLabel > gives every one of the seven statuses its own truthful label`, `clockLabel > never calls a rescind or a lapse an answer`, `clockLabel > says only that something changed for a status it has never heard of`, and `ANSWERED_STATUSES > agrees with clockLabel about what an answer is`. Restored the file → 17/17. The report's "restoring the old `default` turns four tests red, including the ANSWERED_STATUSES cross-check" is true to the test.
+
+## Q2 — nothing lost in the four-file move (diff of `8f823d7cb` vs parent `32cf78fe7`)
+
+The refactor moved `LoanRow`, `ANSWERED_STATUSES`, `isLoanLive`, `isLoanPending`, `loanAnchorMs`, `borrowerSection` out of `telemetryLoans.ts` into `loanStatus.ts`. Verified the seams:
+- `telemetryLoans.ts` **re-exports** `LoanRow`, `isLoanLive`, `isLoanPending`, `loanAnchorMs`, `ANSWERED_STATUSES`, so any old importer still resolves. Its own `ms`/`str` helpers are re-declared locally (still used by the lifecycle fold — grep confirms 172/176), so the folds did not lose their parsing.
+- `loansData.ts` rewired to import `borrowerSection, loanAnchorMs, LoanRow` from `loanStatus` and `buildLoanLifecycle, LoanLifecycle` from `telemetryLoans` — the ONLY net change in that file. `borrowerSection` (not re-exported from telemetryLoans) has exactly one importer, and it points at `loanStatus`. No dangling reference.
+- `loan-rows.tsx` deleted its local `actionsFor`/`clockLine`-`switch` and now imports `actionsFor, clockLabel` from `loanStatus`; the render path is `clockLabel(loan, now)` → `t(chosen.key, {rel})` and `actionsFor(loan, Date.now())`. No other file imported the removed exports (grep clean).
+- Field plumbing intact: `LoanAdminRow` carries camelCase `offerExpiresAt/endsAt/endedAt/answeredAt` (satisfies `LoanClockRow` and `actionsFor`'s param structurally), and `loansData`'s DTO maps `offer_expires_at→offerExpiresAt` etc., so the real panel hands real clocks — not `undefined`, which would have silently flipped `isLoanPending`'s null-as-pending branch.
+tsc 0 + 324 tests are the backstop: a dropped symbol would not compile.
+
+## Q3 — `ALL_LOAN_STATUSES` is genuinely load-bearing
+
+Adding an eighth status turns **three** independent per-status tables red (`clockLabel` table, `actionsFor` table, `borrowerSection` table) — each is a `toEqual` against a hardcoded 7-key object built by iterating the array. The anti-regression argument the whole shape-fix rests on is real: a status added later fails the suite loudly instead of landing in a `default`. (The `ANSWERED_STATUSES`-agrees test does NOT fail on the 8th, because an unknown status routes to `changedAt`, not `answered` — so the cross-check is guarding the right thing, not tautological.)
+
+## Q4 — the sharpest question: does withholding `cancel_offer` on a lapsed offer strand the operator? NO — and the premise is false
+
+The dispatch's premise was "a lapsed offer that the server has not swept still LOCKS the lender's asset (`_is_locked` covers `offered` regardless of clock)." **The router's own code refutes it.** `routers/loans.py::_is_locked` (206-213):
+
+```
+if status == "offered":
+    expires = _parse_ts(row.get("offer_expires_at"))
+    return expires is None or _now() < expires
+```
+
+A lapsed `offered` row (past `offer_expires_at`) returns **False → NOT locked.** Its docstring (203-205) says so verbatim: *"An `offered` row past `offer_expires_at` is NOT locked — the lazy flip in `_expire` has simply not run yet … the predicate is the enforcement, the flip is bookkeeping."* And every "is the lender's asset out of their hands" reader funnels through it: `_locked_count = _live_count + _pending_count` where `_pending_count` uses `_is_pending_offer` (= `offered AND _is_locked`), and `_locked_row` (the `already_on_loan` / `borrower_has_it` guard in `lend`) filters `if _is_locked(r)`. So the instant the 48 h clock passes, the asset is free by predicate — no client read, no DB flip required. The lender can immediately re-offer or use it.
+
+Therefore withholding `cancel_offer` on a lapsed offer creates **no stuck state and strands no one**: the asset is already usable, and the "wrong recipient, re-offer to the right one" support case needs no admin action (a lapsed offer does not block a new offer — `_pending_offer_between` also filters through `_is_pending_offer`). The fix is not merely harmless, it is **actively correct**: `cancel_offer` sets `status=rescinded, answered_at=now()`, which `_cooldown_until` (649-682) reads as a fresh 24 h cooldown on the pair — and the router **deliberately refuses** to impose a cooldown for a lapse (657-659: *"`offer_expired` is deliberately NOT a cooldown trigger. Nobody said no"*). Offering the button would let an admin convert a benign lapse into a punitive nag-cooldown. Withholding it upholds the router's own rule. The mirror case (`force_return` withheld on an `active` row past `ends_at`) is the same story: the asset is already unlocked, and force-returning it would just duplicate what `_expire` does on the next read. The panel still shows these rows with truthful clock labels (`offer lapsed {rel} — flips on next read` / `clock ran out {rel} — expires on next read`), so the operator sees the state, just isn't handed a button that would do harm.
+
+The only thing genuinely lost is the ability to *manually flip* a lapsed row's status column for cosmetics — which is the pre-existing lazy-expiry design the SPEC subtitle documents, not a regression.
+
+## Q5 — `clockLabel` fallback hides nothing for a real status
+
+The `loans.changedAt` (`answeredAt ?? endedAt`) `default` arm is reachable **only for a status this build has never heard of** — all seven known statuses have explicit cases. For every real status the null returns are deliberate and don't hide a meaningful clock:
+- `offered` w/ null `offer_expires_at` → null (no TTL to show; `isLoanPending` still files it under OFFERS). A pre-offers artefact, effectively nonexistent forward.
+- `rescinded`/`offer_expired`/`declined` w/ null `answered_at` → null, but `_terminal_answer`, `golfin_loan_admin.cancel_offer`, and `_expire` all stamp `answered_at` on those transitions, so it is always present in practice.
+- `returned`/`expired` w/ null `ended_at` → null, but `return_loan`/`force_return`/`_expire` all stamp `ended_at`.
+There is **no known status where a meaningful clock exists but the row silently shows nothing.** A hypothetical future status with a clock in some other column would show nothing via the fallback — but that is exactly the case the exhaustive `ALL_LOAN_STATUSES` tests force you to handle (Q3): the status can't be added without a red suite demanding an explicit case. The design self-defends.
+
+## Break-attempts that FAILED (the code held)
+- **Fix is fake / tests don't really pin it** — no; Q1 repro reproduces 4 red exactly.
+- **Refactor silently changed behaviour while "just moving"** — no; Q2 diff shows pure relocation + rewired imports, tsc 0, 324 green, field plumbing intact.
+- **Anti-regression claim is hollow** — no; Q3 shows 3 tables genuinely fail on an added status.
+- **`actionsFor` withholding strands an operator / leaves a stuck lock** — no; Q4, the router frees the asset by predicate at clock-expiry and explicitly forbids the cooldown the button would start.
+- **A row silently shows no clock** — no; Q5, every real status is handled and its timestamp is stamped by the router path that produces it.
+- **Deployed ≠ reviewed / fabricated numbers** — no; deployed stamp `8f823d7cb` has an empty code-diff to HEAD, prod tables are 0/0, live `/rules` matches, and every number the report quotes (4 red, 324, tsc 0) reproduced under my hand.
+
+## Prior-rejection replay
+No `CESAR_REJECTION.md` (not yet at Cesar). The four in-pipeline defects of the one shape are each GONE and re-verified: (1) `medianHoursToAnswer` inclusion set is `{active,returned,expired,declined}`; (2) `borrowerSection` files all seven borrower statuses once (test iterates `ALL_LOAN_STATUSES`); (3) the contradicting comments are replaced by the `loanStatus.ts` header that documents all four; (4) `clockLabel` names every status and never labels a rescind/lapse "answered" (Q1). The fifth this pass would have been a stranded operator from the `actionsFor` clock-gate — chased in Q4 and it does not exist.
+
+**STATUS → ARCHITECT_REVIEW_PASS.** No production writes (only a read-only count). No mock server needed this pass — correctness was provable from the test suite, the commit diff, the router source, and a read-only prod count.

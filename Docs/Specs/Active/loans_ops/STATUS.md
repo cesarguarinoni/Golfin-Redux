@@ -1,23 +1,14 @@
-READY_FOR_REDTEAM
+ARCHITECT_REVIEW_PASS
 
-loans_ops iter-3, 2026-09-10.
+loans_ops iter-3, 2026-09-10 18:15 JST.
 
-Redo after the red-team FAIL. Its blocker was real: clockLine had a `default` arm reading
-"answered {rel}", so a lender rescind and a 48h lapse both rendered as the recipient answering,
-on the panel whose job is explaining why an offer disappeared.
-
-Fixed the SHAPE, not the instance. That was the FOURTH defect of one shape in this task -- a
-status classified by an incomplete list -- so per PIPELINE_HARDENING section 22 every judgement
-about a loan status or its clocks now lives in one pure module, lib/loanStatus.ts, whose header
-names all four. ALL_LOAN_STATUSES is exported and the tests ITERATE it, so a status added later
-fails the suite instead of landing in a default arm. Restoring the old default turns four tests
-red, including a cross-check that ANSWERED_STATUSES and clockLabel cannot drift apart.
-
-Also fixed from the same pass: red-team wart W1. actionsFor took a bare status, so a lapsed
-offerered row still showed Cancel offer -- and the server guards on the status column, so that
-action would have SUCCEEDED and started a 24h cooldown on a pair whose offer had already died.
-It now reads the clock.
-
-Dashboard 312 -> 324 tests (14 files), backend 319, tsc exit 0.
-Deployed: Cloudflare version 70a0c4f4-f20f-4b6e-a31e-5aa6769b55f6; GET /api/version on the live
-site answers {"commit":"8f823d7cb","stamped":true}.
+Red-team gate: genuinely tried the six named attacks + a Rule-5 re-run and could not break it.
+- Q1 repro reproduced exactly 4 red on the old default arm, restored green.
+- Q2 four-file move dropped nothing: re-exports intact, imports rewired, tsc 0, 324 tests.
+- Q3 ALL_LOAN_STATUSES load-bearing: an 8th status fails 3 table tests.
+- Q4 (sharpest) the stuck-state premise is FALSE per routers/loans.py: _is_locked gates offered
+  on the clock, so a lapsed offer is already unlocked; withholding cancel_offer is correct and
+  prevents a spurious 24h cooldown the router deliberately refuses. No operator stranded.
+- Q5 clockLabel default is reachable only for an unknown status; no known status hides a clock.
+Backend 319 green (untouched), live /rules matches, prod tables 0/0 (read-only, no writes),
+deployed 8f823d7cb == reviewed code.

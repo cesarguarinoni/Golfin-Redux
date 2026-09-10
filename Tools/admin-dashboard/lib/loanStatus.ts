@@ -142,12 +142,26 @@ export type LoanAdminActionName = "force_return" | "cancel_offer" | "clear_coold
  * The action bar for a row.
  *
  * Takes the whole row and `nowMs` rather than a bare status, because the
- * SERVER's guards are on the status column while the operator is looking at a
- * clock: `golfin_loan_admin` refuses `cancel_offer` on anything but `offered`,
- * so a lapsed-but-unswept offer still accepts it — and doing so starts a
- * 24 h cooldown on a pair whose offer had already died of its own accord.
- * Offering the button on a row whose clock has run out invites that, so it is
- * withheld. The same for `force_return` on an `active` row past `ends_at`.
+ * SERVER's guard is on the status COLUMN while the operator is looking at a
+ * CLOCK. `golfin_loan_admin` refuses `cancel_offer` on anything but `offered`,
+ * so a lapsed-but-unswept offer still satisfies it and the action would
+ * succeed.
+ *
+ * Withholding it is not merely cautious, it is what the router wants — verified
+ * against `routers/loans.py`, not assumed:
+ *
+ *   * A lapsed offer already frees the lender's asset. `_is_locked` gates
+ *     `offered` on `offer_expires_at`, and its own docstring says "the
+ *     predicate is the enforcement, the flip is bookkeeping". So there is
+ *     nothing for an admin to unstick — no button, no stuck state.
+ *   * Cancelling it would make things WORSE. Cancel writes `rescinded`, which
+ *     starts the pair's 24 h cooldown — and `_cooldown_until` deliberately
+ *     excludes `offer_expired` because "making a lapsed offer block the retry
+ *     would punish the lender for the recipient being away". The button would
+ *     let an operator impose exactly the penalty the router refuses to.
+ *
+ * Same reasoning for `force_return` on an `active` row past `ends_at`: not
+ * live, nothing to return.
  */
 export function actionsFor(
   row: { status: string; offerExpiresAt: string | null; endsAt: string | null },
