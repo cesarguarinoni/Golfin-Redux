@@ -146,6 +146,39 @@ screen. Both halves are fixed rather than one:
   line under the funnel bars, with a tooltip that points at the ACCEPTED card below and says its
   fraction is deliberately different.
 
+
+### Found while writing the brief for red-team — a hole the review under-called
+
+`golfin-reviewer` passed iter-2 but noted "one small pre-existing gap (stale `offered` past TTL
+invisible until `_expire` fires)" and waved it through. It is not small, and it is not
+pre-existing — it was **introduced by the F2 fix**, in the one place it could do the most damage.
+
+An `offered` row whose 48 h clock has run out is **not pending** (so not in OFFERS), **not
+accepted** (so not in BORROWED), and its status column still literally reads `offered` (so not in
+the went-nowhere list). It appeared in **no section of the drawer at all** — while my own comment
+above the filters claimed "no row a borrower is party to is invisible in the drawer".
+
+Because expiry is LAZY, that is not a corner: a row keeps saying `offered` until some client's
+`GET /loans` gets around to flipping it. And it is exactly the case the went-nowhere section was
+added for — a player asking "why did that offer disappear?" about an offer that lapsed while
+nobody was looking.
+
+**Fixed by construction rather than by adding a fourth status list.** The three borrower lists now
+come from ONE total classifier, `borrowerSection(row, borrowerId, nowMs)`, in the pure module so it
+is testable. A lapsed offer is filed as went-nowhere on the strength of its **clock**, which is
+what `_expire` will stamp it as anyway — the same "trust the timestamps, not the status column"
+rule the lifecycle card already follows.
+
+**Five tests**, the important one enumerating all seven statuses and asserting each lands in exactly
+one section, so a status added later fails here rather than vanishing. The hole was demonstrated
+before it was fixed: a throwaway test reconstructing the shipped three-list filters verbatim
+returned `[false, false, false]` for a lapsed row — matched by none of them — and the classifier
+returns `wentNowhere` for the same row.
+
+A mock fixture (`…mock-loan-0009`, Cratilo → ken, `offered`, clock ran out 4 h ago) makes the state
+visible: ken's drawer now shows **OFFERS THAT WENT NOWHERE (2)**, the declined club and the lapsed
+character. Dashboard tests **307 → 312**.
+
 ### The three angles the reviewer cleared
 
 PostgREST `or=` escaping, page-boundary drops, and the `snapshot()` `??` chains were each checked

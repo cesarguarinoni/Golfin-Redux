@@ -349,6 +349,40 @@ export function isLoanPending(row: LoanRow, nowMs: number): boolean {
 }
 
 /**
+ * Which section of the Users drawer's Loans tab a row belongs in, from the
+ * BORROWER's side. `null` means the player is not the borrower on it.
+ *
+ * ⚠️ TOTAL BY CONSTRUCTION, and it has to be. The first version listed the
+ * three "went nowhere" statuses explicitly, which left a hole: an `offered`
+ * row whose 48 h TTL has run out is not pending (so not in `offers`), not
+ * accepted (so not in `in`), and its status is still literally `offered` (so
+ * not in the went-nowhere list either). It appeared in NO section — and
+ * because expiry is LAZY, that is not a rare state: the row keeps saying
+ * `offered` until some client's `GET /loans` gets around to flipping it. It is
+ * also the exact case the went-nowhere section was added for, so the hole was
+ * in the one place it could do the most damage.
+ *
+ * A lapsed offer is therefore classified as went-nowhere on the strength of its
+ * CLOCK rather than its column — which is what `_expire` will stamp it as
+ * anyway, and the same "trust the timestamps, not the status" rule the
+ * lifecycle card already follows.
+ */
+export function borrowerSection(
+  row: LoanRow,
+  borrowerId: string,
+  nowMs: number
+): "offers" | "in" | "wentNowhere" | null {
+  if (str(row.borrower_id) !== borrowerId) return null;
+  if (isLoanPending(row, nowMs)) return "offers";
+  const status = String(row.status ?? "");
+  if (status === "active" || status === "returned" || status === "expired") return "in";
+  // Everything else this player was offered: declined, rescinded, lapsed — and
+  // an `offered` row that is no longer pending, which is a lapse the server has
+  // not swept yet.
+  return "wentNowhere";
+}
+
+/**
  * The moment a loan belongs to, for ranging. `offered_at` is the natural
  * anchor; rows that predate the offers migration have none and fall back to
  * `starts_at`, then `created_at`. Null when the row carries none of the three,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  borrowerSection,
   buildLoanFunnel,
   buildLoanLifecycle,
   isLoanLive,
@@ -392,5 +393,67 @@ describe("loansToCsv", () => {
 
   it("is header-only on no rows", () => {
     expect(loansToCsv([]).split("\n")).toHaveLength(1);
+  });
+});
+
+describe("borrowerSection", () => {
+  const ALL_STATUSES = [
+    "offered", "active", "returned", "expired", "declined", "rescinded", "offer_expired",
+  ] as const;
+
+  it("places every one of the seven statuses in exactly one section", () => {
+    // The property that matters: a support operator opening the drawer must
+    // never find a row that is in no list. Enumerating the whole status set
+    // rather than sampling is the point — a status added later fails here.
+    const placed = ALL_STATUSES.map((status) => {
+      const row = loan({ status, offer_expires_at: h(6), ends_at: h(6) });
+      return [status, borrowerSection(row, "bob", NOW)] as const;
+    });
+    expect(placed.every(([, s]) => s !== null)).toBe(true);
+    expect(Object.fromEntries(placed)).toEqual({
+      offered: "offers",
+      active: "in",
+      returned: "in",
+      expired: "in",
+      declined: "wentNowhere",
+      rescinded: "wentNowhere",
+      offer_expired: "wentNowhere",
+    });
+  });
+
+  it("files a LAPSED but unswept offer under wentNowhere, not nowhere at all", () => {
+    // The hole the first version had. Expiry is lazy, so a row keeps saying
+    // `offered` until some client's GET /loans flips it — and until then it was
+    // not pending, not accepted, and not in the went-nowhere status list, so it
+    // appeared in NO section of the drawer. Classified on its CLOCK instead.
+    const lapsed = loan({ status: "offered", offer_expires_at: h(-1), starts_at: null, ends_at: null });
+    expect(isLoanPending(lapsed, NOW)).toBe(false);
+    expect(borrowerSection(lapsed, "bob", NOW)).toBe("wentNowhere");
+
+    // Still pending an hour earlier — same row, same column, different clock.
+    const stillPending = loan({ status: "offered", offer_expires_at: h(1), starts_at: null, ends_at: null });
+    expect(borrowerSection(stillPending, "bob", NOW)).toBe("offers");
+  });
+
+  it("classifies an ACTIVE row past its clock as held, not as an offer", () => {
+    // The mirror case: `active` past ends_at is stale too, but the borrower DID
+    // hold it, so it belongs under `in` — not shunted into wentNowhere.
+    const stale = loan({ status: "active", ends_at: h(-1) });
+    expect(isLoanLive(stale, NOW)).toBe(false);
+    expect(borrowerSection(stale, "bob", NOW)).toBe("in");
+  });
+
+  it("returns null when the player is not the borrower", () => {
+    expect(borrowerSection(loan({ status: "active" }), "alice", NOW)).toBeNull();
+    expect(borrowerSection(loan({ status: "active" }), "bob", NOW)).toBe("in");
+  });
+
+  it("has no status that lands in two sections", () => {
+    for (const status of ALL_STATUSES) {
+      const row = loan({ status, offer_expires_at: h(6), ends_at: h(6) });
+      const s = borrowerSection(row, "bob", NOW);
+      const hits = (["offers", "in", "wentNowhere"] as const).filter((name) => s === name);
+      expect(hits).toHaveLength(1);
+    }
   });
 });

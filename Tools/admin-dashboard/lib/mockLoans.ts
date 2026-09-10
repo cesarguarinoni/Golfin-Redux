@@ -164,6 +164,23 @@ const SEED_LOANS: LoanAdminRow[] = [
     levelAtStart: 3,
     createdAt: h(-40),
   }),
+  // LAPSED BUT UNSWEPT — the state lazy expiry leaves behind, and the one the
+  // first version of the drawer rendered nowhere at all: the column still says
+  // `offered` because no client has read it, but the 48 h clock ran out 4 h ago.
+  // `borrowerSection` files it under "went nowhere" on its CLOCK.
+  row("00000000-mock-loan-0009", CRATILO, KEN, {
+    kind: "character",
+    refId: "char_yui",
+    days: 3,
+    status: "offered",
+    offeredAt: h(-52),
+    offerExpiresAt: h(-4),
+    answeredAt: null,
+    startsAt: null,
+    endsAt: null,
+    levelAtStart: 18,
+    createdAt: h(-52),
+  }),
   // An offer nobody answered: lapsed at the 48 h mark.
   row("00000000-mock-loan-0007", WWTEST, APPLE, {
     kind: "club",
@@ -221,6 +238,9 @@ const SEED_EVENTS: Record<string, LoanEventDto[]> = {
   "00000000-mock-loan-0008": [
     ev("00000000-mock-loan-0008", h(-40), null, "offered", "lender"),
     ev("00000000-mock-loan-0008", h(-38), "offered", "declined", "borrower"),
+  ],
+  "00000000-mock-loan-0009": [
+    ev("00000000-mock-loan-0009", h(-52), null, "offered", "lender"),
   ],
   "00000000-mock-loan-0007": [
     ev("00000000-mock-loan-0007", h(-100), null, "offered", "lender"),
