@@ -437,3 +437,7 @@ Every uncommitted path outside `Docs/Specs/Active/golfer_club_grip/` is listed.
   the T-pose thumb hanging down, not a defect of the hinge model; the aim is exercised from stage 1.
 - **Spread was 0**, so the abduct-axis sign convention (mirror-antisymmetric, documented in the file header) has been
   captured but not visually exercised yet.
+
+## Stage 0 verdict (Cesar, 2026-09-10)
+
+**PASS.** Fist triple for the gate accepted as **75 / 95 / 50** (SPEC §3.12.6 row 0 updated). Stage 1 (grip pose in hand space, cylinder r = 13.575 mm on the §3.12.4 axis, per-finger k bisection) is the next kickoff.

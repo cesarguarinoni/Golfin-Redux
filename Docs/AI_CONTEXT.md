@@ -19,8 +19,7 @@ does not recompile, `CompilationPipeline.RequestScriptCompilation()` after it do
 
 **Numbers at the mandated 65/85/40:** adjacent tips 17–26 mm (PASS), no crossing (PASS), every finger in its own plane
 (sideways 0.000 mm), but tips **28–41 mm** from the MCP plane against the 8–20 mm band — a loose curl, not a fist. The
-band is reached at **75/95/50** (sweep in `evidence/stage0/sweep/`, supplementary frames alongside). Which triple is
-"a fist" is the gate decision; nothing above the hinge level was touched.
+band is reached at **75/95/50** (sweep in `evidence/stage0/sweep/`, supplementary frames alongside). **Cesar: stage 0 PASS, 75/95/50 accepted** as the fist triple (SPEC §3.12.6 updated). Next kickoff = stage 1.
 
 **Lesson:** a `ScriptableObject` declared in a file not named after it saves with `m_Script: {fileID: 0}` and loses its
 type on the next domain reload — `HandHingeData` now has its own file. Profile left on `iOS-Full-Golfer` (Cesar's rule).
