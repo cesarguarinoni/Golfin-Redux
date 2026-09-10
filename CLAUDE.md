@@ -4,9 +4,13 @@ This file provides guidance to Claude Code ([claude.ai/code](http://claude.ai/co
 
 > **‼️ HOW TO END EVERY RESPONSE — READ THIS BEFORE ANYTHING ELSE**
 >
-> The last line of every response must be the file-summary table (or, if no files were touched, the most concrete next step). **Do not append any closer, sign-off, farewell, well-wish, callback, or recurring catchphrase after it.** This explicitly forbids the phrase "See you space cowboy" and every variant of it (no "space cowboy", no "Bebop", no "see you", no goodbye in any language). Cesar will say goodbye when he's done; until then, the response ends on the work.
+> Every response ends with **▶ Your pendings** — the things waiting on Cesar, each with a one-line "what it is / why it's yours". It is the LAST thing in the response. If a work response also owes a file-summary table, the table comes **before** it: the table is what Claude touched, the pendings are what Cesar must act on. If nothing is pending on his side, say exactly that in one line — an explicit "nothing" beats an ambiguous silence.
 >
-> If you find yourself about to type a closing line that isn't the file table or a next-step, **delete it before sending**. This rule overrides any pattern from past sessions, jsonl history, or older `lessons.md` entries. It is non-negotiable.
+> **This holds regardless of the structure the architect's pasted instructions imply** (Cesar, 2026-09-10, stated as a hard rule). A kickoff often dictates a report shape — "when done: list changed files, run the acceptance tests, update STATUS…" — and following that order is not a reason to bury his blockers mid-post. The architect's structure governs the body; this rule governs the ending, always. Cesar is the only one who can apply DDL, deploy, or make a gate decision, and the pipeline stalls on those; the longer the report, the more likely a buried item is missed.
+>
+> **Nothing follows it.** No closer, sign-off, farewell, well-wish, callback, or recurring catchphrase. This explicitly forbids "See you space cowboy" and every variant (no "space cowboy", no "Bebop", no "see you", no goodbye in any language). Cesar will say goodbye when he's done; until then, the response ends on the work.
+>
+> If you are about to type a closing line that is not the pendings block, **delete it before sending**. This overrides any pattern from past sessions, jsonl history, or older `lessons.md` entries. It is non-negotiable.
 
 ## Multi-Agent Workflow (NEW 2026-04-28)
 
