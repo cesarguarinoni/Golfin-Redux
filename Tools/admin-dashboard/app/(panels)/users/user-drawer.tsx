@@ -14,6 +14,7 @@ import type {
   PlayerInventoryResponse,
   UserActionKind,
   UserDetailResponse,
+  UserLoansResponse,
 } from "@/lib/types";
 import {
   AdjustRpModal,
@@ -23,9 +24,10 @@ import {
 } from "./action-modals";
 import { GachaTab } from "./gacha-tab";
 import { InventoryTab } from "./inventory-tab";
+import { LoansTab } from "./loans-tab";
 import { MissionsTab } from "./missions-tab";
 
-type Tab = "transactions" | "activities" | "inventory" | "missions" | "gacha";
+type Tab = "transactions" | "activities" | "inventory" | "missions" | "gacha" | "loans";
 
 type PendingModal =
   | { kind: "action"; action: UserActionKind }
@@ -146,6 +148,8 @@ export function UserDrawer({
   const [missionsError, setMissionsError] = useState<string | null>(null);
   const [gacha, setGacha] = useState<PlayerGachaResponse | null>(null);
   const [gachaError, setGachaError] = useState<string | null>(null);
+  const [loans, setLoans] = useState<UserLoansResponse | null>(null);
+  const [loansError, setLoansError] = useState<string | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
   const [tab, setTab] = useState<Tab>("transactions");
 
@@ -259,6 +263,30 @@ export function UserDrawer({
       } catch (err) {
         if (!cancelled)
           setGachaError(err instanceof Error ? err.message : t("udrawer.loadFailed"));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id, detailVersion]);
+
+  // Fetched with the detail, for the reason the effects above give. Re-runs on
+  // detailVersion so a force-return or a switch flip shows at once.
+  useEffect(() => {
+    let cancelled = false;
+    setLoansError(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/users/${user.id}/loans`);
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? `Request failed (${res.status})`);
+        }
+        const json = (await res.json()) as UserLoansResponse;
+        if (!cancelled) setLoans(json);
+      } catch (err) {
+        if (!cancelled)
+          setLoansError(err instanceof Error ? err.message : t("udrawer.loadFailed"));
       }
     })();
     return () => {
@@ -603,6 +631,7 @@ export function UserDrawer({
                 ["inventory", "udrawer.tab.inventory"],
                 ["missions", "udrawer.tab.missions"],
                 ["gacha", "udrawer.tab.gacha"],
+                ["loans", "udrawer.tab.loans"],
               ] as const
             ).map(([key, labelKey]) => (
               <button
@@ -745,6 +774,31 @@ export function UserDrawer({
                     onResetPity={(bannerId) => {
                       setNotice(null);
                       setPending({ kind: "resetPity", bannerId });
+                    }}
+                  />
+                )}
+              </>
+            )}
+            {tab === "loans" && (
+              <>
+                {loansError && (
+                  <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    {loansError}
+                  </p>
+                )}
+                {!loans && !loansError && (
+                  <p className="py-6 text-center text-xs text-zinc-600">
+                    {t("common.loading")}
+                  </p>
+                )}
+                {loans && (
+                  <LoansTab
+                    userId={user.id}
+                    data={loans}
+                    onMutated={() => {
+                      setNotice(null);
+                      void onMutated();
+                      setDetailVersion((v) => v + 1);
                     }}
                   />
                 )}

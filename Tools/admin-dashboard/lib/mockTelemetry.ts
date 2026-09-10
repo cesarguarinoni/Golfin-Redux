@@ -99,6 +99,11 @@ interface SessionPlan {
   balances?: number[];
   /** Tournament menu screens instead of the practice ones. */
   tournament?: boolean;
+  /** loans_ops §2 — what this session did in the lend flow, if anything.
+   *  "open" = looked at the modal and closed it; "send" = offered; "accept" /
+   *  "decline" = answered an offer from the Home pill; "return" = gave a
+   *  borrowed asset back early; "switchOff" = turned offers off in Settings. */
+  loans?: ("open" | "send" | "accept" | "decline" | "return" | "switchOff")[];
 }
 
 /**
@@ -107,16 +112,16 @@ interface SessionPlan {
  * where every stage is 100% would prove nothing about the funnel.
  */
 const PLAN: SessionPlan[] = [
-  { tester: 0, startsHoursAgo: 74, depth: "complete", holes: [1, 2], cleanExit: true, flickRejects: 2, cancels: 1, balances: [0, 20, 45] },
-  { tester: 0, startsHoursAgo: 5, depth: "complete", holes: [3], cleanExit: true, balances: [45, 65] },
-  { tester: 1, startsHoursAgo: 50, depth: "complete", holes: [1], cleanExit: true, flickRejects: 1, balances: [0, 20] },
-  { tester: 1, startsHoursAgo: 27, depth: "round", holes: [2], abandon: true, cleanExit: true },
-  { tester: 2, startsHoursAgo: 47, depth: "holeSelect", cleanExit: true },
+  { tester: 0, startsHoursAgo: 74, depth: "complete", holes: [1, 2], cleanExit: true, flickRejects: 2, cancels: 1, balances: [0, 20, 45], loans: ["open", "send"] },
+  { tester: 0, startsHoursAgo: 5, depth: "complete", holes: [3], cleanExit: true, balances: [45, 65], loans: ["open"] },
+  { tester: 1, startsHoursAgo: 50, depth: "complete", holes: [1], cleanExit: true, flickRejects: 1, balances: [0, 20], loans: ["accept"] },
+  { tester: 1, startsHoursAgo: 27, depth: "round", holes: [2], abandon: true, cleanExit: true, loans: ["return"] },
+  { tester: 2, startsHoursAgo: 47, depth: "holeSelect", cleanExit: true, loans: ["open", "send"] },
   { tester: 2, startsHoursAgo: 22, depth: "complete", holes: [1], crash: true, cleanExit: false },
-  { tester: 3, startsHoursAgo: 30, depth: "home", cleanExit: true },
+  { tester: 3, startsHoursAgo: 30, depth: "home", cleanExit: true, loans: ["decline", "switchOff"] },
   { tester: 3, startsHoursAgo: 3, depth: "complete", holes: [2], cleanExit: true, tournament: true, balances: [100, 120] },
   { tester: 4, startsHoursAgo: 26, depth: "boot", cleanExit: true },
-  { tester: 4, startsHoursAgo: 2, depth: "round", holes: [1], cleanExit: true, cancels: 1 },
+  { tester: 4, startsHoursAgo: 2, depth: "round", holes: [1], cleanExit: true, cancels: 1, loans: ["open"] },
 ];
 
 /** Per-hole shot script — fixed, so avg strokes / OB rate never move. */
@@ -238,6 +243,40 @@ function buildRows(): MockEventRow[] {
 
     push("screen_view", (minute += 1), { screen: "Home", since_boot_s: 6.8 });
     points();
+
+    // loans_ops §2 — the lend flow, with the payload keys the client ships.
+    // Emitted on Home so every session that reached the menu can carry one.
+    for (const step of plan.loans ?? []) {
+      switch (step) {
+        case "open":
+          push("loan_modal_open", (minute += 1), { kind: "character", ref_id: "char_kai" });
+          break;
+        case "send":
+          push("loan_offer_sent", (minute += 1), {
+            kind: "character",
+            ref_id: "char_kai",
+            days: s % 2 === 0 ? 3 : 7,
+            via: s % 2 === 0 ? "followed" : "search",
+          });
+          break;
+        case "accept":
+          push("loan_pill_open", (minute += 1), { pending: 1, kind: "character" });
+          push("loan_offer_answered", (minute += 1), { loan_id: id("10a70000", s), answer: "accept" });
+          break;
+        case "decline":
+          push("loan_pill_open", (minute += 1), { pending: 1, kind: "club" });
+          push("loan_offer_answered", (minute += 1), { loan_id: id("10a70000", s), answer: "decline" });
+          break;
+        case "return":
+          push("loan_return", (minute += 1), { loan_id: id("10a70000", s), early: true });
+          break;
+        case "switchOff":
+          push("loan_offers_setting", (minute += 1), { on: false });
+          break;
+        default:
+          break;
+      }
+    }
 
     if (plan.depth === "home") {
       if (plan.cleanExit) push("session_end", (minute += 4), { duration_s: 380 });

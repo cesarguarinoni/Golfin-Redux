@@ -34,6 +34,14 @@
   ],
   "observability": {
     "enabled": true
+  },
+  // Plain vars, not secrets — public URLs the Worker fetches from.
+  //   PLAYLIFE_API_URL: the playlife API (Fly). The Loans panel's Rules card
+  //   reads `GET /api/v1/loans/rules` off it so the numbers can never drift
+  //   from routers/loans.py. `lib/loansData.ts` falls back to this same host
+  //   when the var is absent (a fresh checkout still reaches the API).
+  "vars": {
+    "PLAYLIFE_API_URL": "https://playlife-api.fly.dev"
   }
 
   // No R2 incremental cache binding on purpose: every route in this app is

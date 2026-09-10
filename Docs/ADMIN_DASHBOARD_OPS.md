@@ -149,6 +149,44 @@ Inventory tab still shows the blob's ticket map, labelled **"Device counter
 ledger. `issueInventoryGrant` refuses `kind = 'ticket'` outright so the old path
 cannot be reintroduced by a second caller.
 
+**Loans is the support panel, and its one trap is LAZY EXPIRY.** It reads
+`golfin_loans` and `golfin_loan_events` — the log, filterable by status / kind /
+name-or-id / date, a row expanding to its timeline and its action bar, an Export
+CSV of the filtered set, and a read-only Rules card. Nothing sweeps
+`golfin_loans`: `GET /loans` on the API flips a past-clock row only when a
+CLIENT reads it, so **an offer whose 48 h ran out yesterday still shows as
+OFFERED here**, and the panel's subtitle says so. Do not "fix" a row that looks
+stale — it is not live and not locking anything regardless of the column, and
+the next client read flips it. Only the Telemetry card's *pending now* /
+*active now* apply the router's own predicates to the timestamps.
+
+The timeline is written by a TRIGGER on `golfin_loans`, not by the router, so it
+catches all three writers — the six endpoints, the lazy expiry, and the admin.
+The actor is inferred from the transition, except for the admin: a forced return
+is indistinguishable from a borrower's return, so `golfin_loan_admin` raises a
+transaction-local flag the trigger honours and writes its own row carrying the
+email and the note.
+
+**Three actions, each needing a note (≥ 3 chars) that lands on the timeline AND
+in the audit log**, and all three go through `golfin_loan_admin()` rather than an
+`update` — an `update` would move a status with no timeline row behind it:
+
+* **Force return** (active only) — mirrors `return_loan` exactly, `level_at_end`
+  included. The borrower's client reconciles on its next refresh.
+* **Cancel offer** (offered only) — a rescind. ⚠️ Like a real rescind it STARTS
+  the pair's 24 h re-offer cooldown; clear it next if the case calls for it.
+* **Clear cooldown** (rescinded / declined) — the cooldown is DERIVED from
+  `answered_at`, so there is no column to clear: the pair's rows are pushed 30
+  days back. The history stays, the window is over.
+
+A fourth control, the per-player **Loan offers** switch
+(`profiles.golfin_loan_offers`), lives on the Users drawer's Loans tab. It is
+instant — the API reads the column per lend, so OFF refuses the very next offer
+with `not_accepting` — and it is the same column the player's own Settings
+switch writes. The loan CONSTANTS are not editable from here by design: the
+Rules card fetches them from `GET /api/v1/loans/rules` on the API every load, so
+it cannot drift from `routers/loans.py`.
+
 **Rewards is the one to be careful with.** It edits `game_point_actions`, i.e.
 what every earn PAYS, and it is live on save. The panel says so in a banner at
 the top and again in the editor; do not soften that copy. Its `pts` column being

@@ -44,7 +44,8 @@ export type PanelIcon =
   | "puzzle"
   | "calendar"
   | "ticket"
-  | "pin";
+  | "pin"
+  | "handshake";
 
 export interface PanelDef {
   id: PanelId;
@@ -96,6 +97,12 @@ export const PANELS: readonly PanelDef[] = [
   // operator publishes, this one reads what the server did and carries the pause
   // switch. Same distinction as Telemetry vs the content catalogs.
   { id: "gacha", title: "Gacha", icon: "ticket", route: "/gacha" },
+  // ---- loans_ops §3.3 ------------------------------------------------------
+  // The loans OPS panel — the same KIND of panel as Gacha: it reads what the
+  // server did (`golfin_loans`, `golfin_loan_events`) and carries the support
+  // actions, with no draft, no publish and no version. The loan RULES are code
+  // constants shown read-only; tuning them from here is a deferral.
+  { id: "loans", title: "Loans", icon: "handshake", route: "/loans" },
 
   // ---- gacha_admin_catalogs ----------------------------------------------
   // Three entries for four catalogs: `gacha_rates` is edited INSIDE the Pools

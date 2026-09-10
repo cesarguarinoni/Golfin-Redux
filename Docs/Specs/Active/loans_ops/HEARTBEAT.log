@@ -1,0 +1,19 @@
+=== iter-1 kickoff baseline 2026-09-10T07:22:24Z ===
+HEAD: 664d12aa45207890885e4ca7d75d5bea02d74896
+DIRTY:
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+ M Docs/Economy/MONETIZATION_PLAN.md
+ M Docs/Specs/Active/weekly_rotation_admin/SPEC.md
+ M Docs/Specs/Active/weekly_rotation_client/SPEC.md
+ M Docs/TellCode.md
+?? "Claude outputs/screen_hints_scrim_vs_blur.png"
+?? Docs/Specs/Active/economy_telemetry/SPEC.md
+?? Docs/Specs/Active/economy_telemetry/STATUS.md
+?? Docs/Specs/Active/loans_ops/HEARTBEAT.log
+?? Docs/Specs/Active/loans_ops/SPEC.md
+?? Docs/Specs/Active/loans_ops/STATUS.md
+?? Docs/Specs/Quick/hole_selection_first_card_gap.md
+=== end baseline ===
+2026-09-10T07:22:24Z iter-1 start — read SPEC, ops doc §2/§3/§4, gacha panel + tab, telemetryGacha, loans router/migrations/tests; baselines: backend 315 passed, dashboard 293 passed
+2026-09-10T07:41:23Z iter-1 — dashboard code written; tsc clean; vitest 305/305; mock server :3100 up; force_return exercised end-to-end (row→RETURNED, admin timeline row, audit loan_force_return)
+2026-09-10T08:08:12Z iter-1 — API deployed v73→v74, /loans/rules live 200; live-mode degradation probed against prod (golfin_loan_events 404 + RPC PGRST202 both caught); 141 DICT keys en+ja clean; 12 screenshots captured; committing then deploying the dashboard

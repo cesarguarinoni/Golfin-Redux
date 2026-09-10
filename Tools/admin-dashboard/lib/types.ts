@@ -1,6 +1,7 @@
 /** Shared domain types for the GOLFIN admin dashboard. */
 
 import type { GachaFunnel } from "./telemetryGacha";
+import type { LoanFunnel, LoanLifecycle } from "./telemetryLoans";
 
 export type AuthProvider = "email" | "google" | "apple";
 
@@ -660,6 +661,10 @@ export interface TelemetrySummaryResponse extends TelemetryReadMeta {
   /** gacha_ops_polish §3 — the five gacha_* events, folded. Shape in
    *  `lib/telemetryGacha.ts`, which is where it is computed and tested. */
   gacha: GachaFunnel;
+  /** loans_ops §2 — the seven loan_* events folded (funnel) and the
+   *  `golfin_loans` rows in range folded (lifecycle). Both computed and tested
+   *  in `lib/telemetryLoans.ts`. */
+  loans: { funnel: LoanFunnel; lifecycle: LoanLifecycle };
   /** Distinct event names seen in range — populates the explorer's filter. */
   eventNames: string[];
 }
@@ -1048,4 +1053,134 @@ export interface GeocodeResult {
   geohash: string;
   name: string | null;
   address: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Loans ops (loans_ops §3) — `golfin_loans` + `golfin_loan_events`, server truth
+// ---------------------------------------------------------------------------
+
+export type LoanStatus =
+  | "offered"
+  | "active"
+  | "returned"
+  | "expired"
+  | "declined"
+  | "rescinded"
+  | "offer_expired";
+
+export const LOAN_STATUSES: readonly LoanStatus[] = [
+  "offered",
+  "active",
+  "returned",
+  "expired",
+  "declined",
+  "rescinded",
+  "offer_expired",
+];
+
+export type LoanKind = "character" | "club";
+
+/** One `golfin_loans` row with both parties' display names resolved. */
+export interface LoanAdminRow {
+  id: string;
+  lenderId: string;
+  lenderName: string | null;
+  borrowerId: string;
+  borrowerName: string | null;
+  kind: string;
+  refId: string;
+  days: number;
+  status: string;
+  offeredAt: string | null;
+  offerExpiresAt: string | null;
+  answeredAt: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  endedAt: string | null;
+  levelAtStart: number;
+  levelAtEnd: number | null;
+  lenderShareBp: number;
+  rpToLender: number;
+  rpToBorrower: number;
+  createdAt: string;
+}
+
+export type LoanActor = "lender" | "borrower" | "system" | "admin";
+
+/** One `golfin_loan_events` row — the timeline. */
+export interface LoanEventDto {
+  id: number;
+  at: string;
+  fromStatus: string | null;
+  toStatus: string;
+  actor: string;
+  adminEmail: string | null;
+  note: string | null;
+}
+
+export interface LoanFilters {
+  status?: string;
+  kind?: string;
+  q?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface LoansResponse {
+  loans: LoanAdminRow[];
+  page: number;
+  /** True when the page was full — there may be a next one. */
+  hasMore: boolean;
+  mock: boolean;
+}
+
+export interface LoanDetailResponse {
+  loan: LoanAdminRow;
+  events: LoanEventDto[];
+  mock: boolean;
+  /** Set while 2026_09_10_golfin_loan_events.sql has not been applied here —
+   *  the row still shows, the timeline is empty and says why. */
+  notMigrated?: string;
+}
+
+export interface UserLoansResponse {
+  /** This user is the LENDER (any status, newest first). */
+  out: LoanAdminRow[];
+  /** This user is the BORROWER and the loan was accepted at some point. */
+  in: LoanAdminRow[];
+  /** Offers waiting on this user's answer (`offered`, clock running). */
+  offers: LoanAdminRow[];
+  /** `profiles.golfin_loan_offers`. */
+  offersEnabled: boolean;
+  mock: boolean;
+}
+
+export type LoanAdminAction = "force_return" | "cancel_offer" | "clear_cooldown";
+
+export const LOAN_ADMIN_ACTIONS: readonly LoanAdminAction[] = [
+  "force_return",
+  "cancel_offer",
+  "clear_cooldown",
+];
+
+/** `GET /api/v1/loans/rules` on the API, passed through. */
+export interface LoanRules {
+  lenderShareBp: number;
+  allowedDays: number[];
+  maxLoansOut: number;
+  maxLoansIn: number;
+  maxPendingIn: number;
+  offerTtlHours: number;
+  reofferCooldownHours: number;
+  endedWindowDays: number;
+}
+
+export interface LoanRulesResponse {
+  rules: LoanRules | null;
+  /** Where the numbers came from — the API base URL, or "mock". */
+  source: string;
+  /** Set when the API could not be reached; the card says so instead of 500ing. */
+  unavailable?: string;
 }

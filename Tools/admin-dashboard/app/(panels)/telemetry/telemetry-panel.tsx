@@ -31,6 +31,7 @@ const SECTIONS = [
   { id: "holes", key: "tel.tab.holes" },
   { id: "shots", key: "tel.tab.shots" },
   { id: "gacha", key: "tel.tab.gacha" },
+  { id: "loans", key: "tel.tab.loans" },
   { id: "testers", key: "tel.tab.testers" },
   { id: "events", key: "tel.tab.events" },
 ] as const satisfies readonly { id: string; key: DictKey }[];
@@ -274,7 +275,15 @@ export function TelemetryPanel() {
     );
   }
 
-  const { kpis, funnel, holes, shots, gacha } = summary;
+  const { kpis, funnel, holes, shots, gacha, loans } = summary;
+  const loanFunnel = loans.funnel;
+  const loanLife = loans.lifecycle;
+  const loanEnded = (loanLife.byStatus.returned ?? 0) + (loanLife.byStatus.expired ?? 0);
+  const statusRows = Object.entries(loanLife.byStatus).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const mixRows = (mix: Record<string, number>) =>
+    Object.entries(mix).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const partyLabel = (p: { userId: string; displayName: string | null }) =>
+    p.displayName ?? `${p.userId.slice(0, 8)}…`;
 
   // The timing card's numbers: the whole-range totals under "All schemes", otherwise that
   // scheme's own slice. A scheme with no shots renders every rate as an em-dash rather than
@@ -705,6 +714,188 @@ export function TelemetryPanel() {
               )}
             </tbody>
           </table>
+        </div>
+      </Section>
+
+      {/* loans_ops §2 — lending. The FUNNEL strip is the client's events (who looked and did
+          not send); the LIFECYCLE numbers are the server's own rows (what actually happened),
+          with the router's live/pending predicates applied to the timestamps at render time
+          because expiry is lazy. */}
+      <Section id="loans" title={t("tel.loans.title")}>
+        <h3 className="mb-2 text-xs font-semibold text-zinc-400">{t("tel.loans.funnelTitle")}</h3>
+        <div className="space-y-2 rounded-lg border border-surface-800 bg-surface-900 p-4">
+          {loanFunnel.stages.map((stage) => (
+            <div key={stage.id} className="grid grid-cols-[180px_1fr_120px] items-center gap-3">
+              <span className="truncate text-xs text-zinc-400">
+                {t(`tel.loans.stage.${stage.id}` as DictKey)}
+              </span>
+              <Bar fraction={stage.pct} />
+              <span className="text-right text-xs tabular-nums text-zinc-400">
+                {pct(loanFunnel.modalOpens > 0 ? stage.pct : null)}
+                <span className="ml-1.5 text-zinc-600">({stage.count})</span>
+              </span>
+            </div>
+          ))}
+          <p className="pt-1 text-[11px] text-zinc-500">
+            {loanFunnel.modalOpens + loanFunnel.answered + loanFunnel.pillOpens === 0
+              ? t("tel.loans.noEvents")
+              : t("tel.loans.funnelSub", {
+                  players: loanFunnel.players.toLocaleString(),
+                  declined: loanFunnel.declined.toLocaleString(),
+                  rescinded: loanFunnel.rescinded.toLocaleString(),
+                  pill: loanFunnel.pillOpens.toLocaleString(),
+                  off: loanFunnel.settingOff.toLocaleString(),
+                })}
+          </p>
+          <p className="text-[11px] leading-relaxed text-zinc-600">{t("tel.loans.funnelHint")}</p>
+        </div>
+
+        <h3 className="mb-2 mt-4 text-xs font-semibold text-zinc-400">{t("tel.loans.lifecycleTitle")}</h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Card
+            label={t("tel.loans.kpi.pending")}
+            value={loanLife.pendingNow.toLocaleString()}
+            hint={t("tel.loans.kpi.pendingHint")}
+            tone={loanLife.pendingNow > 0 ? "amber" : "normal"}
+          />
+          <Card
+            label={t("tel.loans.kpi.active")}
+            value={loanLife.activeNow.toLocaleString()}
+            hint={t("tel.loans.kpi.activeHint")}
+            tone={loanLife.activeNow > 0 ? "accent" : "normal"}
+          />
+          <Card
+            label={t("tel.loans.kpi.acceptRate")}
+            value={pct(loanLife.acceptRate, 1)}
+            sub={t("tel.loans.kpi.acceptRateSub", {
+              accepted: loanLife.accepted.toLocaleString(),
+              answered: loanLife.answered.toLocaleString(),
+            })}
+            hint={t("tel.loans.kpi.acceptRateHint")}
+          />
+          <Card
+            label={t("tel.loans.kpi.earlyReturn")}
+            value={pct(loanLife.earlyReturnRate, 1)}
+            sub={t("tel.loans.kpi.earlyReturnSub", {
+              n: loanLife.earlyReturns.toLocaleString(),
+              ended: loanEnded.toLocaleString(),
+            })}
+            hint={t("tel.loans.kpi.earlyReturnHint")}
+          />
+          <Card
+            label={t("tel.loans.kpi.rpLenders")}
+            value={loanLife.rpToLender.toLocaleString()}
+            sub={t("tel.loans.kpi.rpLendersSub", { n: loanLife.rpToBorrower.toLocaleString() })}
+            hint={t("tel.loans.kpi.rpLendersHint")}
+          />
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Card
+            label={t("tel.loans.median")}
+            value={
+              loanLife.medianHoursToAnswer === null
+                ? "—"
+                : duration(loanLife.medianHoursToAnswer * 3600)
+            }
+            hint={t("tel.loans.medianHint")}
+          />
+          <Card
+            label={t("tel.loans.viaSearch")}
+            value={pct(loanFunnel.viaSearchRate, 1)}
+            sub={`${loanFunnel.viaSearch.toLocaleString()} / ${loanFunnel.offersSent.toLocaleString()}`}
+            hint={t("tel.loans.viaSearchHint")}
+          />
+          <div className="rounded-lg border border-surface-800 bg-surface-900 px-4 py-3">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+              {t("tel.loans.daysTitle")}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums text-zinc-200">
+              {mixRows(loanLife.daysMix).length === 0 && <span className="text-zinc-600">—</span>}
+              {mixRows(loanLife.daysMix).map(([days, n]) => (
+                <span key={days}>
+                  <span className="text-zinc-500">{days}d</span> {n}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-lg border border-surface-800 bg-surface-900 px-4 py-3">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+              {t("tel.loans.kindTitle")}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums text-zinc-200">
+              {mixRows(loanLife.kindMix).length === 0 && <span className="text-zinc-600">—</span>}
+              {mixRows(loanLife.kindMix).map(([kind, n]) => (
+                <span key={kind}>
+                  <span className="text-zinc-500">{kind}</span> {n}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+          <div className="overflow-x-auto rounded-lg border border-surface-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface-900 text-xs text-zinc-500">
+                <tr>
+                  <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("tel.loans.col.status")}</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tel.loans.col.count")}</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tel.loans.col.share")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {statusRows.map(([status, n]) => (
+                  <tr key={status} className="border-t border-surface-800 bg-surface-950">
+                    <td className="px-4 py-2 font-mono text-xs text-zinc-300">{status}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-zinc-300">{n}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-zinc-400">
+                      {pct(loanLife.total > 0 ? n / loanLife.total : null, 1)}
+                    </td>
+                  </tr>
+                ))}
+                {statusRows.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-sm text-zinc-600">
+                      {t("tel.loans.none")}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {(
+            [
+              ["tel.loans.topLenders", loanLife.topLenders],
+              ["tel.loans.topBorrowers", loanLife.topBorrowers],
+            ] as const
+          ).map(([key, parties]) => (
+            <div key={key} className="rounded-lg border border-surface-800 bg-surface-900 p-4">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">{t(key)}</div>
+              {parties.length === 0 ? (
+                <p className="mt-2 text-xs text-zinc-600">—</p>
+              ) : (
+                <ol className="mt-2 space-y-1">
+                  {parties.map((p, i) => (
+                    <li key={p.userId} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate text-zinc-300">
+                        <span className="mr-1.5 tabular-nums text-zinc-600">{i + 1}.</span>
+                        <a
+                          href={`/users?open=${encodeURIComponent(p.userId)}`}
+                          className="underline-offset-2 hover:text-accent-300 hover:underline"
+                        >
+                          {partyLabel(p)}
+                        </a>
+                      </span>
+                      <span className="shrink-0 tabular-nums text-zinc-400">
+                        {t("tel.loans.loansN", { n: p.count })}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          ))}
         </div>
       </Section>
 

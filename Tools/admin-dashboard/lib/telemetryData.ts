@@ -4,6 +4,8 @@ import { MOCK_NOW, MOCK_TELEMETRY_EVENTS, type MockEventRow } from "./mockTeleme
 import { isMockMode } from "./mode";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 import { buildGachaFunnel, type GachaEventRow } from "./telemetryGacha";
+import { fetchLoanLifecycle } from "./loansData";
+import { buildLoanFunnel, type LoanEventRow } from "./telemetryLoans";
 import type {
   ClubStat,
   FunnelStage,
@@ -482,7 +484,12 @@ function buildShotQuality(rows: Row[]): ShotQuality {
 export async function fetchTelemetrySummary(
   range: TelemetryRange
 ): Promise<TelemetrySummaryResponse> {
-  const { rows, truncated, mock, tableMissing } = await scanEvents(range);
+  // The loans lifecycle reads `golfin_loans`, not `telemetry_events`, so it is a
+  // second query — issued alongside the scan rather than after it. Same range.
+  const [{ rows, truncated, mock, tableMissing }, loanLifecycle] = await Promise.all([
+    scanEvents(range),
+    fetchLoanLifecycle(range),
+  ]);
   return {
     mock,
     range,
@@ -496,6 +503,9 @@ export async function fetchTelemetrySummary(
     // §3 — folded from the SAME scan every other section reads, so the gacha card
     // can never describe a different window than the KPIs above it.
     gacha: buildGachaFunnel(rows as GachaEventRow[]),
+    // loans_ops §2 — the funnel from the same scan; the lifecycle from the
+    // server's own rows, ranged on the loan's anchor moment.
+    loans: { funnel: buildLoanFunnel(rows as LoanEventRow[]), lifecycle: loanLifecycle },
     eventNames: [...new Set(rows.map((r) => String(r.name ?? "")))].filter(Boolean).sort(),
   };
 }

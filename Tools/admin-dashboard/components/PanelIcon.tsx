@@ -150,6 +150,18 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
       <path d="M14 15v2" />
     </>
   ),
+  // Two hands meeting — a loan is one player handing something to another.
+  handshake: (
+    <>
+      <path d="M2 9l4-4 4 3 3-1 5 4" />
+      <path d="M22 9l-4-4-3 2" />
+      <path d="M13 11l-2 2a1.5 1.5 0 0 0 2 2l2-2" />
+      <path d="M15 13l-2 2a1.5 1.5 0 0 0 2 2l2-2" />
+      <path d="M17 15l-1 1a1.5 1.5 0 0 0 2 2l1-1" />
+      <path d="M2 9v6l5 3" />
+      <path d="M22 9v6l-3 2" />
+    </>
+  ),
   // A rising staircase — levels, each one a step you pay for.
   ladder: (
     <>

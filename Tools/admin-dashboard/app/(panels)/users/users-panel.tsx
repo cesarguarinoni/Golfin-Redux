@@ -111,6 +111,18 @@ export function UsersPanel() {
     void load();
   }, [load]);
 
+  // `/users?open=<uuid>` opens that user's drawer once the list is in — the
+  // Loans panel links a lender / borrower name here (loans_ops §3.3). Read
+  // from the location rather than useSearchParams so this client component
+  // needs no Suspense boundary. Cleared after use so a reload does not reopen.
+  useEffect(() => {
+    if (!data) return;
+    const wanted = new URLSearchParams(window.location.search).get("open");
+    if (!wanted) return;
+    if (data.users.some((u) => u.id === wanted)) setSelectedId(wanted);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [data]);
+
   const users = useMemo(() => data?.users ?? [], [data]);
   // Drawer re-renders from the freshest row after mutations reload the list.
   const selected = useMemo(
