@@ -4,6 +4,58 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-10 — map view: **the club button the map hides behind was never re-wired** — SHIPPED, one cause still open
+
+Reported from real play under Pendulum: entering map view showed a correctly framed top-down hole
+with **not one button on it** and no way back to the shot; a later attempt showed the shot UI gone
+and map furniture strewn across the NORMAL camera.
+
+**Symptom one, cause found and fixed.** `shot_view_layout` (2026-09-07) rebuilt
+`ActionButtons_Cluster`; every button took a new fileID and `MapViewController._shootButton` was
+left at `fileID: 0`. Nothing threw, because all three consumers null-check and carry on —
+`HideShotUIChrome` had no subtree to exempt so it hid EVERY `ShotUI_Canvas` child instead of
+all-but-the-club-button, `RepurposeShootButton` bound no Close, and `BuildShotViewClone` had
+nothing to clone. Three parts to the fix: the scene reference points at DriverButton again;
+`MapViewController` resolves the club button from its `ClubButtonWidget` when the slot is empty and
+**refuses to open** if it still cannot (hiding the shot UI without leaving an exit is a soft-lock);
+and `ActionButtonsBuilder` re-wires it. That builder is the thing that deletes and rebuilds the
+cluster, and this is the **FOURTH** consumer of it to be orphaned — `WireShotLayoutController`,
+`WireShotInProgressUiGate` and `WireFadeDrawHide` all already exist for the identical reason.
+
+Audited the shape rather than the instance (PIPELINE_HARDENING §15): every serialized reference in
+`LabScaffold.unity` pointing into the rebuilt subtrees was enumerated, not sampled. `_shootButton`
+was the only orphan. `ActionButtonsRoot._shotController`, `MapViewController._shotViewButton`, the
+two `_secondaryText` slots, `_mirrorGroup` on all three scheme views and
+`ShotConeView._arrows`/`._powerHUD` are intentionally null with documented reasons.
+
+**Symptom two is a SEPARATE defect and its cause is NOT known.** A screenshot settled what state it
+was: `Open()` had run start to finish — chrome hidden, runtime objects built, world-space markers
+placed — and the top-down camera never appeared. The tell is *which* elements landed: world-space
+ones (aim line, range fan, landing dome) need no camera and were correct; screen-space ones (the
+distance chips) piled up unprojected. This file has **20-plus `if (_mapCam == null) return;`
+guards**, `PositionMapCamera`'s among them, and together they turn a missing camera into a fully
+built map drawn over the shot view with no way back.
+
+Ruled out: the `MapViewCam` tag IS defined (creation cannot throw); no rival camera outranks the
+map (map 10, gameplay 0, shell disabled at -1); and `ShotInProgressUiGate.ShotInProgress` — the one
+silent early-return in `HoleCardWidget.OpenMapView` — latches and releases correctly under Pendulum
+after a real `BotSwing` shot. It did **not reproduce across four play-mode runs** (cold boot with
+Pendulum persisted, before and after a real shot; camera at pitch 70 every time), so it is
+intermittent or device-only.
+
+**What shipped for it is containment, not a cure:** `Open()` verifies the camera is live the moment
+`BuildRuntimeObjects` returns and refuses the open if it is not, logging the reason plus the whole
+camera roster — nothing is hidden at that point, so the player keeps a working shot view — and the
+camera's depth is now derived (`max enabled screen camera + 1`, floor 10) instead of the hardcoded
+10, which was a guess about everyone else's depth.
+
+**NEXT SESSION:** the dead-camera cause is open. The build now prints
+`[MapView v2] Map camera is not live (<reason>) — Cameras: [...]` at the moment of failure; that
+line should name it outright. Needs a device repro with a console attached.
+
+Commits: `14933ac8f` (the button), `27213e6fc` (the camera guard).
+
+---
 ## 2026-09-10 — loans_ops: **manage loans from the admin, and see whether lending is used** — READY_FOR_SELF_REVIEW (migration waiting on Cesar)
 
 The ops half of the loan system. A **Loans panel** cloned from the Gacha ops panel (status chips /

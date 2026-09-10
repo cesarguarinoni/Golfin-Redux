@@ -4280,3 +4280,43 @@ in `Docs/Architecture/`).
 thing under test — this is its mirror: the instrument measured a real thing, just not that one) and
 the standing reviewer gate on font weight *and* rendered size vs the reference render, which is the
 gate this landed on.
+
+---
+
+## Lesson BW — a symptom described as state deserves a FRAME before a theory (2026-09-10, map view)
+
+**What happened.** A bug report arrived as two symptoms: "entered map view, no buttons appeared",
+then "closed the app, tried again, the camera never switched to top view". The first had a clean,
+provable cause in the scene. For the second I built a theory from internal state — the map's
+`_isOpen` latches true, no close control exists, so every later tap early-returns — and reported it
+as the likely explanation. It was wrong: the app had been swipe-killed, which resets every static.
+I then built a *second* theory (`ShotInProgressUiGate.ShotInProgress` stuck, the one silent
+early-return in `HoleCardWidget.OpenMapView`) and disproved that too, with a bot shot.
+
+One screenshot settled it in seconds, and neither theory was close: `Open()` had run to completion
+and the camera simply never rendered. The evidence was **in the frame** — world-space markers
+placed correctly, screen-space chips piled up unprojected. That pattern names the failure exactly
+(the world-space path needs no camera, the screen-space path early-returns without one) and is
+invisible from any amount of code reading.
+
+**Why this codebase makes it worse.** The shot-UI and map-view paths **fail open**: null-checked
+references, silent `return`s, no throw. `MapViewController` alone has 20-plus
+`if (_mapCam == null) return;` guards. Each is individually reasonable; together they mean a broken
+precondition produces a *plausible-looking wrong screen* instead of an error. So "nothing happened"
+and "everything happened except one thing" are indistinguishable from the outside — and the outside
+is all a bug report has.
+
+**The rule.**
+
+1. When a report describes a **visual** symptom, ask for the frame before theorising about state.
+   It is one message and it outranks any amount of tracing.
+2. Distinguish the readings explicitly when asking. "Did the UI vanish and the world stay, or did
+   absolutely nothing happen?" splits the search space in half and costs the reporter five seconds.
+3. Report a theory as a theory. Say which half is proven and which is inferred, so a correction
+   costs one message rather than a wasted round of work built on it.
+4. A cause that cannot be reproduced is not fixed. Ship containment — refuse the operation, log the
+   state that produced it — and say plainly that the cause is still open.
+
+**Sister rules.** Lesson on deriving from the primary source rather than confirming the artifact
+that asserts it, and the standing rule that a real number off the wrong property is not evidence —
+this is the same failure one level up: a real mechanism, just not the one that fired.
