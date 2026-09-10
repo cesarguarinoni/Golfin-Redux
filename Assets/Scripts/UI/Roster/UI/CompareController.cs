@@ -70,6 +70,11 @@ namespace Golfin.Roster
         [SerializeField] private GameObject? compareLevelUpReadyIcon; // IconLevelUpBig — wire in Inspector
         [SerializeField] private GameObject? compareLowStaminaIcon;
 
+        // Same shape as the detail panel — see NameIconFitter. This copy clears a 445px
+        // surname by 7px today, which is not a margin worth trusting to the next long name.
+        [SerializeField] private float compareNameFontSizeMax = 45f;
+        [SerializeField] private float compareNameFontSizeMin = 30f;
+
         // Authored (EN) compare-bio font size + box bottom edge, captured before any
         // Japanese auto-size shrink. English is fixed-size + Overflow so it ignores the box.
         private float _compareBioBaseFontSize;
@@ -339,6 +344,10 @@ namespace Golfin.Roster
 
             if (compareLowStaminaIcon != null)
                 compareLowStaminaIcon.SetActive(playerData.IsStaminaLow(LOW_STAMINA_THRESHOLD));
+
+            // Re-fit the name AFTER the icons are toggled — same shape as the detail panel.
+            NameIconFitter.Fit(compareNameText, compareNameFontSizeMax, compareNameFontSizeMin,
+                               compareSelectedIcon, compareLevelUpReadyIcon, compareLowStaminaIcon);
 
             // Level Up button state
             if (compareLevelUpButton != null)

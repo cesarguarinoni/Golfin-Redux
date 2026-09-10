@@ -116,6 +116,14 @@ namespace Golfin.Roster
         [SerializeField] private GameObject? selectedIcon;       // IconSelectedBig — wire in Inspector
         [SerializeField] private GameObject? levelUpReadyIcon;   // IconLevelUpBig  — wire in Inspector
 
+        // The status icons overlay the name's top-right corner, so a long surname used to run
+        // under the level-up arrow ("CHRISTOFFERSON" needs 445px; the icons start 418px in).
+        // NameIconFitter auto-sizes the label down only as far as the icons force it.
+        // These are the DESIGN size and the floor — with auto-sizing on, `fontSize` is an
+        // output, so the max can never be re-derived from the component.
+        [SerializeField] private float nameFontSizeMax = 45f;
+        [SerializeField] private float nameFontSizeMin = 30f;
+
         // ── asset_loans §4.1 ──────────────────────────────────────────────────
         [Header("Loans")]
         /// <summary>The LEND / RETURN button, a clone of CompareButton sharing its row.</summary>
@@ -376,6 +384,11 @@ namespace Golfin.Roster
                              && playerData.currentLevel < maxLevel;
                 levelUpReadyIcon.SetActive(canLevel);
             }
+
+            // Re-fit the name AFTER the icons are toggled: a character wearing no badge gets
+            // the full 489px back, one wearing both reserves the wider strip.
+            NameIconFitter.Fit(characterNameText, nameFontSizeMax, nameFontSizeMin,
+                               selectedIcon, levelUpReadyIcon);
 
             // --- Button States ---
             if (levelUpButton != null)
