@@ -584,6 +584,20 @@ namespace Golfin.Gameplay.UI.ShotUI
                 return;
             }
 
+            // The map hides the shot UI and puts the only way back on the club button, so a map that
+            // cannot find that button is a soft-lock rather than a degraded view: HideShotUIChrome has
+            // no subtree to exempt and hides EVERY ShotUI_Canvas child, and BuildShotViewClone has
+            // nothing to clone. Refusing to open leaves the player in the shot view with a loud log
+            // line; opening anyway leaves them on a top-down hole with no control on screen at all,
+            // which is what Cesar hit on 2026-09-10.
+            if (ResolveShootButton() == null)
+            {
+                Debug.LogError("[MapView v2] No club button found (Inspector slot empty and no " +
+                               "ClubButtonWidget in the scene) — refusing to open, because the map " +
+                               "would have no close control.");
+                return;
+            }
+
             // § criterion 10 — bot-turn guard.
             if (GameSession.IsVersus && MatchContext.ActiveIndex != 0)
             {
@@ -4319,6 +4333,36 @@ namespace Golfin.Gameplay.UI.ShotUI
         }
 
         // ── Chrome hide / restore ─────────────────────────────────────────────────
+        /// <summary>
+        /// The club button: the control the map keeps on screen, rebinds to <see cref="Close"/>, and
+        /// clones into the bottom-left SHOT VIEW slot.
+        ///
+        /// <para>RESOLVED, NOT MERELY READ. <c>shot_view_layout</c> rebuilt ActionButtons_Cluster and
+        /// every button in it took a new fileID, which left this Inspector slot pointing at an object
+        /// that no longer exists. Nothing failed loudly, because every consumer null-checks and
+        /// carries on: <see cref="HideShotUIChrome"/> had no subtree to exempt and so hid EVERY
+        /// <c>ShotUI_Canvas</c> child, <see cref="RepurposeShootButton"/> bound no Close, and
+        /// <see cref="BuildShotViewClone"/> had nothing to clone. The map opened over the hole with
+        /// not one button on it and no way back to the shot (Cesar, 2026-09-10).</para>
+        ///
+        /// <para>The button needs no Inspector slot to be identifiable — it is the one object in the
+        /// scene carrying a <see cref="ClubButtonWidget"/>. Resolving it here means the next builder
+        /// re-run that reshuffles fileIDs costs a warning instead of a soft-lock.</para>
+        /// </summary>
+        private Button ResolveShootButton()
+        {
+            if (_shootButton != null) return _shootButton;
+
+            var clubWidget = FindObjectOfType<ClubButtonWidget>(true);
+            var resolved   = clubWidget != null ? clubWidget.GetComponent<Button>() : null;
+            if (resolved == null) return null;
+
+            _shootButton = resolved;
+            Debug.LogWarning($"[MapView v2] _shootButton was not wired — resolved '{resolved.name}' from " +
+                             "its ClubButtonWidget. Re-wire the Inspector slot on MapViewController.");
+            return _shootButton;
+        }
+
         private void HideShotUIChrome()
         {
             if (_hideOnMapOpen != null && _hideOnMapOpen.Length > 0)

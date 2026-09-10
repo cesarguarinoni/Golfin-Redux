@@ -727,6 +727,9 @@ public static class ActionButtonsBuilder
         // ── Re-wire the FADE/DRAW hide (third consumer of the rebuilt cluster) ────
         WireFadeDrawHide(abRoot, fadeWidget);
 
+        // ── Re-wire the map view's club button (fourth consumer of the rebuilt cluster) ──
+        WireMapViewShootButton(clubBtn);
+
         // ── Mark scene dirty and save ──────────────────────────────────────────
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
@@ -905,6 +908,41 @@ public static class ActionButtonsBuilder
 
         Debug.Log("[ActionButtonsBuilder] FADE/DRAW hide re-wired (ActionButtonsRoot._fadeDrawButton + " +
                   "FreeSwingSchemeDriver._actionButtons) — the toggle hides again under Free Swing.");
+    }
+
+    /// <summary>
+    /// Restore <c>MapViewController._shootButton</c> — the club button this builder deletes and
+    /// rebuilds.
+    ///
+    /// <para>THE FOURTH ONE, and the most expensive so far. The map hides the shot UI and keeps
+    /// exactly two controls on screen: the club button, rebound to Close, and a clone of it in
+    /// the bottom-left SHOT VIEW slot. Both come from this one reference. When
+    /// <c>shot_view_layout</c> re-ran the builder and left it at <c>fileID: 0</c>, nothing threw:
+    /// <c>HideShotUIChrome</c> had no subtree to exempt and so hid EVERY <c>ShotUI_Canvas</c>
+    /// child, and <c>BuildShotViewClone</c> had nothing to clone. The map opened over the hole
+    /// with not one button on it and no way back to the shot — a soft-lock, found by Cesar in
+    /// play on 2026-09-10.</para>
+    ///
+    /// <para><c>MapViewController</c> now also resolves the button from its
+    /// <c>ClubButtonWidget</c> at open time, so this is the braces to that belt: this keeps the
+    /// scene honest, that keeps the player unstuck if the scene ever is not.</para>
+    /// </summary>
+    static void WireMapViewShootButton(Button clubButton)
+    {
+        var map = Object.FindFirstObjectByType<MapViewController>(FindObjectsInactive.Include);
+        if (map == null)
+        {
+            Debug.LogWarning("[ActionButtonsBuilder] No MapViewController in the scene — its club " +
+                             "button reference was NOT re-wired.");
+            return;
+        }
+
+        var so = new SerializedObject(map);
+        so.FindProperty("_shootButton").objectReferenceValue = clubButton;
+        so.ApplyModifiedProperties();
+
+        Debug.Log("[ActionButtonsBuilder] MapViewController._shootButton re-wired to DriverButton — " +
+                  "the map keeps its club button and its SHOT VIEW close control.");
     }
 
     /// <summary>Depth-first find by name, inactive included — the scheme roots ship inactive and

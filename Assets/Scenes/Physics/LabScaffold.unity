@@ -25899,7 +25899,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.MapViewController
   _shotController: {fileID: 1483952040}
   _shotConeView: {fileID: 1838493589}
-  _shootButton: {fileID: 0}
+  _shootButton: {fileID: 454158640}
   _shootButtonLabel: {fileID: 0}
   _hideOnMapOpen: []
   _heroTiltDeg: 70
