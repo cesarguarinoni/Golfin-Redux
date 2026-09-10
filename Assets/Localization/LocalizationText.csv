@@ -1158,7 +1158,7 @@ LOAN_DAYS_1,1 DAY,1日,true
 LOAN_DAYS_3,3 DAYS,3日,true
 LOAN_DAYS_7,7 DAYS,7日,true
 LOAN_TERMS_FMT,"They level it up, it comes back levelled. You get {0}% of the RP they earn with it.",相手がレベルアップさせ、レベルはそのまま戻ってきます。相手が獲得したRPの{0}%があなたに入ります。,true
-LOAN_NO_FOLLOWING,Follow players in PLAYLIFE to lend to them.,貸すにはPLAYLIFEでプレイヤーをフォローしてください。,true
+LOAN_NO_FOLLOWING,You're not following anyone yet.,まだ誰もフォローしていません。,true
 LOAN_WARN_EQUIPPED,This club will be removed from your bag.,このクラブはバッグから外れます。,true
 LOAN_STATUS_OUT_FMT,ON LOAN TO {0} · {1},{0}に貸出中 · {1},true
 LOAN_STATUS_IN_FMT,BORROWED FROM {0} · {1},{0}から借用中 · {1},true
@@ -1168,11 +1168,11 @@ LOAN_SP_HINT,SP goes to the owner when the loan ends.,SPは返却時にオーナ
 LOAN_RETURN_TITLE_CHAR,RETURN CHARACTER?,キャラクターを返却しますか？,true
 LOAN_RETURN_TITLE_CLUB,RETURN CLUB?,クラブを返却しますか？,true
 LOAN_RETURN_CONFIRM,Return {0} to {1} now? It goes back at Lv {2} — the levels you bought stay with it.,{0}を今すぐ{1}に返しますか？Lv {2}で戻り、上げたレベルはそのまま残ります。,true
-LOAN_TOAST_LENT,{0} lent to {1} for {2},{0}を{1}に{2}貸しました,true
+LOAN_TOAST_LENT,{0} lent to {1} for {2},{0}を{1}に{2}貸しました,false
 LOAN_TOAST_RETURNED_IN,{0} returned to {1},{0}を{1}に返しました,true
 LOAN_TOAST_RETURNED_OUT,{0} is back · +{1} RP,{0}が戻りました · +{1} RP,true
 LOAN_TOAST_SPLIT_FMT,{0} RP to the owner,オーナーに{0} RP,true
-LOAN_ERR_NOT_FOLLOWING,You need to follow them first.,先にフォローしてください。,true
+LOAN_ERR_NOT_FOLLOWING,You need to follow them first.,先にフォローしてください。,false
 LOAN_ERR_ALREADY_ON_LOAN,Already on loan.,すでに貸出中です。,true
 LOAN_ERR_BORROWER_HAS_IT,They already have this one.,相手はすでに持っています。,true
 LOAN_ERR_LIMIT_OUT,You can lend up to 3 at a time.,同時に貸せるのは3つまでです。,true
@@ -1181,3 +1181,37 @@ LOAN_ERR_ON_LOAN,This one is on loan.,これは貸出中です。,true
 LOAN_ERR_GENERIC,Couldn't complete the loan. Try again.,貸出を完了できませんでした。もう一度お試しください。,true
 LOAN_DURATION,DURATION,期間,true
 LOAN_LEND_TO,LEND TO,貸す相手,true
+LOAN_PILL_FMT,LOAN OFFER FROM {0},{0}からの貸出オファー,true
+LOAN_PILL_MANY_FMT,{0} LOAN OFFERS,貸出オファー{0}件,true
+LOAN_OFFER_TITLE,LOAN OFFER,貸出オファー,true
+LOAN_OFFER_FROM_FMT,{0} wants to lend you,{0}があなたに貸したいそうです,true
+LOAN_OFFER_TERMS_FMT,You play with it and can level it up — the levels stay on it when it goes back. {0} gets {1}% of the RP you earn with it.,使ってレベルアップでき、レベルは返却後も残ります。あなたが獲得したRPの{1}%は{0}に入ります。,true
+LOAN_OFFER_FINE_FMT,Offer expires in {0}. Turn offers off in Settings › User Profile.,オファーは{0}で失効します。設定 › ユーザープロフィールでオファーをオフにできます。,true
+LOAN_BTN_ACCEPT,ACCEPT,受ける,true
+LOAN_BTN_DECLINE,DECLINE,断る,true
+LOAN_BTN_RESCIND,RESCIND,取り消す,true
+LOAN_STATUS_OFFERED_FMT,OFFERED TO {0} · {1},{0}にオファー中 · {1},true
+LOAN_TIME_TO_ANSWER_FMT,{0}h to answer,回答まで{0}時間,true
+LOAN_TIME_TO_ANSWER_HOURS_FMT,{0}h,{0}時間,true
+LOAN_SEARCH_PLACEHOLDER,Search by name…,名前で検索…,true
+LOAN_SEARCH_RESULTS,RESULTS,検索結果,true
+LOAN_FOLLOWED_HEADER,PEOPLE YOU FOLLOW,フォロー中,true
+LOAN_NO_RESULTS,Nobody by that name.,その名前のプレイヤーはいません。,true
+LOAN_RESCIND_TITLE,RESCIND OFFER?,オファーを取り消しますか？,true
+LOAN_RESCIND_CONFIRM_FMT,Take back the offer to {0}? You can't offer them this again for {1}.,{0}へのオファーを取り消しますか？{1}の間、同じ相手に再オファーできません。,true
+LOAN_SETTING_TITLE,LOAN OFFERS,貸出オファー,true
+LOAN_SETTING_SUB,Let other players offer to lend you characters and clubs,他のプレイヤーからキャラクターやクラブの貸出オファーを受け取る,true
+LOAN_TOAST_OFFERED_FMT,Offered {0} to {1},{0}を{1}にオファーしました,true
+LOAN_TOAST_ACCEPTED_FMT,{0} accepted {1},{0}が{1}を受け取りました,true
+LOAN_TOAST_ACCEPTED_IN_FMT,{0} is yours for {1} days,{0}を{1}日間使えます,true
+LOAN_TOAST_DECLINED_FMT,{0} declined {1},{0}が{1}を断りました,true
+LOAN_TOAST_DECLINED_IN_FMT,Declined {0},{0}を断りました,true
+LOAN_TOAST_RESCINDED_FMT,Offer for {0} taken back,{0}のオファーを取り消しました,true
+LOAN_TOAST_OFFER_EXPIRED_FMT,Offer for {0} expired,{0}のオファーが失効しました,true
+LOAN_ERR_NOT_ACCEPTING,They're not taking loan offers.,相手は貸出オファーを受け付けていません。,true
+LOAN_ERR_PENDING_LIMIT,They have too many offers waiting.,相手のオファーがいっぱいです。,true
+LOAN_ERR_PENDING_PAIR,You already have an offer waiting with them.,この相手にはすでにオファー中です。,true
+LOAN_ERR_COOLDOWN_FMT,You can offer to {0} again in {1},{1}後に{0}へ再オファーできます,true
+LOAN_ERR_OFFER_GONE,This offer is no longer available.,このオファーは無効になりました。,true
+LOAN_ERR_LIMIT_IN_SELF,You already have 3 loans.,すでに3つ借りています。,true
+LOAN_ERR_HAVE_IT,You already have this one.,すでに持っています。,true

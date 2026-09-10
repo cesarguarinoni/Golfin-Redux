@@ -25,6 +25,12 @@ namespace Golfin.UI.Loans
     /// so at a glance; a BORROWED asset is fully playable, so dimming it would be a lie about the
     /// one thing the borrower most needs to know.
     /// </para>
+    /// <para>
+    /// AN OFFERED ASSET DIMS TOO (asset_loans_offers §3.2). It is locked from the moment the
+    /// offer goes out, so from the lender's side it is exactly as unavailable as a lent one —
+    /// only the sentence differs (OFFERED TO … · 46h to answer), and that is
+    /// <see cref="LabelFor"/>'s job, not this method's.
+    /// </para>
     /// </summary>
     public sealed class LoanRibbonView : MonoBehaviour
     {
@@ -155,13 +161,7 @@ namespace Golfin.UI.Loans
                 ribbonIcon.enabled = sprite != null;
             }
 
-            if (ribbonLabel != null)
-            {
-                string other = asLender ? Name(loan.Borrower) : Name(loan.Lender);
-                string key = asLender ? "LOAN_STATUS_OUT_FMT" : "LOAN_STATUS_IN_FMT";
-                ribbonLabel.text = string.Format(LocalizationManager.Get(key),
-                                                 other, FormatTimeLeft(loan.TimeLeft()));
-            }
+            if (ribbonLabel != null) ribbonLabel.text = LabelFor(loan, asLender);
 
             if (!entering) return;
 
@@ -180,7 +180,39 @@ namespace Golfin.UI.Loans
             if (dim != null) UiMotion.Run(this, ref _dimMotion, UiMotion.Fade(dim, 0f, 1f));
         }
 
-        private static string Name(LoanPartyDto? p) => p != null ? p.Name : "PLAYER";
+        /// <summary>
+        /// The ribbon's sentence — three of them now, picked off the loan's own status.
+        ///
+        /// <para>
+        /// OFFERED READS ITS OWN CLOCK. A pending offer has no <c>ends_at</c> at all (the loan's
+        /// days do not start until the recipient accepts), so formatting it through
+        /// <see cref="FormatTimeLeft"/> would print "0h 0m" — the loan clock's honest answer to
+        /// a question that has not been asked yet. What the lender needs is the OFFER's clock:
+        /// how long the recipient still has to answer, which is <c>offer_expires_at</c>.
+        /// </para>
+        /// <para>
+        /// PUBLIC AND STATIC so an EditMode test can pin all three without a scene.
+        /// </para>
+        /// </summary>
+        public static string LabelFor(LoanDto loan, bool asLender)
+        {
+            if (loan == null) return "";
+
+            if (asLender && loan.IsPendingOffer())
+            {
+                string hours = string.Format(LocalizationManager.Get("LOAN_TIME_TO_ANSWER_FMT"),
+                                             loan.OfferHoursLeft());
+                return string.Format(LocalizationManager.Get("LOAN_STATUS_OFFERED_FMT"),
+                                     Name(loan.Borrower), hours);
+            }
+
+            string other = asLender ? Name(loan.Borrower) : Name(loan.Lender);
+            string key = asLender ? "LOAN_STATUS_OUT_FMT" : "LOAN_STATUS_IN_FMT";
+            return string.Format(LocalizationManager.Get(key), other,
+                                 FormatTimeLeft(loan.TimeLeft()));
+        }
+
+        private static string Name(LoanPartyDto? p) => p != null ? p.Name : LoanPartyDto.Fallback;
 
         /// <summary>
         /// "2d 4h" once a day or more is left, "5h 12m" below that.

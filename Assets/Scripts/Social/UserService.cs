@@ -192,10 +192,11 @@ namespace Golfin.Social
                                   string golfExperience,
                                   string avatarColor,
                                   bool? golfProfilePrompted,
-                                  Action<ApiResult<UserDetailDto>> onResult)
+                                  Action<ApiResult<UserDetailDto>> onResult,
+                                  bool? golfinLoanOffers = null)
         {
             string body = BuildUpdateJson(displayName, handicap, golfExperience, avatarColor,
-                                          golfProfilePrompted);
+                                          golfProfilePrompted, golfinLoanOffers);
             return _client.Put<UserDetailDto>(Endpoints.UserUpdate, body, result =>
             {
                 if (result != null && result.Success && result.Data != null)
@@ -219,7 +220,8 @@ namespace Golfin.Social
         /// </summary>
         public static string BuildUpdateJson(string displayName, double? handicap,
                                              string golfExperience, string avatarColor,
-                                             bool? golfProfilePrompted = null)
+                                             bool? golfProfilePrompted = null,
+                                             bool? golfinLoanOffers = null)
             => Newtonsoft.Json.JsonConvert.SerializeObject(
                 new UpdateBody
                 {
@@ -227,6 +229,11 @@ namespace Golfin.Social
                     handicap        = handicap,
                     golf_experience = string.IsNullOrEmpty(golfExperience) ? null : golfExperience,
                     avatar_color    = string.IsNullOrEmpty(avatarColor)    ? null : avatarColor,
+                    // asset_loans_offers §3.4 — sent as BOTH true and false, unlike the
+                    // one-way latch below it. Turning offers back off is the entire point of
+                    // the setting, and `NullValueHandling.Ignore` still keeps the field out of
+                    // every body that has nothing to say about it.
+                    golfin_loan_offers = golfinLoanOffers,
                     // Sent ONLY as true, never as false: the server reads a falsy value as "no
                     // opinion" rather than as "un-ask", and NullValueHandling.Ignore keeps a
                     // null out of the body altogether. A caller with nothing to say about the
@@ -249,6 +256,7 @@ namespace Golfin.Social
             public string  golf_experience;
             public string  avatar_color;
             public bool?   golf_profile_prompted;
+            public bool?   golfin_loan_offers;
         }
     }
 }

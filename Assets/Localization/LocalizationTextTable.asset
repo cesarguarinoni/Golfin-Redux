@@ -3680,8 +3680,8 @@ MonoBehaviour:
       earn with it.
     japanese: "\u76F8\u624B\u304C\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3055\u305B\u3001\u30EC\u30D9\u30EB\u306F\u305D\u306E\u307E\u307E\u623B\u3063\u3066\u304D\u307E\u3059\u3002\u76F8\u624B\u304C\u7372\u5F97\u3057\u305FRP\u306E{0}%\u304C\u3042\u306A\u305F\u306B\u5165\u308A\u307E\u3059\u3002"
   - key: LOAN_NO_FOLLOWING
-    english: Follow players in PLAYLIFE to lend to them.
-    japanese: "\u8CB8\u3059\u306B\u306FPLAYLIFE\u3067\u30D7\u30EC\u30A4\u30E4\u30FC\u3092\u30D5\u30A9\u30ED\u30FC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
+    english: You're not following anyone yet.
+    japanese: "\u307E\u3060\u8AB0\u3082\u30D5\u30A9\u30ED\u30FC\u3057\u3066\u3044\u307E\u305B\u3093\u3002"
   - key: LOAN_WARN_EQUIPPED
     english: This club will be removed from your bag.
     japanese: "\u3053\u306E\u30AF\u30E9\u30D6\u306F\u30D0\u30C3\u30B0\u304B\u3089\u5916\u308C\u307E\u3059\u3002"
@@ -3750,3 +3750,107 @@ MonoBehaviour:
   - key: LOAN_LEND_TO
     english: LEND TO
     japanese: "\u8CB8\u3059\u76F8\u624B"
+  - key: LOAN_PILL_FMT
+    english: LOAN OFFER FROM {0}
+    japanese: "{0}\u304B\u3089\u306E\u8CB8\u51FA\u30AA\u30D5\u30A1\u30FC"
+  - key: LOAN_PILL_MANY_FMT
+    english: '{0} LOAN OFFERS'
+    japanese: "\u8CB8\u51FA\u30AA\u30D5\u30A1\u30FC{0}\u4EF6"
+  - key: LOAN_OFFER_TITLE
+    english: LOAN OFFER
+    japanese: "\u8CB8\u51FA\u30AA\u30D5\u30A1\u30FC"
+  - key: LOAN_OFFER_FROM_FMT
+    english: '{0} wants to lend you'
+    japanese: "{0}\u304C\u3042\u306A\u305F\u306B\u8CB8\u3057\u305F\u3044\u305D\u3046\u3067\u3059"
+  - key: LOAN_OFFER_TERMS_FMT
+    english: "You play with it and can level it up \u2014 the levels stay on it when
+      it goes back. {0} gets {1}% of the RP you earn with it."
+    japanese: "\u4F7F\u3063\u3066\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u304D\u3001\u30EC\u30D9\u30EB\u306F\u8FD4\u5374\u5F8C\u3082\u6B8B\u308A\u307E\u3059\u3002\u3042\u306A\u305F\u304C\u7372\u5F97\u3057\u305FRP\u306E{1}%\u306F{0}\u306B\u5165\u308A\u307E\u3059\u3002"
+  - key: LOAN_OFFER_FINE_FMT
+    english: "Offer expires in {0}. Turn offers off in Settings \u203A User Profile."
+    japanese: "\u30AA\u30D5\u30A1\u30FC\u306F{0}\u3067\u5931\u52B9\u3057\u307E\u3059\u3002\u8A2D\u5B9A
+      \u203A \u30E6\u30FC\u30B6\u30FC\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3067\u30AA\u30D5\u30A1\u30FC\u3092\u30AA\u30D5\u306B\u3067\u304D\u307E\u3059\u3002"
+  - key: LOAN_BTN_ACCEPT
+    english: ACCEPT
+    japanese: "\u53D7\u3051\u308B"
+  - key: LOAN_BTN_DECLINE
+    english: DECLINE
+    japanese: "\u65AD\u308B"
+  - key: LOAN_BTN_RESCIND
+    english: RESCIND
+    japanese: "\u53D6\u308A\u6D88\u3059"
+  - key: LOAN_STATUS_OFFERED_FMT
+    english: "OFFERED TO {0} \xB7 {1}"
+    japanese: "{0}\u306B\u30AA\u30D5\u30A1\u30FC\u4E2D \xB7 {1}"
+  - key: LOAN_TIME_TO_ANSWER_FMT
+    english: '{0}h to answer'
+    japanese: "\u56DE\u7B54\u307E\u3067{0}\u6642\u9593"
+  - key: LOAN_TIME_TO_ANSWER_HOURS_FMT
+    english: '{0}h'
+    japanese: "{0}\u6642\u9593"
+  - key: LOAN_SEARCH_PLACEHOLDER
+    english: "Search by name\u2026"
+    japanese: "\u540D\u524D\u3067\u691C\u7D22\u2026"
+  - key: LOAN_SEARCH_RESULTS
+    english: RESULTS
+    japanese: "\u691C\u7D22\u7D50\u679C"
+  - key: LOAN_FOLLOWED_HEADER
+    english: PEOPLE YOU FOLLOW
+    japanese: "\u30D5\u30A9\u30ED\u30FC\u4E2D"
+  - key: LOAN_NO_RESULTS
+    english: Nobody by that name.
+    japanese: "\u305D\u306E\u540D\u524D\u306E\u30D7\u30EC\u30A4\u30E4\u30FC\u306F\u3044\u307E\u305B\u3093\u3002"
+  - key: LOAN_RESCIND_TITLE
+    english: RESCIND OFFER?
+    japanese: "\u30AA\u30D5\u30A1\u30FC\u3092\u53D6\u308A\u6D88\u3057\u307E\u3059\u304B\uFF1F"
+  - key: LOAN_RESCIND_CONFIRM_FMT
+    english: Take back the offer to {0}? You can't offer them this again for {1}.
+    japanese: "{0}\u3078\u306E\u30AA\u30D5\u30A1\u30FC\u3092\u53D6\u308A\u6D88\u3057\u307E\u3059\u304B\uFF1F{1}\u306E\u9593\u3001\u540C\u3058\u76F8\u624B\u306B\u518D\u30AA\u30D5\u30A1\u30FC\u3067\u304D\u307E\u305B\u3093\u3002"
+  - key: LOAN_SETTING_TITLE
+    english: LOAN OFFERS
+    japanese: "\u8CB8\u51FA\u30AA\u30D5\u30A1\u30FC"
+  - key: LOAN_SETTING_SUB
+    english: Let other players offer to lend you characters and clubs
+    japanese: "\u4ED6\u306E\u30D7\u30EC\u30A4\u30E4\u30FC\u304B\u3089\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u3084\u30AF\u30E9\u30D6\u306E\u8CB8\u51FA\u30AA\u30D5\u30A1\u30FC\u3092\u53D7\u3051\u53D6\u308B"
+  - key: LOAN_TOAST_OFFERED_FMT
+    english: Offered {0} to {1}
+    japanese: "{0}\u3092{1}\u306B\u30AA\u30D5\u30A1\u30FC\u3057\u307E\u3057\u305F"
+  - key: LOAN_TOAST_ACCEPTED_FMT
+    english: '{0} accepted {1}'
+    japanese: "{0}\u304C{1}\u3092\u53D7\u3051\u53D6\u308A\u307E\u3057\u305F"
+  - key: LOAN_TOAST_ACCEPTED_IN_FMT
+    english: '{0} is yours for {1} days'
+    japanese: "{0}\u3092{1}\u65E5\u9593\u4F7F\u3048\u307E\u3059"
+  - key: LOAN_TOAST_DECLINED_FMT
+    english: '{0} declined {1}'
+    japanese: "{0}\u304C{1}\u3092\u65AD\u308A\u307E\u3057\u305F"
+  - key: LOAN_TOAST_DECLINED_IN_FMT
+    english: Declined {0}
+    japanese: "{0}\u3092\u65AD\u308A\u307E\u3057\u305F"
+  - key: LOAN_TOAST_RESCINDED_FMT
+    english: Offer for {0} taken back
+    japanese: "{0}\u306E\u30AA\u30D5\u30A1\u30FC\u3092\u53D6\u308A\u6D88\u3057\u307E\u3057\u305F"
+  - key: LOAN_TOAST_OFFER_EXPIRED_FMT
+    english: Offer for {0} expired
+    japanese: "{0}\u306E\u30AA\u30D5\u30A1\u30FC\u304C\u5931\u52B9\u3057\u307E\u3057\u305F"
+  - key: LOAN_ERR_NOT_ACCEPTING
+    english: They're not taking loan offers.
+    japanese: "\u76F8\u624B\u306F\u8CB8\u51FA\u30AA\u30D5\u30A1\u30FC\u3092\u53D7\u3051\u4ED8\u3051\u3066\u3044\u307E\u305B\u3093\u3002"
+  - key: LOAN_ERR_PENDING_LIMIT
+    english: They have too many offers waiting.
+    japanese: "\u76F8\u624B\u306E\u30AA\u30D5\u30A1\u30FC\u304C\u3044\u3063\u3071\u3044\u3067\u3059\u3002"
+  - key: LOAN_ERR_PENDING_PAIR
+    english: You already have an offer waiting with them.
+    japanese: "\u3053\u306E\u76F8\u624B\u306B\u306F\u3059\u3067\u306B\u30AA\u30D5\u30A1\u30FC\u4E2D\u3067\u3059\u3002"
+  - key: LOAN_ERR_COOLDOWN_FMT
+    english: You can offer to {0} again in {1}
+    japanese: "{1}\u5F8C\u306B{0}\u3078\u518D\u30AA\u30D5\u30A1\u30FC\u3067\u304D\u307E\u3059"
+  - key: LOAN_ERR_OFFER_GONE
+    english: This offer is no longer available.
+    japanese: "\u3053\u306E\u30AA\u30D5\u30A1\u30FC\u306F\u7121\u52B9\u306B\u306A\u308A\u307E\u3057\u305F\u3002"
+  - key: LOAN_ERR_LIMIT_IN_SELF
+    english: You already have 3 loans.
+    japanese: "\u3059\u3067\u306B3\u3064\u501F\u308A\u3066\u3044\u307E\u3059\u3002"
+  - key: LOAN_ERR_HAVE_IT
+    english: You already have this one.
+    japanese: "\u3059\u3067\u306B\u6301\u3063\u3066\u3044\u307E\u3059\u3002"

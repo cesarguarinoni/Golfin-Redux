@@ -102,6 +102,7 @@ namespace Golfin.Inventory
         [SerializeField] private Golfin.UI.Loans.LoanRibbonView? loanRibbon;
         [SerializeField] private Golfin.UI.Loans.LoanModalController? loanModal;
         [SerializeField] private Golfin.UI.Loans.LoanReturnModalController? loanReturnModal;
+        [SerializeField] private Golfin.UI.Loans.LoanRescindModalController? loanRescindModal;
 
         [Header("Modals")]
         [SerializeField] private ClubLevelUpModalController?  levelUpModal;
@@ -335,6 +336,12 @@ namespace Golfin.Inventory
             bool borrowed = loans.IsBorrowed(Golfin.Social.LoanDto.KindClub, clubId,
                                              out Golfin.Social.LoanDto? inLoan);
 
+            // asset_loans_offers §3.2 — the same OFFERED narrowing the Roster panel takes, and
+            // deliberately the same shape rather than a shared helper: the two panels disable
+            // DIFFERENT button sets (REPAIR/EQUIP here, BOOST/SELECT there) and the only thing
+            // they truly share is this one predicate, which is one line.
+            bool offered = lentOut && outLoan != null && outLoan.IsPendingOffer();
+
             if (loanRibbon != null)
             {
                 if (lentOut)       loanRibbon.Show(outLoan, asLender: true);
@@ -345,8 +352,12 @@ namespace Golfin.Inventory
             if (lendButton != null) lendButton.gameObject.SetActive(true);
             if (lendButtonText != null)
                 lendButtonText.text = LocalizationManager.Get(
-                    borrowed ? "LOAN_BTN_RETURN" : "LOAN_BTN_LEND");
-            if (lendButton != null) lendButton.interactable = !lentOut;
+                    offered  ? "LOAN_BTN_RESCIND"
+                  : borrowed ? "LOAN_BTN_RETURN"
+                             : "LOAN_BTN_LEND");
+            // OFFERED is the one locked state with a live button — taking the offer back is what
+            // a locked-by-offer club affords, and the only way out short of waiting 48 hours.
+            if (lendButton != null) lendButton.interactable = offered || !lentOut;
 
             if (lentOut)
             {
@@ -376,6 +387,15 @@ namespace Golfin.Inventory
             if (string.IsNullOrEmpty(currentClubId)) return;
 
             Golfin.Social.LoanService loans = Golfin.Social.LoanService.Instance;
+
+            // RESCIND first — an offered club is also "lent out" to every other lookup, so asking
+            // the lend question first would open the lend modal on a club that is already locked.
+            if (loans.IsOffered(Golfin.Social.LoanDto.KindClub, currentClubId,
+                                out Golfin.Social.LoanDto? offerLoan))
+            {
+                loanRescindModal?.Open(offerLoan!, ClubDisplayName(currentClubId));
+                return;
+            }
 
             if (loans.IsBorrowed(Golfin.Social.LoanDto.KindClub, currentClubId,
                                  out Golfin.Social.LoanDto? inLoan))

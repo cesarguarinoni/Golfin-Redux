@@ -125,6 +125,7 @@ namespace Golfin.Roster
         [SerializeField] private Golfin.UI.Loans.LoanRibbonView? loanRibbon;
         [SerializeField] private Golfin.UI.Loans.LoanModalController? loanModal;
         [SerializeField] private Golfin.UI.Loans.LoanReturnModalController? loanReturnModal;
+        [SerializeField] private Golfin.UI.Loans.LoanRescindModalController? loanRescindModal;
 
         [Header("Modals")]
         [SerializeField] private LevelUpModalController? levelUpModal;
@@ -457,6 +458,13 @@ namespace Golfin.Roster
             bool borrowed = loans.IsBorrowed(Golfin.Social.LoanDto.KindCharacter, characterId,
                                              out Golfin.Social.LoanDto? inLoan);
 
+            // asset_loans_offers §3.2 — OFFERED is a NARROWING of lentOut, not a sixth state
+            // beside it. The asset is locked either way and every disable below is shared; the
+            // only differences are the ribbon's sentence (which LoanRibbonView picks off the
+            // status) and the LEND slot, which becomes an ENABLED "RESCIND" where a lent asset
+            // has a disabled "LEND".
+            bool offered = lentOut && outLoan != null && outLoan.IsPendingOffer();
+
             // Ribbon + dim.
             if (loanRibbon != null)
             {
@@ -472,14 +480,22 @@ namespace Golfin.Roster
 
             if (lendButtonText != null)
                 lendButtonText.text = LocalizationManager.Get(
-                    borrowed ? "LOAN_BTN_RETURN" : "LOAN_BTN_LEND");
+                    offered  ? "LOAN_BTN_RESCIND"
+                  : borrowed ? "LOAN_BTN_RETURN"
+                             : "LOAN_BTN_LEND");
 
             if (lendButton != null)
                 // A SELECTED character cannot be lent: the player has to pick somebody else to
                 // play as first. The label stays LEND — this is "not right now", not a different
                 // action.
-                lendButton.interactable = rowVisible && !lentOut
-                                       && (borrowed || !playerData.isSelected);
+                //
+                // OFFERED IS THE ONE LOCKED STATE WITH A LIVE BUTTON. Everything else on the
+                // panel is disabled (below) because the asset is not the player's to use — but
+                // taking the offer BACK is precisely the action a locked-by-offer asset affords,
+                // and it is the only way out of the lock short of waiting 48 hours.
+                lendButton.interactable = rowVisible
+                                       && (offered
+                                           || (!lentOut && (borrowed || !playerData.isSelected)));
 
             if (lentOut)
             {
@@ -514,6 +530,16 @@ namespace Golfin.Roster
             if (string.IsNullOrEmpty(currentCharacterId)) return;
 
             Golfin.Social.LoanService loans = Golfin.Social.LoanService.Instance;
+
+            // The RESCIND branch is checked FIRST, because an offered asset is also "lent out" as
+            // far as every other lookup is concerned — asking the lend question first would open
+            // the lend modal on an asset that is already locked.
+            if (loans.IsOffered(Golfin.Social.LoanDto.KindCharacter, currentCharacterId,
+                                out Golfin.Social.LoanDto? offerLoan))
+            {
+                loanRescindModal?.Open(offerLoan!, DisplayName(currentCharacterId));
+                return;
+            }
 
             if (loans.IsBorrowed(Golfin.Social.LoanDto.KindCharacter, currentCharacterId,
                                  out Golfin.Social.LoanDto? inLoan))

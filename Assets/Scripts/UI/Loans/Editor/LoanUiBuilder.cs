@@ -41,6 +41,17 @@ namespace Golfin.UI.Loans.EditorTools
         private const string SpriteIconOutSmall  = ArtDir + "IconLoanOutSmall.png";
         private const string SpriteIconInSmall   = ArtDir + "IconLoanInSmall.png";
 
+        // ── asset_loans_offers (Docs/Scripts/make_loan_sprites.py) ───────────
+        private const string SpriteSearchField = ArtDir + "S_LoanSearchField.png";
+        private const string SpriteSearchGlyph = ArtDir + "S_LoanSearchGlyph.png";
+        private const string SpriteTogglePill  = ArtDir + "S_LoanTogglePill.png";
+        private const string SpriteToggleKnob  = ArtDir + "S_LoanToggleKnob.png";
+
+        /// <summary>The DAILY pill's own panel and glow, reused verbatim by the offer pill —
+        /// the node is a detached copy of the same Mission Card Container.</summary>
+        private const string SpritePillPanel = "Assets/Art/HomeScreen/S_DailyPillPanel.png";
+        private const string SpritePillGlow  = "Assets/Art/HomeScreen/S_DailyPillGlow.png";
+
         /// <summary>The SILVER SMALL button, native 235×56 — the same sprite the LEVEL UP / BOOST
         /// row above uses, which is why the new row can mirror it with no stretching at all.</summary>
         private const string SpriteButtonSilverSmall = ArtDir + "ButtonLevelUp.png";
@@ -57,9 +68,21 @@ namespace Golfin.UI.Loans.EditorTools
         private const string FontSemiBold = "Assets/Fonts/Rubik-SemiBold SDF.asset";
         private const string FontRegular  = "Assets/Fonts/Rubik-VariableFont_wght SDF.asset";
 
-        private const string ModalPrefabPath  = "Assets/Prefabs/UI/Modals/LoanModal.prefab";
-        private const string ReturnPrefabPath = "Assets/Prefabs/UI/Modals/LoanReturnModal.prefab";
-        private const string RowPrefabPath    = "Assets/Prefabs/UI/Loans/LoanRecipientRow.prefab";
+        private const string ModalPrefabPath   = "Assets/Prefabs/UI/Modals/LoanModal.prefab";
+        private const string ReturnPrefabPath  = "Assets/Prefabs/UI/Modals/LoanReturnModal.prefab";
+        private const string RescindPrefabPath = "Assets/Prefabs/UI/Modals/LoanRescindModal.prefab";
+        private const string OfferPrefabPath   = "Assets/Prefabs/UI/Modals/LoanOfferModal.prefab";
+        private const string RowPrefabPath     = "Assets/Prefabs/UI/Loans/LoanRecipientRow.prefab";
+
+        private const string HomeScreen  = "Canvas/ScreensRoot/HomeScreen";
+        private const string DailyPill   = HomeScreen + "/DailyMissionPill";
+        /// <summary>
+        /// ⚠️ <c>SettingsScreen</c> IS ITS OWN SCENE ROOT with its own Canvas — it is NOT under
+        /// <c>Canvas/ScreensRoot</c> like every other screen. Verified against the live scene
+        /// rather than assumed from the pattern the other paths follow.
+        /// </summary>
+        private const string SettingsSub =
+            "SettingsScreen/SettingsPanel/SettingsList/UserProfileRow/UserProfileSubmenu";
 
         private const string RosterDetail = "Canvas/ScreensRoot/RosterScreen/DetailPanel";
         private const string ClubDetail   =
@@ -77,6 +100,15 @@ namespace Golfin.UI.Loans.EditorTools
         private static readonly Color ReturnGold = Hex("ED6B21", 1f);
         private static readonly Color AvatarFill = Hex("38597F", 1f);
 
+        // ── asset_loans_offers (nodes 14261:109851 / 109994 / 107143 / 33108) ─
+        /// <summary>The search field's interior — node #050F1F @ 75 %. The 2 px white @ 35 %
+        /// stroke is baked into the sprite, so this tint reaches only the middle.</summary>
+        private static readonly Color SearchFill  = Hex("050F1F", 0.75f);
+        /// <summary>The pill label — Text Colors/Mission Font, the daily pill's own token.</summary>
+        private static readonly Color PillLabel   = Hex("EEDC9A", 1f);
+        private static readonly Color ToggleOn    = Hex("2775DD", 1f);
+        private static readonly Color RarityGreen = Hex("50C878", 1f);   // placeholder tint only
+
         [MenuItem("GOLFIN/Loans/Build Loan UI")]
         public static void Build()
         {
@@ -87,9 +119,13 @@ namespace Golfin.UI.Loans.EditorTools
                 BuildRowPrefab();
                 BuildModalPrefab();
                 BuildReturnPrefab();
+                BuildRescindPrefab();
+                BuildOfferModalPrefab();
 
                 BuildRosterDetail();
                 BuildClubDetail();
+                BuildOfferPill();
+                BuildSettingsRow();
 
                 BuildCardBadge("Assets/Prefabs/UI/Roster/CharacterThumbnailCard.prefab", isClub: false);
                 BuildCardBadge("Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab", isClub: false);
@@ -151,6 +187,17 @@ namespace Golfin.UI.Loans.EditorTools
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
             rt.localScale = Vector3.one;
+        }
+
+        /// <summary>Fill the parent exactly — anchors 0..1, zero offsets. What a TMP_InputField's
+        /// text and placeholder need inside a viewport that has no layout group of its own.</summary>
+        private static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
         }
 
         private static Image AddImage(GameObject go, Sprite? sprite, Color color,
@@ -356,6 +403,52 @@ namespace Golfin.UI.Loans.EditorTools
                                              TextAlignmentOptions.MidlineLeft);
             Fixed(lendToGo, 732, 50);
 
+            // ── asset_loans_offers §3.1 — the search field (node 14261:109851) ─
+            //
+            // 732×88, r12, fill #050F1F @ 75 %, 2 px white @ 35 % stroke. ONE Image draws both:
+            // the stroke is baked into S_LoanSearchField and the fill is this tint, so there is
+            // no second graphic whose radius could drift from the first's.
+            GameObject searchGo = Child(panel.transform, "SearchField");
+            Fixed(searchGo, 732, 88);
+            Image searchBg = AddImage(searchGo, Require<Sprite>(SpriteSearchField), SearchFill,
+                                      Image.Type.Sliced);
+            searchBg.pixelsPerUnitMultiplier = 1f;
+
+            GameObject glyph = Child(searchGo.transform, "Glyph");
+            SetRect(glyph, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+                    new Vector2(20, 0), new Vector2(36, 36));
+            AddImage(glyph, Require<Sprite>(SpriteSearchGlyph), Color.white, Image.Type.Simple,
+                     raycast: false);
+
+            // The text area starts after the glyph plus the node's 16 gap: 20 + 36 + 16 = 72.
+            GameObject textArea = Child(searchGo.transform, "TextArea");
+            SetRect(textArea, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f),
+                    new Vector2(36, 0), new Vector2(-92, 0));
+            textArea.AddComponent<RectMask2D>();
+
+            TextMeshProUGUI searchPlaceholder =
+                Row(textArea, "Placeholder", FontRegular, 33, new Color(1, 1, 1, 0.55f),
+                    TextAlignmentOptions.MidlineLeft, 640, 88);
+            searchPlaceholder.enableWordWrapping = false;
+            TextMeshProUGUI searchText =
+                Row(textArea, "Text", FontRegular, 33, Color.white,
+                    TextAlignmentOptions.MidlineLeft, 640, 88);
+            searchText.enableWordWrapping = false;
+            // Both fill the text area rather than sitting at a preferred size — the parent has no
+            // layout group, so LayoutElement alone would leave them at whatever Fixed() wrote.
+            Stretch(Rect(searchPlaceholder.gameObject));
+            Stretch(Rect(searchText.gameObject));
+
+            var input = searchGo.GetComponent<TMP_InputField>() ?? searchGo.AddComponent<TMP_InputField>();
+            input.textViewport = Rect(textArea);
+            input.textComponent = searchText;
+            input.placeholder = searchPlaceholder;
+            input.lineType = TMP_InputField.LineType.SingleLine;
+            input.characterLimit = 40;
+            input.targetGraphic = searchBg;
+            input.fontAsset = searchText.font;
+            input.pointSize = 33;
+
             // The list: four rows at 96 + three 16 gaps = 432, and it scrolls beyond that.
             GameObject scrollGo = Child(panel.transform, "RecipientScroll");
             Fixed(scrollGo, 732, 432);
@@ -383,11 +476,82 @@ namespace Golfin.UI.Loans.EditorTools
             clg.childForceExpandWidth = false;
             clg.childForceExpandHeight = false;
             clg.childControlWidth = true;
-            clg.childControlHeight = false;
+            // ⚠️ TRUE, and this FLIPPED in v2 (memory: reference_unity_layout_sizedelta_and_controlheight).
+            //
+            // In v1 this group's children were the recipient ROWS themselves — fixed 96 px each —
+            // so `childControlHeight = false` was right: it left each row at its authored height.
+            // In v2 the children are two SECTIONS whose heights come from their own
+            // ContentSizeFitters, and `false` makes this group ignore those entirely and stack the
+            // sections at whatever sizeDelta they happen to hold. Measured: the RESULTS block and
+            // the PEOPLE YOU FOLLOW header drew ON TOP OF EACH OTHER, with "PEOPLE YOU FOLLOW"
+            // struck through a result row. The rows keep their fixed height because THEIR parents
+            // (ResultRows / FollowedRows) still set childControlHeight = false.
+            clg.childControlHeight = true;
             var cfit = content.GetComponent<ContentSizeFitter>() ?? content.AddComponent<ContentSizeFitter>();
             cfit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             scroll.content = Rect(content);
             scroll.viewport = Rect(scrollGo);
+
+            // ── two sections inside one scroll (asset_loans_offers §3.1) ──────
+            //
+            // RESULTS above, PEOPLE YOU FOLLOW below, both spawning the SAME row prefab into
+            // their own parent. One scroll rather than two so a long result list and a long
+            // followed list share the same 432 px viewport instead of each getting half of it.
+            GameObject resultsSection = Child(content.transform, "ResultsSection");
+            var rsl = resultsSection.GetComponent<VerticalLayoutGroup>()
+                   ?? resultsSection.AddComponent<VerticalLayoutGroup>();
+            rsl.spacing = 16;
+            rsl.childAlignment = TextAnchor.UpperCenter;
+            rsl.childForceExpandWidth = false;
+            rsl.childForceExpandHeight = false;
+            rsl.childControlWidth = true;
+            rsl.childControlHeight = false;
+            var rsf = resultsSection.GetComponent<ContentSizeFitter>()
+                   ?? resultsSection.AddComponent<ContentSizeFitter>();
+            rsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            TextMeshProUGUI resultsHeader =
+                Row(resultsSection, "ResultsHeader", FontSemiBold, 30, SubText,
+                    TextAlignmentOptions.MidlineLeft, 732, TextSlot(30));
+
+            GameObject resultsParent = Child(resultsSection.transform, "ResultRows");
+            var rpl = resultsParent.GetComponent<VerticalLayoutGroup>()
+                   ?? resultsParent.AddComponent<VerticalLayoutGroup>();
+            rpl.spacing = 16;
+            rpl.childAlignment = TextAnchor.UpperCenter;
+            rpl.childForceExpandWidth = false;
+            rpl.childForceExpandHeight = false;
+            rpl.childControlWidth = true;
+            rpl.childControlHeight = false;
+            var rpf = resultsParent.GetComponent<ContentSizeFitter>()
+                   ?? resultsParent.AddComponent<ContentSizeFitter>();
+            rpf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            GameObject noResultsGo = Child(resultsSection.transform, "NoResults");
+            TextMeshProUGUI noResults = AddText(noResultsGo, FontRegular, 30, SubText,
+                                                TextAlignmentOptions.Center);
+            Fixed(noResultsGo, 732, 72);
+            noResultsGo.SetActive(false);
+
+            // Hidden until the player types — the node shows RESULTS only with a query in the box.
+            resultsSection.SetActive(false);
+
+            TextMeshProUGUI followedHeader =
+                Row(content, "FollowedHeader", FontSemiBold, 30, SubText,
+                    TextAlignmentOptions.MidlineLeft, 732, TextSlot(30));
+
+            GameObject followedParent = Child(content.transform, "FollowedRows");
+            var fpl = followedParent.GetComponent<VerticalLayoutGroup>()
+                   ?? followedParent.AddComponent<VerticalLayoutGroup>();
+            fpl.spacing = 16;
+            fpl.childAlignment = TextAnchor.UpperCenter;
+            fpl.childForceExpandWidth = false;
+            fpl.childForceExpandHeight = false;
+            fpl.childControlWidth = true;
+            fpl.childControlHeight = false;
+            var fpf = followedParent.GetComponent<ContentSizeFitter>()
+                   ?? followedParent.AddComponent<ContentSizeFitter>();
+            fpf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             GameObject emptyGo = Child(panel.transform, "EmptyState");
             TextMeshProUGUI empty = AddText(emptyGo, FontRegular, 30, SubText,
@@ -442,7 +606,15 @@ namespace Golfin.UI.Loans.EditorTools
             Wire(controller, "equippedWarningRoot", warningGo);
             Wire(controller, "equippedWarningText", warning);
             Wire(controller, "lendToLabel", lendTo);
-            Wire(controller, "recipientParent", content.transform);
+            Wire(controller, "recipientParent", followedParent.transform);
+            Wire(controller, "searchField", input);
+            Wire(controller, "searchPlaceholder", searchPlaceholder);
+            Wire(controller, "resultsSectionRoot", resultsSection);
+            Wire(controller, "resultsHeader", resultsHeader);
+            Wire(controller, "resultsParent", resultsParent.transform);
+            Wire(controller, "noResultsRoot", noResultsGo);
+            Wire(controller, "noResultsText", noResults);
+            Wire(controller, "followedHeader", followedHeader);
             Wire(controller, "recipientRowPrefab", AssetDatabase.LoadAssetAtPath<GameObject>(RowPrefabPath));
             Wire(controller, "emptyStateRoot", emptyGo);
             Wire(controller, "emptyStateText", empty);
@@ -486,6 +658,28 @@ namespace Golfin.UI.Loans.EditorTools
         /// children from THEIR preferred size, and a bare RectTransform's is whatever the last
         /// thing to touch it left behind. A LayoutElement is the only thing that pins it.</para>
         /// </summary>
+        /// <summary>
+        /// The height a ONE-LINE text slot needs, from its font size.
+        ///
+        /// <para>
+        /// ⚠️ NEVER PIN A TEXT SLOT TO ITS OWN LINE BOX. Rubik's face metric is 1.185 line-box
+        /// per point, so a 33 px label needs 39.1 — and a 40 px LayoutElement, which CLEARS that
+        /// by 0.9 px, made TMP emit <b>zero characters</b> with <c>overflowMode = Ellipsis</c>.
+        /// Not a clipped glyph, not an ellipsis: `characterCount = 0` and
+        /// `renderedWidth = -4294967000` (the never-computed sentinel), on an object that
+        /// reported the right text, the right rect, full alpha and active=true. The offer modal's
+        /// asset name rendered as an empty band and every property said it was fine.
+        /// </para>
+        /// <para>
+        /// The ellipsis routine needs room for the ellipsis glyph and TMP's own margins on top of
+        /// the line box, and how much is not worth deriving. 1.4× is comfortably past it at every
+        /// size this file uses, and routing every slot through one function means no call site can
+        /// pick a hairline again. Verified by the capture bot's `chars=` dump, which is the only
+        /// thing that distinguishes "renders" from "silently renders nothing".
+        /// </para>
+        /// </summary>
+        private static float TextSlot(float fontSize) => Mathf.Ceil(fontSize * 1.4f);
+
         private static void Fixed(GameObject go, float w, float h)
         {
             var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
@@ -580,15 +774,327 @@ namespace Golfin.UI.Loans.EditorTools
         }
 
         // ═════════════════════════════════════════════════════════════════════
+        // asset_loans_offers — the rescind confirm prefab (§3.2)
+        // ═════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// The RETURN popup's shell with two strings swapped and one button relabelled.
+        ///
+        /// <para>Built by a near-copy of <see cref="BuildReturnPrefab"/> rather than by
+        /// parameterising it, and that is a deliberate call: the two bodies differ (a level vs a
+        /// cooldown), the two controllers differ, and a shared builder taking six flags to express
+        /// "which of these two" would be harder to read than the twenty lines it saved. The
+        /// SHELL — panel sprite, ppum, padding, spacing, both button sprites — is what is actually
+        /// reused, and every one of those comes from the same named constant.</para>
+        /// </summary>
+        private static void BuildRescindPrefab()
+        {
+            Log.Append("== LoanRescindModal.prefab ==\n");
+
+            var root = new GameObject("LoanRescindModal", typeof(RectTransform));
+            SetRect(root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+            GameObject backdrop = Child(root.transform, "Backdrop");
+            SetRect(backdrop, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            AddImage(backdrop, null, Scrim);
+            backdrop.SetActive(false);
+
+            GameObject panel = Child(root.transform, "ModalPanel");
+            SetRect(panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    Vector2.zero, new Vector2(810, 520));
+            Image panelImg = AddImage(panel, Require<Sprite>(SpritePopupPanel), Color.white, Image.Type.Sliced);
+            panelImg.pixelsPerUnitMultiplier = 3.2f;
+
+            var vlg = panel.AddComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(48, 48, 40, 32);
+            vlg.spacing = 32;
+            vlg.childAlignment = TextAnchor.UpperCenter;
+            vlg.childForceExpandWidth = false;
+            vlg.childForceExpandHeight = false;
+            vlg.childControlWidth = true;
+            vlg.childControlHeight = true;
+            var fitter = panel.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            TextMeshProUGUI title = Row(panel, "Title", FontSemiBold, 45, ReturnGold,
+                                        TextAlignmentOptions.Center, 714, 60);
+            TextMeshProUGUI body = Row(panel, "Body", FontRegular, 33, Color.white,
+                                       TextAlignmentOptions.Center, 714, 160);
+
+            GameObject footer = Child(panel.transform, "Footer");
+            Fixed(footer, 714, 120);
+            var fl = footer.GetComponent<HorizontalLayoutGroup>() ?? footer.AddComponent<HorizontalLayoutGroup>();
+            fl.spacing = 24;
+            fl.childAlignment = TextAnchor.MiddleCenter;
+            fl.childForceExpandWidth = false;
+            fl.childForceExpandHeight = false;
+            fl.childControlWidth = false;
+            fl.childControlHeight = false;
+
+            GameObject cancelGo = Child(footer.transform, "CancelButton");
+            SetRect(cancelGo, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f),
+                    Vector2.zero, new Vector2(345, 120));
+            Button cancel = MakeButton(cancelGo, Require<Sprite>(SpriteButtonSilverBig),
+                                       Image.Type.Sliced, "CANCEL", 39);
+
+            GameObject rescindGo = Child(footer.transform, "RescindButton");
+            SetRect(rescindGo, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f),
+                    Vector2.zero, new Vector2(345, 120));
+            Button rescind = MakeButton(rescindGo, Require<Sprite>(SpriteButtonGoldBig),
+                                        Image.Type.Sliced, "RESCIND", 39);
+
+            panel.SetActive(false);
+
+            var controller = root.AddComponent<LoanRescindModalController>();
+            Wire(controller, "modalPanel", panel);
+            Wire(controller, "backdrop", backdrop);
+            Wire(controller, "titleText", title);
+            Wire(controller, "bodyText", body);
+            Wire(controller, "cancelButton", cancel);
+            Wire(controller, "rescindButton", rescind);
+            Wire(controller, "rescindButtonText", rescind.GetComponentInChildren<TextMeshProUGUI>(true));
+
+            PrefabUtility.SaveAsPrefabAsset(root, RescindPrefabPath);
+            Object.DestroyImmediate(root);
+            Log.Append("  saved ").Append(RescindPrefabPath).Append('\n');
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // asset_loans_offers — the offer modal prefab (§3.3, node 14261:107143)
+        // ═════════════════════════════════════════════════════════════════════
+
+        private static void BuildOfferModalPrefab()
+        {
+            Log.Append("== LoanOfferModal.prefab ==\n");
+
+            var root = new GameObject("LoanOfferModal", typeof(RectTransform));
+            SetRect(root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+            GameObject backdrop = Child(root.transform, "Backdrop");
+            SetRect(backdrop, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            AddImage(backdrop, null, Scrim);
+            backdrop.SetActive(false);
+
+            // 780 wide, HUG height (node: VERTICAL, gap 24, pad 24).
+            GameObject panel = Child(root.transform, "ModalPanel");
+            SetRect(panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    Vector2.zero, new Vector2(780, 900));
+            Image panelImg = AddImage(panel, Require<Sprite>(SpritePopupPanel), Color.white, Image.Type.Sliced);
+            panelImg.pixelsPerUnitMultiplier = 3.2f;   // border 64 ÷ 3.2 = 20 UI px, the node radius
+
+            var vlg = panel.AddComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(24, 24, 24, 24);
+            vlg.spacing = 24;
+            vlg.childAlignment = TextAnchor.UpperCenter;
+            vlg.childForceExpandWidth = false;
+            vlg.childForceExpandHeight = false;
+            vlg.childControlWidth = true;
+            vlg.childControlHeight = true;
+            var fitter = panel.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            TextMeshProUGUI title = Row(panel, "Title", FontSemiBold, 45, Color.white,
+                                        TextAlignmentOptions.Center, 732, 60);
+            TextMeshProUGUI subtitle = Row(panel, "Subtitle", FontRegular, 33, Color.white,
+                                           TextAlignmentOptions.Center, 732, 44);
+
+            // ── the asset row (node 14261:107146): 732×140, r12, #050F1F @ 60 % ──
+            GameObject assetRow = Child(panel.transform, "AssetRow");
+            Fixed(assetRow, 732, 140);
+            // The recipient row's sprite, tinted the SAME #050F1F @ 60 % — same shape (r12), same
+            // fill, one atom. Its 732×96 bake is 9-sliced to 140 tall, which is why the border is
+            // set below rather than left at the row's own.
+            Image assetBg = AddImage(assetRow, Require<Sprite>(SpriteRow), RowFill, Image.Type.Sliced,
+                                     raycast: false);
+            assetBg.pixelsPerUnitMultiplier = 1f;
+            var arl = assetRow.GetComponent<HorizontalLayoutGroup>() ?? assetRow.AddComponent<HorizontalLayoutGroup>();
+            arl.padding = new RectOffset(20, 24, 0, 0);
+            arl.spacing = 24;
+            arl.childAlignment = TextAnchor.MiddleLeft;
+            arl.childForceExpandWidth = false;
+            arl.childForceExpandHeight = false;
+            arl.childControlWidth = true;
+            arl.childControlHeight = true;
+
+            GameObject portrait = Child(assetRow.transform, "Portrait");
+            Image portraitImg = AddImage(portrait, null, Color.white, Image.Type.Simple, raycast: false);
+            portraitImg.preserveAspect = true;
+            var pLe = portrait.GetComponent<LayoutElement>() ?? portrait.AddComponent<LayoutElement>();
+            pLe.preferredWidth = 100;
+            pLe.preferredHeight = 100;
+            pLe.flexibleWidth = 0;
+
+            GameObject texts = Child(assetRow.transform, "Texts");
+            var tl = texts.GetComponent<VerticalLayoutGroup>() ?? texts.AddComponent<VerticalLayoutGroup>();
+            // ⚠️ ZERO, not the node's 6 — and that is not a fidelity miss, it is the conversion.
+            //
+            // Figma's gap sits between text boxes that are TIGHT to their glyphs. A TMP slot is a
+            // LINE BOX: it carries the font's internal leading above the cap and its descent below
+            // the baseline whether the string uses them or not, and `TextSlot` adds a safety
+            // margin on top (see its remarks — a hairline slot makes an Ellipsis text render
+            // nothing at all). Adding 6 more on top of all of that separates the two lines by
+            // more than the design does.
+            //
+            // Measured, not reasoned: glyph-bottom to glyph-top is **19 px** in the node render
+            // and was **25 px** built — exactly this 6. Cesar caught it by eye on the first pass
+            // ("MYTHIC is not vertically centred relative to the portrait"), which is what the
+            // extra 6 looks like: the second line pushed below the portrait's midline.
+            tl.spacing = 0;
+            tl.childAlignment = TextAnchor.MiddleLeft;
+            tl.childForceExpandWidth = false;
+            tl.childForceExpandHeight = false;
+            tl.childControlWidth = true;
+            tl.childControlHeight = true;
+            var textsLe = texts.GetComponent<LayoutElement>() ?? texts.AddComponent<LayoutElement>();
+            textsLe.flexibleWidth = 1;    // FILL, per the node
+
+            GameObject nameGo = Child(texts.transform, "AssetName");
+            TextMeshProUGUI assetName = AddText(nameGo, FontSemiBold, 33, Color.white,
+                                                TextAlignmentOptions.MidlineLeft);
+            assetName.enableWordWrapping = false;
+            assetName.overflowMode = TextOverflowModes.Ellipsis;
+            var nLe = nameGo.GetComponent<LayoutElement>() ?? nameGo.AddComponent<LayoutElement>();
+            nLe.preferredHeight = TextSlot(33);      // 47, not 40 — see TextSlot's remarks
+            // FILL — same trap as the settings row: a label whose width comes from its own
+            // (empty-at-build-time) text is measured at 0 and never recovers unless something
+            // dirties the layout after the string lands.
+            nLe.flexibleWidth = 1;
+            // An AUTHORED sizeDelta as well, even though the layout group overwrites it at
+            // runtime (measured live: 564×47). Unity's default is 100×100, and the fidelity
+            // linter flags that as trap C9 — correctly: a reviewer opening the prefab sees a
+            // 100 px box, and the day this element leaves a layout group it would silently BE
+            // one. 564 is the column's real width (732 − 20 − 24 padding − 100 portrait − 24 gap).
+            Rect(nameGo).sizeDelta = new Vector2(564, TextSlot(33));
+
+            // The meta line is a THREE-CHILD horizontal group, not one string, because the three
+            // parts have three different colours — the rarity's comes from RarityHelper at runtime
+            // and cannot be a rich-text tag baked into a format string.
+            GameObject meta = Child(texts.transform, "Meta");
+            var ml = meta.GetComponent<HorizontalLayoutGroup>() ?? meta.AddComponent<HorizontalLayoutGroup>();
+            ml.spacing = 16;
+            ml.childAlignment = TextAnchor.MiddleLeft;
+            ml.childForceExpandWidth = false;
+            ml.childForceExpandHeight = false;
+            ml.childControlWidth = true;
+            ml.childControlHeight = true;
+            var metaLe = meta.GetComponent<LayoutElement>() ?? meta.AddComponent<LayoutElement>();
+            metaLe.preferredHeight = TextSlot(30);
+            metaLe.flexibleWidth = 1;
+
+            TextMeshProUGUI rarity = MetaChip(meta, "Rarity", FontSemiBold, RarityGreen);
+            TextMeshProUGUI level  = MetaChip(meta, "Level",  FontRegular,  Color.white);
+            TextMeshProUGUI days   = MetaChip(meta, "Days",   FontRegular,  SubText);
+
+            // ── body ──────────────────────────────────────────────────────────
+            TextMeshProUGUI terms = Row(panel, "Terms", FontRegular, 30, Color.white,
+                                        TextAlignmentOptions.TopLeft, 732, 132);
+            TextMeshProUGUI fine = Row(panel, "FinePrint", FontRegular, 26, SubText,
+                                       TextAlignmentOptions.Top, 732, 40);
+
+            // ── footer: DECLINE silver + ACCEPT gold, equal widths ────────────
+            GameObject footer = Child(panel.transform, "Footer");
+            Fixed(footer, 732, 120);
+            var fl = footer.GetComponent<HorizontalLayoutGroup>() ?? footer.AddComponent<HorizontalLayoutGroup>();
+            fl.spacing = 24;
+            fl.childAlignment = TextAnchor.MiddleCenter;
+            fl.childForceExpandWidth = false;
+            fl.childForceExpandHeight = false;
+            fl.childControlWidth = false;
+            fl.childControlHeight = false;
+
+            GameObject declineGo = Child(footer.transform, "DeclineButton");
+            SetRect(declineGo, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f),
+                    Vector2.zero, new Vector2(354, 120));
+            Button decline = MakeButton(declineGo, Require<Sprite>(SpriteButtonSilverBig),
+                                        Image.Type.Sliced, "DECLINE", 39);
+
+            GameObject acceptGo = Child(footer.transform, "AcceptButton");
+            SetRect(acceptGo, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f),
+                    Vector2.zero, new Vector2(354, 120));
+            Button accept = MakeButton(acceptGo, Require<Sprite>(SpriteButtonGoldBig),
+                                       Image.Type.Sliced, "ACCEPT", 39);
+
+            panel.SetActive(false);
+
+            var controller = root.AddComponent<LoanOfferModalController>();
+            Wire(controller, "modalPanel", panel);
+            Wire(controller, "backdrop", backdrop);
+            Wire(controller, "titleText", title);
+            Wire(controller, "subtitleText", subtitle);
+            Wire(controller, "assetPortrait", portraitImg);
+            Wire(controller, "assetNameText", assetName);
+            Wire(controller, "rarityText", rarity);
+            Wire(controller, "levelText", level);
+            Wire(controller, "daysText", days);
+            Wire(controller, "termsText", terms);
+            Wire(controller, "finePrintText", fine);
+            Wire(controller, "declineButton", decline);
+            Wire(controller, "declineButtonText", decline.GetComponentInChildren<TextMeshProUGUI>(true));
+            Wire(controller, "acceptButton", accept);
+            Wire(controller, "acceptButtonText", accept.GetComponentInChildren<TextMeshProUGUI>(true));
+
+            PrefabUtility.SaveAsPrefabAsset(root, OfferPrefabPath);
+            Object.DestroyImmediate(root);
+            Log.Append("  saved ").Append(OfferPrefabPath).Append('\n');
+        }
+
+        /// <summary>One chip of the asset row's meta line — hug-width, no wrap.</summary>
+        private static TextMeshProUGUI MetaChip(GameObject parent, string name, string font, Color color)
+        {
+            GameObject go = Child(parent.transform, name);
+            TextMeshProUGUI tmp = AddText(go, font, 30, color, TextAlignmentOptions.MidlineLeft);
+            tmp.enableWordWrapping = false;
+            var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
+            le.preferredHeight = TextSlot(30);
+            le.flexibleWidth = 0;
+            // Authored, for the same reason as AssetName above — the chips HUG at runtime, but
+            // Unity's 100×100 default is what a reviewer and the linter both see in the prefab.
+            Rect(go).sizeDelta = new Vector2(140, TextSlot(30));
+            return tmp;
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
         // the two detail panels
         // ═════════════════════════════════════════════════════════════════════
 
         private static GameObject Find(string path)
         {
-            var go = GameObject.Find(path);
+            var go = GameObject.Find(path) ?? FindIncludingInactive(path);
             if (go == null)
                 throw new System.InvalidOperationException($"Scene object not found: {path}");
             return go;
+        }
+
+        /// <summary>
+        /// Walk a "/"-separated scene path through INACTIVE objects too.
+        ///
+        /// <para>
+        /// ⚠️ <c>GameObject.Find</c> SKIPS ANYTHING INACTIVE, including every ancestor. Most of
+        /// this project's screens are authored inactive — <c>SettingsScreen</c>'s whole
+        /// <c>SettingsPanel</c> is, and so is every modal root — so a path that reaches into one
+        /// is unfindable by the ordinary call, and the failure reads as "the object does not
+        /// exist" rather than as "the object is switched off".
+        /// </para>
+        /// <para>
+        /// Walks <c>Transform.Find</c> from the scene roots instead, which is inactive-blind in
+        /// exactly the way this needs.
+        /// </para>
+        /// </summary>
+        private static GameObject? FindIncludingInactive(string path)
+        {
+            string[] parts = path.Split('/');
+            if (parts.Length == 0) return null;
+
+            var scene = EditorSceneManager.GetActiveScene();
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.name != parts[0]) continue;
+
+                Transform t = root.transform;
+                for (int i = 1; i < parts.Length && t != null; i++) t = t.Find(parts[i]);
+                if (t != null) return t.gameObject;
+            }
+            return null;
         }
 
         /// <summary>
@@ -851,6 +1357,9 @@ namespace Golfin.UI.Loans.EditorTools
 
             GameObject modal  = SpawnModal(detail.transform.parent, ModalPrefabPath, "LoanModal");
             GameObject retMod = SpawnModal(detail.transform.parent, ReturnPrefabPath, "LoanReturnModal");
+            // asset_loans_offers §3.2 — the RESCIND confirm, spawned per screen like its two
+            // siblings so it inherits the same canvas and sorting.
+            GameObject rescMod = SpawnModal(detail.transform.parent, RescindPrefabPath, "LoanRescindModal");
 
             var panel = detail.GetComponent<Golfin.Roster.CharacterDetailPanel>();
             Wire(panel, "lendButton", lend);
@@ -858,6 +1367,7 @@ namespace Golfin.UI.Loans.EditorTools
             Wire(panel, "loanRibbon", ribbon);
             Wire(panel, "loanModal", modal.GetComponent<LoanModalController>());
             Wire(panel, "loanReturnModal", retMod.GetComponent<LoanReturnModalController>());
+            Wire(panel, "loanRescindModal", rescMod.GetComponent<LoanRescindModalController>());
         }
 
         private static void BuildClubDetail()
@@ -914,6 +1424,7 @@ namespace Golfin.UI.Loans.EditorTools
                                ?? detail.transform.parent;
             GameObject modal  = SpawnModal(screen, ModalPrefabPath, "LoanModal");
             GameObject retMod = SpawnModal(screen, ReturnPrefabPath, "LoanReturnModal");
+            GameObject rescMod = SpawnModal(screen, RescindPrefabPath, "LoanRescindModal");
 
             var panel = detail.GetComponent<Golfin.Inventory.ClubDetailPanel>();
             Wire(panel, "lendButton", lend);
@@ -921,6 +1432,7 @@ namespace Golfin.UI.Loans.EditorTools
             Wire(panel, "loanRibbon", ribbon);
             Wire(panel, "loanModal", modal.GetComponent<LoanModalController>());
             Wire(panel, "loanReturnModal", retMod.GetComponent<LoanReturnModalController>());
+            Wire(panel, "loanRescindModal", rescMod.GetComponent<LoanRescindModalController>());
         }
 
         /// <summary>
@@ -1052,6 +1564,299 @@ namespace Golfin.UI.Loans.EditorTools
         /// from COMPARE would also enter compare mode when tapped. Both the serialized array and
         /// any runtime listeners have to go.</para>
         /// </summary>
+        // ═════════════════════════════════════════════════════════════════════
+        // asset_loans_offers — the Home offer pill (§3.3, node 14261:33108)
+        // ═════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// CLONED FROM THE DAILY PILL, object for object (Rule 19).
+        ///
+        /// <para>
+        /// The Figma node is a DETACHED COPY of the daily pill's own "Mission Card Container" —
+        /// same panel sprite, same glow, same 122 height, same 24/16 padding, same 10 gap. So the
+        /// clone here is not a convenience, it is the design: the two pills are one component with
+        /// two contents, and hand-building a second one from a rounded rect would put a
+        /// near-identical-but-not-identical pill next to the original, which is the single most
+        /// visible kind of fidelity failure.
+        /// </para>
+        /// <para>
+        /// <c>Instantiate</c> of the live scene object rather than a fresh hierarchy: it carries
+        /// the Image sprites, the ppum, the anchors and the ButtonPressFeedback across without any
+        /// of them being retyped here. The daily pill's own controller is then REMOVED from the
+        /// copy (it would fetch a mission and fight for the same slot) and replaced with this
+        /// pill's.
+        /// </para>
+        /// </summary>
+        private static void BuildOfferPill()
+        {
+            Log.Append("== HomeScreen/LoanOfferPill ==\n");
+
+            GameObject daily = Find(DailyPill);
+            GameObject home = Find(HomeScreen);
+
+            GameObject pill;
+            Transform existing = home.transform.Find("LoanOfferPill");
+            if (existing != null)
+            {
+                pill = existing.gameObject;
+                Log.Append("  reusing existing LoanOfferPill (idempotent re-run)\n");
+            }
+            else
+            {
+                pill = Object.Instantiate(daily, home.transform);
+                pill.name = "LoanOfferPill";
+                // Immediately after the daily pill in the hierarchy, so the two draw in the order
+                // they read.
+                pill.transform.SetSiblingIndex(daily.transform.GetSiblingIndex() + 1);
+                Log.Append("  cloned from ").Append(DailyPill)
+                   .Append(" (panel guid=").Append(AssetDatabase.AssetPathToGUID(SpritePillPanel))
+                   .Append(", glow guid=").Append(AssetDatabase.AssetPathToGUID(SpritePillGlow))
+                   .Append(")\n");
+            }
+
+            // The daily pill's controller and streak flame have no meaning here.
+            var stale = pill.GetComponent<Golfin.UI.Home.DailyMissionPillController>();
+            if (stale != null) Object.DestroyImmediate(stale, allowDestroyingAssets: false);
+
+            Transform flame = pill.transform.Find("StreakFlame");
+            if (flame != null) Object.DestroyImmediate(flame.gameObject, allowDestroyingAssets: false);
+
+            // The icon takes the flame's slot: 56×56 at padX 24, vertically centred in the 122.
+            GameObject icon = Child(pill.transform, "Icon");
+            SetRect(icon, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
+                    new Vector2(24, -33), new Vector2(56, 56));
+            Image iconImg = AddImage(icon, Require<Sprite>(SpriteIconInBig), Color.white,
+                                     Image.Type.Simple, raycast: false);
+            iconImg.preserveAspect = true;
+            icon.transform.SetSiblingIndex(2);   // after Glow and Panel, before Label
+
+            // The label is the CLONE's own — it arrived with the right font, colour and rect from
+            // the daily pill. Only the size changes (the node is one step down, 39 vs 45) and the
+            // LocalizedText binder goes, because this label's text is a FORMAT with the lender's
+            // name in it and no static key can carry that.
+            Transform labelT = pill.transform.Find("Label");
+            var label = labelT != null ? labelT.GetComponent<TextMeshProUGUI>() : null;
+            if (label == null)
+                throw new System.InvalidOperationException("LoanOfferPill: the cloned Label is missing.");
+
+            var binder = label.GetComponent<LocalizedText>();
+            if (binder != null) Object.DestroyImmediate(binder, allowDestroyingAssets: false);
+
+            // 39 node px in the daily pill's own ratio: it renders its 45 px node label at 40, so
+            // 40 × 39/45 = 34.67. Matching the SIBLING rather than applying a divisor from
+            // elsewhere is what keeps the two pills reading as one family.
+            //
+            // ⚠️ fontSizeMax, NOT fontSize. The clone arrives with `enableAutoSizing` ON (min 24,
+            // max 40) from the daily pill, and with auto-sizing on, `fontSize` is an OUTPUT — TMP
+            // overwrites it on the next layout. Setting it alone measured 32.6 immediately (the
+            // fitted size for the placeholder string) and would have snapped back to the DAILY
+            // pill's 40 the moment a short lender name fit, which is precisely the "one size down"
+            // the node asks for, undone. Capping the range keeps the step-down AND keeps the
+            // shrink-to-fit that stops a long name from clipping.
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 24f;
+            label.fontSizeMax = 34.67f;
+            label.fontSize = 34.67f;
+            label.color = PillLabel;
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.text = "LOAN OFFER FROM KENJI";
+            SetRect(labelT.gameObject, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
+                    new Vector2(90, -31), new Vector2(433, 60));   // 24 + 56 + 10 = 90
+
+            var button = pill.GetComponent<Button>() ?? pill.AddComponent<Button>();
+            StripPersistentClicks(button);
+            if (pill.GetComponent<ButtonPressFeedback>() == null) pill.AddComponent<ButtonPressFeedback>();
+
+            var ctrl = pill.GetComponent<Golfin.UI.Home.LoanOfferPillController>()
+                    ?? pill.AddComponent<Golfin.UI.Home.LoanOfferPillController>();
+
+            Wire(ctrl, "pillRect", pill.GetComponent<RectTransform>());
+            Wire(ctrl, "glowImage", pill.transform.Find("Glow")?.GetComponent<Image>());
+            Wire(ctrl, "iconImage", iconImg);
+            Wire(ctrl, "labelRect", labelT.GetComponent<RectTransform>());
+            Wire(ctrl, "labelText", label);
+            Wire(ctrl, "tapButton", button);
+            Wire(ctrl, "dailyPill", daily.GetComponent<Golfin.UI.Home.DailyMissionPillController>());
+            Wire(ctrl, "offerModal", SpawnModal(Find("Canvas").transform, OfferPrefabPath,
+                                                "LoanOfferModal")
+                                     .GetComponent<LoanOfferModalController>());
+
+            // Home owns the placement chain (the offer pill reads the daily pill's Y, which reads
+            // the notice panel's), so HomeScreenController has to hold the reference.
+            var homeCtrl = home.GetComponent<GolfinRedux.UI.HomeScreenController>();
+            if (homeCtrl != null) Wire(homeCtrl, "loanOfferPill", ctrl);
+            else Log.Append("  ⚠️ HomeScreenController not found — placement hook NOT wired\n");
+
+            Log.Append("  wired LoanOfferPillController\n");
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // asset_loans_offers — Settings ▸ User Profile ▸ LOAN OFFERS (§3.4)
+        // ═════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Append the LOAN OFFERS row to the User Profile submenu and grow the submenu to fit.
+        ///
+        /// ⚠️ THE SPEC SAYS "after the DELETE ACCOUNT block" AND THAT BLOCK DOES NOT EXIST IN THE
+        /// SHIPPED SCENE. The Figma frame draws EMAIL, ACCOUNT ID and DELETE ACCOUNT above this
+        /// row; the built submenu has only USERNAME + the input + SAVE + a feedback line (and an
+        /// inactive AccountLinkingSection). So "after DELETE ACCOUNT" is honoured as what it
+        /// means — LAST in the submenu — and the discrepancy is surfaced in the report rather
+        /// than papered over by building three sections this task was not asked for.
+        ///
+        /// <para>
+        /// THE SUBMENU IS NOT A LAYOUT GROUP. Its children are absolutely positioned, so the row
+        /// is placed by hand and the CONTAINER's height is grown by exactly the row's height plus
+        /// its gap. That height is what <c>SettingsMenuItem</c> reads at Awake
+        /// (<c>submenuHeight = 0</c> ⇒ auto-detect from <c>sizeDelta.y</c>) and what it adds to
+        /// the row's <c>LayoutElement.preferredHeight</c> when expanded — which is what pushes
+        /// LOG OUT and CLOSE down in the OUTER VerticalLayoutGroup. Nothing else has to be told.
+        /// </para>
+        /// </summary>
+        private static void BuildSettingsRow()
+        {
+            Log.Append("== Settings/UserProfileSubmenu/LoanOffersRow ==\n");
+
+            GameObject submenu = Find(SettingsSub);
+            RectTransform submenuRect = Rect(submenu);
+
+            // 68 title + 4 gap + 42 sub = 114, plus 10 of breathing room. Derived from TextSlot
+            // rather than typed, so raising a font size cannot silently squeeze the row — which
+            // is exactly what would have happened when the title went 40 → 48.
+            const float RowH = 124f;
+            const float GapY = 20f;
+
+            // ── the row's top, DERIVED, so a re-run cannot drift ──────────────
+            //
+            // The first version computed this as "the submenu's current height" and then grew the
+            // submenu — correct once, and wrong on every re-run that changed RowH, because the
+            // height it read already contained the row. Measuring the OTHER children instead
+            // makes the builder genuinely idempotent: the answer is the same whether the row
+            // exists yet or not, and it survives the submenu gaining content later.
+            float contentBottom = 0f;
+            foreach (RectTransform child in submenu.transform)
+            {
+                if (child.name == "LoanOffersRow") continue;
+                if (!child.gameObject.activeSelf) continue;
+                // Children of this submenu are top-anchored with negative y; the deepest edge is
+                // the most negative (y − height).
+                contentBottom = Mathf.Max(contentBottom,
+                                          -child.anchoredPosition.y + child.sizeDelta.y);
+            }
+            float top = contentBottom + GapY;
+
+            GameObject row = Child(submenu.transform, "LoanOffersRow");
+            SetRect(row, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1),
+                    new Vector2(0, -top), new Vector2(-48, RowH));
+
+            var hl = row.GetComponent<HorizontalLayoutGroup>() ?? row.AddComponent<HorizontalLayoutGroup>();
+            hl.padding = new RectOffset(24, 24, 0, 0);
+            hl.spacing = 24;
+            hl.childAlignment = TextAnchor.MiddleLeft;
+            hl.childForceExpandWidth = false;
+            hl.childForceExpandHeight = false;
+            hl.childControlWidth = true;
+            hl.childControlHeight = true;
+
+            // texts column — FILL, per the node
+            GameObject texts = Child(row.transform, "Texts");
+            var vl = texts.GetComponent<VerticalLayoutGroup>() ?? texts.AddComponent<VerticalLayoutGroup>();
+            vl.spacing = 4;
+            vl.childAlignment = TextAnchor.MiddleLeft;
+            vl.childForceExpandWidth = false;
+            vl.childForceExpandHeight = false;
+            vl.childControlWidth = true;
+            vl.childControlHeight = true;
+            var textsLe = texts.GetComponent<LayoutElement>() ?? texts.AddComponent<LayoutElement>();
+            textsLe.flexibleWidth = 1;
+
+            GameObject titleGo = Child(texts.transform, "Title");
+            // 48 — the node's number, and ALSO the family's.
+            //
+            // ⚠️ THIS WAS 40, ON A RATIONALE BUILT FROM THE WRONG FIELD. The claim was "the
+            // sibling rows render their 48 px node labels at 40" — but 40 is those labels'
+            // `sizeDelta.y`, not their `fontSize`. Every section-title Label in SettingsList
+            // (User Profile, Sound Settings, Graphics, Controls, Language, Terms of Use, Privacy
+            // Policy, FAQ, About, Contact Form, Log Out) is fontSize **48**, measured. So 40 made
+            // this row one step SMALLER than every neighbour — the exact opposite of the
+            // "reads as one family" argument used to justify it.
+            //
+            // The lesson generalises past this row: a rect's height and a font's size are two
+            // different numbers that are often close enough to swap without looking wrong, and a
+            // fidelity rationale built on the wrong one survives review until somebody enumerates
+            // the siblings. Enumerate them.
+            TextMeshProUGUI title = AddText(titleGo, FontSemiBold, 48, Color.white,
+                                            TextAlignmentOptions.MidlineLeft);
+            title.enableWordWrapping = false;
+            var tLe = titleGo.GetComponent<LayoutElement>() ?? titleGo.AddComponent<LayoutElement>();
+            tLe.preferredHeight = TextSlot(48);      // 68
+            // FILL the column. Without this the VLG sizes the label from its PREFERRED width,
+            // which is a function of its TEXT — and the text is empty until OnEnable writes it,
+            // so the label is measured at width 0 and a left-aligned string has nothing to be
+            // left-aligned in. Measured: rect width 0.00 before this line existed.
+            tLe.flexibleWidth = 1;
+
+            GameObject subGo = Child(texts.transform, "Subtitle");
+            // 30 — the node's number. Was 25, scaled down to sit under the (wrong) 40 title.
+            TextMeshProUGUI sub = AddText(subGo, FontRegular, 30, SubText,
+                                          TextAlignmentOptions.MidlineLeft);
+            sub.enableWordWrapping = false;
+            sub.overflowMode = TextOverflowModes.Ellipsis;
+            var sLe = subGo.GetComponent<LayoutElement>() ?? subGo.AddComponent<LayoutElement>();
+            sLe.preferredHeight = TextSlot(30);      // 42 — and this one IS Ellipsis
+            sLe.flexibleWidth = 1;      // same reason as the title above
+
+            // the 112×60 pill + 48 knob
+            GameObject toggle = Child(row.transform, "Toggle");
+            var togLe = toggle.GetComponent<LayoutElement>() ?? toggle.AddComponent<LayoutElement>();
+            togLe.preferredWidth = 112;
+            togLe.preferredHeight = 60;
+            togLe.flexibleWidth = 0;
+            // Image.Type.Simple on a FULL capsule baked at final size — memory
+            // reference_fixed_size_pill_capsule_sprite. 9-slicing an r=30 stadium at 60 tall
+            // collapses its own corners into an oval, which is the linter's render-health FAIL.
+            Image pillImg = AddImage(toggle, Require<Sprite>(SpriteTogglePill), ToggleOn,
+                                     Image.Type.Simple);
+            var togBtn = toggle.GetComponent<Button>() ?? toggle.AddComponent<Button>();
+            togBtn.targetGraphic = pillImg;
+            togBtn.transition = Selectable.Transition.None;   // the knob IS the feedback
+            StripPersistentClicks(togBtn);
+            if (toggle.GetComponent<ButtonPressFeedback>() == null)
+                toggle.AddComponent<ButtonPressFeedback>();
+
+            GameObject knob = Child(toggle.transform, "Knob");
+            // 54 wide because the bake carries a 3 px shadow pad on every side; the DISC is 48.
+            SetRect(knob, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+                    new Vector2(58, 0), new Vector2(54, 54));
+            AddImage(knob, Require<Sprite>(SpriteToggleKnob), Color.white, Image.Type.Simple,
+                     raycast: false);
+
+            var ctrl = row.GetComponent<LoanOffersToggle>() ?? row.AddComponent<LoanOffersToggle>();
+            Wire(ctrl, "titleText", title);
+            Wire(ctrl, "subtitleText", sub);
+            Wire(ctrl, "toggleButton", togBtn);
+            Wire(ctrl, "pillImage", pillImg);
+            Wire(ctrl, "knobRect", Rect(knob));
+
+            // SET the container's height, never increment it. SettingsMenuItem reads this at
+            // Awake (submenuHeight = 0 ⇒ auto-detect from sizeDelta.y) and adds it to the row's
+            // LayoutElement.preferredHeight when expanded, which is what pushes LOG OUT and CLOSE
+            // down in the OUTER VerticalLayoutGroup. An increment would compound on every re-run.
+            float wanted = top + RowH;
+            if (!Mathf.Approximately(submenuRect.sizeDelta.y, wanted))
+            {
+                Log.Append("  submenu height ").Append(submenuRect.sizeDelta.y)
+                   .Append(" -> ").Append(wanted)
+                   .Append(" (content ").Append(contentBottom)
+                   .Append(" + gap ").Append(GapY).Append(" + row ").Append(RowH).Append(")\n");
+                submenuRect.sizeDelta = new Vector2(submenuRect.sizeDelta.x, wanted);
+            }
+
+            EditorUtility.SetDirty(submenu);
+            Log.Append("  wired LoanOffersToggle\n");
+        }
+
         private static void StripPersistentClicks(Button? button)
         {
             if (button == null) return;

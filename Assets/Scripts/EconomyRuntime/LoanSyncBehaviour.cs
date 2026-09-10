@@ -31,13 +31,19 @@ namespace Golfin.EconomyRuntime
     /// game is byte-identical to what it was before the feature. Same posture, and the same
     /// bootstrap, as <see cref="ServerBalanceSyncBehaviour"/> next door.
     ///
-    /// REFRESH MOMENTS (§2):
+    /// REFRESH MOMENTS (§2, extended by asset_loans_offers §2):
     ///   • sign-in succeeds / startup while already signed in — the first list of the session;
-    ///   • entering Roster or Inventory — the two screens a loan is visible on, throttled;
-    ///   • after every LEND or RETURN — the modal calls <see cref="RequestRefresh"/> itself.
+    ///   • entering HOME, Roster or Inventory — the three screens a loan or an offer is visible
+    ///     on, throttled. Home joined the list because the offer pill lives there and an offer
+    ///     that arrived while the player was mid-session would otherwise not show until they
+    ///     wandered into the Roster;
+    ///   • after every LEND / RETURN / ACCEPT / DECLINE / RESCIND — the modals call
+    ///     <see cref="RequestRefresh"/> themselves.
     ///
     /// There is deliberately no poll. A loan does not change under the player's feet often enough
-    /// to be worth a timer, and the two screens that show one are exactly the ones that refresh.
+    /// to be worth a timer, and the three screens that show one are exactly the ones that refresh.
+    /// (A push/notice on offer ARRIVAL is explicitly out of scope — the pill is a Home-entry
+    /// affordance, not a notification.)
     /// </summary>
     public sealed class LoanSyncBehaviour : MonoBehaviour, ILoanReconciler
     {
@@ -46,10 +52,19 @@ namespace Golfin.EconomyRuntime
         /// post-write refresh are NOT throttled — those are the moments the list actually moved.</summary>
         private const float ScreenRefreshCooldownSeconds = 10f;
 
-        /// <summary>How many reconciled loan ids the save keeps. The server's window is 14 days;
-        /// 50 is comfortably more loans than that window can hold for one player, and the cap
-        /// exists so the list cannot grow without bound over a year of play.</summary>
-        private const int MaxReconciledIds = 50;
+        /// <summary>
+        /// How many reconciled loan ids the save keeps. The server's window is 14 days.
+        ///
+        /// <para>
+        /// RAISED FROM 50 TO 150 BY asset_loans_offers, because a loan now writes up to THREE
+        /// entries instead of one: <c>offered:&lt;id&gt;</c> when it goes out,
+        /// <c>accepted:&lt;id&gt;</c> when the answer lands, and the bare id when it ends. At 50
+        /// the eviction would start dropping the OLDEST — which is the `offered:` marker — and a
+        /// busy lender would stop being told their offers were accepted. 150 keeps the same
+        /// "comfortably more than 14 days can hold" margin the original number had.
+        /// </para>
+        /// </summary>
+        private const int MaxReconciledIds = 150;
 
         private static LoanSyncBehaviour? _instance;
 
@@ -114,10 +129,12 @@ namespace Golfin.EconomyRuntime
 
         private void OnScreenChanged(ScreenId screen)
         {
-            if (screen != ScreenId.Roster && screen != ScreenId.Inventory) return;
+            if (screen != ScreenId.Roster && screen != ScreenId.Inventory
+                && screen != ScreenId.Home) return;
             if (Time.unscaledTime - _lastScreenRefresh < ScreenRefreshCooldownSeconds) return;
             _lastScreenRefresh = Time.unscaledTime;
-            Refresh(screen == ScreenId.Roster ? "roster" : "inventory");
+            Refresh(screen == ScreenId.Roster ? "roster"
+                  : screen == ScreenId.Inventory ? "inventory" : "home");
         }
 
         /// <summary>
@@ -226,6 +243,8 @@ namespace Golfin.EconomyRuntime
         {
             if (loan == null || string.IsNullOrEmpty(loan.RefId)) return;
 
+            NoteOfferTransition(loan);
+
             if (loan.IsCharacter)
             {
                 CharacterManager? cm = CharacterManager.Instance;
@@ -297,7 +316,11 @@ namespace Golfin.EconomyRuntime
                 if (clubs.RemoveBorrowed(loan.RefId)) _inventoryDirty = true;
             }
 
-            if (firstTime)
+            // AN OFFER THAT ENDED IS NOT A RETURN, and the recipient gets no toast for one.
+            // They already know: they tapped DECLINE (the modal toasts), or the lender took it
+            // back / it lapsed — in which case the recipient was never told it existed in the
+            // first place and "X went back to Y" would be about an asset they never had.
+            if (firstTime && !loan.IsOfferEnded)
                 _pendingToasts.Add(Format("LOAN_TOAST_RETURNED_IN",
                                           AssetName(loan), Party(loan.Lender)));
         }
@@ -305,6 +328,15 @@ namespace Golfin.EconomyRuntime
         public void ClearLentOut(LoanDto loan, bool firstTime)
         {
             if (loan == null || string.IsNullOrEmpty(loan.RefId)) return;
+
+            // AN OFFER THAT WAS NEVER ACCEPTED HAS NO CATCH-UP TO APPLY, and skipping it is not
+            // an optimisation — `ApplyLoanLevelCatchUp` is what grants the SP for levels the
+            // BORROWER bought, and on a declined / rescinded / lapsed offer nobody ever held the
+            // asset, so there are no such levels. Running it would be a no-op today (level_at_end
+            // is null, so it falls back to the owner's own current level) but it would be a no-op
+            // by luck rather than by intent, and the first time a future change made
+            // `LevelAtEnd` non-null on a terminal offer it would silently grant SP for nothing.
+            bool offerEnded = loan.IsOfferEnded;
 
             int levelAtEnd = loan.LevelAtEnd ?? loan.Level;
             int sp = 0;
@@ -315,7 +347,7 @@ namespace Golfin.EconomyRuntime
                 if (cm == null) return;
                 if (cm.IsLentOut(loan.RefId)) _rosterDirty = true;
                 cm.SetLentOut(loan.RefId, false);
-                sp = cm.ApplyLoanLevelCatchUp(loan.RefId, levelAtEnd);
+                if (!offerEnded) sp = cm.ApplyLoanLevelCatchUp(loan.RefId, levelAtEnd);
             }
             else if (loan.IsClub)
             {
@@ -323,7 +355,7 @@ namespace Golfin.EconomyRuntime
                 if (clubs == null) return;
                 if (clubs.IsLentOut(loan.RefId)) _inventoryDirty = true;
                 clubs.SetLentOut(loan.RefId, false);
-                sp = clubs.ApplyLoanLevelCatchUp(loan.RefId, levelAtEnd);
+                if (!offerEnded) sp = clubs.ApplyLoanLevelCatchUp(loan.RefId, levelAtEnd);
             }
 
             if (sp > 0)
@@ -333,9 +365,73 @@ namespace Golfin.EconomyRuntime
                 InventorySync.InventorySyncService.Instance?.MarkDirty();
             }
 
-            if (firstTime)
-                _pendingToasts.Add(Format("LOAN_TOAST_RETURNED_OUT",
-                                          AssetName(loan), loan.RpToLender.ToString()));
+            if (!firstTime) return;
+
+            // THREE TERMINAL STATES, THREE SENTENCES. A single "your offer ended" would be the
+            // cheap version of this and it would be wrong every time: "they said no", "you took
+            // it back" and "nobody answered" call for completely different next actions from
+            // the lender, and the cooldown applies to the first two but not the third.
+            switch (loan.Status)
+            {
+                case LoanDto.StatusDeclined:
+                    _pendingToasts.Add(Format("LOAN_TOAST_DECLINED_FMT",
+                                              Party(loan.Borrower), AssetName(loan)));
+                    return;
+                case LoanDto.StatusRescinded:
+                    _pendingToasts.Add(Format("LOAN_TOAST_RESCINDED_FMT", AssetName(loan)));
+                    return;
+                case LoanDto.StatusOfferExpired:
+                    _pendingToasts.Add(Format("LOAN_TOAST_OFFER_EXPIRED_FMT", AssetName(loan)));
+                    return;
+                default:
+                    _pendingToasts.Add(Format("LOAN_TOAST_RETURNED_OUT",
+                                              AssetName(loan), loan.RpToLender.ToString()));
+                    return;
+            }
+        }
+
+        // ── the offer → loan transition (asset_loans_offers §2) ───────────────
+
+        /// <summary>Prefix under which an id is remembered as "this went out as an offer".</summary>
+        private const string SeenOfferedPrefix = "offered:";
+
+        /// <summary>Prefix under which "we have already told the lender it was accepted" lives.</summary>
+        private const string ToldAcceptedPrefix = "accepted:";
+
+        /// <summary>
+        /// Notice when an asset this player OFFERED has been accepted, and say so once.
+        ///
+        /// <para>
+        /// THE TRANSITION IS INVISIBLE FROM ONE PAYLOAD. Both an `offered` row and the `active`
+        /// row it becomes arrive in <c>out</c> and both mean "locked", so nothing about the
+        /// current list says an answer just landed — the lender would watch their ribbon quietly
+        /// change wording and never be told. What makes it visible is remembering, on the pass
+        /// that first saw the offer, that this id went out as one.
+        /// </para>
+        /// <para>
+        /// Recorded through the SAME <c>SaveData.reconciledLoanIds</c> mechanism the ended-loan
+        /// window uses (SPEC §2), under a prefix, so the "exactly once, and across relaunches"
+        /// property comes for free rather than being re-derived. Two entries per loan rather
+        /// than one is why <see cref="MaxReconciledIds"/> grew — see its remarks.
+        /// </para>
+        /// </summary>
+        private void NoteOfferTransition(LoanDto loan)
+        {
+            if (loan == null || string.IsNullOrEmpty(loan.Id)) return;
+
+            if (loan.IsPendingOffer())
+            {
+                MarkReconciled(SeenOfferedPrefix + loan.Id);
+                return;
+            }
+
+            if (!loan.IsLive()) return;
+            if (!WasReconciled(SeenOfferedPrefix + loan.Id)) return;
+            if (WasReconciled(ToldAcceptedPrefix + loan.Id)) return;
+
+            MarkReconciled(ToldAcceptedPrefix + loan.Id);
+            _pendingToasts.Add(Format("LOAN_TOAST_ACCEPTED_FMT",
+                                      Party(loan.Borrower), AssetName(loan)));
         }
 
         public void ReconcileFinished(bool changed)

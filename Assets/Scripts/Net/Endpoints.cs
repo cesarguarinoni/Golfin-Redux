@@ -697,20 +697,90 @@ namespace Golfin.Net
             => BaseUrl + "/loans/" + UnityWebRequest.EscapeURL(loanId ?? "") + "/return";
 
         /// <summary>
+        /// POST → <c>{data: {status, loan}}</c> — the RECIPIENT takes an offer, and this is
+        /// where the loan actually begins (asset_loans_offers §1.3). The row flips to
+        /// <c>active</c> with <c>starts_at = now()</c>, so the days the recipient agreed to run
+        /// from THIS moment, not from when the offer was sent.
+        ///
+        /// <para>
+        /// Refusals: <c>not_borrower</c>, <c>not_offered</c> (includes an offer that lapsed
+        /// while the modal was open), and — RE-CHECKED here because an offer can sit for two
+        /// days — <c>limit_in</c> and <c>borrower_has_it</c>. Idempotent: a second tap on a
+        /// loan this player already accepted answers <c>ok</c>.
+        /// </para>
+        /// </summary>
+        public static string LoansAccept(string loanId)
+            => BaseUrl + "/loans/" + UnityWebRequest.EscapeURL(loanId ?? "") + "/accept";
+
+        /// <summary>
+        /// POST → <c>{data: {status, loan}}</c> — the RECIPIENT turns an offer down.
+        /// <c>not_borrower</c> / <c>not_offered</c>; idempotent.
+        ///
+        /// <para>A decline UNLOCKS the lender's asset on their next refresh and starts the
+        /// re-offer cooldown for the pair: it is an answer, and the lender does not get to ask
+        /// again immediately.</para>
+        /// </summary>
+        public static string LoansDecline(string loanId)
+            => BaseUrl + "/loans/" + UnityWebRequest.EscapeURL(loanId ?? "") + "/decline";
+
+        /// <summary>
+        /// POST → <c>{data: {status, loan}}</c> — the LENDER takes back an unanswered offer.
+        /// <c>not_lender</c> / <c>not_offered</c>; idempotent.
+        ///
+        /// <para>
+        /// ⚠️ THIS IS NOT A RECALL. <c>not_offered</c> covers an <c>active</c> row, so a lender
+        /// still cannot pull back a loan the recipient has already accepted — asset_loans
+        /// decision of record #3 stands. Rescinding costs the same 24-hour cooldown a decline
+        /// does, or "rescind and re-offer" would be a spam loop.
+        /// </para>
+        /// </summary>
+        public static string LoansRescind(string loanId)
+            => BaseUrl + "/loans/" + UnityWebRequest.EscapeURL(loanId ?? "") + "/rescind";
+
+        /// <summary>
         /// GET → <c>{data: [{following_id, created_at, profiles:{id, display_name, avatar_url,
         /// avatar_level}}]}</c> — the accounts <paramref name="userId"/> follows
         /// (followers.py <c>get_following</c>). AUTH REQUIRED.
         ///
         /// <para>
-        /// THIS IS THE LEND MODAL'S RECIPIENT LIST, and the whole recipient model: you may only
-        /// lend to somebody you follow (decision of record #2). The server re-checks the same
-        /// graph, so a client that shows a stale list gets <c>not_following</c> rather than an
-        /// unauthorised transfer.
+        /// THIS IS THE LEND MODAL'S DEFAULT SUGGESTION LIST. It stopped being the whole
+        /// recipient model in asset_loans_offers — anyone can be offered to by name now — but
+        /// the people you follow are still who you most likely mean, so they stay listed under
+        /// the search field.
+        /// </para>
+        /// <para>
+        /// <paramref name="forLoans"/> asks the server to drop anybody who has switched LOAN
+        /// OFFERS off. OPT-IN, because this same endpoint backs the social Following list,
+        /// where a player who wants no loans must still appear.
         /// </para>
         /// </summary>
-        public static string SocialFollowing(string userId, int limit = 50)
+        public static string SocialFollowing(string userId, int limit = 50, bool forLoans = false)
             => BaseUrl + "/social/" + UnityWebRequest.EscapeURL(userId ?? "")
-                       + "/following?skip=0&limit=" + limit;
+                       + "/following?skip=0&limit=" + limit
+                       + (forLoans ? "&for_loans=1" : "");
+
+        /// <summary>
+        /// GET → <c>{data: [{id, display_name, avatar_url, avatar_level, …}]}</c> — players
+        /// whose display name contains <paramref name="q"/> (user.py <c>search_users</c>), the
+        /// caller excluded. AUTH REQUIRED.
+        ///
+        /// <para>
+        /// THE LEND MODAL'S SEARCH FIELD (asset_loans_offers §3.1), and the reason anyone can
+        /// now be lent to. ⚠️ The rows are a BARE profiles row — <c>id</c> / <c>display_name</c>
+        /// at the TOP LEVEL — where <see cref="SocialFollowing"/> nests the same fields under
+        /// <c>profiles</c>. <c>FollowedUserDto</c> maps both shapes for exactly this reason.
+        /// </para>
+        /// <para>
+        /// An EMPTY <paramref name="q"/> is a legitimate call and returns recently-active
+        /// players rather than nothing; the modal does not make it (it hides the RESULTS
+        /// section instead), but the endpoint's behaviour is worth naming so a future caller
+        /// does not discover it as a surprise.
+        /// </para>
+        /// </summary>
+        public static string UserSearch(string q, int limit = 20, bool forLoans = false)
+            => BaseUrl + "/user/search?q=" + UnityWebRequest.EscapeURL(q ?? "")
+                       + "&limit=" + limit
+                       + (forLoans ? "&for_loans=1" : "");
 
         /// <summary>Restore the shipping host (used by tests that retarget <see cref="RootUrl"/>).</summary>
         public static void ResetToDefault() => RootUrl = DefaultRootUrl;

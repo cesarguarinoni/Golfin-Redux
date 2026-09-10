@@ -90,15 +90,45 @@ namespace Golfin.Social
 
         // ── state ────────────────────────────────────────────────────────────
 
-        private readonly List<LoanDto> _out   = new List<LoanDto>();
-        private readonly List<LoanDto> _in    = new List<LoanDto>();
-        private readonly List<LoanDto> _ended = new List<LoanDto>();
+        private readonly List<LoanDto> _out    = new List<LoanDto>();
+        private readonly List<LoanDto> _in     = new List<LoanDto>();
+        private readonly List<LoanDto> _ended  = new List<LoanDto>();
+        private readonly List<LoanDto> _offers = new List<LoanDto>();
 
-        /// <summary>LIVE loans where this player is the lender.</summary>
+        /// <summary>
+        /// LOCKED assets where this player is the lender — running loans AND pending offers.
+        ///
+        /// <para>
+        /// THE UNION IS DELIBERATE AND IT IS WHAT MAKES THE FEATURE CHEAP. Offering an asset
+        /// has to lock it (asset_loans_offers decision #3), and every lock in the game already
+        /// goes through <see cref="IsLentOut"/> — SelectCharacter, EquipClub, the level-up
+        /// gate, both detail panels. Putting offers in this list makes all of them true on the
+        /// first refresh with no new branch anywhere; a fourth list would have meant finding
+        /// and editing every one of those call sites.
+        /// </para>
+        /// <para>
+        /// Callers that need to tell the two apart ask <see cref="IsOffered"/>, or read
+        /// <c>loan.Status</c> — which is what the ribbon does to pick OFFERED over ON LOAN.
+        /// </para>
+        /// </summary>
         public IReadOnlyList<LoanDto> Out => _out;
 
-        /// <summary>LIVE loans where this player is the borrower.</summary>
+        /// <summary>LIVE loans where this player is the borrower. Never carries offers — see
+        /// <see cref="OffersIn"/>.</summary>
         public IReadOnlyList<LoanDto> In => _in;
+
+        /// <summary>
+        /// Offers made TO this player and not yet answered, newest first.
+        ///
+        /// <para>
+        /// NOT MERGED INTO <see cref="In"/>, and that is the safety property. Everything in
+        /// <c>In</c> is handed to <c>EnsureBorrowed</c> and becomes a runtime instance in the
+        /// player's roster; an unanswered offer must not, and keeping it in a separate list
+        /// means no reconciler branch has to remember to check a status first. This list feeds
+        /// the Home pill and the offer modal, and nothing else.
+        /// </para>
+        /// </summary>
+        public IReadOnlyList<LoanDto> OffersIn => _offers;
 
         /// <summary>Loans that have ENDED inside the server's reporting window, either side.</summary>
         public IReadOnlyList<LoanDto> Ended => _ended;
@@ -116,9 +146,20 @@ namespace Golfin.Social
 
         // ── lookups the UI asks ──────────────────────────────────────────────
 
-        /// <summary>Is this asset out on loan (this player is the lender)?</summary>
+        /// <summary>Is this asset out of this player's hands — lent OR offered?</summary>
         public bool IsLentOut(string kind, string refId, out LoanDto loan)
             => TryFind(_out, kind, refId, out loan);
+
+        /// <summary>
+        /// Is this asset OFFERED (not yet accepted) by this player? A narrowing of
+        /// <see cref="IsLentOut"/>, for the two callers that must tell the states apart: the
+        /// detail panels, which relabel LEND to RESCIND, and the ribbon, which says OFFERED TO
+        /// rather than ON LOAN.
+        /// </summary>
+        public bool IsOffered(string kind, string refId, out LoanDto loan)
+            => TryFind(_out, kind, refId, out loan) && loan.IsPendingOffer();
+
+        public bool IsOffered(string kind, string refId) => IsOffered(kind, refId, out _);
 
         /// <summary>Is this asset borrowed (this player is the borrower)?</summary>
         public bool IsBorrowed(string kind, string refId, out LoanDto loan)
@@ -222,12 +263,47 @@ namespace Golfin.Social
             _out.Clear();
             _in.Clear();
             _ended.Clear();
+            _offers.Clear();
             if (payload == null) return;
 
             DateTime now = DateTime.UtcNow;
 
-            Sort(payload.Out, _out, now, asBorrower: false);
-            Sort(payload.In,  _in,  now, asBorrower: true);
+            // OUT is filtered on the LOCKED predicate, so a pending offer stays in it and every
+            // existing lock path holds. IN is filtered on LIVE, so an offer can never reach it
+            // even if the server one day put one there.
+            Sort(payload.Out, _out, now, asBorrower: false, live: l => l.IsLocked(now));
+            Sort(payload.In,  _in,  now, asBorrower: true,  live: l => l.IsLive(now));
+
+            // OFFERS never fall through to `_ended`: an offer the recipient never answered
+            // reaches THEM as an ordinary disappearance (the pill goes), and reaches the LENDER
+            // through `out` as `offer_expired`, which is the side that owns the toast. Adding it
+            // to `_ended` here would toast the recipient about an offer they were never told
+            // about in the first place.
+            if (payload.OffersIn != null)
+            {
+                foreach (LoanDto l in payload.OffersIn)
+                {
+                    if (l == null || string.IsNullOrEmpty(l.Id)) continue;
+                    if (l.IsPendingOffer(now)) _offers.Add(l);
+                }
+            }
+        }
+
+        /// <summary>The newest pending offer, or null. What the Home pill opens on a tap.</summary>
+        public LoanDto NewestOfferIn()
+        {
+            LoanDto best = null;
+            DateTime bestAt = DateTime.MinValue;
+            foreach (LoanDto l in _offers)
+            {
+                if (l == null) continue;
+                // `offered_at` rather than list order: the server sorts by `created_at` desc,
+                // which is the same thing today, but "newest" is a property of the row and not
+                // of how it arrived.
+                DateTime at = LoanDto.ParseUtc(l.OfferedAt) ?? DateTime.MinValue;
+                if (best == null || at > bestAt) { best = l; bestAt = at; }
+            }
+            return best;
         }
 
         /// <summary>
@@ -254,7 +330,40 @@ namespace Golfin.Social
                 yield break;
             }
 
-            IEnumerator call = _client.Get(Endpoints.SocialFollowing(myId, limit), onResult);
+            IEnumerator call = _client.Get(
+                Endpoints.SocialFollowing(myId, limit, forLoans: true), onResult);
+            while (call.MoveNext()) yield return call.Current;
+        }
+
+        /// <summary>
+        /// GET <c>/user/search?q=…&amp;for_loans=1</c> — the lend modal's search field
+        /// (asset_loans_offers §3.1), and the reason anyone can now be lent to.
+        ///
+        /// <para>
+        /// SAME DTO AS <see cref="Following"/>, DIFFERENT WIRE SHAPE. Search returns a bare
+        /// profiles row with <c>id</c> / <c>display_name</c> at the top level; following nests
+        /// them under <c>profiles</c>. <c>FollowedUserDto</c> maps both, so the modal holds one
+        /// selection and one row type across the two sections.
+        /// </para>
+        /// <para>
+        /// An empty or whitespace query is answered LOCALLY with an empty list and no round
+        /// trip: the endpoint would happily return "recently active players" for it, and the
+        /// modal's contract is that clearing the field hides the RESULTS section entirely.
+        /// </para>
+        /// </summary>
+        public IEnumerator SearchUsers(string query,
+                                       Action<ApiResult<List<FollowedUserDto>>> onResult,
+                                       int limit = 20)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                onResult?.Invoke(ApiResult<List<FollowedUserDto>>.Ok(
+                    new List<FollowedUserDto>(), 200, null, 0));
+                yield break;
+            }
+
+            IEnumerator call = _client.Get(
+                Endpoints.UserSearch(query.Trim(), limit, forLoans: true), onResult);
             while (call.MoveNext()) yield return call.Current;
         }
 
@@ -274,6 +383,26 @@ namespace Golfin.Social
         /// <summary>POST <c>/loans/{id}/return</c> — the borrower gives it back early.</summary>
         public IEnumerator Return(string loanId, Action<ApiResult<LoanMutationDto>> onResult)
             => _client.Post<LoanMutationDto>(Endpoints.LoansReturn(loanId), "{}", onResult);
+
+        /// <summary>
+        /// POST <c>/loans/{id}/accept</c> — the RECIPIENT takes an offer, and the loan begins.
+        ///
+        /// <para>NO IDEMPOTENCY KEY, unlike <see cref="Lend"/>, and it does not need one: the
+        /// loan id in the path IS the identity of the action, and the server answers <c>ok</c>
+        /// to a second accept of a loan this player already accepted. A retried tap cannot
+        /// create a second anything.</para>
+        /// </summary>
+        public IEnumerator Accept(string loanId, Action<ApiResult<LoanMutationDto>> onResult)
+            => _client.Post<LoanMutationDto>(Endpoints.LoansAccept(loanId), "{}", onResult);
+
+        /// <summary>POST <c>/loans/{id}/decline</c> — the recipient turns an offer down.</summary>
+        public IEnumerator Decline(string loanId, Action<ApiResult<LoanMutationDto>> onResult)
+            => _client.Post<LoanMutationDto>(Endpoints.LoansDecline(loanId), "{}", onResult);
+
+        /// <summary>POST <c>/loans/{id}/rescind</c> — the LENDER takes back an unanswered
+        /// offer. Not a recall: an accepted loan answers <c>not_offered</c>.</summary>
+        public IEnumerator Rescind(string loanId, Action<ApiResult<LoanMutationDto>> onResult)
+            => _client.Post<LoanMutationDto>(Endpoints.LoansRescind(loanId), "{}", onResult);
 
         /// <summary>Public so an EditMode test can pin the wire shape without a transport — the
         /// same seam <c>GiftService.BuildSendJson</c> uses. Field names are snake_case because they
@@ -384,15 +513,23 @@ namespace Golfin.Social
             else            _endedAsBorrower.Remove(l.Id);
         }
 
-        /// <summary>Split one side's rows into live and ended, recording the side as it goes.</summary>
-        private void Sort(List<LoanDto> src, List<LoanDto> live, DateTime now, bool asBorrower)
+        /// <summary>
+        /// Split one side's rows into current and ended, recording the side as it goes.
+        ///
+        /// <para><paramref name="stillCurrent"/> is the predicate that differs between the two
+        /// sides: LOCKED for the lender (a pending offer is current), LIVE for the borrower (it
+        /// is not). Passed in rather than branched on <paramref name="asBorrower"/> so the call
+        /// site says which predicate it means.</para>
+        /// </summary>
+        private void Sort(List<LoanDto> src, List<LoanDto> current, DateTime now, bool asBorrower,
+                          Func<LoanDto, bool> live)
         {
             if (src == null) return;
             foreach (LoanDto l in src)
             {
                 if (l == null || string.IsNullOrEmpty(l.Id)) continue;
                 NoteSide(l, asBorrower);
-                if (l.IsLive(now)) live.Add(l);
+                if (live(l)) current.Add(l);
                 else _ended.Add(l);
             }
         }

@@ -75,6 +75,21 @@ namespace Golfin.Social
         //    null-vs-not — so it is never parsed at all.
         [JsonProperty("golf_profile_prompted_at")] public string GolfProfilePromptedAt;
 
+        // ── asset_loans_offers §3.4 — "may other players offer to lend me characters and
+        //    clubs". Settings ▸ User Profile ▸ LOAN OFFERS.
+        //
+        //    NULLABLE, AND THE NULL MEANS "YES". The column is NOT NULL DEFAULT TRUE server
+        //    side, so a null here can only mean this build read a row from a server that
+        //    predates the migration — and every one of those accounts could already be lent
+        //    to. `GolfinLoanOffers != false` is therefore the reading, and it is written once
+        //    as `AcceptsLoanOffers` rather than at each call site, because a toggle that
+        //    defaults to OFF because of a missing column would silently remove the player from
+        //    every recipient list without them touching anything.
+        [JsonProperty("golfin_loan_offers")] public bool? GolfinLoanOffers;
+
+        /// <summary>Does this player take loan offers? Null (an older server row) reads as YES.</summary>
+        public bool AcceptsLoanOffers => GolfinLoanOffers != false;
+
         // ── Social counters. ──
         [JsonProperty("followers_count")]  public int? FollowersCount;
         [JsonProperty("following_count")]  public int? FollowingCount;

@@ -1,6 +1,8 @@
 // asset_loans §4.2 — the LEND modal (Figma 14183:32758 Roster / 14185:34162 Clubs).
-// ONE prefab for both: the only difference between the two nodes is the equipped-club warning
-// line, which is a toggle, not a second layout.
+// asset_loans_offers §3.1 — v2: a display-name SEARCH above the followed list (Figma
+// 14261:109475, field 14261:109851), because anyone can be lent to now.
+// ONE prefab for both kinds: the only difference between the two nodes is the equipped-club
+// warning line, which is a toggle, not a second layout.
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
@@ -18,7 +20,20 @@ using UnityEngine.UI;
 namespace Golfin.UI.Loans
 {
     /// <summary>
-    /// Pick somebody you follow and a duration, and hand them a character or a club.
+    /// Pick anybody and a duration, and OFFER them a character or a club.
+    ///
+    /// <para>
+    /// TWO SECTIONS, ONE SELECTION. RESULTS (whatever the search field found) sits above
+    /// PEOPLE YOU FOLLOW (the default suggestions). A row in either can be picked and the
+    /// other section clears — <see cref="_selectedUserId"/> is a single field for exactly that
+    /// reason, and both sections spawn the same <see cref="LoanRecipientRow"/> so there is one
+    /// selected-sprite rule rather than two.
+    /// </para>
+    /// <para>
+    /// LEND IS NOW AN OFFER. The server writes an `offered` row and the recipient decides; the
+    /// success toast says "Offered X to Y" rather than "Lent", and the asset locks on the
+    /// refresh below exactly as a lent one does.
+    /// </para>
     ///
     /// <para>
     /// NOTHING IS OPTIMISTIC. The asset does not move locally until the server has said <c>ok</c>
@@ -64,6 +79,16 @@ namespace Golfin.UI.Loans
         [SerializeField] private TextMeshProUGUI? emptyStateText;
         [SerializeField] private ScrollRect? recipientScroll;
 
+        [Header("Search (asset_loans_offers §3.1 — Figma 14261:109851)")]
+        [SerializeField] private TMP_InputField? searchField;
+        [SerializeField] private TextMeshProUGUI? searchPlaceholder;
+        [SerializeField] private GameObject? resultsSectionRoot;
+        [SerializeField] private TextMeshProUGUI? resultsHeader;
+        [SerializeField] private Transform? resultsParent;
+        [SerializeField] private GameObject? noResultsRoot;
+        [SerializeField] private TextMeshProUGUI? noResultsText;
+        [SerializeField] private TextMeshProUGUI? followedHeader;
+
         [Header("Footer")]
         [SerializeField] private Button? cancelButton;
         [SerializeField] private Button? confirmButton;
@@ -78,7 +103,28 @@ namespace Golfin.UI.Loans
         /// <summary>The default duration (Figma: 3 DAYS pre-selected).</summary>
         private const int DefaultDays = 3;
 
+        /// <summary>How long after the last keystroke before the search goes out.</summary>
+        private const float SearchDebounceSeconds = 0.3f;
+
+        /// <summary>Followed rows. Separate list from <see cref="_resultRows"/> so a new search
+        /// can replace one section without destroying the other — and so the selection can
+        /// survive in whichever section it lives in.</summary>
         private readonly List<LoanRecipientRow> _rows = new List<LoanRecipientRow>();
+
+        private readonly List<LoanRecipientRow> _resultRows = new List<LoanRecipientRow>();
+
+        private Coroutine? _searchRoutine;
+
+        /// <summary>
+        /// Monotonic id of the most recently ISSUED search.
+        ///
+        /// <para>THE STALE-RESPONSE GUARD. Typing "k", "ke", "ken" can put three requests in
+        /// flight, and they can come back in any order — a slow "k" landing after a fast "ken"
+        /// would repaint the list with results for a query the field no longer holds, and the
+        /// player would watch their search un-narrow itself. Every response compares its own
+        /// ticket against this and drops itself if a newer one has already gone out.</para>
+        /// </summary>
+        private int _searchTicket;
 
         private string _kind = LoanDto.KindCharacter;
         private string _refId = "";
@@ -87,6 +133,8 @@ namespace Golfin.UI.Loans
 
         private int _days = DefaultDays;
         private string? _selectedUserId;
+        /// <summary>Telemetry only — `via: search|followed` on <c>loan_offer_sent</c>.</summary>
+        private bool _selectedViaSearch;
         private string _idempotencyKey = "";
         private bool _pending;
 
@@ -99,6 +147,11 @@ namespace Golfin.UI.Loans
             if (days1Button   != null) days1Button.onClick.AddListener(() => SelectDays(1));
             if (days3Button   != null) days3Button.onClick.AddListener(() => SelectDays(3));
             if (days7Button   != null) days7Button.onClick.AddListener(() => SelectDays(7));
+
+            // onValueChanged, not onEndEdit: the field filters as you type (Figma shows "ken|"
+            // with a live result list), and onEndEdit only fires when focus leaves — which on a
+            // modal with no other focusable field is never.
+            if (searchField != null) searchField.onValueChanged.AddListener(OnSearchChanged);
         }
 
         /// <summary>
@@ -135,6 +188,21 @@ namespace Golfin.UI.Loans
             if (lendToLabel != null) lendToLabel.text = LocalizationManager.Get("LOAN_LEND_TO");
             if (confirmText != null) confirmText.text = LocalizationManager.Get("LOAN_BTN_CONFIRM");
             if (emptyStateText != null) emptyStateText.text = LocalizationManager.Get("LOAN_NO_FOLLOWING");
+
+            // ── search, reset to empty on every open ──────────────────────────
+            // SetTextWithoutNotify: assigning `.text` would fire onValueChanged and queue a
+            // debounce for the empty string on every single open.
+            if (searchField != null) searchField.SetTextWithoutNotify("");
+            if (searchPlaceholder != null)
+                searchPlaceholder.text = LocalizationManager.Get("LOAN_SEARCH_PLACEHOLDER");
+            if (resultsHeader != null)
+                resultsHeader.text = LocalizationManager.Get("LOAN_SEARCH_RESULTS");
+            if (followedHeader != null)
+                followedHeader.text = LocalizationManager.Get("LOAN_FOLLOWED_HEADER");
+            if (noResultsText != null)
+                noResultsText.text = LocalizationManager.Get("LOAN_NO_RESULTS");
+            ClearResultRows();
+            ShowResultsSection(false);
 
             if (equippedWarningText != null)
                 equippedWarningText.text = LocalizationManager.Get("LOAN_WARN_EQUIPPED");
@@ -282,13 +350,135 @@ namespace Golfin.UI.Loans
             UpdateConfirmEnabled();
         }
 
-        private LoanRecipientRow? SpawnRow()
+        // ── search (asset_loans_offers §3.1) ─────────────────────────────────
+
+        /// <summary>
+        /// A keystroke. Restart the debounce; an empty field hides RESULTS immediately.
+        ///
+        /// <para>THE EMPTY CASE DOES NOT WAIT. Clearing the field is an instruction ("show me
+        /// the followed list again"), not a query — making the player watch 300 ms of stale
+        /// results after they emptied the box would read as lag.</para>
+        /// </summary>
+        private void OnSearchChanged(string query)
         {
-            if (recipientRowPrefab == null || recipientParent == null) return null;
-            GameObject go = Instantiate(recipientRowPrefab, recipientParent);
+            if (_searchRoutine != null) { StopCoroutine(_searchRoutine); _searchRoutine = null; }
+
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                // Any answer still in flight is now stale by construction.
+                _searchTicket++;
+                ClearResultRows();
+                ShowResultsSection(false);
+                UpdateConfirmEnabled();
+                return;
+            }
+
+            _searchRoutine = StartCoroutine(SearchRoutine(query));
+        }
+
+        private IEnumerator SearchRoutine(string query)
+        {
+            float waited = 0f;
+            while (waited < SearchDebounceSeconds)
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            int ticket = ++_searchTicket;
+
+            ApiResult<List<FollowedUserDto>>? result = null;
+            IEnumerator call = LoanService.Instance.SearchUsers(query, r => result = r);
+            while (call.MoveNext()) yield return call.Current;
+
+            _searchRoutine = null;
+
+            if (!IsVisible()) yield break;
+
+            // THE STALE GUARD. A newer keystroke has already gone out — this answer describes a
+            // query the player has moved past, and painting it would un-narrow their search.
+            if (ticket != _searchTicket) yield break;
+
+            // NO SHIMMER, and no placeholder rows either (the GameShimmerSites rule): one ~200 ms
+            // request does not earn a loading state, and a skeleton that appears and vanishes on
+            // every keystroke is noise. The region simply repaints.
+            ClearResultRows();
+
+            // ⚠️ ONE FRAME, BECAUSE `Destroy` IS DEFERRED TO END OF FRAME — the same lesson as
+            // LoadRecipients below, and it bites identically here: StaggerRise force-rebuilds the
+            // layout to read each row's rest position, and the rows it is measuring past are the
+            // ones we just destroyed. Without this the first result pins itself below however
+            // many corpses the previous query left.
+            yield return null;
+            if (!IsVisible() || ticket != _searchTicket) yield break;
+
+            List<FollowedUserDto>? users = result != null && result.Success ? result.Data : null;
+
+            ShowResultsSection(true);
+
+            if (users == null || users.Count == 0)
+            {
+                // A transport failure and "nobody by that name" render the same, deliberately:
+                // the field is a search, the honest answer either way is "no rows", and a toast
+                // per keystroke on a flaky connection would be unusable.
+                if (noResultsRoot != null) noResultsRoot.SetActive(true);
+                UpdateConfirmEnabled();
+                yield break;
+            }
+
+            if (noResultsRoot != null) noResultsRoot.SetActive(false);
+
+            var arrived = new List<Transform>(users.Count);
+            foreach (FollowedUserDto user in users)
+            {
+                if (user == null || string.IsNullOrEmpty(user.Id)) continue;
+                LoanRecipientRow? row = SpawnRow(resultsParent, _resultRows);
+                if (row == null) continue;
+                row.Bind(user);
+                row.Clicked += OnRowClicked;
+                // The selection survives a re-search when the same player is still in the list —
+                // otherwise typing one more letter would silently disarm the LEND button under a
+                // row that is visibly still highlighted.
+                row.SetSelected(string.Equals(row.UserId, _selectedUserId, System.StringComparison.Ordinal));
+                arrived.Add(row.transform);
+            }
+
+            if (arrived.Count > 0) Golfin.Gps.UI.GpsPaintMotion.StaggerRise(this, arrived);
+
+            UpdateConfirmEnabled();
+        }
+
+        private void ShowResultsSection(bool shown)
+        {
+            if (resultsSectionRoot != null) resultsSectionRoot.SetActive(shown);
+            if (!shown && noResultsRoot != null) noResultsRoot.SetActive(false);
+        }
+
+        private void ClearResultRows()
+        {
+            foreach (LoanRecipientRow row in _resultRows)
+            {
+                if (row == null) continue;
+                row.Clicked -= OnRowClicked;
+                Destroy(row.gameObject);
+            }
+            _resultRows.Clear();
+            // NOTE: `_selectedUserId` is deliberately NOT cleared here. The selection belongs to
+            // the modal, not to a section — a player who picked somebody, then typed one more
+            // letter, has not changed their mind about who they are lending to.
+        }
+
+        private LoanRecipientRow? SpawnRow() => SpawnRow(recipientParent, _rows);
+
+        /// <summary>Spawn one row under <paramref name="parent"/> and track it in
+        /// <paramref name="into"/>. Two sections, one row type, one tracking mechanism.</summary>
+        private LoanRecipientRow? SpawnRow(Transform? parent, List<LoanRecipientRow> into)
+        {
+            if (recipientRowPrefab == null || parent == null) return null;
+            GameObject go = Instantiate(recipientRowPrefab, parent);
             go.SetActive(true);
             LoanRecipientRow? row = go.GetComponent<LoanRecipientRow>();
-            if (row != null) _rows.Add(row);
+            if (row != null) into.Add(row);
             return row;
         }
 
@@ -302,6 +492,7 @@ namespace Golfin.UI.Loans
             }
             _rows.Clear();
             _selectedUserId = null;
+            _selectedViaSearch = false;
         }
 
         private void OnRowClicked(LoanRecipientRow row)
@@ -309,7 +500,13 @@ namespace Golfin.UI.Loans
             if (_pending || row == null || string.IsNullOrEmpty(row.UserId)) return;
 
             _selectedUserId = row.UserId;
+            // BOTH sections, because the selection is one thing: picking a search result has to
+            // visibly un-pick whoever was highlighted in PEOPLE YOU FOLLOW, or the modal shows
+            // two selected rows and lends to only one of them.
+            _selectedViaSearch = _resultRows.Contains(row);
             foreach (LoanRecipientRow r in _rows)
+                if (r != null) r.SetSelected(ReferenceEquals(r, row));
+            foreach (LoanRecipientRow r in _resultRows)
                 if (r != null) r.SetSelected(ReferenceEquals(r, row));
 
             // §D6 — the row that just BECAME selected bumps; the one that just lost the selection
@@ -391,32 +588,61 @@ namespace Golfin.UI.Loans
 
             if (!data.IsOk)
             {
-                Toast(LocalizationManager.Get(data.ErrorKey()));
+                // COOLDOWN IS THE ONE REFUSAL THE DTO CANNOT FORMAT FOR ITSELF: its sentence
+                // takes the recipient's NAME, which only this modal knows (the server answers
+                // with an id and a timestamp). Everything else goes through the shared table.
+                Toast(data.Status == LoanMutationDto.StatusCooldown
+                          ? CooldownMessage(data)
+                          : LocalizationManager.Get(data.ErrorKey()));
                 yield break;
             }
 
-            TelemetryService.Instance?.RecordSafe("loan_lend",
+            TelemetryService.Instance?.RecordSafe("loan_offer_sent",
                 () => new Dictionary<string, object>
                 {
-                    { "kind", _kind }, { "ref_id", _refId }, { "days", _days }
+                    { "kind", _kind }, { "ref_id", _refId }, { "days", _days },
+                    { "via", _selectedViaSearch ? "search" : "followed" }
                 });
 
             string recipient = data.Loan?.Borrower != null ? data.Loan.Borrower.Name : "";
-            string duration  = LocalizationManager.Get(DurationKey(_days));
 
-            // The refresh is what actually moves the asset: it reconciles, which sets isLentOut,
-            // pulls the club out of the bag, and repaints both panels and every card.
+            // The refresh is what actually LOCKS the asset: it reconciles, which sets isLentOut
+            // (true for an offered row too), pulls the club out of the bag, and repaints both
+            // panels and every card into the OFFERED state.
             LoanSyncBehaviour.RequestRefresh("lend");
 
             Hide();
 
-            Toast(string.Format(LocalizationManager.Get("LOAN_TOAST_LENT"),
-                                LoanSyncBehaviour.AssetName(data.Loan), recipient, duration));
+            // "Offered X to Y", not "Lent" — the asset has not moved and saying it has would be
+            // the one sentence that makes the recipient's DECLINE look like a bug.
+            Toast(string.Format(LocalizationManager.Get("LOAN_TOAST_OFFERED_FMT"),
+                                LoanSyncBehaviour.AssetName(data.Loan), recipient));
         }
 
-        private static string DurationKey(int days) => days == 1 ? "LOAN_DAYS_1"
-                                                     : days == 7 ? "LOAN_DAYS_7"
-                                                     : "LOAN_DAYS_3";
+        /// <summary>
+        /// "You can offer to {0} again in {1}" — the only refusal that needs two arguments this
+        /// modal owns. <c>retry_after</c> is an absolute instant on the wire; the player is told
+        /// a duration, because "in 4h" is actionable and "at 04:12 UTC" is not.
+        /// </summary>
+        private string CooldownMessage(LoanMutationDto data)
+        {
+            string name = SelectedName();
+            System.DateTime? until = data.RetryAfterUtc;
+            string left = until.HasValue
+                ? LoanRibbonView.FormatTimeLeft(until.Value - System.DateTime.UtcNow)
+                : "";
+            return string.Format(LocalizationManager.Get("LOAN_ERR_COOLDOWN_FMT"), name, left);
+        }
+
+        /// <summary>The display name of the picked row, from whichever section it is in.</summary>
+        private string SelectedName()
+        {
+            foreach (LoanRecipientRow r in _resultRows)
+                if (r != null && r.UserId == _selectedUserId) return r.DisplayName;
+            foreach (LoanRecipientRow r in _rows)
+                if (r != null && r.UserId == _selectedUserId) return r.DisplayName;
+            return LoanPartyDto.Fallback;
+        }
 
         private static void Toast(string message)
         {
@@ -426,6 +652,12 @@ namespace Golfin.UI.Loans
 
         public override void Hide()
         {
+            if (_searchRoutine != null) { StopCoroutine(_searchRoutine); _searchRoutine = null; }
+            // A response still in flight must not repaint a modal that is closing (and, worse,
+            // re-open its RESULTS section behind the backdrop on the next Show).
+            _searchTicket++;
+            ClearResultRows();
+            ShowResultsSection(false);
             ClearRows();
             base.Hide();
         }

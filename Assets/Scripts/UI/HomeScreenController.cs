@@ -69,6 +69,16 @@ namespace GolfinRedux.UI
         [SerializeField] private Golfin.UI.Home.DailyMissionPillController dailyMissionPill;
 
         /// <summary>
+        /// The loan-offer pill (asset_loans_offers §3.3). Home owns the reference for the same
+        /// single reason the daily one is here: its Y is COMPUTED — from the DAILY pill, which is
+        /// in turn computed from <see cref="newsPanelRoot"/> — and Home is the only object that
+        /// knows when that panel's visibility changed. The chain has to be re-seated top-down,
+        /// which is why this call sits immediately after the daily pill's and not inside it.
+        /// <para>Unassigned is not an error: no offer pill, and Home behaves exactly as before.</para>
+        /// </summary>
+        [SerializeField] private Golfin.UI.Home.LoanOfferPillController loanOfferPill;
+
+        /// <summary>
         /// The notice box's page motion (notice_panel_slide §2). Assigned, every page change goes
         /// through <see cref="Golfin.UI.Home.NoticePageSlider.SlideTo"/> — the box slides — and the
         /// direct <c>.text</c> writes below become the fallback for a scene that has no slider.
@@ -527,6 +537,12 @@ namespace GolfinRedux.UI
             // not repeated at each RefreshNewsPanel/NextNewsPage call site. The panel's height is
             // fixed (no ContentSizeFitter), so it is already final at this point.
             if (dailyMissionPill != null) dailyMissionPill.RefreshPlacement();
+
+            // AFTER the daily pill, and the order is load-bearing: the offer pill reads the daily
+            // pill's target Y to seat itself 40px below it, so re-placing it first would seat it
+            // against the notice's PREVIOUS position and leave the two pills overlapping for as
+            // long as the panel stayed in that state.
+            if (loanOfferPill != null) loanOfferPill.RefreshPlacement();
         }
 
         // ---------- Promo Banner (GPS) ----------

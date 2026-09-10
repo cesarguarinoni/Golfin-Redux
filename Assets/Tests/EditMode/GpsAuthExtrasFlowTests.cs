@@ -362,7 +362,7 @@ namespace GolfinRedux.Tests.EditMode
             var build = svcType.GetMethod("BuildUpdateJson", BindingFlags.Static | BindingFlags.Public);
             Assert.IsNotNull(build, "UserService.BuildUpdateJson not found.");
 
-            string skip = (string)build.Invoke(null, new object[] { "Cratilo", null, null, null, true });
+            string skip = (string)build.Invoke(null, new object[] { "Cratilo", null, null, null, true, null });
             StringAssert.Contains("\"display_name\":\"Cratilo\"", skip, "display_name is required by the endpoint.");
             StringAssert.Contains("\"golf_profile_prompted\":true", skip, "the whole point of the Skip write.");
             Assert.IsFalse(skip.Contains("avatar_color"), "Skip must not write a colour the player declined to pick.");
@@ -370,14 +370,23 @@ namespace GolfinRedux.Tests.EditMode
             Assert.IsFalse(skip.Contains("handicap"), "Skip must not write a handicap.");
 
             // SAVE carries the flag in the SAME put as the profile — never a second write.
-            string save = (string)build.Invoke(null, new object[] { "Cratilo", 18.4, "advanced", "green", true });
+            string save = (string)build.Invoke(null, new object[] { "Cratilo", 18.4, "advanced", "green", true, null });
             StringAssert.Contains("\"golf_profile_prompted\":true", save);
             StringAssert.Contains("\"avatar_color\":\"green\"", save);
 
             // And every other caller sends a body byte-identical to the pre-feature one.
-            string untouched = (string)build.Invoke(null, new object[] { "Cratilo", null, null, null, null });
+            string untouched = (string)build.Invoke(null, new object[] { "Cratilo", null, null, null, null, null });
             Assert.IsFalse(untouched.Contains("golf_profile_prompted"),
                 "A caller with no opinion about the prompt must not mention it at all.");
+
+            // asset_loans_offers added `golfin_loan_offers` to the same body. The trailing `null`
+            // in every Invoke above IS that field — reflection does not apply C# default
+            // arguments, so the arity has to be spelled out. "…AndNothingElse" now covers it too:
+            // the Golf Profile screen has no opinion about loan offers and must not write one.
+            Assert.IsFalse(skip.Contains("golfin_loan_offers"),
+                "Skip must not touch a setting it knows nothing about.");
+            Assert.IsFalse(save.Contains("golfin_loan_offers"),
+                "Save must not touch a setting it knows nothing about.");
         }
 
         // ── gps_standalone_shell §7 — the shell's boot goes through this same seam ──────
