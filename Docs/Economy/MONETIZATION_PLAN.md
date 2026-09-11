@@ -73,7 +73,7 @@ club type cycles weekly, brand of the week cycles through all 20 brands, 12 marq
 calendar carry two Legendaries; 457 distinct clubs, every ball 6–11×, every non-starter character
 5–7×; Freda (Supreme) on two marquee weeks is a flagged decision.
 
-Specs: `Docs/Specs/Active/weekly_rotation_admin/` (catalog + generator + publish + pity rule)
+Specs: `Docs/Specs/Completed/weekly_rotation_admin/` (catalog + generator + publish + pity rule — shipped 2026-09-11)
 then `Docs/Specs/Active/weekly_rotation_client/` (badges, countdown, roll-over). Interaction with
 the paid track later: when cosmetics exist, the same rotation row can carry a cosmetic feature
 of the week — but cosmetic rows never enter the RP lineup quotas, and lineup rows never enter a

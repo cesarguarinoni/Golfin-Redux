@@ -171,7 +171,7 @@ class Catalog:
 # non-`id` id in the table after `level`, `tier` and `bannerId` — the week is
 # the thing every generated row references back to, so a synthetic id would be
 # a second name for it. The 52 seeded rows are the plan in
-# Docs/Specs/Active/weekly_rotation_admin/reference/rotations_seed.csv, LF
+# Docs/Specs/Completed/weekly_rotation_admin/reference/rotations_seed.csv, LF
 # line endings (the reference file is CRLF; the exporter's canonical form is LF,
 # and the round trip is byte-identical only against the canonical form).
 #

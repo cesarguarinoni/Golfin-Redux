@@ -81,7 +81,7 @@ re-attribute every balance.
 column at SEED time, which is why `seed_from_csv.py` now splits that column out
 of `data` the way the importer and exporter always did — the flag is
 `content_rows.is_active`, never a field of the row. `rotations.csv` is LF (the
-reference plan under `Docs/Specs/Active/weekly_rotation_admin/reference/` is
+reference plan under `Docs/Specs/Completed/weekly_rotation_admin/reference/` is
 CRLF); the exporter's canonical form is LF and the round trip is byte-identical
 only against that form.
 

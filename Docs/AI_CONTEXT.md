@@ -25,7 +25,7 @@ Tests +15; namespaces green (Polish 170, EditMode 345, Economy 118, Net 18). Cli
 `Docs/Specs/Quick/home_carousel_and_daily_timing.md`. Lessons CA–CC.
 
 ---
-## 2026-09-11 — weekly_rotation_admin: **the store and the gacha rotate weekly, authored in the admin as one unit** — READY_FOR_SELF_REVIEW, first rotation LIVE on prod for Monday
+## 2026-09-11 — weekly_rotation_admin: **the store and the gacha rotate weekly, authored in the admin as one unit** — DONE (Cesar-approved), first rotation LIVE on prod for Monday
 
 Catalog #21 `rotations` (52 planned weeks, `wk_2026_38` → `wk_2027_36`, seeded at v1 and
 round-tripped byte-identical), the pure generator `lib/rotation.ts` (pins win, verbatim;
@@ -61,9 +61,18 @@ the **R3 stand-in exemption** (`export --check` refused a weekly banner's `artUr
 `GachaBanner_Weekly` sprite — every TestFlight build would have blocked from the first upload),
 iter-4 mirrored that exemption into `ContentArtValidator.cs` (the red-team's third site). On
 Cesar's word: `banner_wk_2026_38.artUrl` = the placeholder (gacha_banners v13), `shop_char_mike` +
-`shop_ball_putt_ace` retired (shop v10), the ticket listing stays off. **Awaiting Cesar's final
-approval (Tuesday)** plus the Architect decisions listed in the report. Task folder:
-`Docs/Specs/Active/weekly_rotation_admin/`.
+`shop_ball_putt_ace` retired (shop v10), the ticket listing stays off. **DONE — approved by
+Cesar 2026-09-11** on video evidence: a PRODUCTION read-only walk-through recorded in his Chrome
+(calendar `wk_2026_38` SCHEDULED, PREVIEW, odds, hash `0e56b2a6`, Pity `weekly` GROUP · 3) and a
+MOCK-mode clip of the whole flow (PREVIEW → MATERIALIZE → typed PUBLISH → SCHEDULED → ARCHIVE
+ENDED) made with the new `scripts/record.mjs` (`c94579a3b`; the `#do=` steps now live in
+`scripts/steps.mjs`, shared with `shoot.mjs`). Clips are local-only (`Docs/Specs/**/videos/`
+is ignored). Task folder: `Docs/Specs/Completed/weekly_rotation_admin/`. **Still open for the
+Architect on Tuesday:** one-ball vs ten-ball; the named `rotation_*` audit action; ECONOMY_MASTER
+§3 wording; the two Freda (Supreme) weeks; the four shop_stocking club placeholders
+(`shop_club_driver_gf` collides with `wk_2026_39`); missions/loadouts active-only guard; and
+**`wk_2026_39` needs its own banner `artUrl` before Mon 2026-09-21** (installed builds withhold
+a weekly banner without one).
 
 ---
 ## 2026-09-11 — standalone lane rewrote `content_art.txt` with the SHELL's picture — FIXED

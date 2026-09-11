@@ -79,6 +79,8 @@ rule G3-Q refuses anything else on a ball row). The pity migration was applied b
 | `app/(panels)/gacha-banners/gacha-banners-panel.tsx` | `pityGroup` + `rotationId` fields in the pity block, with the R3 hint. |
 | `app/(panels)/users/gacha-tab.tsx` | The pity table labels a GROUP key (`GROUP · n`, members in the tooltip) and reads "n pulls on this key". |
 | `scripts/shoot.mjs` | `select:<value>` step; `fill:` falls back to an open dialog's text input. |
+| `scripts/steps.mjs` | **NEW** (close-out, `c94579a3b`) — the `#do=` step vocabulary, moved verbatim out of `shoot.mjs` so the still and clip scripts cannot drift. |
+| `scripts/record.mjs` | **NEW** (close-out, `c94579a3b`) — clips the mock dashboard over CDP: same steps, a JPEG of the viewport every ~150 ms beside the driver, concat list with measured durations, `captions.json` for `build_bot_video.py --mode captionsjson`. |
 
 ### playlife — commit `df84963`
 
@@ -383,6 +385,18 @@ and `gacha_banners`.
 
 **Database:** rotations seed **applied** (data, PostgREST). Pity migration **applied by Cesar**
 (SQL editor, Part 1 + Part 2), then proven live (row 7).
+
+---
+
+## Videos (close-out, 2026-09-11 — Cesar: "get some sort of video evidence and then done")
+
+Local-only per `.gitignore` (`Docs/Specs/**/videos/` — spec verification clips stay on disk,
+regenerable); the two files were sent in chat and live at these paths.
+
+| File | What it shows | How it was made |
+|---|---|---|
+| `videos/weekly_rotation_admin_prod_walkthrough.mp4` (1556×894, 31.5 s, 0.5 MB) | **PRODUCTION, read-only.** `/rotations`: the calendar with `wk_2026_37` ENDED and **`wk_2026_38` SCHEDULED for Mon 2026-09-14**; PREVIEW of the published lineup (9 clubs, 3 balls, Mike, `banner_wk_2026_38` · pool `pool_wk_2026_38` · pity 50→Legendary · group `weekly`); the odds table with the two featured rows at weight 300; `Lineup hash 0e56b2a6 · seed 3287013188`. Then `/users` → the test player's drawer → Gacha → **Pity: `weekly` GROUP · 3, 3 / 50 to Legendary, "3 pulls on this key"** under `banner_wk_2026_36` (2 pulls) and `banner_wk_2026_37` (1 pull) — the §6.4 result, read back from the live table. No write was made. | Recorded in Cesar's Chrome (`gif_creator`, 8 frames, `~/Downloads/weekly_rotation_admin_prod.gif`), frames re-timed to a readable pace (3–6 s each) with a 3 s title card and a black caption band, captions burned with `build_bot_video.py --mode captionsjson`. |
+| `videos/weekly_rotation_admin_mock_flow.mp4` (2880×2400, 53 s, 2.8 MB) | **MOCK mode, the whole flow with writes.** Calendar (nothing generated) → `wk_2026_38` selected (seed 9999) → **PREVIEW** (pinned lineup, warning about the permanent listing, odds ★ 300 / 55.000, hash `992baf1d`) → **MATERIALIZE** ("wrote 6 rate rows, 6 pool entries, 1 banner, 4 shop rows and the rotation row; 0 stale row(s) deactivated. Drafts only", cell → GENERATED, "1 unpublished") → **PUBLISH ROTATION** (the five-catalog dialog with the diff links, `PUBLISH` typed, confirm) → "All five catalogs published: gacha_rates v10000, gacha_pools v10000, gacha_banners v10000, shop_catalog v10000, rotations v10000" in order, cell → **SCHEDULED** → **ARCHIVE ENDED** → "Nothing to archive — no rotation ended more than 7 days ago with active rows." Every frame carries the MOCK DATA banner. | `node scripts/record.mjs` against `admin-dashboard-mock` (:3100) with the real buttons (`wk_2026_38`, `PREVIEW`, `MATERIALIZE`, `PUBLISH ROTATION`, `fill:PUBLISH`, `PUBLISH ROTATION@1`, `ARCHIVE ENDED`); one decoded frame per caption window checked before filing. |
 
 ---
 
