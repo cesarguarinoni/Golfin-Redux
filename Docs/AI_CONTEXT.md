@@ -32,8 +32,17 @@ builds withhold `banner_wk_2026_38` until it has an `artUrl` (they do not bundle
 
 **Pity migration applied by Cesar the same day; §6.4 E2E passed on prod** (two 20-minute test
 rotations, pulls on Cratilo: A x2 → counter 2, B x1 → counter 3 with `key = weekly`, cap per
-banner; both archived and published afterwards). **Waiting on Cesar:** art for the weekly banner
-before Monday, the three decisions above. Task folder: `Docs/Specs/Active/weekly_rotation_admin/`.
+banner; both archived and published afterwards). **Gates: ARCHITECT_REVIEW_PASS** after four
+iterations — iter-2 re-pinned the content tests by id (a rotation publish grows four catalogs
+every week), iter-3 closed the **archive trap** (cross-row validator rules ran on inactive rows,
+so an archived week blocked every later `gacha_banners` publish; seven guards, `70464d323`) and
+the **R3 stand-in exemption** (`export --check` refused a weekly banner's `artUrl` under the shared
+`GachaBanner_Weekly` sprite — every TestFlight build would have blocked from the first upload),
+iter-4 mirrored that exemption into `ContentArtValidator.cs` (the red-team's third site). On
+Cesar's word: `banner_wk_2026_38.artUrl` = the placeholder (gacha_banners v13), `shop_char_mike` +
+`shop_ball_putt_ace` retired (shop v10), the ticket listing stays off. **Awaiting Cesar's final
+approval (Tuesday)** plus the Architect decisions listed in the report. Task folder:
+`Docs/Specs/Active/weekly_rotation_admin/`.
 
 ---
 ## 2026-09-11 — standalone lane rewrote `content_art.txt` with the SHELL's picture — FIXED
