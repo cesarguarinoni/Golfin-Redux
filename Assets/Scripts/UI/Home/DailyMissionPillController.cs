@@ -180,13 +180,18 @@ namespace Golfin.UI.Home
         /// Notice hidden ⇒ the pill takes the notice's own top (Figma y 361). Notice shown ⇒
         /// 24px below the notice's bottom edge (Figma y 725, computed here from the live panel
         /// so a notice of any height still clears it).
+        ///
+        /// <para>The notice's REST y, not its live one. The notice is in Home's entry rise
+        /// (<c>ScreenEntryMotion</c>), and this runs from OnEnable — the same frame that rise
+        /// starts, when the live y is 16 px low. Read live, the pill (and the loan pill, which
+        /// derives from this) seated itself 16 px under where the notice was going to be.</para>
         /// </summary>
         public float ComputeTargetY()
         {
             var noticeRect = noticePanelRoot != null ? noticePanelRoot.transform as RectTransform : null;
             if (noticeRect == null) return fallbackTopY;
 
-            float top = noticeRect.anchoredPosition.y;
+            float top = UiMotion.RestY(noticeRect);
             if (!noticePanelRoot.activeInHierarchy) return top;
             return top - noticeRect.rect.height - noticeGap;
         }

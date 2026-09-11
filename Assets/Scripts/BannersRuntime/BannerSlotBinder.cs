@@ -61,7 +61,7 @@ namespace Golfin.Banners
                  "Home sets this to ModeCarouselSection: its strip is bottom-anchored under a " +
                  "screen with NO layout group, so nothing moves on its own. Rankings leaves it " +
                  "empty — ContentArea's VerticalLayoutGroup already closes up.\n\n" +
-                 "The distance is MEASURED from the authored geometry, not typed in, so " +
+                 "The distance is MEASURED from the live geometry on every hide, not typed in, so " +
                  "re-positioning either element cannot silently desync it.")]
         [SerializeField] private RectTransform[] _shiftDownOnHide = new RectTransform[0];
 
@@ -74,11 +74,14 @@ namespace Golfin.Banners
                  "for outlines during OnEnable would find nothing and silently fall back to 0.")]
         [SerializeField] private float _shiftDownTrim;
 
-        /// <summary>Authored anchoredPositions of <c>_shiftDownOnHide</c>, so the move is idempotent.</summary>
+        /// <summary>
+        /// Authored anchoredPositions of <c>_shiftDownOnHide</c>, so the move is idempotent.
+        /// Captured at REST (<see cref="Golfin.UI.Polish.UiMotion.RestY"/>): the first capture
+        /// can land in the very OnEnable that starts Home's entry rise, when the live y is 16 px
+        /// low, and a base taken then would re-seat the carousel 16 px under its authored place
+        /// every time the banner came back.
+        /// </summary>
         private Vector2[]? _shiftBasePositions;
-
-        /// <summary>How far each target must drop, in ITS parent's local units. Measured once.</summary>
-        private float[]? _shiftDistances;
 
         /// <summary>
         /// Each <c>_expandOnHide</c> entry's authored height, captured once before anything touches
@@ -187,9 +190,25 @@ namespace Golfin.Banners
         /// Drop each <c>_shiftDownOnHide</c> target so its bottom edge lands where the banner's
         /// bottom edge was — literally "let it rest where the banner was".
         /// <para>
-        /// The distance is measured ONCE from the authored geometry (target bottom minus slot
-        /// bottom), which on Home is the banner's height plus the 24px design gap. Measuring beats
-        /// a serialized number: re-sizing the slot or moving the cards cannot desync it.
+        /// The distance is measured from the geometry (target bottom minus slot bottom), which on
+        /// Home is the banner's height plus the 24px design gap. Measuring beats a serialized
+        /// number: re-sizing the slot or moving the cards cannot desync it.
+        /// </para>
+        /// <para>
+        /// MEASURED ON EVERY HIDE, NEVER CACHED. The first version measured once and kept the
+        /// number, and the first call is the scene-load one — HomeScreen is authored active, so
+        /// this runs on frame 0, before <c>CanvasScaler</c> has scaled the canvas. On that raw
+        /// canvas the section's PROPORTIONAL anchors (0.227 → 0.876 of the screen height) put it
+        /// somewhere else than on the scaled one, while the pixel-anchored banner does not move:
+        /// on a 2796 px-tall Pro Max the drop measured 296 instead of 237, and the cards sat on
+        /// the Tee button. At 1170x2532 the raw and scaled canvases coincide, which is why an
+        /// iPhone 14 and the Editor never showed it. Re-measuring on each hide costs eight
+        /// GetWorldCorners and makes the frame-0 number irrelevant: the first real Home entry
+        /// measures on the scaled canvas and lands right.
+        /// </para>
+        /// <para>
+        /// Both rects are read at REST. They are in Home's entry rise, and this can run in the
+        /// OnEnable that starts it; mid-rise a live corner is up to <c>UiMotion.RiseDy</c> low.
         /// </para>
         /// </summary>
         private void SetShiftedDown(bool shifted)
@@ -200,37 +219,21 @@ namespace Golfin.Banners
             if (_shiftBasePositions == null || _shiftBasePositions.Length != _shiftDownOnHide.Length)
             {
                 _shiftBasePositions = new Vector2[_shiftDownOnHide.Length];
-                _shiftDistances     = new float[_shiftDownOnHide.Length];
-
-                var slot = _image != null ? (RectTransform)_image.transform : null;
-                float slotBottom = 0f;
-                if (slot != null)
-                {
-                    var sc = new Vector3[4];
-                    slot.GetWorldCorners(sc);
-                    slotBottom = sc[0].y;
-                }
-
                 for (int i = 0; i < _shiftDownOnHide.Length; i++)
                 {
                     var rt = _shiftDownOnHide[i];
                     if (rt == null) continue;
-                    _shiftBasePositions[i] = rt.anchoredPosition;
-                    if (slot == null) continue;
-
-                    var tc = new Vector3[4];
-                    rt.GetWorldCorners(tc);
-                    float worldDrop = tc[0].y - slotBottom;   // how far its bottom sits ABOVE the slot's
-
-                    var parent = rt.parent as RectTransform;
-                    float local = parent != null
-                        ? parent.InverseTransformVector(new Vector3(0f, worldDrop, 0f)).y
-                        : worldDrop;
-
-                    // Trim by the target's own outline/shadow overhang so the gap the player
-                    // SEES is the design gap, not the gap between invisible rect edges.
-                    _shiftDistances[i] = local - _shiftDownTrim;
+                    _shiftBasePositions[i] = new Vector2(rt.anchoredPosition.x, Golfin.UI.Polish.UiMotion.RestY(rt));
                 }
+            }
+
+            var slot = _image != null ? (RectTransform)_image.transform : null;
+            float slotBottom = 0f;
+            if (slot != null)
+            {
+                var sc = new Vector3[4];
+                slot.GetWorldCorners(sc);
+                slotBottom = sc[0].y - RiseOffsetWorld(slot);
             }
 
             for (int i = 0; i < _shiftDownOnHide.Length; i++)
@@ -238,8 +241,36 @@ namespace Golfin.Banners
                 var rt = _shiftDownOnHide[i];
                 if (rt == null) continue;
                 var b = _shiftBasePositions[i];
-                rt.anchoredPosition = shifted ? new Vector2(b.x, b.y - _shiftDistances![i]) : b;
+
+                // Sit it at its authored place first, so the drop is measured from the geometry
+                // the designer laid out — not from wherever the previous hide left it. Both writes
+                // land in one frame; nothing is drawn in between.
+                rt.anchoredPosition = b;
+                if (!shifted || slot == null) continue;
+
+                var tc = new Vector3[4];
+                rt.GetWorldCorners(tc);
+                float worldDrop = tc[0].y - slotBottom;   // how far its bottom sits ABOVE the slot's
+
+                var parent = rt.parent as RectTransform;
+                float local = parent != null
+                    ? parent.InverseTransformVector(new Vector3(0f, worldDrop, 0f)).y
+                    : worldDrop;
+
+                // Trim by the target's own outline/shadow overhang so the gap the player
+                // SEES is the design gap, not the gap between invisible rect edges.
+                rt.anchoredPosition = new Vector2(b.x, b.y - (local - _shiftDownTrim));
             }
+        }
+
+        /// <summary>How far an in-flight entry rise currently holds <paramref name="rt"/> below
+        /// its rest, in world units — zero when nothing is rising it.</summary>
+        private static float RiseOffsetWorld(RectTransform rt)
+        {
+            float local = rt.anchoredPosition.y - Golfin.UI.Polish.UiMotion.RestY(rt);
+            if (local == 0f) return 0f;
+            var parent = rt.parent as RectTransform;
+            return parent != null ? parent.TransformVector(new Vector3(0f, local, 0f)).y : local;
         }
 
         /// <summary>

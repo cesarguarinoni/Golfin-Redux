@@ -4,6 +4,25 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-11 — home_carousel_and_daily_timing: **Home mode cards on the Tee button (Pro Max) + the daily card shoving the mission list** — FIXED, awaiting Cesar's eyeball
+
+Two chat reports with a device screenshot. (1) The Home mode cards overlapped the Tee button —
+**only on a Dynamic-Island phone**: `BannerSlotBinder` measured the carousel's drop ONCE, at
+scene-load frame 0, before `CanvasScaler` scaled the canvas; the section's proportional anchors sit
+60 px higher on that raw canvas, so the cached drop was 296 instead of 237 (reproduced in the
+Editor at 1290×2796, invisible at 1170×2532). Found on the way: `ScreenEntryMotion` rises the same
+rects the binder and the pills place, in the same frame — `UiMotion.Rise` froze its rest and undid
+their writes. Fix: `Rise` adopts external writes as its rest + `UiMotion.RestY(rect)` for readers
+(PATTERNS §12); the binder re-measures on every hide, at rest; the pill reads the notice's rest.
+(2) `RefreshDaily()` deactivated the daily card for the fetch, so the campaign list painted high
+and was pushed 439 px down 0.2–1.6 s later (R2 had removed the shimmer that held the space). Fix:
+`MissionsClient.LastDaily` paints the card in the opening frame, rising with the rows; cold path
+holds the collapsed slot at alpha 0 and fades in; the fetch repaints status in place.
+Tests +11; namespaces green (Polish 170, EditMode 341, Economy 118, Net 18). Clip + before/after in
+`Docs/Specs/Quick/media/home_carousel_and_daily_timing/`. Record:
+`Docs/Specs/Quick/home_carousel_and_daily_timing.md`. Lessons CA–CC.
+
+---
 ## 2026-09-11 — weekly_rotation_admin: **the store and the gacha rotate weekly, authored in the admin as one unit** — READY_FOR_SELF_REVIEW, first rotation LIVE on prod for Monday
 
 Catalog #21 `rotations` (52 planned weeks, `wk_2026_38` → `wk_2027_36`, seeded at v1 and

@@ -161,7 +161,28 @@ namespace Golfin.Economy
         /// standing invariant (never a dead card).
         /// </summary>
         public IEnumerator FetchDailyRoutine(Action<ApiResult<DailyMissionResult>> onResult)
-            => _client.Get(Endpoints.MissionsDaily, onResult);
+            => _client.Get<DailyMissionResult>(Endpoints.MissionsDaily, r =>
+            {
+                if (r != null && r.Success && r.Data != null) LastDaily = r.Data;
+                onResult?.Invoke(r);
+            });
+
+        /// <summary>
+        /// The last answer <see cref="FetchDailyRoutine"/> got, or null before the first one.
+        ///
+        /// <para>NOT A CACHE WITH A POLICY — no expiry, no refresh, and every screen still
+        /// fetches on entry (the same stance <c>DailyMissionState</c> takes). It exists so a
+        /// screen can PAINT today's daily in the frame it opens instead of holding an empty
+        /// slot for the round trip: the Home pill fetches on every Home entry, so by the time
+        /// the player reaches Mission Selection the answer is already here, and the card
+        /// arrives with the campaign list rather than 200 ms–2 s after it. A reader checks
+        /// <see cref="DailyMissionResult.Date"/> against today before trusting it; the fetch
+        /// that follows overwrites it either way.</para>
+        /// </summary>
+        public DailyMissionResult LastDaily { get; private set; }
+
+        /// <summary>Test seam.</summary>
+        public void ForgetDailyForTest() => LastDaily = null;
 
         /// <summary>
         /// Claim the daily for one UTC date. Once per player per date.

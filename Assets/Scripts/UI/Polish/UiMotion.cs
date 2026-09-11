@@ -416,25 +416,56 @@ namespace Golfin.UI.Polish
             if (rect != null) rect.anchoredPosition = new Vector2(toX, y);
         }
 
-        /// <summary>Rise into place: y from (rest − dy) to rest, with alpha 0 → 1.</summary>
+        /// <summary>
+        /// Rise into place: y from (rest − dy) to rest, with alpha 0 → 1.
+        ///
+        /// <para>THE REST IS NOT FROZEN AT THE CALL. A rise is a transient offset laid over
+        /// wherever the rect belongs, and "where it belongs" can legitimately change while the
+        /// 250 ms run: Home's <c>BannerSlotBinder</c> drops the mode carousel into the hidden
+        /// banner's place in the very OnEnable that starts the entry rise, the daily and loan
+        /// pills re-seat themselves under the notice, a layout group re-lays out a staggered row.
+        /// The first version of this routine wrote its captured rest back on every frame and
+        /// again on its last line, so whichever of those wrote during the rise was simply undone
+        /// 250 ms later — the carousel came back up 236 px, the pill snapped to its old y. Now any
+        /// write to <c>anchoredPosition.y</c> that is not this routine's own is taken as the new
+        /// rest (<see cref="RiseState.AbsorbExternal"/>): the rise carries on from there with
+        /// whatever offset it had left and lands on the value the other writer meant. Last write
+        /// wins, as it should — the rise is decoration, the placement is the fact.</para>
+        ///
+        /// <para>The mirror rule for READERS: a placement computed FROM a rising rect must read
+        /// its rest, <see cref="RestY"/>, not its live y — mid-rise the live value is up to
+        /// <see cref="RiseDy"/> low. <c>DailyMissionPillController.ComputeTargetY</c> and
+        /// <c>BannerSlotBinder</c> do.</para>
+        /// </summary>
         public static IEnumerator Rise(RectTransform rect, CanvasGroup? group,
                                        float dy = RiseDy, float dur = EntryDur,
                                        Ease ease = Ease.OutCubic)
         {
             if (rect == null) return Register(Empty(), Noop);
-            float restY = rect.anchoredPosition.y;
-            return Register(RiseRoutine(rect, group, dy, dur, restY, ease), () =>
+            var state = new RiseState(rect.anchoredPosition.y);
+            return Register(RiseRoutine(rect, group, dy, dur, state, ease), () =>
             {
-                if (rect != null) rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, restY);
+                if (rect != null)
+                {
+                    state.AbsorbExternal(rect);
+                    state.Write(rect, state.RestY);
+                    Rising.Remove(rect);
+                }
                 if (group != null) group.alpha = 1f;
             });
         }
 
         private static IEnumerator RiseRoutine(RectTransform rect, CanvasGroup? group,
-                                               float dy, float dur, float restY, Ease ease)
+                                               float dy, float dur, RiseState state, Ease ease)
         {
-            float x = rect.anchoredPosition.x;
-            rect.anchoredPosition = new Vector2(x, restY - dy);
+            // Registered on the first step, not at creation: a routine handed to Stagger waits
+            // its beat before it moves anything, and a reader must not see an offset that has not
+            // been applied yet. Absorb first — the beat is exactly the window a layout pass or a
+            // placement fills.
+            state.AbsorbExternal(rect);
+            Rising.Remove(rect);
+            Rising.Add(rect, state);
+            state.Write(rect, state.RestY - dy);
             if (group != null) group.alpha = 0f;
 
             float elapsed = 0f;
@@ -443,13 +474,75 @@ namespace Golfin.UI.Polish
                 elapsed += Time.unscaledDeltaTime;
                 if (rect == null) yield break;
                 float e = Curve(ease, dur <= 0f ? 1f : elapsed / dur);
-                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x,
-                                                    Mathf.LerpUnclamped(restY - dy, restY, e));
+                state.AbsorbExternal(rect);
+                state.Write(rect, Mathf.LerpUnclamped(state.RestY - dy, state.RestY, e));
                 if (group != null) group.alpha = Mathf.Clamp01(e);
                 yield return null;
             }
-            if (rect != null) rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, restY);
+            if (rect != null)
+            {
+                state.AbsorbExternal(rect);
+                state.Write(rect, state.RestY);
+                Rising.Remove(rect);
+            }
             if (group != null) group.alpha = 1f;
+        }
+
+        /// <summary>
+        /// The y a rect is rising TO — its rest — or its live y when no rise is in flight on it.
+        /// Read this, never <c>anchoredPosition.y</c>, when placing something relative to a rect
+        /// that <see cref="Rise"/> may be moving: for the 250 ms after a screen entry the live
+        /// value is up to <see cref="RiseDy"/> below where the rect belongs, and a placement
+        /// derived from it inherits the whole error.
+        /// </summary>
+        public static float RestY(RectTransform rect)
+        {
+            if (rect == null) return 0f;
+            if (!Rising.TryGetValue(rect, out RiseState state)) return rect.anchoredPosition.y;
+            state.AbsorbExternal(rect);
+            return state.RestY;
+        }
+
+        /// <summary>Test seam: whether a rise currently owns this rect's y.</summary>
+        internal static bool IsRising(RectTransform rect) => rect != null && Rising.TryGetValue(rect, out _);
+
+        /// <summary>
+        /// Rises in flight, by rect. Weak-keyed for the same reason <see cref="Finalizers"/> is: a
+        /// rect destroyed mid-rise (a screen torn down under it) must not be pinned by a static.
+        /// </summary>
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<RectTransform, RiseState>
+            Rising = new System.Runtime.CompilerServices.ConditionalWeakTable<RectTransform, RiseState>();
+
+        /// <summary>The one mutable fact a rise carries: where it lands, and what it last wrote.</summary>
+        private sealed class RiseState
+        {
+            /// <summary>
+            /// Below this, a difference between what was written and what reads back is storage
+            /// noise, not a writer. `anchoredPosition` round-trips through localPosition and at a
+            /// magnitude of a few hundred px one ulp is ~1e-4; the same floor
+            /// <c>UiMotionTests.Rise_ReturnsToTheRestYItWasGivenAndFullAlpha</c> tolerates.
+            /// Without it every frame would nudge the rest by an ulp and a session of entries
+            /// would walk the content off by a pixel.
+            /// </summary>
+            private const float Noise = 0.01f;
+
+            public float RestY;
+            private float _lastWritten;
+
+            public RiseState(float restY) { RestY = restY; _lastWritten = restY; }
+
+            /// <summary>Fold in a move somebody else made since our last write — it is the new rest.</summary>
+            public void AbsorbExternal(RectTransform rect)
+            {
+                float y = rect.anchoredPosition.y;
+                if (Mathf.Abs(y - _lastWritten) > Noise) { RestY = y; _lastWritten = y; }
+            }
+
+            public void Write(RectTransform rect, float y)
+            {
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
+                _lastWritten = y;
+            }
         }
 
         /// <summary>

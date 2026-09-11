@@ -574,15 +574,180 @@ namespace GolfinRedux.UI.MissionSelection
         private void RefreshDaily()
         {
             if (dailyCard == null) return;
-            dailyCard.gameObject.SetActive(false);
 
-            // NO PLACEHOLDER HERE ANY MORE (polish_regressions_0909 R2). §D4 filled this gap with
-            // a shimmer block; the gap is one request, ~200 ms, and the daily is cold on every
-            // visit — so what the player actually saw was a highlight band sweeping across a
-            // 978x374 space on every single entry, with the card popping in over it. The card
-            // fades in when it arrives instead; see EndDailyWait. The gate stays because it is
-            // what tells that fade whether this is the first paint of the entry or a repaint.
+            // THE SLOT IS NEVER GIVEN UP FOR THE ROUND TRIP. The first version deactivated the
+            // card here and re-activated it when the fetch answered, so the campaign list painted
+            // at the top of the column and, 200 ms to 2 s later, was shoved 439 px down by a card
+            // popping in over it (Cesar: "suddenly appear and displace it"). game_polish_b §D4 had
+            // held the space with a shimmer block; polish_regressions_0909 R2 removed the shimmer
+            // and, with it, the reservation.
+            //
+            // Two paths, one column shape:
+            //   · the answer is already known — the Home pill fetches on every Home entry, so on
+            //     the normal route it is — and the card is painted NOW, rising with the campaign
+            //     rows as the first row of the same stagger;
+            //   · it is not (a cold session, a rollover), and the card HOLDS its collapsed slot
+            //     at alpha 0, untappable, until the fetch fades it in — or hides it, if there is
+            //     no daily today, which is the one case the list still closes up.
+            // Either way the fetch that follows is the source of truth: it repaints status in
+            // place, re-binds only if the recipe actually changed, and never re-fades a card the
+            // player is already reading.
+            var known = TodaysKnownDaily();
+            if (known != null)
+            {
+                Debug.Log($"[MissionSelection] daily painted from the last answer ({known.Date}) — with the list.");
+                PaintDaily(known, DailyArrival.WithList);
+                if (ExpandDailyOnOpen)
+                {
+                    ExpandDailyOnOpen = false;
+                    SetExpanded(dailyCard);
+                }
+            }
+            else
+            {
+                HoldDailySlot();
+            }
+
             StartCoroutine(FetchDailyRoutine());
+        }
+
+        /// <summary>How the daily card comes on screen, which decides its motion.</summary>
+        private enum DailyArrival
+        {
+            /// <summary>Painted in the frame the screen opens — rises with the campaign rows.</summary>
+            WithList,
+            /// <summary>The fetch answered into a held slot — fades in where the slot was.</summary>
+            Late,
+            /// <summary>The card is already on screen — instant, nothing moves.</summary>
+            Repaint,
+        }
+
+        /// <summary>
+        /// The last daily answer, if it is today's and the shared fact agrees it is live. Null
+        /// means "hold the slot and wait for the fetch" — a cold session, a UTC rollover since the
+        /// answer, or a <c>SetNoDaily</c> that has since retracted it.
+        /// </summary>
+        private static Golfin.Economy.DailyMissionResult? TodaysKnownDaily()
+        {
+            var last = Golfin.Economy.MissionsClient.Instance.LastDaily;
+            if (last == null || last.Recipe == null) return null;
+            if (last.Date != Golfin.UI.Home.DailyMissionPillController.UtcToday()) return null;
+            if (!DailyMissionState.Known || !DailyMissionState.HasRecipe || DailyMissionState.Date != last.Date) return null;
+            return last;
+        }
+
+        /// <summary>
+        /// Keep the daily card's collapsed slot in the column while the fetch is out: active, so
+        /// the layout group reserves its height; alpha 0 and untappable, so nothing unbound is
+        /// seen or pressed. On a re-entry after a rollover this is yesterday's card held dark
+        /// until today's replaces it.
+        /// </summary>
+        private void HoldDailySlot()
+        {
+            if (dailyCard == null) return;
+            dailyCard.gameObject.SetActive(true);
+            if (dailyCard.State != MissionCardState.Collapsed) dailyCard.SetState(MissionCardState.Collapsed);
+            SetDailyVisible(false);
+            if (isActiveAndEnabled) StartCoroutine(RebalanceNextFrame());
+        }
+
+        /// <summary>Whether the daily card is on screen for the player — active AND lit.</summary>
+        private bool DailyShowing
+        {
+            get
+            {
+                if (dailyCard == null || !dailyCard.gameObject.activeInHierarchy) return false;
+                var cg = dailyCard.GetComponent<CanvasGroup>();
+                return cg == null || cg.alpha > 0f;
+            }
+        }
+
+        private void SetDailyVisible(bool visible)
+        {
+            if (dailyCard == null) return;
+            var cg = dailyCard.GetComponent<CanvasGroup>();
+            if (cg == null) cg = dailyCard.gameObject.AddComponent<CanvasGroup>();
+            cg.alpha = visible ? 1f : 0f;
+            cg.interactable = visible;
+            cg.blocksRaycasts = visible;
+        }
+
+        /// <summary>
+        /// Bind and show the daily card from one server answer. Returns false when the recipe
+        /// cannot be resolved (the card is hidden, as it always was for that case).
+        /// </summary>
+        private bool PaintDaily(Golfin.Economy.DailyMissionResult data, DailyArrival arrival)
+        {
+            if (dailyCard == null) return false;
+            var def = BuildDailyDefinition(data);
+            if (def == null || def.ClubIds.Count == 0)
+            {
+                Debug.LogWarning("[MissionSelection] the daily recipe could not be resolved — card stays hidden.");
+                dailyCard.gameObject.SetActive(false);
+                return false;
+            }
+
+            dailyCard.gameObject.SetActive(true);
+
+            // The daily card is a SERIALIZED SCENE OBJECT, not one of the rows RebuildCards
+            // instantiates — so it never passed through the subscribe site there, and its two
+            // events had no listeners at all. The card rendered correctly and did nothing:
+            // tapping it could not expand it and its PLAY button could not start the round.
+            // Subscribe here, where the card is bound, so a real recipe is always wired.
+            // `-=` first because OnEnable calls RefreshDaily on every return to the screen;
+            // without it a second visit would double-subscribe and one tap would expand and
+            // immediately collapse again.
+            dailyCard.OnCardTapped -= HandleCardTapped;
+            dailyCard.OnCardTapped += HandleCardTapped;
+            dailyCard.OnActionButtonClicked -= HandleActionClicked;
+            dailyCard.OnActionButtonClicked += HandleActionClicked;
+
+            dailyCard.Bind(def, MissionCardMode.Daily, MissionCardState.Collapsed);
+            SetDailyVisible(true);
+
+            switch (arrival)
+            {
+                case DailyArrival.WithList:
+                    // The same rise the campaign rows are starting this frame (RebuildCards runs
+                    // first in OnEnable), so the column arrives as one thing. Under a push the
+                    // rows do not rise either — StaggerRise refuses — and neither does this.
+                    if (!Golfin.Gps.UI.GpsPaintMotion.SuppressedByPush && dailyCard.rootRect != null)
+                    {
+                        var cg = dailyCard.GetComponent<CanvasGroup>();
+                        UiMotion.Run(this, UiMotion.Rise(dailyCard.rootRect, cg));
+                    }
+                    break;
+                case DailyArrival.Late:
+                    // R2 — the arrival, AFTER Bind: fading an unbound card would fade in the
+                    // previous day's content. FadeInPanel is UiMotion.Fade 0->1 over FadeDur on
+                    // the card's own CanvasGroup — no slide, no stagger, the same treatment every
+                    // other §D4 panel gets. The slot was already reserved, so nothing else moves.
+                    Golfin.Gps.UI.GpsPaintMotion.FadeInPanel(this, dailyCard.gameObject, animate: true);
+                    break;
+                case DailyArrival.Repaint:
+                    break;
+            }
+
+            // Bank the collapsed column budget now, while it is still readable.
+            if (isActiveAndEnabled) StartCoroutine(RebalanceNextFrame());
+
+            ApplyDailyStatus(data);
+            return true;
+        }
+
+        /// <summary>The countdown, streak and claimed state, plus the hash a claim is checked
+        /// against — everything in the answer that is not the recipe.</summary>
+        private void ApplyDailyStatus(Golfin.Economy.DailyMissionResult data)
+        {
+            if (dailyCard == null) return;
+            System.DateTime utc = System.DateTime.UtcNow;
+            dailyCard.SetDailyStatus(utc.Date.AddDays(1) - utc, data.Streak, data.Claimed);
+
+            // The hash the server will check a claim against. Kept from THIS response, not
+            // re-fetched at claim time: re-fetching would defeat the check, which exists to
+            // stop a client holding yesterday's recipe from being paid after midnight.
+            _dailyDate = data.Date;
+            _dailyHash = data.RecipeHash;
         }
 
         /// <summary>
@@ -591,22 +756,7 @@ namespace GolfinRedux.UI.MissionSelection
         /// the fetch landed at all, and the two FAILURE arms are exactly the ones that would
         /// otherwise leave the screen's paint unaccounted for.
         /// </summary>
-        /// <returns>
-        /// True when the card should FADE in — the first paint of this screen entry that actually
-        /// produced a card. False on a repaint (the streak/claimed refresh at the bottom of this
-        /// file), where re-fading a card the player is already reading would be the very effect R2
-        /// removed, and on both failure arms, where there is no card to fade.
-        ///
-        /// <para>IsCold is read BEFORE <c>Fetch</c> because Fetch spends the gate. Fetch's own
-        /// return value cannot be used: this gate is built with <c>staggers: false</c> — correctly,
-        /// nothing here staggers — so it always answers false.</para>
-        /// </returns>
-        private bool EndDailyWait(int count)
-        {
-            bool firstPaint = _dailyGate.IsCold && count > 0;
-            _dailyGate.Fetch(count);
-            return firstPaint;
-        }
+        private void EndDailyWait(int count) => _dailyGate.Fetch(count);
 
         private IEnumerator FetchDailyRoutine()
         {
@@ -616,6 +766,9 @@ namespace GolfinRedux.UI.MissionSelection
                 {
                     Debug.Log($"[MissionSelection] no daily today ({r.ErrorMessage ?? "no recipe"}) — card stays hidden.");
                     EndDailyWait(0);
+                    // No daily: the slot goes, and the list closes up — the one path that still
+                    // moves it, and the rare one.
+                    if (dailyCard != null) dailyCard.gameObject.SetActive(false);
                     // Tell the Home pill too: it must not advertise a daily this screen just
                     // failed to find (daily_mission_home_pill §2).
                     Golfin.Gameplay.Missions.DailyMissionState.SetNoDaily();
@@ -629,60 +782,35 @@ namespace GolfinRedux.UI.MissionSelection
                 // whether today's daily is waiting (daily_mission_home_pill §2).
                 Golfin.Gameplay.Missions.DailyMissionState.Set(
                     r.Data.Date, r.Data.Streak, r.Data.Claimed, hasRecipe: true);
-                var def = BuildDailyDefinition(r.Data);
-                if (def == null || def.ClubIds.Count == 0)
+
+                bool showing = DailyShowing;
+                if (showing && r.Data.Date == _dailyDate && r.Data.RecipeHash == _dailyHash)
                 {
-                    Debug.LogWarning("[MissionSelection] the daily recipe could not be resolved — card stays hidden.");
-                    EndDailyWait(0);
-                    return;
+                    // Same recipe the player is already looking at (painted from the last answer,
+                    // or the claim repaint below): only the status can have moved. Re-binding
+                    // would collapse a card they may have opened in the meantime.
+                    EndDailyWait(1);
+                    ApplyDailyStatus(r.Data);
                 }
-
-                bool fadeIn = EndDailyWait(1);
-                dailyCard!.gameObject.SetActive(true);
-
-                // The daily card is a SERIALIZED SCENE OBJECT, not one of the rows RebuildCards
-                // instantiates — so it never passed through the subscribe site there, and its two
-                // events had no listeners at all. The card rendered correctly and did nothing:
-                // tapping it could not expand it and its PLAY button could not start the round.
-                // Subscribe here, where the card is bound, so a real recipe is always wired.
-                // `-=` first because OnEnable calls RefreshDaily on every return to the screen;
-                // without it a second visit would double-subscribe and one tap would expand and
-                // immediately collapse again.
-                dailyCard.OnCardTapped -= HandleCardTapped;
-                dailyCard.OnCardTapped += HandleCardTapped;
-                dailyCard.OnActionButtonClicked -= HandleActionClicked;
-                dailyCard.OnActionButtonClicked += HandleActionClicked;
-
-                dailyCard.Bind(def, MissionCardMode.Daily, MissionCardState.Collapsed);
-
-                // R2 — the arrival, AFTER Bind: fading an unbound card would fade in the previous
-                // day's content. FadeInPanel is UiMotion.Fade 0->1 over FadeDur on the card's own
-                // CanvasGroup — no slide, no stagger, the same treatment every other §D4 panel
-                // gets. `animate: false` sets alpha to 1 outright, so a repaint is instant.
-                Golfin.Gps.UI.GpsPaintMotion.FadeInPanel(this, dailyCard.gameObject, fadeIn);
-
-                // Bank the collapsed column budget now, while it is still readable.
-                if (isActiveAndEnabled) StartCoroutine(RebalanceNextFrame());
-
-                System.DateTime utc = System.DateTime.UtcNow;
-                dailyCard.SetDailyStatus(utc.Date.AddDays(1) - utc, r.Data.Streak, r.Data.Claimed);
+                else
+                {
+                    bool painted = PaintDaily(r.Data, showing ? DailyArrival.Repaint : DailyArrival.Late);
+                    EndDailyWait(painted ? 1 : 0);
+                    if (!painted) return;
+                }
 
                 // Arrived from the Home pill — open the daily rather than making the player tap
                 // it a second time. Bind collapsed FIRST and expand here, not by binding
                 // Expanded: SetExpanded is what enforces the one-card-open invariant against the
                 // campaign list, and it rebalances the shared column budget afterwards. Consumed
-                // one-shot so a later visit is unaffected.
+                // one-shot so a later visit is unaffected. (Already consumed on the painted-from-
+                // the-last-answer path, where the card was open before this fetch went out.)
                 if (ExpandDailyOnOpen)
                 {
                     ExpandDailyOnOpen = false;
-                    SetExpanded(dailyCard);
+                    SetExpanded(dailyCard!);
                 }
 
-                // The hash the server will check a claim against. Kept from THIS response, not
-                // re-fetched at claim time: re-fetching would defeat the check, which exists to
-                // stop a client holding yesterday's recipe from being paid after midnight.
-                _dailyDate = r.Data.Date;
-                _dailyHash = r.Data.RecipeHash;
                 if (!r.Data.Claimed) StartCoroutine(ClaimPendingDailyRoutine());
             });
         }
@@ -733,7 +861,10 @@ namespace GolfinRedux.UI.MissionSelection
                         // taps Home must not find the pill still inviting them to a mission they
                         // just finished (daily_mission_home_pill §2).
                         Golfin.Gameplay.Missions.DailyMissionState.MarkClaimed(d.Streak);
-                        RefreshDaily();   // repaint with the streak and the claimed state
+                        // Re-fetch, not RefreshDaily: the same recipe is on screen, so the
+                        // answer lands as a status repaint in place — streak and claimed — with
+                        // no re-bind and no second arrival.
+                        StartCoroutine(FetchDailyRoutine());
                     }
                 });
         }

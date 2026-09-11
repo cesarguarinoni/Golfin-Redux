@@ -4406,3 +4406,53 @@ the on-disk reference to prove it (it pointed at iOS-Full-GPS, left by 2874).
 3. When adding a variant-aware skip, pin the mechanism, not the instance: the test asserts the
    two profiles DISAGREE (`iOS-Standalone` true, `iOS-Full` false), which no active-profile read
    can satisfy — `StandaloneIdentityProfileTests`.
+
+## Lesson CA — a geometry number measured on scene-load frame 0 is measured on the UNSCALED canvas (2026-09-11, `home_carousel_and_daily_timing`)
+
+Cesar's phone showed the Home mode cards sitting ON the Tee button; the Editor at 1170x2532 showed
+the design gap, and so would an iPhone 14. `BannerSlotBinder` measured the carousel's drop once —
+"from the authored geometry, so it cannot desync" — and the first call was the scene-load one:
+`HomeScreen` is authored active, so its children's `OnEnable` runs on frame 0, before
+`CanvasScaler` has scaled the Canvas. On that raw-pixel canvas a rect with PROPORTIONAL anchors
+(the section, 0.2275→0.8764 of the height) sits somewhere else than after scaling, while a
+pixel-anchored one (the banner) does not move. On a 2796-tall Pro Max the drop measured 296
+instead of 237 and stuck. The tell in the screenshot: the ticket cluster 36 px below the R-pill —
+the `SafeAreaFitter` baseline-141 nudge that only a Dynamic-Island phone gets.
+
+**The rule.**
+1. Never cache a geometry measurement taken in `Awake`/`OnEnable`/first-`Apply` of a component on
+   an authored-active screen. Measure when you apply it (the binder re-measures on every hide; the
+   frame-0 number becomes irrelevant the moment the first real entry re-measures on the scaled
+   canvas).
+2. "Measured, not typed" is only safer than a constant if it is measured on the geometry the
+   player sees. A measurement can be stale in TIME as well as in value.
+3. The Editor at the reference resolution cannot see this class of bug — the raw and scaled
+   canvases coincide there. When a report comes from a device and the Editor disagrees, set the
+   Game View to 1290x2796 (`GameViewSizes` reflection, see `GameViewSizeUtil`) and re-run the real
+   flow before theorising; it reproduced in one boot.
+
+## Lesson CB — two components writing one rect's `anchoredPosition.y`: the entry rise and the placement (2026-09-11, `home_carousel_and_daily_timing`)
+
+`ScreenEntryMotion` rises Home's four content layers 16 px on every entry — the same rects the
+banner binder drops and the pills seat, in the same `OnEnable` frame. `UiMotion.Rise` captured its
+rest at the call and wrote it back on its last line, so whichever placement wrote during the
+250 ms was undone (the carousel came back UP 236 px until the next fetch happened to re-apply it),
+and a placement READ from a rising rect (the pill from the notice) was 16 px low. `store_history
+§8` had already met the same shape from the other side (rows under a layout group have no rest
+until layout runs) and patched it at the call site.
+
+**The rule.** A transient motion does not own the property it animates. `Rise` now adopts any
+external write as its new rest and `UiMotion.RestY(rect)` gives readers the rest; a placement
+writes when it likes and reads `RestY`, and never has to know a rise exists (PATTERNS §12).
+Corollary for the next motion primitive: if it writes a property other code also writes, either
+compose external writes or animate something nobody else touches.
+
+## Lesson CC — removing a loading placeholder removes two things: the activity, and the SPACE (2026-09-11, Mission Select daily card)
+
+`polish_regressions_0909 R2` deleted the §D4 shimmer block over the daily slot because a 200 ms
+wait did not deserve a sweeping highlight. Correct — but the block was also what held the daily
+card's 374 px in the column, and with it gone the campaign list painted at the top and was shoved
+down when the card arrived (Cesar: "suddenly appear and displace it"). Separate the two on the way
+out: keep the reservation (the card holds its collapsed slot at alpha 0), drop the animation. And
+if the answer is usually already known — the Home pill fetched it seconds earlier — paint it in
+the opening frame (`MissionsClient.LastDaily`) and let the fetch repaint in place.

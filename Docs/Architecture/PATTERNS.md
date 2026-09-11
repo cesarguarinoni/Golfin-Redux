@@ -297,6 +297,30 @@ Constructor options for the two non-carousel callers:
 
 **When adding a new paged surface:** use this, do not write another dot loop.
 
+## 12. Computed Placement Beside an Entry Rise (UiMotion.RestY)
+
+Files: `Assets/Scripts/UI/Polish/UiMotion.cs`, `ScreenEntryMotion.cs`,
+`Assets/Scripts/BannersRuntime/BannerSlotBinder.cs`, `Assets/Scripts/UI/Home/DailyMissionPillController.cs`
+
+Every shell screen's content layers get a 16 px entry rise (`ScreenEntryMotion` →
+`UiMotion.Rise`) on a fade-path arrival. On Home those layers are four direct children with
+**computed** placements — the binder drops `ModeCarouselSection` into the hidden banner's place,
+the daily and loan pills seat themselves under `NoticePanel` — and all of that runs in the same
+`OnEnable` frame the rise starts. Two rules keep the two from fighting over one `anchoredPosition.y`:
+
+- **Writers just write.** `UiMotion.Rise` treats any external write to the rect's y during the
+  rise as the new rest and lands there. A placement never has to know a rise is in flight.
+- **Readers read the rest.** A placement computed FROM a rect that may be rising reads
+  `UiMotion.RestY(rect)`, never `anchoredPosition.y` — mid-rise the live value is up to
+  `UiMotion.RiseDy` low, and a placement derived from it inherits the error.
+
+And one rule about *when* to measure: a `MonoBehaviour` on an authored-active screen (`HomeScreen`,
+`RankingsScreen`, …) gets its first `OnEnable` on scene-load frame 0, **before `CanvasScaler` has
+scaled the canvas**. A geometry number measured there and cached is measured on a raw-pixel canvas
+and is only right when the device happens to be the reference resolution. Measure when you apply
+(`BannerSlotBinder.SetShiftedDown` re-measures on every hide) and verify layout at a second
+resolution (1290×2796) before calling it done.
+
 ## Quick Reference: File Locations
 
 | Pattern | Character (Roster) | Club (Inventory) | Bag (Inventory) |

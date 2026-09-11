@@ -185,6 +185,93 @@ namespace Golfin.UI.Polish.Tests
             Assert.AreEqual(1f, cg.alpha, 1e-6f);
         }
 
+        // ── home_carousel_and_daily_timing — the rest is not frozen ─────────────────
+
+        static bool IsRising(RectTransform rt)
+            => (bool)T.GetMethod("IsRising", BindingFlags.NonPublic | BindingFlags.Static)!
+                      .Invoke(null, new object[] { rt })!;
+
+        static float RestY(RectTransform rt) => (float)Call("RestY", rt);
+
+        [Test]
+        public void Rise_AdoptsAnExternalWriteAsItsRest()
+        {
+            // Home: ScreenEntryMotion starts the carousel's rise in OnEnable, and in the SAME
+            // frame BannerSlotBinder drops the carousel 236 px into the hidden banner's place.
+            // The old routine wrote its captured rest (-40) back on its last line and undid the
+            // drop; the carousel came back up and left a banner-shaped hole above the nav bar.
+            NewGo("rise", out RectTransform rt, out CanvasGroup cg);
+            rt.anchoredPosition = new Vector2(0f, -40f);
+            var e = (IEnumerator)Call("Rise", rt, cg, 16f, 0.05f);
+
+            // One MoveNext runs the initial write AND the first lerp step before the first yield,
+            // so "below the rest" is the invariant, not "exactly RiseDy below".
+            Assert.IsTrue(e.MoveNext(), "first step");
+            Assert.Less(rt.anchoredPosition.y, -40f, "starts below its rest");
+
+            rt.anchoredPosition = new Vector2(0f, -276f);      // the binder's drop, mid-rise
+            Drain(e);
+
+            Assert.AreEqual(-276f, rt.anchoredPosition.y, 0.01f, "lands where the other writer meant");
+            Assert.AreEqual(1f, cg.alpha, 1e-6f);
+        }
+
+        [Test]
+        public void Rise_TheFinalizerHonoursAnExternalWriteToo()
+        {
+            // The interrupted case: a screen deactivated mid-rise settles through the finalizer,
+            // and it must settle on the moved rest, not the captured one — otherwise the
+            // carousel came back from every Home visit 236 px too high.
+            NewGo("rise", out RectTransform rt, out CanvasGroup cg);
+            rt.anchoredPosition = new Vector2(0f, -40f);
+            var e = (IEnumerator)Call("Rise", rt, cg, 16f, 0.05f);
+            e.MoveNext();
+            rt.anchoredPosition = new Vector2(0f, -276f);
+
+            // Run(host=null) cannot start a coroutine, so it settles immediately: the finalizer
+            // is what runs, on exactly the routine we already stepped.
+            Enabled = false;
+            T.GetMethod("Run", new[] { typeof(MonoBehaviour), typeof(IEnumerator) })!
+             .Invoke(null, new object?[] { null, e });
+
+            Assert.AreEqual(-276f, rt.anchoredPosition.y, 0.01f);
+            Assert.AreEqual(1f, cg.alpha, 1e-6f);
+            Assert.IsFalse(IsRising(rt), "settled rises release the rect");
+        }
+
+        [Test]
+        public void RestY_ReadsTheRestMidRise_AndTheLiveValueOtherwise()
+        {
+            NewGo("rise", out RectTransform rt, out CanvasGroup cg);
+            rt.anchoredPosition = new Vector2(0f, -361f);
+            Assert.AreEqual(-361f, RestY(rt), 0.01f, "no rise: the live value");
+            Assert.IsFalse(IsRising(rt));
+
+            var e = (IEnumerator)Call("Rise", rt, cg, 16f, 0.05f);
+            e.MoveNext();
+            Assert.IsTrue(IsRising(rt));
+            Assert.Less(rt.anchoredPosition.y, -361f, "live: below the rest");
+            Assert.AreEqual(-361f, RestY(rt), 0.01f, "rest: where it is going — what the pill must read");
+
+            rt.anchoredPosition = new Vector2(0f, -400f);     // the notice re-seated mid-rise
+            Assert.AreEqual(-400f, RestY(rt), 0.01f, "an external write is the new rest, at once");
+
+            Drain(e);
+            Assert.IsFalse(IsRising(rt));
+            Assert.AreEqual(-400f, RestY(rt), 0.01f);
+        }
+
+        [Test]
+        public void Rise_IgnoresStorageNoiseSoARestDoesNotWalk()
+        {
+            // Sanity for the noise floor: with nobody else writing, a long rise at a large
+            // magnitude still lands exactly where it started.
+            NewGo("rise", out RectTransform rt, out CanvasGroup cg);
+            rt.anchoredPosition = new Vector2(7f, -2531f);
+            Drain((IEnumerator)Call("Rise", rt, cg, 16f, 0.25f));
+            Assert.AreEqual(-2531f, rt.anchoredPosition.y, 0.01f);
+        }
+
         [Test]
         public void CountUp_SnapsToTheTargetNumber()
         {
