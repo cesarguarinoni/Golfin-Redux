@@ -372,3 +372,140 @@ export half, and all SPEC §7 state are verified sound this pass.
 |---|---|
 | [`REDTEAM_REVIEW.md`](Docs/Specs/Active/weekly_rotation_admin/REDTEAM_REVIEW.md) | Appended iter-3 adversarial record — FAIL (one blocker). |
 | [`STATUS.md`](Docs/Specs/Active/weekly_rotation_admin/STATUS.md) | `READY_FOR_REDTEAM` → `ARCHITECT_REVIEW_FAIL`. |
+
+---
+
+# Iteration 4 — red-team (2026-09-11 14:43 JST)
+
+Iter-4 addresses the single blocker I named at iter-3: the third R3 site,
+`Assets/Editor/ContentArtValidator.cs`, ran the identical masked-art check un-exempted. Fix in
+`6eb69d0f5` (`0febb2e1a` = docs). Editor tooling + one test only — no CSV, no publish, no deploy
+(live stamp still `70464d323`). I re-generated every number below myself; nothing carried forward.
+
+## The angle I attacked (no-render task → primary source, not the report)
+
+The kickoff pointed me at five knives. I ran each against HEAD, read-only.
+
+**(a) Is the C# predicate EXACTLY the exporter's?** Field-by-field, both trimmed:
+
+| clause | `export_content.py::is_rotation_standin` | `ContentArtValidator.IsRotationStandIn` | equal? |
+|---|---|---|---|
+| catalog | `catalog_name == "gacha_banners"` | `spec.Name != "gacha_banners" → false` | ✓ |
+| rotationId non-blank | `bool((row.get("rotationId") or "").strip())` | `!IsNullOrEmpty(Field(…, "rotationId"))` — and `Field` returns `fields[i].Trim()` (L397) | ✓ (both trim; the whitespace-only edge collapses identically) |
+| sprite == stand-in | `(row.get("artSprite") or "").strip() == "GachaBanner_Weekly"` | `(spriteName ?? "").Trim() == WeeklyBannerStandIn` | ✓ |
+| constant | `WEEKLY_BANNER_STANDIN = "GachaBanner_Weekly"` | `WeeklyBannerStandIn = "GachaBanner_Weekly"` == `rotation.ts WEEKLY_BANNER_ART` (L53) | ✓ three tools, one string |
+
+Byte-equivalent. (Latent, not a blocker: the C# passes the *current column's* `spriteName` rather
+than always reading `artSprite`; harmless while `gacha_banners` has exactly one art column, and it
+would fail *safe* — toward flagging — if a second were ever added.)
+
+**(b) Applied at EVERY masked site in the file?** `grep -n "masked" ContentArtValidator.cs`: exactly
+one `Verdict = "masked"` emission (L357), and it now carries `&& !IsRotationStandIn(spec, index,
+fields, spriteName)` (L348). The C# validator has **no** conflict check (the Python R3 has a second
+half, `conflicting_art_report`, that the C# tool never implemented), so there is no second C# site
+to exempt. `grep -c "error CS"` on the offline Roslyn build of `Assembly-CSharp-Editor` (the rsp the
+kickoff supplied) = **0**.
+
+**(c) Independent boolean simulation on the LIVE CSV** (my own replica of the exact C# branch,
+`convention_name` + the exemption, run on `Assets/Resources/Data/gacha_banners.csv`):
+```
+total banner rows: 7
+MASKED before exemption: ['banner_wk_2026_38']
+MASKED after  exemption: []
+```
+`ConventionName("banner_wk_2026_38")` = `GachaBanner_Wk202638` ≠ `GachaBanner_Weekly`, so the row
+genuinely trips the check without the exemption and is genuinely clean with it. The stand-in sprite
+`Assets/Resources/Art/Gacha/Banners/GachaBanner_Weekly.png` exists, so the exempted row also
+resolves (it does not merely trade a `masked` verdict for a `withheld` one).
+
+**(d) Does anything in the build lane consume the "masked" verdict as a DECISION?** No.
+`MaskedRowCount` (L191) feeds only `Summary()` report text (L251) and one `Debug.LogWarning` in
+`RunAndReport`. `CIBuild.cs:479` wraps `RunAndReport()` in try/catch with **no failure return** ("a
+report, not a gate"); `TESTFLIGHT_RUNBOOK.md` documents it is skipped entirely on the standalone
+lane and report-only on the game lane. The exemption changes what `Docs/Reports/content_art.txt`
+*says*, never whether a build proceeds. (This is why the iter-3 blocker was a false-FAIL-in-a-
+committed-artifact, not an outage — restated here from my own re-read, not carried forward.)
+
+**(e) Can a hand-made banner widen it (fake `rotationId`)?** No — proven by the two narrowness tests
+in `test_export_check.py`: a tagged banner on **another** shared sprite
+(`GachaBanner_StandardClub1`) is still `masked`, and an **un-tagged** banner on the stand-in is
+still `masked`. The only exempt shape is (rotation tag ∧ sprite == the stand-in) — which is, by
+construction, a real weekly banner, and for which the runtime `GachaBannerArt.SpriteIsOwn` returns
+false so the URL art wins and nothing is actually masked. The exemption cannot hide a real
+masking defect.
+
+## Fourth-site hunt (kickoff grep, incl. release lane under Docs/Scripts + Tools/)
+
+`grep -rn "masked|ConventionName|SpriteIsOwn" Assets Tools Docs/Scripts` (code files, excl. Specs):
+the only **own-name gate** sites are `export_content.py` (`masked_art_report` + `conflicting_art_report`,
+both exempted since `b0a70282a`) and `ContentArtValidator.cs` (one site, now exempted). Everything
+else is out of scope by inspection:
+- `GachaBannerArt.SpriteIsOwn` / `GachaTicketArt.SpriteIsOwn` — runtime *resolvers*; a `false` there
+  is the desired stand-in demotion, not an error, so they must **not** be exempted (correct as-is).
+- `ContentArtFetcher.cs:212` uses `ConventionName` only to *write* the sprite name; no masked verdict.
+- `Docs/Scripts/make_*_pill.py` "masked" = image alpha-masking of gradient pills — unrelated.
+- test files — not sites of the shape.
+
+No fourth site.
+
+## Prior-rejection replay (Step 1)
+
+No `CESAR_REJECTION.md` — this task iterated through red-team FAILs, not a Cesar bounce. The one
+prior defect to replay is my own iter-3 blocker:
+
+| iter-3 blocker | verdict | proof |
+|---|---|---|
+| R3 exemption incomplete — `ContentArtValidator.cs` runs the identical masked-check un-exempted; `banner_wk_2026_38` (+ every future weekly banner w/ `artUrl`) would be stamped `masked — FAIL` in committed `content_art.txt`, contradicting `export --check` | **GONE** | `&& !IsRotationStandIn(...)` at L348 (predicate byte-equal to exporter); offline compile 0 errors; live-CSV sim before=1/after=0; `export --check` prints "no row's art is masked by a placeholder"; test #57 greps the exact exemption call + pins the string across all three tools so a regression re-fails |
+
+## Re-run of the ENTIRE SPEC §7 list at HEAD (Rule 5 — re-derived, not re-read)
+
+| Check | Expected | Got (my run) | |
+|---|---|---|---|
+| offline C# compile (Assembly-CSharp-Editor) | 0 `error CS` | 0 | ✓ |
+| C# masked branch on live CSV | 1 before / 0 after | `[banner_wk_2026_38]` / `[]` | ✓ |
+| content suite (`python3 -m unittest discover Tools/content/tests`) | 57 | Ran 57, OK | ✓ |
+| dashboard `npx vitest run` | 382 | 382 passed (16 files) | ✓ |
+| dashboard `npx tsc --noEmit` | clean | exit 0, 0 errors | ✓ |
+| `export_content.py --check` (env-file) | clean | "no catalog has drifted, and no row's art is masked" | ✓ |
+| published versions | rates 6 / pools 5 / banners 13 / shop 10 / rotations 4 | all match, all `unchanged` (drift check) | ✓ |
+| `banner_wk_2026_38` | active v13, artSprite GachaBanner_Weekly, rotationId wk_2026_38, artUrl set | exact (live CSV; drift-clean ⇒ == published) | ✓ |
+| artUrl serves | 200 image/jpeg 244928 | HTTP/2 200, image/jpeg, 244928 | ✓ |
+| shop_char_mike / shop_ball_putt_ace | inactive | is_active=false both | ✓ |
+| shop_wk_2026_38 rows | 13 active | total 13 / active 13 | ✓ |
+| rotations wk_2026_36/37/38 | F / F / T | 36 false · 37 false · 38 true | ✓ |
+| pity 'weekly' for f2636482… | counter 3 | `golfin_gacha_pity` banner_id="weekly" counter 3 / total_pulls 3 | ✓ |
+| deployed stamp / Access | 70464d323 / 302 | no dashboard change this iter → stamp unchanged by construction; Access 302 (unchanged) | ✓ |
+
+Report integrity (Rule 6): every number the implementer/reviewer cited (0 CS errors, before=1/after=0,
+57, 382, artUrl 244928) re-derives against primary sources. No fabrication.
+
+## The three break-attempts, and why each FAILED
+
+1. **Behavioral/predicate** — hoped the C# predicate diverged from the exporter (e.g. `IsNullOrEmpty`
+   vs `strip()` on `rotationId`, or comparing the wrong column). **Failed:** `Field` trims, so the
+   rotationId clause is identical; the sole art column is `artSprite`, so the column passed is always
+   the right one; live-CSV sim matches the exporter exactly.
+2. **Completeness/scope** — hoped for a second un-exempted masked site in the C# file, or a fourth
+   site elsewhere, or a build step that consumes the verdict as a decision. **Failed:** one masked
+   site (exempted), no C# conflict check, no fourth own-name gate anywhere, and CIBuild treats it as
+   a report with no failure path.
+3. **Exploit/over-broad** — hoped a hand-made banner could fake a `rotationId` to mask real art.
+   **Failed:** the exemption requires the sprite to be *exactly* the stand-in, in which case the
+   runtime resolver never lets the sprite win; the two narrowness tests lock both escape hatches.
+
+## Verdict
+
+**`ARCHITECT_REVIEW_PASS`.** I attacked the fix five ways the kickoff named plus my own three, on
+primary evidence I generated this pass, and could not break it. The iter-3 blocker is GONE: the R3
+stand-in exemption is now mirrored into `ContentArtValidator.cs` with a predicate byte-equivalent to
+the exporter's, at the file's only masked site, verified by an offline compile (0 errors), a live-CSV
+simulation (masked before=1 / after=0), a clean `export --check`, and a regression test that pins the
+string across all three tools and greps the exact exemption call. It is editor tooling only — no
+Unity/Figma/mesh/invariant/clone gate applies. Every SPEC §7 item re-ran green. Advancing to Cesar.
+
+## Files summary (iter-4)
+
+| Path | Change |
+|---|---|
+| [`REDTEAM_REVIEW.md`](Docs/Specs/Active/weekly_rotation_admin/REDTEAM_REVIEW.md) | Appended iter-4 adversarial record — PASS (blocker GONE; no new blocker found). |
+| [`STATUS.md`](Docs/Specs/Active/weekly_rotation_admin/STATUS.md) | `READY_FOR_REDTEAM` → `ARCHITECT_REVIEW_PASS`. |
