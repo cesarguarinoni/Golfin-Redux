@@ -32,7 +32,12 @@ CSV FACTS this module encodes, all verified against the live repo 2026-08-25
   gacha_rates     6 rows  Assets/Resources/Data/gacha_rates.csv
   gacha_pools    11 rows  Assets/Resources/Data/gacha_pools.csv
   ticket_types    2 rows  Assets/Resources/Data/ticket_types.csv
-  rotations      52 rows  Assets/Resources/Data/rotations.csv
+  rotations      52 planned rows + archived test rows  Assets/Resources/Data/rotations.csv
+
+  (Counts are the seed-day facts. Since weekly_rotation_admin a rotation publish
+  APPENDS to gacha_banners / gacha_rates / gacha_pools / shop_catalog every week,
+  so those four grow by construction — the registry test pins the seeded ROWS by
+  id, never a count.)
 
 Two of those facts contradict the SPEC's reference counts and both are handled
 rather than papered over:

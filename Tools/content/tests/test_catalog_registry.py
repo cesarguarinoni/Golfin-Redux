@@ -37,17 +37,30 @@ sys.path.insert(0, HERE)
 from catalogs import CATALOGS, CATALOGS_BY_NAME, IS_ACTIVE_COLUMN, read_csv  # noqa: E402
 from seed_from_csv import seed_rows  # noqa: E402
 
-#: Catalogs whose row COUNT is pinned here, with the value from the module
-#: docstring's CSV-facts list. Only the four this task added: pinning the other
-#: sixteen would make every legitimate content edit a test failure, which is how
-#: a suite gets switched off. These four are seeded and round-tripped in the same
-#: task, so a change to their size is a change to what was just verified.
-GACHA_ROW_COUNTS = {
-    "gacha_banners": 4,
-    "gacha_rates": 6,
-    "gacha_pools": 11,
-    "ticket_types": 2,
+#: The rows gacha_admin_catalogs seeded and round-tripped, pinned BY ID.
+#:
+#: These used to be row COUNTS (4 / 6 / 11 / 2). weekly_rotation_admin made a
+#: count the wrong shape: every Monday's rotation publish adds a banner, a
+#: pool and a rate table to three of these catalogs by construction, so a
+#: pinned count would fail on the first live rotation — and did, on 2026-09-11,
+#: 8 of 53 tests, caught by the self-reviewer. What the pin MEANT was "the
+#: seeded rows survived the round trip"; the ids say that and do not drift.
+SEEDED_GACHA_ROW_IDS = {
+    "gacha_banners": {"banner_standard_club1", "banner_test_a", "banner_test_b", "banner_inactive"},
+    "gacha_rates": {f"pool_standard_club1_{r}" for r in
+                    ("common", "uncommon", "rare", "mythic", "legendary", "supreme")},
+    "gacha_pools": {"psc1_driver_gf", "psc1_wood_gf", "psc1_ball_golfin", "psc1_iron9_klyro",
+                    "psc1_repairkit_common", "psc1_iron7_mireo", "psc1_repairkit_rare",
+                    "psc1_awedge_fyloe", "psc1_repairkit_mythic", "psc1_pwedge_royal",
+                    "psc1_putter_golfinx"},
+    "ticket_types": {"0", "1"},
 }
+
+#: The year plan weekly_rotation_admin seeded: ISO 2026 has 53 weeks, so the
+#: 52 planned ids run wk_2026_38 .. wk_2026_53, wk_2027_01 .. wk_2027_36.
+PLANNED_ROTATION_IDS = (
+    [f"wk_2026_{w:02d}" for w in range(38, 54)] + [f"wk_2027_{w:02d}" for w in range(1, 37)]
+)
 
 
 class TestEveryCatalogReads(unittest.TestCase):
@@ -96,10 +109,13 @@ class TestGachaCatalogsAreRegistered(unittest.TestCase):
     def test_the_table_holds_twenty_one_catalogs(self):
         self.assertEqual(21, len(CATALOGS))
 
-    def test_the_seeded_row_counts_are_what_was_round_tripped(self):
-        for name, expected in GACHA_ROW_COUNTS.items():
+    def test_the_seeded_rows_are_what_was_round_tripped(self):
+        # By id, not by count — a rotation publish appends to three of these
+        # every week (see SEEDED_GACHA_ROW_IDS).
+        for name, expected in SEEDED_GACHA_ROW_IDS.items():
             with self.subTest(catalog=name):
-                self.assertEqual(expected, len(read_csv(CATALOGS_BY_NAME[name]).rows))
+                ids = {ln.row_id for ln in read_csv(CATALOGS_BY_NAME[name]).rows}
+                self.assertTrue(expected <= ids, f"{name} lost seeded rows: {sorted(expected - ids)}")
 
     def test_gacha_banners_keeps_the_nine_columns_the_shipped_client_reads(self):
         # The client parser is header-indexed since gacha_admin_catalogs §3, so
@@ -127,39 +143,53 @@ class TestRotationsIsRegistered(unittest.TestCase):
         self.assertEqual("rotationId", CATALOGS_BY_NAME["rotations"].id_column)
         self.assertEqual("Assets/Resources/Data/rotations.csv", CATALOGS_BY_NAME["rotations"].csv_path)
 
-    def test_the_seeded_row_count_is_the_year_plan(self):
-        # 52 planned weeks (wk_2026_38 .. wk_2027_36 — ISO 2026 has 53 weeks).
+    def test_the_year_plan_is_present_and_pinned(self):
+        # The 52 planned weeks are pinned BY ID. Not "the file has 52 rows": a
+        # rotation row is content, and the admin adds rows — the two archived
+        # pity-E2E test rotations (wk_2026_36 / wk_2026_37, 2026-09-11) are the
+        # first — so the file grows and the plan must simply still be in it.
         f = read_csv(CATALOGS_BY_NAME["rotations"])
-        self.assertEqual(52, len(f.rows))
-        ids = [ln.row_id for ln in f.rows]
-        self.assertEqual("wk_2026_38", ids[0])
-        self.assertEqual("wk_2027_36", ids[-1])
-        for rid in ids:
+        by_id = dict(f.as_dicts())
+        missing = [rid for rid in PLANNED_ROTATION_IDS if rid not in by_id]
+        self.assertEqual([], missing, "planned weeks missing from rotations.csv")
+        for rid in PLANNED_ROTATION_IDS:
+            with self.subTest(row=rid):
+                for col in ("pinnedClubs", "pinnedBalls", "pinnedCharacter", "pinnedFeatured"):
+                    self.assertNotEqual("", by_id[rid][col], f"{rid}: the year plan pins every bucket")
+        for rid in by_id:
             self.assertRegex(rid, r"^wk_\d{4}_\d{2}$")
 
-    def test_every_seed_row_is_unmaterialized_and_LF(self):
-        cat = CATALOGS_BY_NAME["rotations"]
-        f = read_csv(cat)
+    def test_rotations_csv_is_LF_and_materializedAt_is_blank_or_an_instant(self):
+        # LF is the exporter's canonical form (the reference plan is CRLF).
+        # `materializedAt` is NOT pinned blank: a materialized week is the
+        # normal state of a rotation once the admin has generated it — but when
+        # it is set it must be the ISO instant the generator writes.
+        f = read_csv(CATALOGS_BY_NAME["rotations"])
         self.assertFalse(f.crlf, "rotations.csv must be LF — the exporter's canonical form")
         for rid, data in f.as_dicts():
             with self.subTest(row=rid):
-                self.assertEqual("", data["materializedAt"], "the seed ships un-materialized")
-                for col in ("pinnedClubs", "pinnedBalls", "pinnedCharacter", "pinnedFeatured"):
-                    self.assertNotEqual("", data[col], f"{rid}: the year plan pins every bucket")
+                at = data["materializedAt"]
+                if at:
+                    self.assertRegex(at, r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
     def test_the_seeder_splits_is_active_out_of_data(self):
         # The one non-obvious rule of the pipeline, now applied by all three
-        # scripts: `is_active` is `content_rows.is_active`, never a `data` field.
+        # scripts: `is_active` is `content_rows.is_active`, never a `data` field,
+        # and its value follows the CSV cell — the archived test rotations read
+        # `false`, the plan rows `true`.
         cat = CATALOGS_BY_NAME["rotations"]
-        header = read_csv(cat).header
-        self.assertIn(IS_ACTIVE_COLUMN, header, "rotations.csv carries is_active from day one")
+        f = read_csv(cat)
+        self.assertIn(IS_ACTIVE_COLUMN, f.header, "rotations.csv carries is_active from day one")
+        cells = {rid: data[IS_ACTIVE_COLUMN] for rid, data in f.as_dicts()}
         rows = seed_rows(cat)
-        self.assertEqual(52, len(rows))
+        self.assertEqual(len(f.rows), len(rows))
         for rid, data, active in rows:
             with self.subTest(row=rid):
                 self.assertNotIn(IS_ACTIVE_COLUMN, data, "is_active leaked into data")
-                self.assertTrue(active)
-                self.assertEqual(len(header) - 1, len(data))
+                self.assertEqual(cells[rid].strip().lower() != "false", active)
+                self.assertEqual(len(f.header) - 1, len(data))
+        for rid in PLANNED_ROTATION_IDS:
+            self.assertTrue(dict((r, a) for r, _, a in rows)[rid], f"{rid} is a planned week and must be active")
 
     def test_a_false_is_active_cell_seeds_an_inactive_row(self):
         import os as _os
