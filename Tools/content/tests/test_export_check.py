@@ -277,6 +277,24 @@ class TestWeeklyStandinIsNotMaskedArt(unittest.TestCase):
         self.assertEqual(1, len(report))
         self.assertIn("banner_hand_made", report[0])
 
+    def test_the_three_tools_spell_the_stand_in_the_same_way(self):
+        # The exemption lives in three places that cannot import each other:
+        # the generator (lib/rotation.ts, WEEKLY_BANNER_ART), this exporter
+        # (WEEKLY_BANNER_STANDIN) and the Unity editor validator
+        # (Assets/Editor/ContentArtValidator.cs, WeeklyBannerStandIn). The
+        # red-team gate of 2026-09-11 found the third one un-exempted; this pins
+        # the NAME across all three so a rename cannot drift one of them.
+        import re
+        root = os.path.dirname(os.path.dirname(TOOLS))
+        ts = open(os.path.join(root, "Tools/admin-dashboard/lib/rotation.ts"), encoding="utf-8").read()
+        cs = open(os.path.join(root, "Assets/Editor/ContentArtValidator.cs"), encoding="utf-8").read()
+        ts_name = re.search(r'WEEKLY_BANNER_ART = "([^"]+)"', ts).group(1)
+        cs_name = re.search(r'WeeklyBannerStandIn = "([^"]+)"', cs).group(1)
+        self.assertEqual(export_content.WEEKLY_BANNER_STANDIN, ts_name)
+        self.assertEqual(export_content.WEEKLY_BANNER_STANDIN, cs_name)
+        # And the C# check carries the exemption at its masked-art branch.
+        self.assertIn("!IsRotationStandIn(spec, index, fields, spriteName)", cs)
+
     def test_a_tagged_banner_on_another_shared_sprite_is_still_masked(self):
         cat, root = self._catalog_dir(
             "banner_wk_2026_40,GachaBanner_StandardClub1,https://x/catalog-art/d.jpg,wk_2026_40\n"

@@ -141,6 +141,23 @@ namespace Golfin.EditorTools
                 new Column("iconSprite", "Art/Gacha/Tickets", primary: true)),
         };
 
+        /// <summary>The bundled stand-in every rotation-generated gacha banner names — keep in
+        /// step with <c>WEEKLY_BANNER_ART</c> (lib/rotation.ts) and <c>WEEKLY_BANNER_STANDIN</c>
+        /// (Tools/content/export_content.py); three tools must agree on one string.</summary>
+        internal const string WeeklyBannerStandIn = "GachaBanner_Weekly";
+
+        /// <summary>True for a rotation-generated banner drawing the declared weekly stand-in —
+        /// the one (catalog, tag, sprite) triple the masked-art check exempts. See the comment
+        /// at the check.</summary>
+        static bool IsRotationStandIn(CatalogSpec spec, Dictionary<string, int> index,
+                                               List<string> fields, string spriteName)
+        {
+            if (spec.Name != "gacha_banners") return false;
+            if (!index.ContainsKey("rotationId")) return false;
+            if (string.IsNullOrEmpty(Field(fields, index, "rotationId"))) return false;
+            return string.Equals((spriteName ?? string.Empty).Trim(), WeeklyBannerStandIn, StringComparison.Ordinal);
+        }
+
         // ── Findings ────────────────────────────────────────────────────────
 
         public sealed class Miss
@@ -311,11 +328,24 @@ namespace Golfin.EditorTools
                     // resolve. GachaBannerArt.Resolve no longer lets it mask the URL art, but the
                     // repo state is still wrong and a re-export would still bake it — so it is a
                     // FAIL here and in export_content.py --check, not a silent recovery.
+                    //
+                    // THE ONE DELIBERATE SHARED SPRITE (weekly_rotation_admin §4.4, 2026-09-11):
+                    // every weekly gacha banner is generated with artSprite = GachaBanner_Weekly,
+                    // a bundled STAND-IN, and gets its real art per week through artUrl — 52
+                    // banners a year cannot each bundle a PNG. GachaBannerArt.Resolve only lets a
+                    // bundled sprite WIN when it is the row's own name, so the stand-in is step 4
+                    // ("draw this while the URL downloads") and can never mask the upload. A
+                    // rotation-tagged banner on exactly that sprite is therefore not "masked";
+                    // export_content.py's R3 makes the identical exemption (is_rotation_standin),
+                    // and lib/rotation.ts WEEKLY_BANNER_ART is where the name comes from. An
+                    // un-tagged banner on the stand-in, or a tagged banner on any other shared
+                    // sprite, is still the accidental case and still reports as masked.
                     if (column.UrlColumn != null && column.OwnName != null
                         && index.ContainsKey(column.UrlColumn)
                         && !string.IsNullOrEmpty(Field(fields, index, column.UrlColumn))
                         && !string.IsNullOrEmpty(spriteName)
-                        && !string.Equals(spriteName.Trim(), column.OwnName(rowId), StringComparison.Ordinal))
+                        && !string.Equals(spriteName.Trim(), column.OwnName(rowId), StringComparison.Ordinal)
+                        && !IsRotationStandIn(spec, index, fields, spriteName))
                     {
                         report.misses.Add(new Miss
                         {
