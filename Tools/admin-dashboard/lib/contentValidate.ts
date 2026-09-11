@@ -553,21 +553,32 @@ export function validateCatalog(
       // Hoisted so the build gates below can see it too — same lookup, once.
       const referenced = target && refId ? ctx.otherCatalogs.get(target)?.get(refId) : undefined;
 
-      if (!target) {
-        err(row.rowId, "category", `Unknown category "${category}". Known: ${Object.keys(SHOP_CATEGORY_TO_CATALOG).join(", ")}.`);
-      } else if (!refId) {
-        err(row.rowId, "refId", "refId is empty.");
-      } else if (!referenced) {
-        err(row.rowId, "refId", `refId "${refId}" does not exist in the ${target} catalog.`);
-      } else if (!referenced.isActive) {
-        err(row.rowId, "refId", `refId "${refId}" is deactivated in ${target} — the shop would offer an item the game hides.`);
-      } else if (category === "ball" && isTrue(referenced.data.isDefault)) {
-        // gacha_ops_polish §4e, the listing half. Same column, same reasoning as the gacha rule:
-        // every player already owns the default ball, so a shop row that sells it sells something
-        // the buyer is holding.
-        err(row.rowId, "refId",
-          `"${refId}" is the DEFAULT ball — every player already owns one, so this row would sell ` +
-            "something the buyer is already holding.");
+      // ACTIVE ROWS ONLY — the same carve-out the build gates below and the
+      // gacha pool's rule 5 make, for the same reason (weekly_rotation_admin,
+      // 2026-09-11: the shape audit after the archive trap). A deactivated
+      // listing reaches no player — `GeneralShopCatalog.Admit` drops it and
+      // `golfin_shop_purchase` answers `not_listed / inactive` — so a ref it
+      // names that was retired later cannot hurt anyone through it. Erroring
+      // here would make the catalog unpublishable with no way out, because
+      // deactivation IS the way out (I6), and an archived rotation week keeps
+      // its rows forever. Reactivating the row runs the check again.
+      if (row.isActive) {
+        if (!target) {
+          err(row.rowId, "category", `Unknown category "${category}". Known: ${Object.keys(SHOP_CATEGORY_TO_CATALOG).join(", ")}.`);
+        } else if (!refId) {
+          err(row.rowId, "refId", "refId is empty.");
+        } else if (!referenced) {
+          err(row.rowId, "refId", `refId "${refId}" does not exist in the ${target} catalog.`);
+        } else if (!referenced.isActive) {
+          err(row.rowId, "refId", `refId "${refId}" is deactivated in ${target} — the shop would offer an item the game hides.`);
+        } else if (category === "ball" && isTrue(referenced.data.isDefault)) {
+          // gacha_ops_polish §4e, the listing half. Same column, same reasoning as the gacha rule:
+          // every player already owns the default ball, so a shop row that sells it sells something
+          // the buyer is holding.
+          err(row.rowId, "refId",
+            `"${refId}" is the DEFAULT ball — every player already owns one, so this row would sell ` +
+              "something the buyer is already holding.");
+        }
       }
 
       // ---- The two build gates (shop_stocking §3) --------------------------
@@ -803,7 +814,9 @@ export function validateCatalog(
       }
 
       // R2 / R4 (weekly_rotation_admin §4.5) — a row that belongs to a rotation.
-      checkRotationTag(row, "startAt", "endAt");
+      // Active rows only, like every other cross-row rule: an archived week's
+      // rows keep their tag for ever and must never block a later publish.
+      if (row.isActive) checkRotationTag(row, "startAt", "endAt");
       if (row.isActive) {
         const rotationId = text(row.data.rotationId).trim();
         const rotationRow = rotationId ? rotationRows().get(rotationId) : undefined;
@@ -1819,7 +1832,19 @@ export function validateCatalog(
 
       // 10. poolId resolves to a pool with a COMPLETE rate table; ticketType
       //     resolves to an active ticket_types row.
-      if (!poolId) {
+      //
+      //     ACTIVE BANNERS ONLY (weekly_rotation_admin, 2026-09-11). ARCHIVE
+      //     ENDED deactivates a week's banner together with its pool and its
+      //     rate table; this rule used to run on the archived banner too and
+      //     refused every later gacha_banners publish with "Pool pool_wk_… has
+      //     no active rate table" — the one publish the archive flow needs
+      //     next. A deactivated banner is refused by the server (`is_active`)
+      //     and hidden by the client, so nothing it names can reach a player;
+      //     reactivating it runs the check again. Same carve-out as pools
+      //     rule 5 and the shop's rule 6.
+      if (!row.isActive) {
+        // nothing to resolve for a row no player can reach
+      } else if (!poolId) {
         err(row.rowId, "poolId", "poolId is empty — the server would not know what to roll.");
       } else {
         const rates = ratesOfPool(rateRows, poolId);
@@ -1845,7 +1870,9 @@ export function validateCatalog(
         }
       }
 
-      if (!ticketType) {
+      if (!row.isActive) {
+        // see rule 10 — a deactivated banner charges nobody
+      } else if (!ticketType) {
         err(row.rowId, "ticketType", "ticketType is empty — the cost is in no currency.");
       } else if (!ticketRows) {
         err(row.rowId, "ticketType",
@@ -1900,7 +1927,9 @@ export function validateCatalog(
       const pityThreshold = num(row.data.pityThreshold);
       const pityMinRarity = text(row.data.pityMinRarity).trim();
       const guarantee = text(row.data.guaranteeMinRarityX10).trim();
-      const rolled = poolId ? rolledRarities(poolId) : new Set<string>();
+      // Pool-dependent halves of 13 apply to ACTIVE banners only (see rule 10);
+      // an empty `rolled` set disables exactly those branches below.
+      const rolled = row.isActive && poolId ? rolledRarities(poolId) : new Set<string>();
 
       if (pityThreshold === null || pityThreshold === 0) {
         if (pityMinRarity) {
@@ -1971,9 +2000,10 @@ export function validateCatalog(
         if (key) sortOrders.set(key, [...(sortOrders.get(key) ?? []), row.rowId]);
       }
 
-      // 18. every featured ref is actually IN the banner's pool.
+      // 18. every featured ref is actually IN the banner's pool (active banners only —
+      //     an archived week's pool is inactive by then, and the warning would be noise).
       const featured = text(row.data.featuredRefIds).trim();
-      if (featured && poolId) {
+      if (row.isActive && featured && poolId) {
         const inPool = new Set(entriesOfPool(poolRows, poolId).map((e) => text(e.data.refId).trim()));
         for (const token of featured.split(";").map((t) => t.trim()).filter(Boolean)) {
           if (!inPool.has(token)) {
@@ -1985,7 +2015,8 @@ export function validateCatalog(
       }
 
       // R2 (weekly_rotation_admin §4.5) — a banner tagged with a rotation sits inside its week.
-      checkRotationTag(row, "startUtc", "endUtc");
+      // Active banners only: an archived week's banner keeps its tag for ever.
+      if (row.isActive) checkRotationTag(row, "startUtc", "endUtc");
 
       // R3 — pity groups. Collected here, judged below across the whole catalog.
       if (row.isActive && isTrue(row.data.active)) {
@@ -2119,7 +2150,9 @@ export function validateCatalog(
       const basePool = text(row.data.gachaBasePoolId).trim();
       if (!basePool) {
         err(row.rowId, "gachaBasePoolId", "R1: gachaBasePoolId is empty — the weekly pool is cloned from it.");
-      } else if (ctx.otherCatalogs.has("gacha_pools")) {
+      } else if (row.isActive && ctx.otherCatalogs.has("gacha_pools")) {
+        // Cross-row, so active rotations only: an archived week must not block
+        // the catalog once its base pool is retired.
         const poolRows = Array.from(ctx.otherCatalogs.get("gacha_pools")!.values());
         if (!poolRows.some((p) => p.isActive && text(p.data.poolId).trim() === basePool)) {
           err(row.rowId, "gachaBasePoolId",

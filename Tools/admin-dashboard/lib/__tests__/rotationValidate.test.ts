@@ -246,6 +246,70 @@ describe("shop publish loads every catalog a category resolves in", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The archive trap — an archived week must never block a later publish
+// ---------------------------------------------------------------------------
+
+describe("archived rows never block a publish", () => {
+  const rates = ["Common", "Uncommon", "Rare", "Mythic", "Legendary", "Supreme"].map((rarity, i) =>
+    draft(`pool_standard_club1_${rarity.toLowerCase()}`, { id: `pool_standard_club1_${rarity.toLowerCase()}`, poolId: "pool_standard_club1", rarity, rateBp: String([5500, 2500, 1200, 550, 200, 50][i]) })
+  );
+  const pools = ["Common", "Uncommon", "Rare", "Mythic", "Legendary", "Supreme"].map((rarity) =>
+    poolEntry(`psc1_${rarity.toLowerCase()}`, `club_${rarity.toLowerCase()}`, rarity)
+  );
+  // The archived week: its pool and rates deactivated by ARCHIVE ENDED.
+  const archivedRates = rates.map((r) => ({ ...r, rowId: r.rowId.replace("pool_standard_club1", "pool_wk_2026_36"), data: { ...r.data, id: r.rowId.replace("pool_standard_club1", "pool_wk_2026_36"), poolId: "pool_wk_2026_36" }, isActive: false }));
+  const archivedPool = pools.map((p) => ({ ...p, rowId: p.rowId.replace("psc1_", "pwk_2026_36_"), data: { ...p.data, id: p.rowId.replace("psc1_", "pwk_2026_36_"), poolId: "pool_wk_2026_36" }, isActive: false }));
+  const tickets = [draft("0", { id: "0", key: "standard", nameEn: "Ticket", nameJa: "チケット" })];
+  const wk36 = rotation("wk_2026_36", "2026-09-11T03:16:35Z", "2026-09-11T03:36:35Z", {}) ;
+  const other = { gacha_rates: [...rates, ...archivedRates], gacha_pools: [...pools, ...archivedPool], ticket_types: tickets, rotations: [{ ...wk36, isActive: false }, WK38] };
+  const banner = (id: string, over: Record<string, unknown> = {}, isActive = true): DraftRow =>
+    draft(id, {
+      bannerId: id, nameKey: id, artSprite: "GachaBanner_Weekly", costX1: "0", costX10: "0",
+      endUtc: "2026-09-11T03:36:35Z", rulesUrl: "", sortOrder: "0", active: "true", startUtc: "2026-09-11T03:16:35Z",
+      poolId: "pool_wk_2026_36", ticketType: "0", pityThreshold: "50", pityMinRarity: "Legendary",
+      guaranteeMinRarityX10: "Rare", maxPullsPerPlayer: "", artUrl: "", nameEn: id, nameJa: id,
+      taglineEn: "", taglineJa: "", featuredRefIds: "club_common", rotationId: "wk_2026_36", pityGroup: "weekly", ...over,
+    }, { isActive });
+
+  it("an ARCHIVED banner whose pool and rates are inactive is not an error (the live trap of 2026-09-11)", () => {
+    const live = banner("banner_standard_club1", { poolId: "pool_standard_club1", rotationId: "", pityGroup: "", featuredRefIds: "", endUtc: "2027-01-01T00:00:00Z", startUtc: "2026-01-01T00:00:00Z", sortOrder: "1" });
+    const p = validateCatalog("gacha_banners", [banner("banner_wk_2026_36", {}, false), live], ctx(other));
+    expect(p).toEqual([]);
+    // The same banner ACTIVE is refused — rule 10 still bites where it should.
+    const q = validateCatalog("gacha_banners", [banner("banner_wk_2026_36", {}, true), live], ctx(other));
+    expect(hasErrors(q)).toBe(true);
+    expect(errorsOf(q).some((x) => x.rowId === "banner_wk_2026_36" && x.message.includes("no active rate table"))).toBe(true);
+  });
+
+  it("an archived banner still has to be a SANE row (costs, window, pity shape)", () => {
+    const p = validateCatalog("gacha_banners", [banner("banner_wk_2026_36", { costX1: "-5", endUtc: "2026-09-11T03:00:00Z", pityThreshold: "50", pityMinRarity: "" }, false)], ctx(other));
+    const cols = errorsOf(p).map((x) => x.column);
+    expect(cols).toContain("costX1");
+    expect(cols).toContain("endUtc");
+    expect(cols).toContain("pityMinRarity");
+    expect(cols).not.toContain("poolId");
+  });
+
+  it("an INACTIVE shop row whose ref was retired later does not block the shop", () => {
+    const retired = draft("club_gone", { id: "club_gone", name: "Gone", type: "Driver", rarity: "Common", brand: "GF" }, { isActive: false });
+    const row = (isActive: boolean): DraftRow => draft("shop_wk_2026_36_club_gone", {
+      entryId: "shop_wk_2026_36_club_gone", category: "club", refId: "club_gone", rpCost: "100", saleRpCost: "", sortOrder: "500",
+      popular: "false", offer: "false", rarity: "Common", startAt: "2026-09-11T03:16:35Z", endAt: "2026-09-11T03:36:35Z",
+      saleStartAt: "", saleEndAt: "", quantity: "", rotationId: "wk_2026_36",
+    }, { minBuild: 2350, isActive });
+    expect(validateCatalog("shop_catalog", [row(false)], ctx({ clubs: [retired], rotations: [wk36] }))).toEqual([]);
+    const active = validateCatalog("shop_catalog", [row(true)], ctx({ clubs: [retired], rotations: [wk36] }));
+    expect(errorsOf(active).some((x) => x.message.includes("deactivated in clubs"))).toBe(true);
+  });
+
+  it("an INACTIVE rotation whose base pool was retired does not block the rotations catalog", () => {
+    const gone = rotation("wk_2026_36", "2026-09-11T03:16:35Z", "2026-09-11T03:36:35Z", { gachaBasePoolId: "pool_retired" });
+    expect(validateCatalog("rotations", [{ ...gone, isActive: false }, WK38], ctx({ gacha_pools: pools }))).toEqual([]);
+    expect(hasErrors(validateCatalog("rotations", [gone, WK38], ctx({ gacha_pools: pools })))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // R2 / R3 — gacha_banners
 // ---------------------------------------------------------------------------
 
