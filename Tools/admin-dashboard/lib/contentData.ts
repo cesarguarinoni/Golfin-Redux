@@ -2,7 +2,7 @@ import "server-only";
 import { mockDb } from "./mockStore";
 import { isMockMode } from "./mode";
 import { getSupabaseAdmin } from "./supabaseAdmin";
-import { ID_COLUMN } from "./contentValidate";
+import { ID_COLUMN, SHOP_REFERENCED_CATALOGS } from "./contentValidate";
 import type {
   ContentCatalogSummary,
   ContentCatalogsResponse,
@@ -532,8 +532,10 @@ export async function fetchVersionSnapshot(
   });
 }
 
-/** The catalogs a `shop_catalog` publish has to resolve refIds against. */
-export const REFERENCED_CATALOGS = ["clubs", "balls", "items", "bags", "characters"];
+/** The catalogs a `shop_catalog` publish has to resolve refIds against —
+ *  derived from SHOP_CATEGORY_TO_CATALOG in the pure module (see
+ *  SHOP_REFERENCED_CATALOGS there for the ticket_types drift it closes). */
+export const REFERENCED_CATALOGS: readonly string[] = SHOP_REFERENCED_CATALOGS;
 
 /**
  * The catalogs a `gacha_pools` publish resolves `refId` against (§5.5 rule 5).

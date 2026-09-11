@@ -220,6 +220,23 @@ export const SHOP_CATEGORY_TO_CATALOG: Record<string, string> = {
   ticket: "ticket_types",
 };
 
+/**
+ * The catalogs a `shop_catalog` publish has to load to resolve every `refId` —
+ * one per SHOP_CATEGORY_TO_CATALOG value, DERIVED from the map so the two
+ * cannot drift. `lib/contentData.ts` re-exports it as REFERENCED_CATALOGS.
+ *
+ * ⚠️ They did drift: `ticket` joined the map on 2026-08-31 (gacha_server_pull)
+ * while the hand-written list in contentData stayed at five, so from the
+ * moment `shop_ticket_standard_50` existed every Shop-drawer publish failed
+ * with `refId "0" does not exist in the ticket_types catalog` — the catalog was
+ * never loaded. v5/v6 that day went through the RPC and never met the
+ * validator; the first drawer publish that did was weekly_rotation_admin's
+ * chain, which stopped at shop_catalog on it (2026-09-11).
+ */
+export const SHOP_REFERENCED_CATALOGS: readonly string[] = Array.from(
+  new Set(Object.values(SHOP_CATEGORY_TO_CATALOG))
+);
+
 export const ID_COLUMN: Record<string, string> = {
   clubs: "id",
   characters: "id",

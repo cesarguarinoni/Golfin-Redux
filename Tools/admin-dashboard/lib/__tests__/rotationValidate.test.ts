@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   hasErrors,
+  SHOP_CATEGORY_TO_CATALOG,
+  SHOP_REFERENCED_CATALOGS,
   validateCatalog,
   type ContentProblem,
   type DraftRow,
@@ -216,6 +218,30 @@ describe("R2 + R4 shop_catalog", () => {
     ], ctx({ balls, rotations: [] }));
     expect(warningsOf(dear)).toHaveLength(1);
     expect(warningsOf(dear)[0]!.message).toContain("Common ball band 15–60");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The catalogs a shop publish loads — found by the live chain (2026-09-11)
+// ---------------------------------------------------------------------------
+
+describe("shop publish loads every catalog a category resolves in", () => {
+  it("SHOP_REFERENCED_CATALOGS covers SHOP_CATEGORY_TO_CATALOG — ticket_types included", () => {
+    // `ticket` joined the category map on 2026-08-31 while this list stayed at
+    // five, so a Shop-drawer publish with the ticket row present failed with
+    // `refId "0" does not exist in the ticket_types catalog`. The rotation
+    // chain was the first drawer publish to hit it.
+    for (const target of Object.values(SHOP_CATEGORY_TO_CATALOG)) {
+      expect(SHOP_REFERENCED_CATALOGS).toContain(target);
+    }
+    expect(SHOP_REFERENCED_CATALOGS).toContain("ticket_types");
+  });
+
+  it("with ticket_types loaded, the shipped ticket row resolves", () => {
+    const p = validateCatalog("shop_catalog", [
+      draft("shop_ticket_standard_50", { entryId: "shop_ticket_standard_50", category: "ticket", refId: "0", rpCost: "100", sortOrder: "80", quantity: "50" }, { minBuild: 2536, isActive: false }),
+    ], ctx({ ticket_types: [draft("0", { id: "0", key: "standard", nameEn: "Ticket", nameJa: "チケット" })], rotations: [] }));
+    expect(hasErrors(p)).toBe(false);
   });
 });
 
