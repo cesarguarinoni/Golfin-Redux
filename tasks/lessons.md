@@ -4376,3 +4376,33 @@ shared `Library/` with the open Editor.
    on a live Editor process even with no lock.
 3. The MCP ping is the tell between "hung in shutdown" and "never got the quit": a main loop
    that still answers never received it.
+
+## Lesson BZ — a build-lane step that runs BEFORE `SetActiveBuildProfile` cannot ask "which variant is this?" of the active profile (2026-09-11, standalone `content_art.txt`)
+
+`punch it standalone` (build 2873) regenerated `Docs/Reports/content_art.txt` as *"2449 missing
+sprite reference(s) across 6 catalogs"* and it had to be `git checkout`-ed before committing. Two
+facts collided, each correct on its own: `BuildIOSStandalone` moves the golf `Resources/` folders
+out of the tree BEFORE `BuildIOSCore` (R2 — the preprocess hook is too late to change what ships),
+and `ContentArtValidator` resolves art exactly as the runtime does (§ "same resolution", the whole
+reason it is trustworthy). Run one inside the other's window and the validator faithfully reports
+the stash. Nothing in that path knew which variant it was in; only the tree-bake gate had a skip.
+
+**The trap in the obvious fix.** `StandaloneBuildPreprocessor.IsStandaloneIdentityBuild()` exists
+for exactly this question — but it answers from the ACTIVE profile, and `m_ActiveBuildProfile`
+is a persisted `Library/EditorUserBuildSettings.asset` reference that outlives batchmode. Every
+existing caller (`BuildStampGenerator`, `iOSArchivePostAction`, `GolferTestBuildGate`) runs
+inside `BuildPlayer`, after the lane activated its profile. The report call site runs BEFORE
+that, where the active profile is whatever the previous run left — 2873 (standalone) → 2874 (GPS)
+is the exact sequence, and the bare call would have skipped the GAME's report in 2874. Decoded
+the on-disk reference to prove it (it pointed at iOS-Full-GPS, left by 2874).
+
+**The rule.**
+1. A step that runs before `BuildProfile.SetActiveBuildProfile` judges the variant from the
+   profile it is about to build: `IsStandaloneIdentityBuild(BuildProfile)` now exists for that;
+   the parameterless form is for in-build hooks only (its doc says so).
+2. A REPORT that runs inside a stashed/mutated window describes the mutation, not the product.
+   Either move it outside the window or skip it for that lane with one log line saying why —
+   never let it overwrite the shared file (`content_art.txt` always describes the GAME build).
+3. When adding a variant-aware skip, pin the mechanism, not the instance: the test asserts the
+   two profiles DISAGREE (`iOS-Standalone` true, `iOS-Full` false), which no active-profile read
+   can satisfy — `StandaloneIdentityProfileTests`.
