@@ -35,6 +35,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
+import { stepExpression } from "./steps.mjs";
 
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const PORT = 9333;
@@ -145,61 +146,7 @@ try {
     await sleep(6000);
 
     for (const step of clicks) {
-      const expression = step.startsWith("row:")
-        ? `(() => {
-            const needle = ${JSON.stringify(step.slice(4))};
-            const li = [...document.querySelectorAll('li')]
-              .find((n) => (n.textContent || '').includes(needle));
-            if (!li) return 'NOT FOUND: a row containing ' + needle;
-            const btn = [...li.querySelectorAll('button')]
-              .find((b) => /^(Timeline|Hide|履歴|閉じる)/.test((b.textContent || '').trim()));
-            if (!btn) return 'NOT FOUND: an expander in the row for ' + needle;
-            btn.click();
-            return 'expanded row: ' + needle;
-          })()`
-        : step.startsWith("select:")
-        ? `(() => {
-            // select:<value> — pick an <option> by value in the first <select>
-            // that has it, through React's own setter so onChange fires.
-            const value = ${JSON.stringify(step.slice(7))};
-            const sel = [...document.querySelectorAll('select')]
-              .find((s) => [...s.options].some((o) => o.value === value));
-            if (!sel) return 'NOT FOUND: a select with option ' + value;
-            const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set;
-            setter.call(sel, value);
-            sel.dispatchEvent(new Event('change', { bubbles: true }));
-            return 'selected: ' + value;
-          })()`
-        : step.startsWith("fill:")
-        ? `(() => {
-            const text = ${JSON.stringify(step.slice(5))};
-            // A textarea when the page has one, else the text input inside an
-            // open dialog — the Rotations workbench's typed confirmations
-            // ("type PUBLISH", "type wk_2026_38") are inputs, not textareas.
-            const ta = document.querySelector('textarea')
-              ?? document.querySelector('[role="dialog"] input[type="text"]');
-            if (!ta) return 'NOT FOUND: a textarea or a dialog text input';
-            // React tracks the last value it set on the node; assigning .value
-            // directly leaves that tracker in step and the change is swallowed.
-            const setter = Object.getOwnPropertyDescriptor(
-              ta.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
-              'value').set;
-            setter.call(ta, text);
-            ta.dispatchEvent(new Event('input', { bubbles: true }));
-            return 'filled: ' + text.slice(0, 40);
-          })()`
-        : `(() => {
-            const raw = ${JSON.stringify(step)};
-            const at = /@(\\d+)$/.exec(raw);
-            const wanted = at ? raw.slice(0, at.index) : raw;
-            const nth = at ? Number(at[1]) : 0;
-            const all = [...document.querySelectorAll('button')]
-              .filter((b) => (b.textContent || '').trim().startsWith(wanted));
-            const el = all[nth];
-            if (!el) return 'NOT FOUND: ' + wanted + ' #' + nth + ' (' + all.length + ' matched)';
-            el.click();
-            return 'clicked: ' + (el.textContent || '').trim().slice(0, 40);
-          })()`;
+      const expression = stepExpression(step);
       const { result } = await send("Runtime.evaluate", { expression, returnByValue: true });
       console.log(`  ${result.value}`);
       if (String(result.value).startsWith("NOT FOUND")) {
