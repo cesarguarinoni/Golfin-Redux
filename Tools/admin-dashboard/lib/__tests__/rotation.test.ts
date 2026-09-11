@@ -436,6 +436,19 @@ describe("exclusion", () => {
     expect(lineupRows(l).length).toBeGreaterThan(0);
   });
 
+  it("a ref that is also a permanent listing WARNS (twice on sale, two prices)", () => {
+    const permanent = row("shop_char_mike", { entryId: "shop_char_mike", category: "character", refId: "char_mike", rpCost: "150", rotationId: "" });
+    const l = generateLineup(ctx({ pinnedCharacter: "char_mike" }, { shop: [permanent] }));
+    expect(l.errors).toEqual([]);
+    expect(l.characters.map((c) => c.refId)).toEqual(["char_mike"]);
+    const w = l.warnings.find((x) => x.bucket === "characters");
+    expect(w?.message).toContain("shop_char_mike");
+    expect(w?.message).toContain("150 RP");
+    // A deactivated permanent row is not a twin.
+    const off = generateLineup(ctx({ pinnedCharacter: "char_mike" }, { shop: [{ ...permanent, isActive: false }] }));
+    expect(off.warnings).toEqual([]);
+  });
+
   it("a bad quota or window blocks before anything is drawn", () => {
     expect(generateLineup(ctx({ clubQuota: "Common:x" })).errors[0]).toContain("clubQuota");
     expect(generateLineup(ctx({ characterQuota: "Villain:1" })).errors[0]).toContain("Villain");

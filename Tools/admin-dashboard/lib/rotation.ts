@@ -592,6 +592,26 @@ export function generateLineup(ctx: LineupContext): Lineup {
   fillSimple("balls", quotas.balls.quota!, balls, eligibleBalls, BALL_RP_LADDER);
   fillSimple("characters", quotas.characters.quota!, characters, eligibleChars, CHARACTER_RP_LADDER);
 
+  // A ref that ALSO has an active permanent listing (an untagged shop row)
+  // would be on sale twice that week, at two prices. The plan pinned
+  // char_mike for wk_2026_38 while shop_stocking's placeholder
+  // `shop_char_mike` (150 RP) was still live — warn, do not decide.
+  const permanent = new Map<string, CatalogRow>();
+  for (const row of ctx.shop) {
+    if (row.isActive && !text(row.data.rotationId).trim()) permanent.set(text(row.data.refId).trim(), row);
+  }
+  for (const [bucket, picks] of [["clubs", clubs], ["balls", balls], ["characters", characters]] as const) {
+    for (const p of picks) {
+      const twin = permanent.get(p.refId);
+      if (twin) {
+        warnings.push({
+          bucket,
+          message: `"${p.refId}" is also a permanent listing (${twin.rowId}, ${text(twin.data.rpCost).trim() || "?"} RP) — the week would list it twice, at two prices.`,
+        });
+      }
+    }
+  }
+
   // ---- featured: pins, then the week's clubs highest rarity first ----------
   const featured = pinnedFeatured.slice(0, Math.max(featuredCount, pinnedFeatured.length));
   for (const c of sortRarityDesc(clubs)) {
