@@ -1,5 +1,7 @@
 # home_carousel_and_daily_timing — Quick task (2026-09-11)
 
+**DONE — Cesar approved 2026-09-11** (commits `02e22a34e`, `c3156cafa`; clip in `../media/home_carousel_and_daily_timing/`).
+
 Reported by Cesar in chat, with a device screenshot:
 
 1. *Mode selection in Main Screen is overlapping the middle button of the bottom nav bar (seems to

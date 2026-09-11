@@ -4,7 +4,7 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## 2026-09-11 — home_carousel_and_daily_timing: **Home mode cards on the Tee button (Pro Max) + the daily card shoving the mission list** — FIXED, awaiting Cesar's eyeball
+## 2026-09-11 — home_carousel_and_daily_timing: **Home mode cards on the Tee button (Pro Max) + the daily card shoving the mission list** — DONE (Cesar approved 2026-09-11)
 
 Two chat reports with a device screenshot. (1) The Home mode cards overlapped the Tee button —
 **only on a Dynamic-Island phone**: `BannerSlotBinder` measured the carousel's drop ONCE, at
