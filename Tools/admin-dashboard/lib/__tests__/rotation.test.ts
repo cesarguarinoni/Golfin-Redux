@@ -20,6 +20,7 @@ import {
   rotationState,
   WEEKLY_PITY_GROUP,
   type CatalogRow,
+  type Lineup,
   type LineupContext,
   type OutRow,
   type RotationCatalog,
@@ -372,6 +373,30 @@ describe("the unpinned draw", () => {
       sortOrder: "0", active: "true", rotationId: "wk_2026_38",
       featuredRefIds: l.featured.join(";"),
     });
+  });
+
+  it("a re-draw carries the existing draft banner's artUrl forward; a fresh week writes it blank", () => {
+    // The art is uploaded on the banner row AFTER materializing, so blanking it
+    // on every re-generation would silently un-art the week (wk_2026_39,
+    // 2026-09-11). Everything else on the row is still re-derived.
+    const ART = "https://example.test/catalog-art/gacha_banners-banner_wk_2026_38-artUrl-abc.jpg";
+    const ownDraft = row("banner_wk_2026_38", {
+      ...gachaBanners[0]!.data,
+      bannerId: "banner_wk_2026_38", poolId: "pool_wk_2026_38", rotationId: "wk_2026_38",
+      artUrl: ART, costX1: "999", costX10: "9999", nameEn: "HAND-EDITED NAME", sortOrder: "0",
+    });
+    const redraw = generateLineup(ctx({}, { gachaBanners: [...gachaBanners, ownDraft] }));
+    const b = redraw.rows.gacha_banners[0]!;
+    expect(b.data.artUrl).toBe(ART);
+    // …but the own draft is never the BASE banner: cost and name come from the
+    // base pool's banner and the rotation row, exactly as on a fresh week.
+    expect(b.data).toMatchObject({ costX1: "50", costX10: "450", nameEn: "DRIVER WEEK · BOGEYB" });
+    const fresh = generateLineup(ctx());
+    expect(fresh.rows.gacha_banners[0]!.data.artUrl).toBe("");
+    // The art is part of what will be written, so the two lineups differ only there.
+    expect(redraw.hash).not.toBe(fresh.hash);
+    const strip = (l: Lineup) => JSON.stringify({ ...l.rows, gacha_banners: l.rows.gacha_banners.map((r) => ({ ...r, data: { ...r.data, artUrl: "" } })) });
+    expect(strip(redraw)).toBe(strip(fresh));
   });
 
   it("stamps the rotation row materializedAt and keeps every column", () => {

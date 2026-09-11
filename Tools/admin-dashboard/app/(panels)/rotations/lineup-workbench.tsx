@@ -627,6 +627,11 @@ function LineupPreview({ lineup, mul }: { lineup: Lineup; mul: string }) {
                 x1 {banner.data.costX1} · x10 {banner.data.costX10} · pity {banner.data.pityThreshold || "—"}→{banner.data.pityMinRarity || "—"} · group <code>{banner.data.pityGroup}</code>
               </div>
               <div className="text-zinc-500">{banner.data.startUtc} → {banner.data.endUtc}</div>
+              {banner.data.artUrl ? (
+                <div className="text-zinc-500">{t("ro.lineup.art.kept", { file: String(banner.data.artUrl).split("/").pop() ?? "" })}</div>
+              ) : (
+                <div className="text-amber-300">{t("ro.lineup.art.none")}</div>
+              )}
             </div>
           )}
           <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-zinc-500">{t("ro.lineup.odds", { mul })}</p>

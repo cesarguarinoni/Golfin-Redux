@@ -761,6 +761,13 @@ export function generateLineup(ctx: LineupContext): Lineup {
     warnings.push({ bucket: "banner", message: `No active banner rolls "${basePoolId}" — cost, ticket and pity were left at the standard defaults (50 / 450 / ticket 0 / no pity).` });
   }
   const bd = baseBanner?.data ?? {};
+  // The art is the one thing on this row the generator does not own — an
+  // operator uploads it on the banner row AFTER materializing (installed
+  // builds withhold a weekly banner that has no artUrl). So a re-draw carries
+  // the existing draft's artUrl forward instead of blanking it; everything
+  // else is re-derived from the rotation row and the base banner as before.
+  const ownBanner = ctx.gachaBanners.find((b) => b.rowId === bannerId);
+  const artUrl = text(ownBanner?.data.artUrl).trim();
   const nameEn = text(data.nameEn).trim() || ROTATION_DEFAULTS.nameEn;
   const nameJa = text(data.nameJa).trim() || ROTATION_DEFAULTS.nameJa;
   rows.gacha_banners.push({
@@ -782,7 +789,7 @@ export function generateLineup(ctx: LineupContext): Lineup {
       pityMinRarity: text(bd.pityMinRarity).trim(),
       guaranteeMinRarityX10: text(bd.guaranteeMinRarityX10).trim(),
       maxPullsPerPlayer: "",
-      artUrl: "",
+      artUrl,
       nameEn,
       nameJa,
       taglineEn: "Featured this week",

@@ -2246,6 +2246,11 @@ export const DICT = {
   "ro.lineup.odds": { en: "Effective odds (featured rows boosted ×{mul})", ja: "実効確率（ピックアップ行は ×{mul}）" },
   "ro.lineup.rows": { en: "Rows this will write", ja: "書き込まれる行" },
   "ro.lineup.hash": { en: "Lineup hash", ja: "ラインナップハッシュ" },
+  "ro.lineup.art.kept": { en: "Art kept from the existing draft: {file}", ja: "アートは既存ドラフトから引き継ぎ: {file}" },
+  "ro.lineup.art.none": {
+    en: "No art yet — after MATERIALIZE, upload it on the banner row; builds without the bundled stand-in hide a banner that has none.",
+    ja: "アート未設定 — 生成後にバナー行でアップロードしてください。同梱スタンドインのないビルドでは、アートのないバナーは表示されません。",
+  },
   "ro.pinned": { en: "PINNED", ja: "ピン留め" },
   "ro.featured": { en: "FEATURED", ja: "ピックアップ" },
   "ro.warnings": { en: "Warnings", ja: "警告" },
