@@ -25,7 +25,10 @@ What it emits, per SPEC §A2:
     `content_drafts` — drafts are the working set an admin edits, and a publish
     upserts drafts into rows, so seeding rows alone would make the very first
     publish look like it deleted nothing and changed everything.
-  * every row stamped `version = 1`, `min_build = 0`, `is_active = true`.
+  * every row stamped `version = 1`, `min_build = 0`, `is_active = true` — unless
+    the CSV header carries an `is_active` column, in which case that column is
+    the flag (split out of `data`, exactly as the importer and exporter treat
+    it; see `seed_rows`).
   * `update content_catalogs set published_version = 1`.
   * ONE ADDITION beyond the spec text: a `content_versions` row per catalog
     holding the v1 snapshot. Without it v1 is the one version nobody can roll
@@ -64,7 +67,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from catalogs import CATALOGS, CATALOGS_BY_NAME, REPO_ROOT, read_csv  # noqa: E402
+from catalogs import CATALOGS, CATALOGS_BY_NAME, IS_ACTIVE_COLUMN, REPO_ROOT, read_csv  # noqa: E402
 
 DEFAULT_OUT = os.path.join(
     os.path.dirname(REPO_ROOT), "playlife", "backend", "migrations", "2026_08_24_content_seed.sql"
@@ -72,6 +75,31 @@ DEFAULT_OUT = os.path.join(
 
 SEED_VERSION = 1
 BATCH = 100  # rows per INSERT statement — keeps single statements pasteable
+
+
+def seed_rows(cat, repo_root: str = REPO_ROOT):
+    """`[(row_id, data, is_active)]` sorted by row_id — what one catalog seeds.
+
+    `is_active` is split OUT of `data` when the CSV header carries it, the way
+    `import_content.py` splits it and `export_content.py` writes it: the column
+    is `content_rows.is_active`, never a field of `data`. Until
+    weekly_rotation_admin no CSV carried the column at SEED time (the exporter
+    appends it only once a published row is deactivated), so the seeder never
+    had to know. `rotations.csv` ships with it on day one, and a seeder that put
+    `"is_active": "true"` INTO `data` would (a) mint a phantom field the row
+    editor then shows as a column and (b) seed a `false` row as active — a lossy
+    mapping in exactly the direction the §3 round trip exists to catch.
+    Absent column ⇒ every row is active, as before.
+    """
+    f = read_csv(cat, repo_root)
+    out = []
+    for row_id, data in sorted(f.as_dicts(), key=lambda kv: kv[0]):
+        active = True
+        if IS_ACTIVE_COLUMN in data:
+            raw = data.pop(IS_ACTIVE_COLUMN).strip().lower()
+            active = raw != "false"
+        out.append((row_id, data, active))
+    return out
 
 
 def sql_str(value: str) -> str:
@@ -126,8 +154,7 @@ def generate(out, repo_root: str = REPO_ROOT, catalogs=None, filename=None) -> d
     emit(out)
 
     for cat in cats:
-        f = read_csv(cat, repo_root)
-        rows = sorted(f.as_dicts(), key=lambda kv: kv[0])
+        rows = seed_rows(cat, repo_root)
         counts[cat.name] = len(rows)
 
         emit(out, "-- " + "-" * 72)
@@ -146,12 +173,12 @@ def generate(out, repo_root: str = REPO_ROOT, catalogs=None, filename=None) -> d
                     f"insert into {table} (catalog, row_id, data, min_build, is_active, {extra_cols}updated_at)",
                 )
                 emit(out, "values")
-                for i, (row_id, data) in enumerate(chunk):
+                for i, (row_id, data, active) in enumerate(chunk):
                     tail = "," if i < len(chunk) - 1 else ""
                     emit(
                         out,
                         f"  ({sql_str(cat.name)}, {sql_str(row_id)}, {sql_json(data)}::jsonb, "
-                        f"0, true, {extra_vals}now()){tail}",
+                        f"0, {'true' if active else 'false'}, {extra_vals}now()){tail}",
                     )
                 emit(out, "on conflict (catalog, row_id) do nothing;")
                 emit(out)
@@ -215,8 +242,7 @@ def apply_over_rest(repo_root: str = REPO_ROOT, env_file=None, batch: int = 200,
     client = PostgrestClient.from_env(env_file)
     client.insert_ignore_duplicates("content_catalogs", [{"name": c.name} for c in cats])
     for cat in cats:
-        f = read_csv(cat, repo_root)
-        rows = sorted(f.as_dicts(), key=lambda kv: kv[0])
+        rows = seed_rows(cat, repo_root)
 
         payload_rows = [
             {
@@ -224,10 +250,10 @@ def apply_over_rest(repo_root: str = REPO_ROOT, env_file=None, batch: int = 200,
                 "row_id": rid,
                 "data": data,
                 "min_build": 0,
-                "is_active": True,
+                "is_active": active,
                 "version": SEED_VERSION,
             }
-            for rid, data in rows
+            for rid, data, active in rows
         ]
         payload_drafts = [{k: v for k, v in r.items() if k != "version"} for r in payload_rows]
 

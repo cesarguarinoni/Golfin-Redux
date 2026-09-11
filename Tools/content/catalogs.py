@@ -32,6 +32,7 @@ CSV FACTS this module encodes, all verified against the live repo 2026-08-25
   gacha_rates     6 rows  Assets/Resources/Data/gacha_rates.csv
   gacha_pools    11 rows  Assets/Resources/Data/gacha_pools.csv
   ticket_types    2 rows  Assets/Resources/Data/ticket_types.csv
+  rotations      52 rows  Assets/Resources/Data/rotations.csv
 
 Two of those facts contradict the SPEC's reference counts and both are handled
 rather than papered over:
@@ -149,6 +150,31 @@ class Catalog:
 # saves (`TicketType.Standard = 0`), which is why the catalog may be appended to
 # but never renumbered.
 
+# `rotations` is the TWENTY-FIRST — weekly_rotation_admin §3.1, added 2026-09-11.
+#
+# A rotation is one WEEK of the store + the weekly gacha banner, authored as a
+# single row: a window, per-rarity quotas, a seed, and the pinned refs the
+# year plan chose (§3.1a). Nothing reads it at runtime — not the client, not the
+# server. The admin's Lineup workbench turns a row into DRAFT rows of the
+# existing `shop_catalog` / `gacha_rates` / `gacha_pools` / `gacha_banners`
+# catalogs, and THOSE are what the spend paths read on their clock. So an edit
+# here changes nothing a player sees until the rotation is materialized and
+# the five catalogs are published; that is the whole reason it can be content
+# rather than a live table.
+#
+# Its id column is `rotationId` (`wk_<ISO-year>_<ISO-week>`), the fourth
+# non-`id` id in the table after `level`, `tier` and `bannerId` — the week is
+# the thing every generated row references back to, so a synthetic id would be
+# a second name for it. The 52 seeded rows are the plan in
+# Docs/Specs/Active/weekly_rotation_admin/reference/rotations_seed.csv, LF
+# line endings (the reference file is CRLF; the exporter's canonical form is LF,
+# and the round trip is byte-identical only against the canonical form).
+#
+# ⚠️ `is_active` is a COLUMN OF THE CSV HEADER on day one — the first catalog
+# for which that is true at seed time. The exporter and importer both treat
+# that column as `content_rows.is_active`, never as a field of `data`, and since
+# this catalog `seed_from_csv.py` does the same (see IS_ACTIVE_COLUMN there).
+
 CATALOGS: Tuple[Catalog, ...] = (
     Catalog("clubs", "Assets/Resources/Data/Clubs.csv", "id"),
     Catalog("characters", "Assets/Data/Characters.csv", "id"),
@@ -170,11 +196,18 @@ CATALOGS: Tuple[Catalog, ...] = (
     Catalog("gacha_rates", "Assets/Resources/Data/gacha_rates.csv", "id"),
     Catalog("gacha_pools", "Assets/Resources/Data/gacha_pools.csv", "id"),
     Catalog("ticket_types", "Assets/Resources/Data/ticket_types.csv", "id"),
+    Catalog("rotations", "Assets/Resources/Data/rotations.csv", "rotationId"),
 )
 
 CATALOGS_BY_NAME: Dict[str, Catalog] = {c.name: c for c in CATALOGS}
 
 COMMENT_PREFIX = "#"
+
+#: The one header column that is NOT a field of `data`: it is the
+#: `content_rows.is_active` flag, which the exporter appends to a CSV when some
+#: row is inactive and the importer splits back out. Named here so the seeder
+#: can apply the same rule to a catalog whose CSV carries it from day one.
+IS_ACTIVE_COLUMN = "is_active"
 
 
 # ---------------------------------------------------------------------------

@@ -25,13 +25,13 @@ until somebody publishes it.
 | `catalogs.py` | The catalog ↔ CSV table, and the CSV reader that keeps line layout. Run it directly to print the current row counts. |
 | `rest.py` | Stdlib PostgREST client. Service key from the environment. |
 | `seed_from_csv.py` | Repo CSVs → `2026_08_24_content_seed.sql` (and `--apply` runs it). |
-| `export_content.py` | Published Supabase rows → the twenty repo CSVs + `content_version.txt`. |
+| `export_content.py` | Published Supabase rows → the twenty-one repo CSVs + `content_version.txt`. |
 | `import_content.py` | Repo CSVs → `content_drafts`, as a proposal. The fix for the one drift direction the exporter cannot repair. |
 | `tests/` | `python3 -m unittest discover Tools/content/tests` — stdlib only, no network. A fake PostgREST client (`tests/fakes.py`) stands in for Supabase, shared by the import and export suites. |
 
 ## The catalogs
 
-Twenty, and `catalogs.py` is the one place they are listed. The right-hand column
+Twenty-one, and `catalogs.py` is the one place they are listed. The right-hand column
 names everything that reads a catalog BESIDES the game client; an edit to one of
 those is a price or a payout change, not a display change:
 
@@ -57,6 +57,7 @@ those is a price or a payout change, not a display change:
 | `gacha_rates` | `Assets/Resources/Data/gacha_rates.csv` | `golfin_gacha_pull()` rolls the rarity from the published rows (spec B) |
 | `gacha_pools` | `Assets/Resources/Data/gacha_pools.csv` | `golfin_gacha_pull()` picks the prize from the published rows (spec B) |
 | `ticket_types` | `Assets/Resources/Data/ticket_types.csv` | the ticket ledger (spec B); `id` is the `ticketTypeInt` in player saves |
+| `rotations` | `Assets/Resources/Data/rotations.csv` | nothing at runtime — the admin's Lineup workbench (`weekly_rotation_admin`) turns a row into `shop_catalog` + gacha draft rows tagged `rotationId`; the 52 seeded rows are the year plan |
 
 The four gacha catalogs are read by the server **without a mirror**, and this is
 now LIVE rather than planned: `golfin_gacha_pull()`
@@ -75,6 +76,14 @@ at call time.
 `ticket_types.id` is the integer persisted in saves: append only, never renumber.
 It is also the primary key of `golfin_tickets`, so renumbering would silently
 re-attribute every balance.
+
+`rotations` (2026-09-11) is the first catalog whose CSV carries an `is_active`
+column at SEED time, which is why `seed_from_csv.py` now splits that column out
+of `data` the way the importer and exporter always did — the flag is
+`content_rows.is_active`, never a field of the row. `rotations.csv` is LF (the
+reference plan under `Docs/Specs/Active/weekly_rotation_admin/reference/` is
+CRLF); the exporter's canonical form is LF and the round trip is byte-identical
+only against that form.
 
 Adding one is a row in `CATALOGS` plus a scoped seed:
 
