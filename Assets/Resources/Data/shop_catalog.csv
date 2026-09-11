@@ -7,3 +7,16 @@ shop_ball_putt_ace,ball,ball_putt_ace,50,35,50,false,true,Rare,,,,,,true,
 shop_char_mike,character,char_mike,150,,60,false,false,,,,,,,true,
 shop_item_repairkit_common,item,repairkit_common,75,,70,false,false,,,,,,,true,
 shop_ticket_standard_50,ticket,0,100,,80,false,false,,,,,,50,false,
+shop_wk_2026_38_ball_ace_attire,ball,ball_ace_attire,30,,503,false,false,Common,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_ball_clover_pro,ball,ball_clover_pro,60,,402,false,false,Uncommon,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_ball_putt_ace,ball,ball_putt_ace,120,,302,false,false,Rare,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_char_mike,character,char_mike,200,,504,false,false,Common,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_awedge_bogeyb_rare,club,club_awedge_bogeyb_rare,400,,301,false,false,Rare,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_driver_bogeyb_common,club,club_driver_bogeyb_common,100,,501,false,false,Common,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_driver_bogeyb_legendary,club,club_driver_bogeyb_legendary,1500,,100,false,false,Legendary,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_iron_bogeyb_rare,club,club_iron_bogeyb_rare,400,,300,false,false,Rare,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_putter_bogeyb_common,club,club_putter_bogeyb_common,100,,500,false,false,Common,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_pwedge_bogeyb_uncommon,club,club_pwedge_bogeyb_uncommon,200,,400,false,false,Uncommon,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_swedge_bogeyb_uncommon,club,club_swedge_bogeyb_uncommon,200,,401,false,false,Uncommon,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_wood_bogeyb_common,club,club_wood_bogeyb_common,100,,502,false,false,Common,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_38_club_wood_bogeyb_mythic,club,club_wood_bogeyb_mythic,800,,200,false,false,Mythic,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
