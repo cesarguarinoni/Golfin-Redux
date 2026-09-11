@@ -45,16 +45,22 @@ signup-confirmation and password-reset links go through the landing page and wer
   scheme are two copies of one string, pinned together. Auth 52/52, EditMode 339/339,
   WireupTests 253/253 (BannerPolicy constants), StandaloneGate 10/10.
 
+## Supabase allow-list — DONE (2026-09-11, via Cesar's logged-in Chrome)
+
+`golfingps://auth-callback` added under Authentication → URL Configuration → Redirect URLs and
+read back after a full reload. The list is now 7 entries: `https://playlife-app.web.app/*`,
+`golfin://auth-callback`, `https://admin.golfin.world`, `https://admin.golfin.world/**`,
+`https://confirm.golfin.world`, `https://confirm.golfin.world/**`, `golfingps://auth-callback`.
+The `confirm.golfin.world/**` glob covers the new `?app=golfingps` query (GoTrue matches the glob
+against the full URL). Without this entry Supabase would silently have swapped the shell's
+`redirect_to` for the Site URL (`admin.golfin.world`, behind Access) — the shell's Google/Apple
+login would have broken instead of stealing the game's.
+
 ## What only Cesar can do
 
-1. **Supabase → Authentication → URL Configuration → Redirect URLs: add `golfingps://auth-callback`.**
-   Without it Supabase silently ignores the shell's `redirect_to` and falls back to the Site URL
-   (`admin.golfin.world`, behind Access) — the shell's Google/Apple login would then break instead
-   of stealing the game's. Do this BEFORE the next "punch it standalone". `https://confirm.golfin.world/**`
-   (already listed per `auth_email_redirect`) covers the new `?app=golfingps` query.
-2. **Ship both apps.** The stale shell on a phone still claims `golfin`; the game's login is only
-   safe once the rebuilt shell (`punch it standalone`) is installed beside it. The game build
-   (`punch it` / `punch it GPS`) is unchanged in behaviour but carries the alias/property refactor.
+**Ship both apps.** The stale shell on a phone still claims `golfin`; the game's login is only
+safe once the rebuilt shell (`punch it standalone`) is installed beside it. The game build
+(`punch it` / `punch it GPS`) is unchanged in behaviour but carries the alias/property refactor.
 
 ## Not touched
 

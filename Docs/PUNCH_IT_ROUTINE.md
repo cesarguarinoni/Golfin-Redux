@@ -33,7 +33,8 @@ is byte-identical before and after, exactly like the build-number stamp.
 `oauth_callback_per_app`, 2026-09-11). iOS hands a custom-scheme URL to whichever installed app
 claims it, so a shell that also claimed `golfin://` received the GAME's Google/Apple sign-in
 callback and signed itself in. The shell's runtime asks Supabase for `golfingps://auth-callback`
-(`AppDeepLink`), which must be on the Supabase redirect allow-list before a standalone build ships.
+(`AppDeepLink`), which is on the Supabase redirect allow-list (added 2026-09-11) — if it ever
+disappears, the shell's OAuth silently falls back to the Site URL.
 
 ### Shipping several variants of the same commit
 

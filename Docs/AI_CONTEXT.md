@@ -24,9 +24,9 @@ redirects from the authored fields (the game's values stay byte-identical); the 
 `AppDeepLinkTests` + `StandaloneUrlSchemeTests` pin the plist scheme to the runtime scheme.
 Auth 52/52, EditMode 339/339, WireupTests 253/253.
 
-**Gate for Cesar:** `golfingps://auth-callback` must be added to the Supabase redirect allow-list
-BEFORE the next `punch it standalone`, or the shell's OAuth falls back to the Site URL. Then ship
-both apps — a stale shell on the phone still claims `golfin`. Lesson BX.
+**Supabase allow-list: done** — `golfingps://auth-callback` added through Cesar's logged-in Chrome
+(claude-in-chrome) and read back after reload (7 entries). Remaining: ship both apps — a stale
+shell on the phone still claims `golfin` until `punch it standalone` replaces it. Lesson BX.
 
 ---
 ## 2026-09-10 — map view: **the club button the map hides behind was never re-wired** — SHIPPED, one cause still open
