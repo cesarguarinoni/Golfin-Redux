@@ -76,9 +76,11 @@ Architect on Tuesday:** one-ball vs ten-ball; the named `rotation_*` audit actio
 of `GachaBanner_Weekly_upload.jpg`, 13 shop rows, seed 3303790807) — **NOT published**: the
 generator warns that `club_driver_gf` is also a permanent listing (`shop_club_driver_gf`, 100 RP),
 so the week would list it twice; PUBLISH ROTATION before Mon 2026-09-21 once that placeholder
-decision is made. Trap: a re-MATERIALIZE resets the banner's `artUrl` to "" (`newBannerRow` in
-`lib/rotation.ts`), so re-upload after any re-generation — or carry the existing draft's `artUrl`
-forward (one-line change, not yet approved).
+decision is made. **Fixed the same day (`d536b5b90`, live, CF `bda424da-d72c-4641-bb14-52383341a5a2`):** a
+re-MATERIALIZE now carries the rotation's existing draft banner `artUrl` forward instead of
+blanking it, and PREVIEW's banner card says "Art kept from the existing draft: <file>" or, on a
+week without art, tells the operator to upload it after MATERIALIZE (en + ja). Verified live on
+`wk_2026_39` (kept) and `wk_2026_40` (none) with read-only PREVIEWs. vitest 383.
 
 ---
 ## 2026-09-11 — standalone lane rewrote `content_art.txt` with the SHELL's picture — FIXED
