@@ -19,3 +19,11 @@ DIRTY:
 2026-09-11T03:54:31Z iter-2 start — SELF_REVIEW_FAIL: 8/53 content tests pinned seed-day counts that the live publish grew; re-pinned by id (53 OK after the publishes), Deviation 12 + Iteration 2 section written
 2026-09-11T03:56:00Z iter-2 self-review — re-derived: content suite 53 OK, vitest 378, tsc 0, --check clean; reasoned invariants survive next Monday's publish (subset-by-id, regex materializedAt, per-row is_active); walked SPEC §7 all 12 items CONFIRM-PASS; Deviation 12 resolves both iter-1 findings A and B; verdict FORWARD_TO_ARCHITECT, STATUS -> READY_FOR_ARCHITECT_REVIEW
 2026-09-11T04:04:00Z reviewer — re-derived every SPEC §7 item (vitest 378, content 53 OK, tsc 0, --check clean, PostgREST versions gr6/gp5/gb12/sc9/rot4, wk_2026_38 13 active shop, banner_wk_2026_38 pityGroup=weekly, Cratilo pity weekly=3 per-banner 2+1, RPC refusals not_listed/window+inactive & not_available/window+inactive, stamp f8063af6b, Access 302, backend /health 200 /tickets 403 /content 200); 12 Deviations judged on merit — sound; iter-2 test re-shape survives next Monday walkthrough; PASS -> READY_FOR_REDTEAM
+=== iter-3 kickoff baseline 2026-09-11T04:40:30Z ===
+HEAD: c2690de92f9826f373d4d1fcfa49445bd7bdf48b
+DIRTY:
+ M Docs/Specs/Active/weekly_rotation_admin/HEARTBEAT.log
+ M Docs/Specs/Active/weekly_rotation_admin/IMPLEMENTER_REPORT.md
+=== end baseline ===
+2026-09-11T04:40:30Z iter-3 start — post-PASS: artUrl uploaded (banners v13), two placeholders retired (shop v10), archive trap found by that publish → cross-row validator rules guarded on isActive (382 tests), deployed 70464d323; back through the chain
+2026-09-11T04:42:43Z iter-3 — R3 refused the weekly artUrl; exporter exempts the rotation stand-in (56 tests, --check clean); report Deviation 14; STATUS -> READY_FOR_SELF_REVIEW

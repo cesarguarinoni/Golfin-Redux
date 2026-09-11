@@ -1,7 +1,7 @@
 # IMPLEMENTER_REPORT — `weekly_rotation_admin`
 
 **Iteration shape:** `rotations:generator-and-publish-chain`
-**Iteration:** 2
+**Iteration:** 3
 **Canonical screenshot:** `screenshots/rotations_workbench_preview.png` (2880×2600)
 
 ---
@@ -54,6 +54,7 @@ rule G3-Q refuses anything else on a ball row). The pity migration was applied b
 | `Tools/content/seed_from_csv.py` | `seed_rows()` splits an `is_active` CSV column OUT of `data` and uses it as the row flag — the rule the importer and exporter already applied; `rotations.csv` is the first CSV to carry the column at seed time. |
 | `Tools/content/tests/test_catalog_registry.py` | Count 20 → 21; `TestRotationsIsRegistered` (the 52 planned ids present and pinned, LF, `materializedAt` blank-or-instant, the seeder rule, a `false` cell seeds inactive). **iter-2:** the seeded gacha rows and the plan are pinned BY ID, never by count — a rotation publish appends to four catalogs every week. Suite 48 → **53, all passing** (`Ran 53 tests … OK`, re-run AFTER the live publishes). |
 | `Tools/content/README.md`, `Docs/TESTFLIGHT_RUNBOOK.md` | Twenty-one catalogs; the `rotations` row; the seeder note. |
+| `Tools/content/export_content.py`, `tests/test_export_check.py` | **iter-3:** R3 (masked / conflicting art) exempts a rotation-tagged banner on the `GachaBanner_Weekly` stand-in — Deviation 14. |
 | `Tools/admin-dashboard/migrations/2026_09_11_content_rotations_seed.sql`, `…/2026_09_11_gacha_pity_group.sql` | Mirrors of the two playlife migrations. |
 | `Docs/Economy/ECONOMY_MASTER.md` | §3: the ball ladder line (one-ball, with the ten-ball caveat) and a "Weekly rotation" paragraph — **Architect to review the wording**. |
 
@@ -195,6 +196,57 @@ leftover_rows_expected_0 = 0 · leftover_banners_expected_0 = 0 · gacha_pull_cl
     not bundle `GachaBanner_Weekly.png`, and `GachaBannerModel` withholds a banner whose art
     resolves neither by `artUrl` nor by `artSprite`. `banner_wk_2026_38` goes live Monday with
     `artUrl` blank — see the pendings.
+13. **The archive trap (iter-3, found after ARCHITECT_REVIEW_PASS, fixed in `70464d323`).** The
+    first `gacha_banners` publish through the drawer AFTER an archive was refused:
+    `banner_wk_2026_36: Pool "pool_wk_2026_36" has no active rate table` — rule 10 ran on the
+    ARCHIVED banner whose pool and rates ARCHIVE ENDED had just deactivated, so the one publish
+    the archive flow needs next could never succeed (my own E2E cleanup had gone over the RPC,
+    which skips the validator, so nothing caught it; three gates passed it). Rule 15 shape audit —
+    *"a rule that resolves a row against OTHER rows, and errors on a row that is itself
+    inactive"* — every site in `contentValidate.ts`, including the ones that were fine:
+
+    | Site | Cross-row? | Guarded on `row.isActive` before | Verdict |
+    |---|---|---|---|
+    | shop rule 6 — category / refId resolves / ref active / default ball | yes | **no** | TRAP (an archived week's row whose ref is retired later) — **fixed** |
+    | shop G1 / G1-T / G3-Q / G2 | yes | yes | fine |
+    | shop rule 8 (price band) | read only, warn | no | fine (warning) |
+    | shop R2 `checkRotationTag` | yes | **no** | TRAP — **fixed** |
+    | shop R4 | yes | yes | fine |
+    | level_up_costs coverage / ceiling | catalog-level | n/a | fine |
+    | gacha_rates ↔ gacha_pools (`checkRatesAgainstPool`, rules 2–4, 9) | yes | active rows only by construction | fine |
+    | gacha_pools rule 5 (kind / ref / active / default ball) | yes | yes | fine |
+    | gacha_pools rule 6 (rarity equals the ref's) | compares only when the ref is found | no | fine (a retired ref is still found) |
+    | gacha_pools rule 8 (min_build) | yes | yes | fine |
+    | gacha_banners rule 10 — pool rate table / entries / ticketType | yes | **no** | **THE TRAP** — fixed |
+    | gacha_banners rule 13 — pity rarity payable in the pool | yes | **no** | latent (an inactive pool yields an empty rolled set, so it happened not to fire) — fixed for consistency |
+    | gacha_banners rule 18 — featured refs in the pool (warn) | yes | **no** | noise on archived banners — fixed |
+    | gacha_banners R2 | yes | **no** | TRAP — **fixed** |
+    | gacha_banners R3 | yes | yes | fine |
+    | ticket_types rule 20 (a type charged by ACTIVE banners) | yes | yes (the banners' flag) | fine |
+    | rotations R1 base pool has active entries | yes | **no** | TRAP once a base pool is retired — **fixed** |
+    | rotations R1 overlap / gap | active rows only | yes | fine |
+    | missions ↔ components, mission_loadouts ↔ clubs | yes | no | same shape, **not changed here**: no deactivation path retires those referents today; flagged for the Architect |
+
+    Fix: every cross-row rule runs on active rows only — the carve-out pools rule 5 and the shop's
+    build gates already made, for the reason they give (a deactivated row reaches no player: the
+    server refuses it, the client hides it; deactivation must stay the way out, I6). Sane-row rules
+    (costs, windows, rarity shape, numeric) still run on every row. Four tests pin it
+    (`archived rows never block a publish`), suite **382**; deployed as `70464d323`
+    (CF `29e5e6d8-432a-49ba-8a53-0d54fb0d02c0`, live `/api/version` = `70464d323`), and the
+    same `gacha_banners` publish then went through the validated route: **v13**.
+14. **`export --check` R3 and the weekly stand-in (iter-3, fixed in `b0a70282a`).** The first
+    `artUrl` on a weekly banner failed `--check`: `polish_regressions_0909` R3 refuses a banner
+    whose `artUrl` is set while `artSprite` is not its own derived name (`GachaBanner_Wk202638`)
+    — "the placeholder MASKS the uploaded art" — and the release lane refuses to build on a
+    failing `--check`, so every week from now on would have blocked TestFlight. The rule was
+    written for the accidental case (nobody ran Fetch URL Art); the spec's §4.4 design IS that
+    state on purpose — 52 banners a year cannot each bundle a PNG — and `GachaBannerArt.Resolve`
+    only lets a bundled sprite win when it is the row's own name (a shared stand-in is step 4,
+    "draw this while the URL downloads"), so nothing is masked. Both R3 halves (masked, and
+    conflicting uploads under one sprite) now exempt exactly a rotation-tagged banner on
+    `GachaBanner_Weekly`; an un-tagged banner on it, or a tagged banner on any other shared
+    sprite, still fails. 3 tests (`TestWeeklyStandinIsNotMaskedArt`), content suite **56**;
+    `--check: clean` with the uploaded art in place.
 12. **The CSVs carry the E2E's two archived test rotations, and the tests were re-pinned as
     invariants (iter-2, from the self-review).** `rotations.csv` now has 54 rows — the 52 planned
     weeks plus `wk_2026_36` / `wk_2026_37` with `is_active=false` — and `gacha_banners.csv`,
@@ -228,6 +280,27 @@ deviation. Both addressed, nothing else changed:
 3. The suite result and `--check: clean` are now quoted in checklist row 10.
 
 `catalogs.py`'s CSV-facts docstring says the four catalogs grow by construction.
+
+---
+
+## Iteration 3 — after ARCHITECT_REVIEW_PASS, on Cesar's answers
+
+Cesar (2026-09-11): upload the placeholder as the weekly banner's `artUrl` (no new art before
+Tuesday); leave the ticket listing off until a rotation carries it; retire the two colliding
+shop_stocking placeholders; approval and the Architect decisions wait until Tuesday.
+
+- **`banner_wk_2026_38.artUrl`** = the blue placeholder, uploaded through the Gacha Banners row
+  editor's real upload control (JPEG q90, 245 KB — the route caps art at 500 KB, the bundled PNG is
+  1.2 MB; the upload copy is kept under `reference/GachaBanner_Weekly_upload.jpg`, md5
+  `8f3cfbef…` = the bytes the CDN serves, `200 image/jpeg 244928`). Published **gacha_banners
+  v13**. Installed builds now render the banner Monday.
+- **`shop_char_mike` and `shop_ball_putt_ace` deactivated** through the row route and published:
+  **shop_catalog v10 — 2 deactivated**. `shop_ticket_standard_50` stays off.
+- **The archive trap (Deviation 13)** was found by that very publish, fixed, tested, deployed
+  (`70464d323`) and the publish re-run through the validated route. The code changed after the
+  gates' PASS, so STATUS goes back through the chain (iter-3).
+- **`--check` R3 refused the uploaded art (Deviation 14)** — the weekly stand-in is now the one
+  deliberate shared sprite; `--check: clean`; content suite 56 OK; dashboard 382.
 
 ---
 
@@ -288,9 +361,11 @@ and `gacha_banners`.
 
 ## Manual verification needed
 
-- **Art for `banner_wk_2026_38`** before Monday 00:00 UTC (installed builds withhold it otherwise).
-- Decisions: the ticket listing back on sale?; retire the shop_stocking placeholder rows now that
-  the rotation lists the same refs?; ECONOMY_MASTER §3 wording; the named audit action.
+- Decisions for the Architect (Tuesday, per Cesar): one-ball vs ten-ball listing; the named
+  `rotation_*` audit action; ECONOMY_MASTER §3 wording; the two Freda (Supreme) weeks; the
+  remaining four shop_stocking club placeholders (`shop_club_driver_gf` collides with
+  `wk_2026_39`'s pins) and the missions/loadouts cross-row rules that share the archive-trap
+  shape but have no deactivation path today.
 - Validator (R1–R4) and generator messages are English-only, following the existing
   `ContentProblem.message` convention (every other rule's text is English too); the DICT carries
   the panel's own strings in both languages.
