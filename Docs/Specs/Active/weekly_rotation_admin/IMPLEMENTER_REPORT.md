@@ -1,7 +1,7 @@
 # IMPLEMENTER_REPORT — `weekly_rotation_admin`
 
 **Iteration shape:** `rotations:generator-and-publish-chain`
-**Iteration:** 3
+**Iteration:** 4
 **Canonical screenshot:** `screenshots/rotations_workbench_preview.png` (2880×2600)
 
 ---
@@ -54,7 +54,8 @@ rule G3-Q refuses anything else on a ball row). The pity migration was applied b
 | `Tools/content/seed_from_csv.py` | `seed_rows()` splits an `is_active` CSV column OUT of `data` and uses it as the row flag — the rule the importer and exporter already applied; `rotations.csv` is the first CSV to carry the column at seed time. |
 | `Tools/content/tests/test_catalog_registry.py` | Count 20 → 21; `TestRotationsIsRegistered` (the 52 planned ids present and pinned, LF, `materializedAt` blank-or-instant, the seeder rule, a `false` cell seeds inactive). **iter-2:** the seeded gacha rows and the plan are pinned BY ID, never by count — a rotation publish appends to four catalogs every week. Suite 48 → **53, all passing** (`Ran 53 tests … OK`, re-run AFTER the live publishes). |
 | `Tools/content/README.md`, `Docs/TESTFLIGHT_RUNBOOK.md` | Twenty-one catalogs; the `rotations` row; the seeder note. |
-| `Tools/content/export_content.py`, `tests/test_export_check.py` | **iter-3:** R3 (masked / conflicting art) exempts a rotation-tagged banner on the `GachaBanner_Weekly` stand-in — Deviation 14. |
+| `Tools/content/export_content.py`, `tests/test_export_check.py` | **iter-3:** R3 (masked / conflicting art) exempts a rotation-tagged banner on the `GachaBanner_Weekly` stand-in — Deviation 14. **iter-4:** the cross-tool stand-in name test. |
+| `Assets/Editor/ContentArtValidator.cs` | **iter-4 (Editor tooling, not client C#):** the same exemption in the build-lane report — Deviation 15. Compiled offline with Unity's Roslyn, 0 errors. |
 | `Tools/admin-dashboard/migrations/2026_09_11_content_rotations_seed.sql`, `…/2026_09_11_gacha_pity_group.sql` | Mirrors of the two playlife migrations. |
 | `Docs/Economy/ECONOMY_MASTER.md` | §3: the ball ladder line (one-ball, with the ten-ball caveat) and a "Weekly rotation" paragraph — **Architect to review the wording**. |
 
@@ -247,6 +248,23 @@ leftover_rows_expected_0 = 0 · leftover_banners_expected_0 = 0 · gacha_pull_cl
     `GachaBanner_Weekly`; an un-tagged banner on it, or a tagged banner on any other shared
     sprite, still fails. 3 tests (`TestWeeklyStandinIsNotMaskedArt`), content suite **56**;
     `--check: clean` with the uploaded art in place.
+15. **The third site of the R3 shape (iter-4, from the red-team; fixed in `6eb69d0f5`).** The
+    masked-art check also lives in `Assets/Editor/ContentArtValidator.cs` — the build lane's
+    `Docs/Reports/content_art.txt` and `GOLFIN/Content/Validate Catalog Art` — and Deviation 14
+    exempted only the exporter. Report-only (`CIBuild` never fails a build on it), but every
+    weekly banner with an `artUrl` would have been stamped "masked — FAIL". Same exemption
+    (`IsRotationStandIn`: gacha_banners ∧ rotationId non-blank ∧ artSprite == `GachaBanner_Weekly`),
+    with the named constant `WeeklyBannerStandIn`. This is Editor tooling, not client C#. Proof
+    without the Editor (Unity MCP down): compiled offline with Unity's own Roslyn
+    (`Assembly-CSharp-Editor`, 228 files, **0 errors**); the exact C# boolean simulated on the
+    live `gacha_banners.csv` → `banner_wk_2026_38 … masked_before=True masked_after=False`, **0 masked
+    rows**; and a content-suite test now pins the stand-in NAME across the three tools
+    (`rotation.ts` `WEEKLY_BANNER_ART`, `export_content.py` `WEEKLY_BANNER_STANDIN`,
+    `ContentArtValidator.cs` `WeeklyBannerStandIn`) and greps the C# check for the exemption
+    call — content suite **57**. An EditMode test cannot call the validator (it lives in
+    `Assembly-CSharp-Editor`, which the test assembly does not reference — the existing
+    `ContentArtFetchTests` reads the validator's SOURCE for the same reason); the lesson of rule
+    15 applied twice in one task: the R3 defect should have had its own shape audit at iter-3.
 12. **The CSVs carry the E2E's two archived test rotations, and the tests were re-pinned as
     invariants (iter-2, from the self-review).** `rotations.csv` now has 54 rows — the 52 planned
     weeks plus `wk_2026_36` / `wk_2026_37` with `is_active=false` — and `gacha_banners.csv`,
@@ -301,6 +319,15 @@ shop_stocking placeholders; approval and the Architect decisions wait until Tues
   gates' PASS, so STATUS goes back through the chain (iter-3).
 - **`--check` R3 refused the uploaded art (Deviation 14)** — the weekly stand-in is now the one
   deliberate shared sprite; `--check: clean`; content suite 56 OK; dashboard 382.
+
+---
+
+## Iteration 4 — the red-team's fail list
+
+`golfin-redteam-reviewer` returned `ARCHITECT_REVIEW_FAIL` on iter-3 with one blocker: the R3
+masked-art exemption had a third site, `Assets/Editor/ContentArtValidator.cs`. Fixed (Deviation
+15), compiled offline, simulated on the live CSV, pinned across the three tools. Nothing else
+changed; no deploy needed (Editor tooling, not the dashboard).
 
 ---
 

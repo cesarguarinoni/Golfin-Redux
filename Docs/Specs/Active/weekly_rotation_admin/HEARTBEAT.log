@@ -27,3 +27,15 @@ DIRTY:
 === end baseline ===
 2026-09-11T04:40:30Z iter-3 start — post-PASS: artUrl uploaded (banners v13), two placeholders retired (shop v10), archive trap found by that publish → cross-row validator rules guarded on isActive (382 tests), deployed 70464d323; back through the chain
 2026-09-11T04:42:43Z iter-3 — R3 refused the weekly artUrl; exporter exempts the rotation stand-in (56 tests, --check clean); report Deviation 14; STATUS -> READY_FOR_SELF_REVIEW
+2026-09-11T04:51:05Z iter-3 self-review — re-derived: vitest 382 (rotationValidate +4), tsc 0, content 56 OK (+3 stand-in), --check clean; PostgREST gr6/gp5/gb13/sc10/rot4, artUrl 200 244928B, shop_char_mike & shop_ball_putt_ace active=False v10, 13 shop_wk_2026_38 active, pity weekly=3; diff f8063af6b..70464d323 -- contentValidate.ts: 7 sites guarded on row.isActive matching shape audit; sane-row rules preserved; not_listed/inactive + not_available/inactive verified in migration sources; R3 stand-in exemption narrow (rotation-tagged AND GachaBanner_Weekly), safe by SpriteIsOwn/ConventionName ladder, 2 negative tests; walked SPEC §7 all 12 items CONFIRM-PASS; verdict FORWARD_TO_ARCHITECT, STATUS -> READY_FOR_ARCHITECT_REVIEW
+=== iter-4 kickoff baseline 2026-09-11T05:22:59Z ===
+HEAD: 6eb69d0f5e55da7b251fa52208ece981eded361e
+DIRTY:
+ M Docs/Specs/Active/weekly_rotation_admin/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/weekly_rotation_admin/HEARTBEAT.log
+ M Docs/Specs/Active/weekly_rotation_admin/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/weekly_rotation_admin/REDTEAM_REVIEW.md
+ M Docs/Specs/Active/weekly_rotation_admin/SELF_REVIEW.md
+ M Docs/Specs/Active/weekly_rotation_admin/STATUS.md
+=== end baseline ===
+2026-09-11T05:22:59Z iter-4 start — ARCHITECT_REVIEW_FAIL (red-team): ContentArtValidator.cs masked-check not exempted; fixed 6eb69d0f5, offline Roslyn 0 errors, live-CSV boolean 0 masked, 57 content tests

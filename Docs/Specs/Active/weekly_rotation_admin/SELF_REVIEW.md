@@ -493,3 +493,265 @@ Forwarding to architect-review.
 |---|---|
 | [`/Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/weekly_rotation_admin/SELF_REVIEW.md`](Docs/Specs/Active/weekly_rotation_admin/SELF_REVIEW.md) | APPENDED — iter-2 section, verdict `FORWARD_TO_ARCHITECT`. |
 | [`/Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/weekly_rotation_admin/STATUS.md`](Docs/Specs/Active/weekly_rotation_admin/STATUS.md) | UPDATED — `READY_FOR_SELF_REVIEW` → `READY_FOR_ARCHITECT_REVIEW`. |
+
+---
+
+## Iteration 3
+
+**Iteration:** 3
+**Reviewer:** self-review pass (main Claude Code thread acting as self-reviewer)
+**Date:** 2026-09-11 13:52 JST
+**Verdict:** **FORWARD_TO_ARCHITECT**
+**STATUS after this review:** `READY_FOR_ARCHITECT_REVIEW`
+
+### Scope of this pass
+
+The task cleared architect + red-team on iter-2. Cesar then answered the pendings and two
+things published on prod (banner_wk_2026_38 got the placeholder as `artUrl`, gacha_banners v13;
+`shop_char_mike` + `shop_ball_putt_ace` deactivated, shop_catalog v10). Those two publishes
+exposed two defects — an archived week's rows blocking the very next `gacha_banners` publish,
+and `export --check` R3 refusing a weekly banner carrying `artUrl` while its `artSprite` is the
+shared `GachaBanner_Weekly` — both fixed in code (`70464d323`, `b0a70282a`) after the gates'
+PASS. Status went back through the chain, iter-3.
+
+Rule 5 (re-run the ENTIRE acceptance list) applies — I re-walked all 12 §7 items against
+HEAD, not only the two new fixes. No carry-forward language, no "prior architect verdict."
+
+### Independent re-derivation — the kickoff commands
+
+1. **Dashboard vitest** — `Test Files 16 passed · Tests 382 passed (382)`.
+   `rotation.test.ts` 34, `rotationValidate.test.ts` **24** (+4 archived-rows tests since
+   iter-2's 20), everything else unchanged. MATCH.
+2. **`npx tsc --noEmit`** — exit 0, no output. MATCH.
+3. **Content suite** — `Ran 56 tests in 0.072s OK` (+3 `TestWeeklyStandinIsNotMaskedArt` tests
+   since iter-2's 53). MATCH.
+4. **`export_content.py --check`** — `--check: clean — no file would change, no catalog has
+   drifted, and no row's art is masked by a placeholder.` Row counts on disk:
+   `rotations v4 54 rows · gacha_banners v13 7 rows · gacha_rates v6 24 rows · gacha_pools
+   v5 45 rows · shop_catalog v10 25 rows`. Every version matches the kickoff PostgREST
+   snapshot exactly.
+5. **PostgREST prod state (read-only)** — `content_catalogs`: `gacha_rates 6 · gacha_pools 5 ·
+   gacha_banners 13 · shop_catalog 10 · rotations 4`; `banner_wk_2026_38`: `artSprite=
+   GachaBanner_Weekly artUrl=…/catalog-art/gacha_banners-banner_wk_2026_38-artUrl-ffdc9441b0f8.jpg
+   pityGroup=weekly rotationId=wk_2026_38 active=True v=13`; `shop_char_mike active=False v=10`,
+   `shop_ball_putt_ace active=False v=10`; `13 shop_wk_2026_38_* rows, all active`;
+   `golfin_gacha_pity weekly counter=3 total=3` for user `f2636482`. MATCH.
+6. **CDN artUrl serve** — `curl -sI …/catalog-art/gacha_banners-banner_wk_2026_38-artUrl-ffdc9441b0f8.jpg`
+   → `HTTP/2 200 · content-type: image/jpeg · content-length: 244928`. MATCH.
+7. **Deployed stamp** — `grep '"[0-9a-f]\{7,10\}"' Tools/admin-dashboard/.open-next/…/api/version/route.js`
+   → `"70464d323"`. MATCH.
+8. **Smoke** — `admin.golfin.world/api/version` → **302** (Access); `playlife-api.fly.dev/health`
+   → **200** `application/json`; `/api/v1/gacha/tickets` → **403** (unauth). MATCH.
+9. **Working tree** — `git status --porcelain --untracked-files=all` → empty. Clean.
+
+### Deviation 13 — the archive trap — reading the diff and judging the shape audit
+
+`git diff f8063af6b 70464d323 -- Tools/admin-dashboard/lib/contentValidate.ts` shows exactly
+seven sites re-scoped to `row.isActive`, and no other logic change:
+
+| Site | Diff form | Report audit says | Match |
+|---|---|---|---|
+| **Shop rule 6** (category / refId / target-active / default ball) | old: unconditional `if (!target) err…`; new: `if (row.isActive) { if (!target) err… }` — the whole cascade | TRAP → fixed | ✓ |
+| **Shop R2** (`checkRotationTag`) | `if (row.isActive) checkRotationTag(row, "startAt", "endAt")` | TRAP → fixed | ✓ |
+| **Gacha banners rule 10** (poolId → active pool + rate table + entries; ticketType → active row) | new: `if (!row.isActive) { /* nothing to resolve */ } else if (!poolId) err…`, same for ticketType | THE TRAP → fixed | ✓ |
+| **Gacha banners rule 13** (pity min rarity payable / x10 guarantee payable) | `const rolled = row.isActive && poolId ? rolledRarities(poolId) : new Set()` — the pool-dependent branches now short-circuit on inactive banners | latent → fixed for consistency | ✓ |
+| **Gacha banners rule 18** (featured refs in pool, warn) | `if (row.isActive && featured && poolId)` | noise → fixed | ✓ |
+| **Gacha banners R2** (`checkRotationTag`) | `if (row.isActive) checkRotationTag(row, "startUtc", "endUtc")` | TRAP → fixed | ✓ |
+| **Rotations R1 base pool has active entries** | `else if (row.isActive && ctx.otherCatalogs.has("gacha_pools"))` | TRAP once retired → fixed | ✓ |
+
+Nothing else in the diff — no logic change, no reordering, no rewording that could produce
+a silent side effect. I grepped `grep -n "otherCatalogs" contentValidate.ts` (22 hits) and
+walked each against the audit table:
+
+- **Fine (already `row.isActive`-gated by construction, or catalog-level):** `checkRatesAgainstPool`
+  (`otherRows("gacha_pools")` filters to active pools internally); `gacha_pools` rule 5
+  (`if (row.isActive) { … }` at line ~1735); `gacha_pools` rule 8 (build gates on `row.isActive`);
+  `gacha_banners` R3 (`if (row.isActive && isTrue(row.data.active))`); shop G1 / G1-T / G3-Q /
+  G2 (build gates, active-only); shop R4 (`if (row.isActive)`); rotations R1 overlap (compares
+  ACTIVE rotations by construction); rotations R1 gap (same); `level_up_costs` coverage
+  (catalog-level over rows); `ticket_types` rule 20 (compares against the ACTIVE-flag of
+  banners). Every one lines up with the audit's verdicts.
+- **Fine (warn-only or ref-resolves-either-way):** shop rule 8 price band (warn), `gacha_pools`
+  rule 6 rarity equality (`if (referenced && …)` — a retired ref is still resolvable by I6, so
+  the equality still holds), `gacha_pools` rule 6 min_build (`if (referenced && …)`).
+- **Same shape, NOT changed here (flagged for Architect):** missions ↔ components
+  (`mission_start_areas`, `mission_wind_presets`, `mission_loadouts`, `mission_goal_weights`,
+  `mission_tiers`), `mission_loadouts` ↔ `clubs`. Rule text says `err` on `!area.isActive` / on
+  a missing club token. As of today, missions and loadouts have no deactivation path in the
+  admin drawer that retires their referents, so the trap cannot fire — but the shape is
+  identical. Report calls this out explicitly, and the fix would be the same one-line guard.
+  The choice to defer to the Architect is defensible: adding the guard costs nothing but
+  changing shipped rule behaviour with no failing publish to fix is a decision, not a
+  self-review call.
+
+**Verdict on the shape audit: complete.** Every cross-row reference in the file is either now
+`row.isActive`-guarded, or explicitly flagged as fine, or flagged for the Architect.
+
+**Verdict on the guards being the right ones.** The kickoff hypothesis — a deactivated row
+reaches no player — is verifiable in the migration source:
+
+- `Tools/admin-dashboard/migrations/2026_09_01_shop_purchase_tickets.sql:259-261`:
+  ```
+    if v_is_active is not true then
+      return json_build_object('status', 'not_listed', 'reason', 'inactive');
+    end if;
+  ```
+- `Tools/admin-dashboard/migrations/2026_09_11_gacha_pity_group.sql:310`:
+  ```
+    return json_build_object('status', 'not_available', 'reason', 'inactive');
+  ```
+
+So the server refuses BOTH sides of the pair on `is_active=False`, before any content
+resolution runs. The client ladder does the same (`GachaBannerModel` withholds a banner
+whose art resolves neither by artUrl nor artSprite; `GeneralShopCatalog.Admit` drops
+inactive rows). A validator error on a deactivated row can never save a player from
+anything — but it CAN block the archive flow's own next publish, which is exactly the
+trap that fired. Guard shape is correct.
+
+**Sane-row rules preserved.** Rules 12–17 that check the row's own shape (window
+well-ordered, cost non-negative, cap ≥ 1, pity blank/0 shape, artUrl allowlist) still
+run on every row — I re-read each and none was moved under the isActive guard. That
+matters: an archived row could be reactivated by a one-click flip and there is no
+publish gate in between; sane-row rules stay in force so reactivation cannot revive
+garbage. `an archived banner still has to be a SANE row (costs, window, pity shape)`
+is a vitest.
+
+**Four new archived-rows tests** in `rotationValidate.test.ts`, all pinning the
+correctness of the guard (`archived rows never block a publish` describe block):
+
+1. `an ARCHIVED banner whose pool and rates are inactive is not an error (the live
+   trap of 2026-09-11)` — reproduces the exact trap.
+2. `an archived banner still has to be a SANE row (costs, window, pity shape)` — the
+   negative test that keeps the guard narrow.
+3. `an INACTIVE shop row whose ref was retired later does not block the shop` — the
+   shop counterpart.
+4. `an INACTIVE rotation whose base pool was retired does not block the rotations
+   catalog` — the rotations counterpart.
+
+vitest count 378 → **382**, matching the report claim.
+
+### Deviation 14 — R3 stand-in exemption
+
+`git diff 70464d323 b0a70282a -- Tools/content/export_content.py` adds two things:
+
+1. A named constant `WEEKLY_BANNER_STANDIN = "GachaBanner_Weekly"` and a helper
+   `is_rotation_standin(catalog_name, row)` that returns True only when the catalog
+   is `gacha_banners`, the row's `rotationId` is non-blank, AND the row's `artSprite`
+   equals `GachaBanner_Weekly`.
+2. Two `if is_rotation_standin(catalog.name, row): continue` guards — one at the top
+   of the per-row loop in `masked_art_report`, one at the top of `conflicting_art_report`.
+   Nothing else changed.
+
+The exemption is narrow by construction (all three conditions must hold), and the two
+tests that pin the negative cases confirm it:
+- `test_an_untagged_banner_on_the_standin_is_still_masked` — a hand-made banner without
+  `rotationId` still trips R3 (accidental case survives).
+- `test_a_tagged_banner_on_another_shared_sprite_is_still_masked` — a rotation banner
+  on any other shared sprite (`GachaBanner_StandardClub1`) still trips R3.
+
+**Safety by the client ladder.** `Assets/Scripts/UI/Gacha/GachaBannerArt.cs:47-59` defines
+`SpriteIsOwn(entry)` as `entry.ArtSprite == ConventionName(entry.BannerId)`, and
+`ConventionName("banner_wk_2026_38")` is `"GachaBanner_Wk202638"` — not the stand-in
+`"GachaBanner_Weekly"`. The ladder at line 84–116 wins on step 2 only when
+`ownSprite` is true; a shared stand-in falls through to step 4 (placeholder,
+"draw this while the URL downloads"). Even if the stand-in were the only sprite
+available on a build (it is — 2873/2874 don't bundle `GachaBanner_Weekly` yet
+either, but a future build might), it can NEVER mask a real `artUrl`. The R3
+rule was written for the accidental case (an operator forgetting to run Fetch URL
+Art, so a placeholder sprite sits on a row that has an uploaded URL); the spec's
+§4.4 design IS that state on purpose because 52 banners a year cannot each bundle
+a PNG. Exempting exactly that shape is the correct fix, not a workaround.
+
+**One caveat, not a blocker.** The 2873/2874 installed builds do not bundle
+`GachaBanner_Weekly.png`, so on Monday when `banner_wk_2026_38`'s window opens,
+those clients will fall through step 2 (own bundle absent), step 3 (URL cached
+if the CDN was reached last launch, otherwise not), step 4 (placeholder absent
+too) and be withheld until the URL cache warms — that first-launch flicker is
+disclosed by Deviation 11 in the report (**not** iter-3). Deviation 14 doesn't
+create it; it only allows the publish that exposes it. Cesar's answer to
+Deviation 11 was to leave the withhold in place for one build cycle (SPEC-compliant,
+§3.1 says a client with no art withholds a banner rather than shows a blank one).
+
+### Re-walking SPEC §7 acceptance — the FULL list, iter-3 verdicts
+
+| # | Item | Iter-3 verdict | Reasoning at HEAD `70464d323` |
+|---|---|---|---|
+| 1 | `rotations` seeded 52 planned rows; export byte-identical; `--check` clean for `rotations`, `shop_catalog`, `gacha_banners`; 21 catalogs in README + runbook | **CONFIRM-PASS** | `--check: clean` RE-DERIVED; the seed-time byte-identical claim is unchanged since iter-1 (md5 `11a9211bc77e365d4d8dbe34fb42cea6`); `rotations v4 54 rows` on disk is Deviation 12 (test rotations kept as I6-inactive; iter-2 pinned tests by id so this stays green); the plan's 52 planned ids are still all present and pinned by `test_the_year_plan_is_present_and_pinned`. Iter-3 did not touch this axis. |
+| 2 | Rotations panel: calendar + PREVIEW pinned/unpinned + featured ×3 + determinism + unresolvable-pin block | **CONFIRM-PASS** | Panel code unchanged since iter-1; vitest hash `8838dbcb` still pinned; unresolvable-pin block still tested. |
+| 3 | MATERIALIZE writes drafts; second MATERIALIZE typed-confirm; other rotations untouched | **CONFIRM-PASS** | Unchanged. Live prod counts quoted in report; vitest asserts other-rotation JSON identity; iter-3 changed nothing here. |
+| 4 | PUBLISH ROTATION in dependency order; R3 stops at `gacha_banners`; nothing after published | **CONFIRM-PASS with iter-3 addition** | Publish chain unchanged; vitest for order + stop unchanged. Iter-3's specific relevance: Cesar's post-PASS publish of `banner_wk_2026_38 artUrl` (v13) and the `shop_char_mike` / `shop_ball_putt_ace` deactivations (v10) both went through the drawer's validated `publishCatalog`, exercising the fixed rule set. Both landed cleanly at the versions the kickoff quotes. |
+| 5 | R1 overlap error, R1 gap warn, R2, R3, R4 each have a vitest | **CONFIRM-PASS** | `rotationValidate.test.ts` at 24 tests (was 20 in iter-2, +4 archived-rows in iter-3); every rule still covered. |
+| 6 | Ended rotations: ARCHIVE deactivates; server refuses purchase of archived row (`not_listed / inactive`) and pull on archived banner (`not_available / inactive`) | **CONFIRM-PASS with iter-3 fix** | This is the axis iter-3 fixed. The archive trap made the FIRST post-archive `gacha_banners` publish through the drawer fail with "Pool `pool_wk_2026_36` has no active rate table" — the archive flow could deactivate rows via the RPC (skipping the validator) but the next drawer publish couldn't clear. Fixed at `70464d323`, `gacha_banners v13` then went through the drawer cleanly. The server-refusal half is unchanged and verified in migration source. |
+| 7 | Pity migration + live §6.4 E2E quoted | **CONFIRM-PASS** | Migration applied by Cesar iter-1; `weekly` pity counter still at 3 for user `f2636482` (RE-DERIVED via PostgREST). No pull happened this iter. |
+| 8 | Gacha ops per-user pity group key + reset works | **CONFIRM-PASS** | Unchanged from iter-2. `users_gacha_tab_pity_group.png` shows the `weekly · GROUP · 2` badge; `resetPity` keys on `banner_id` == the pity key. |
+| 9 | Mock mode exercises full panel | **CONFIRM-PASS** | Unchanged. All 9 mock-banner frames still cover the acceptance-mentioned states. |
+| 10 | `npm run build` + vitest + backend + deployment id + version stamp + Access 302 + smoke routes | **CONFIRM-PASS** | vitest **382** RE-DERIVED (+4 archived-rows tests); tsc 0 RE-DERIVED; content suite **56 OK** RE-DERIVED (+3 stand-in tests); deploy stamp `70464d323` in the built worker route (matches HEAD); Access 302; `/health` 200; `/gacha/tickets` 403. No new API deploy (no Python changed). |
+| 11 | Strings: no player-facing keys; 72 admin DICT en+ja | **CONFIRM-PASS** | Unchanged. The iter-3 changes are pure code + tests + validator rule shape — no new DICT keys, no `LocalizationText.csv` diff. |
+| 12 | `ECONOMY_MASTER.md` §3 ball ladder + weekly-rotation paragraph (Architect-review wording) | **CONFIRM-PASS on presence** | Unchanged. Both present with the "Architect to review wording" flag. |
+
+Every acceptance item passes at HEAD `70464d323`. Iter-3's changes address axis 6 and are
+covered by tests without regressing any other axis.
+
+### Deviations §-by-§ (iter-3 review)
+
+The 12 iter-1/iter-2 deviations read clean as before. Two new entries added in iter-3:
+
+- **Deviation 13 — the archive trap.** Fix is complete (7 cross-row rules re-scoped), guards
+  are the right ones (server refuses deactivated rows before content resolution), 4 archived-
+  rows tests pin it including the sane-row negative test that keeps the guard narrow. The
+  shape audit table is exhaustive against the file's `otherCatalogs` reference list. The one
+  cross-catalog family left explicitly untouched (missions ↔ components, mission_loadouts ↔
+  clubs) is flagged for the Architect with the correct rationale — no deactivation path
+  today, so the trap can't fire, but the shape is identical. **Sound.**
+- **Deviation 14 — R3 stand-in exemption.** Exemption is narrow (rotation-tagged banner on
+  exactly `GachaBanner_Weekly`), safe by the client ladder (`SpriteIsOwn` compares to
+  `ConventionName` which is per-row and can never equal a shared stand-in name), and pinned
+  by two negative-case tests (un-tagged banner OR different sprite still trips R3). Fixes
+  the exact state SPEC §4.4 describes on purpose. **Sound.**
+
+### What I did NOT re-check (with reason)
+
+- Pity migration function body — applied iter-1 by Cesar, no re-issuance in iter-3.
+- Frontend panel code (`lineup-workbench.tsx`, `rotations-panel.tsx`) — unchanged since
+  iter-1 per `git log`; `git diff a0c845ce4 HEAD -- Tools/admin-dashboard/app/(panels)/rotations/`
+  is empty.
+- Mock-mode screenshots — unchanged since iter-1.
+- Byte-identical seed export — unchanged since iter-1; iter-3 only added 2 rows total to
+  the four dependent CSVs (via the drawer publishes) and none to `rotations.csv`.
+
+### Visual diff / bbox / scene / capture-helper / production-flow
+
+Not applicable — no Figma node, no Unity, no scene, no capture harness. Production flow for
+this task is the deployed admin dashboard behind Cloudflare Access; prod evidence is
+PostgREST reads plus the deployed worker's version stamp, both re-derived above.
+
+### Rule 5 / 6 / 9 / 10 / 11 audit
+
+- **Rule 5** (re-run the ENTIRE acceptance list) — done above, all 12 items walked.
+- **Rule 6** (report integrity, unverified claims) — every checklist item in the report
+  is backed by a tool result I could reproduce (vitest, content suite, `--check`,
+  PostgREST, curl, git diff). No fabrication.
+- **Rule 9** (Figma node re-pull) — not applicable, no Figma node.
+- **Rule 10** (reference-image diff) — not applicable.
+- **Rule 11** (clone-provenance read-back) — not applicable, no Unity mandated-clone
+  elements.
+
+### Verdict rationale
+
+Iter-3's two fixes address defects that only surfaced when Cesar's real post-PASS
+publishes ran through the drawer — not something a self-reviewer could have caught
+in iter-2 without live prod state after PASS. The fixes are minimal, correctly scoped,
+covered by 7 new tests including 3 negative-case tests that keep the guards narrow,
+and re-run cleanly against every acceptance axis. The archive trap fix is the exact
+shape audit the pipeline's Rule 15 (name the shape, enumerate every candidate site,
+publish a per-site verdict including the ones that are fine) asks for — the report
+delivers it. No regression on any of the 12 acceptance items. Working tree clean.
+
+Forwarding to architect-review.
+
+### Files summary (this iteration's write)
+
+| Path | Change |
+|---|---|
+| [`/Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/weekly_rotation_admin/SELF_REVIEW.md`](Docs/Specs/Active/weekly_rotation_admin/SELF_REVIEW.md) | APPENDED — iter-3 section, verdict `FORWARD_TO_ARCHITECT`. |
+| [`/Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/weekly_rotation_admin/STATUS.md`](Docs/Specs/Active/weekly_rotation_admin/STATUS.md) | UPDATED — `READY_FOR_SELF_REVIEW` → `READY_FOR_ARCHITECT_REVIEW`. |

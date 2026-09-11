@@ -198,3 +198,177 @@ two that are product decisions are surfaced for Cesar's final approval.
 |---|---|
 | [`/Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/weekly_rotation_admin/REDTEAM_REVIEW.md`](Docs/Specs/Active/weekly_rotation_admin/REDTEAM_REVIEW.md) | NEW — adversarial red-team verdict PASS. |
 | [`/Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/weekly_rotation_admin/STATUS.md`](Docs/Specs/Active/weekly_rotation_admin/STATUS.md) | UPDATED — `READY_FOR_REDTEAM` → `ARCHITECT_REVIEW_PASS`. |
+
+---
+
+# Iteration 3 — red-team (2026-09-11 14:2x JST)
+
+STATUS was `READY_FOR_REDTEAM` after golfin-reviewer's iter-3 PASS. Two post-iter-2 defects were
+fixed in code (archive trap `70464d323`; R3 stand-in exemption `b0a70282a`); my brief was to break
+the fixes and hunt a third of the same shape. HEAD = `a0c845ce4`. No Unity/Figma/mesh gates apply
+(admin-dashboard + content-pipeline task). **Verdict: `ARCHITECT_REVIEW_FAIL` — one concrete
+blocker (the R3 exemption is incomplete; the same masked-check in a second tool was not exempted).**
+
+## Method (Rule 5 — I re-generated, did not carry forward)
+
+Read both fix diffs; read the whole 2194-line `contentValidate.ts` and enumerated **all 15**
+`otherCatalogs` cross-row sites myself; read the client art ladder (`GachaBannerArt.cs`,
+`GachaBannerModel.cs`); read `export_content.py` R3 bodies + `own_name`; read
+`ContentArtFetcher.cs`, `CIBuild.cs`, `ContentArtValidator.cs`; simulated the R3 boolean against
+the live CSV; wrote & ran 5 adversarial vitests (deleted after); re-derived all prod state over
+PostgREST; re-ran both suites and `export --check`; curled the artUrl and the deployed stamp.
+
+## Fix 1 — archive trap (`contentValidate.ts` active-row guards) → SOUND
+
+Full shape audit, re-derived (every `otherCatalogs` site, incl. the fine ones):
+
+| Site (line) | Cross-row | Automated deactivation path? | Guarded on `row.isActive` | Verdict |
+|---|---|---|---|---|
+| shop rule 6 refId/ref-active/default-ball (554) | yes | ARCHIVE (shop row) | **now yes** | fixed ✓ |
+| shop rule 8 price band (805) | read, **warn** | — | no | fine (warn never blocks) |
+| shop R2 checkRotationTag (400/818) | yes | ARCHIVE (shop row→rotation) | **now yes** | fixed ✓ |
+| shop R4 (820) | warn | — | now yes | fine |
+| shop G1/G1-T/G3-Q/G2 | yes | ARCHIVE | yes (pre-existing) | fine |
+| level_up_costs coverage/ceiling (892) | catalog-level | — | n/a | fine (not the shape) |
+| gacha_rates↔pools `checkRatesAgainstPool` (1621/1712/1808) | yes | ARCHIVE (rates+pool) | **active-only by construction** (poolIds built from active rows) | fine ✓ |
+| gacha_pools rule 5 kind/ref/active/default (1721) | yes | ARCHIVE (pool) | yes (psc1 scar) | fine |
+| gacha_pools rule 6 rarity-match (1762) | compare-if-found | — | no | fine (sane-row consistency) |
+| gacha_pools rule 8 min_build (1806) | yes | ARCHIVE | yes | fine |
+| gacha_banners rule 10 pool/rates/ticket (1846) | yes | ARCHIVE (banner→pool) | **now yes** | **THE TRAP — fixed ✓** |
+| gacha_banners rule 13 rolled (1929) | yes | ARCHIVE | **now yes** (empty set) | fixed ✓ |
+| gacha_banners rule 18 featured-in-pool (2005) | warn | ARCHIVE | **now yes** | fixed ✓ |
+| gacha_banners R2 (2018) | yes | ARCHIVE | **now yes** | fixed ✓ |
+| gacha_banners R3 pity group (2020) | yes | ARCHIVE | yes (`row.isActive && active`) | fine |
+| ticket_types rule 20 (2086) | yes | — (fires on `!row.isActive` but counts only **active** banners) | yes | fine |
+| rotations R1 base pool (2153) | yes | ARCHIVE (rotation) | **now yes** | fixed ✓ |
+| rotations R1 overlap/gap (398) | yes | ARCHIVE | active-only | fine |
+| **missions→areas/loadouts (1030-1090); mission_loadouts→clubs (1299)** | yes | **NONE automated** (see below) | **no** | same shape, correctly deferred |
+
+- **Q1 "can an inactive row hide garbage a reactivation revives unchecked?" → NO.** Every guard is
+  `if (row.isActive)`. Probe A/A′: an inactive banner pointing at a rateless `pool_gone` yields no
+  rule-10 error; flip it active and the rule-10 error returns. Garbage is caught the moment it can
+  reach a player. (The only skip-all-validation path is the `content_publish` RPC, which bypasses
+  the validator for **every** row regardless of these guards — pre-existing, not introduced here.)
+- **Q2 "any unguarded cross-row site a deactivation path can trigger today?" → NO.** The only
+  automated deactivation flow is `archiveRows` (`rotation.ts` L1065-79), which touches exactly
+  `gacha_rates/gacha_pools/gacha_banners/shop_catalog` (by poolId/rotationId) + the rotation row —
+  never clubs, missions, areas, loadouts or components. Every catalog it touches is now
+  active-guarded. The report's "missions↔components / loadouts↔clubs = same shape, no deactivation
+  path" is **accurate in the sense that matters**: no automated flow retires those referents. A
+  *manual* drawer toggle of a club or `mission_start_area` can trip the pre-existing (unchanged by
+  this task) missions rules — probe confirms an inactive mission on a deactivated area still errors
+  — but that is escapable (reactivate / re-point, per the rule's own message) and is correctly
+  flagged for the Architect, not a regression this task owns.
+- **Q3 "does any guard skip a rule an ACTIVE row needs?" → NO.** Probe B: an active banner with an
+  empty poolId still errors "poolId is empty". Each guard preserves pre-fix behaviour for active
+  rows verbatim.
+
+5 adversarial vitests all passed (probe deleted). Fix 1 is sound.
+
+## Fix 2 — R3 stand-in exemption in `export_content.py` → SOUND (but see the blocker)
+
+- Client masking requires `ownSprite == true`, i.e. `artSprite == ConventionName(bannerId)`.
+  `own_name` in `export_content.py` is byte-identical to `GachaBannerArt.ConventionName`, so
+  `GachaBanner_Weekly` is the own-name of **only** `banner_weekly`. For every real weekly banner
+  (`banner_wk_2026_38`→`GachaBanner_Wk202638`) `ownSprite` is false, so `Resolve` skips step 2 and
+  the **URL wins at step 3** — no masking. The exemption removes a **false-positive** refusal, it
+  does not hide a real one.
+- **Data-widening (Q3): cannot cause harm.** A hand-made banner with a fake `rotationId` +
+  `GachaBanner_Weekly` is exempted from `--check`, but on the client its `ownSprite` is still false
+  → URL wins → not masked. The only id that masks (`banner_weekly`) passes R3 *with or without* the
+  exemption (sprite == own-name), so the exemption opens no new masking path. `conflicting_art`
+  skip is correct too (weekly banners share the stand-in with different URLs *by design*).
+- `ContentArtFetcher` does **not** consume the R3 report; "Fetch URL Art" resets the sprite to the
+  row's own name, so the exemption stops applying there — nothing broken. `--check` is clean.
+
+## THE BLOCKER — the R3 exemption is incomplete: `ContentArtValidator.cs` runs the identical masked-check, un-exempted
+
+The R3 "placeholder masks URL art" check exists in **two** static tools (the client `Resolve` is a
+third, and it handles the stand-in correctly at runtime):
+
+1. `Tools/content/export_content.py` `masked_art_report` — **exempted** in `b0a70282a`. ✓
+2. `Assets/Editor/ContentArtValidator.cs` `ValidateCatalog` (L~318-338) — **the same check, NOT
+   exempted.** Its `gacha_banners` column carries `ownName: GachaBannerArt.ConventionName`, and it
+   emits a `Verdict = "masked"` Miss whenever `artUrl` is set and `artSprite != own-name`.
+
+`banner_wk_2026_38` (live, v13: `artUrl` set, `artSprite=GachaBanner_Weekly`, own-name
+`GachaBanner_Wk202638`) trips it. Simulated the exact boolean against the live CSV:
+
+```
+MASKED-FAIL: banner_wk_2026_38  artSprite='GachaBanner_Weekly' own='GachaBanner_Wk202638' rotationId='wk_2026_38'
+```
+
+`ContentArtValidator.RunAndReport()` runs in the build lane (`CIBuild.cs:479`) and via
+`GOLFIN/Content/Validate Catalog Art`. On the next **game** build it will rewrite the committed
+`Docs/Reports/content_art.txt` — today "gacha_banners (4 rows, 0 with missing art) … every sprite
+column resolves" — to report `banner_wk_2026_38 … masked`, whose own legend reads **"masked —
+FAIL. The row renders the WRONG picture."** That verdict is factually false (the client renders the
+uploaded art; `ownSprite` is false so the stand-in is demoted to step 4), and it directly
+contradicts `export --check`'s "no row's art is masked by a placeholder" on the same row — breaking
+the codebase's own stated "three tools must agree on one string" invariant. It does **not** filter
+by `is_active`, so every weekly banner ever run that carries an `artUrl` accumulates a permanent
+false "masked" row in that committed report (I6 keeps them in the CSV forever).
+
+Why this is a blocker and not a note:
+- It is the **third defect of the exact shape** the two fixes address (a pre-weekly-rotation art
+  gate flagging the legitimate shared stand-in) — the one the kickoff asked me to hunt for, in the
+  exact domain it pointed at ("a build step the exemption breaks").
+- The Rule-15 / PIPELINE_HARDENING §22 shape audit was done for the **archive-trap** defect but
+  **not** for the **R3** defect. Grepping the R3 masked-check operation class (not sampling) returns
+  **two** static sites; the fix patched one. Enumerating both is exactly what §22 requires.
+- It writes a committed **"FAIL"** artifact to the repo on the next build — the "Cesar catches it on
+  sight" class this gate exists to stop.
+
+Mitigating (so the implementer can scope it): `ContentArtValidator` is deliberately
+report-only — `RunAndReport` never throws/fails, `CIBuild.cs:479` wraps it in try/catch as "a
+report, not a gate", and nothing consumes `MaskedRowCount`. So it does **not** block the build, the
+weekly-rotation flow, or TestFlight today. It is a false-FAIL in a committed report + a tool-
+consistency violation, not a functional outage. But it is squarely in scope (the same R3 concept
+the fix under review addresses) and mechanically fixable, so it routes to the implementer, not to
+Cesar.
+
+### Fix instruction
+
+Mirror `b0a70282a` into `ContentArtValidator.ValidateCatalog`: before recording the `"masked"`
+Miss, skip a rotation stand-in — `spec.Name == "gacha_banners" && !string.IsNullOrEmpty(Field(fields, index, "rotationId")) && spriteName.Trim() == "GachaBanner_Weekly"`.
+Prefer one shared definition of the stand-in name (beside `GachaBannerArt.ConventionName`) that
+`export_content.py`, `lib/rotation.ts` (`WEEKLY_BANNER_ART`) and `ContentArtValidator` all reference,
+honouring "three tools, one string". Add an EditMode test asserting a rotation-tagged
+`GachaBanner_Weekly` banner with an `artUrl` is **not** flagged `masked`, while an un-tagged one on
+the stand-in still is (parity with `test_export_check.py::TestWeeklyStandinIsNotMaskedArt`).
+Re-run the game-lane `Validate Catalog Art` and confirm `content_art.txt` reports 0 masked.
+
+## SPEC §7 re-verification at HEAD (independent, read-only)
+
+| Check | Expected | Got | |
+|---|---|---|---|
+| content_catalogs published_version | rates 6 / pools 5 / banners 13 / shop 10 / rotations 4 | rates 6 / pools 5 / banners 13 / shop 10 / rotations 4 | ✓ |
+| banner_wk_2026_38 | active v13, artSprite GachaBanner_Weekly, pityGroup weekly, rotationId wk_2026_38, artUrl set | exact | ✓ |
+| artUrl serves | 200 image/jpeg 244928 | HTTP/2 200, image/jpeg, 244928 | ✓ |
+| shop_char_mike / shop_ball_putt_ace | inactive v10 | is_active=false v10 both | ✓ |
+| shop_wk_2026_38 | 13 active | total 13, active 13 | ✓ |
+| rotations wk_2026_36/37 / 38 | inactive / active | 36 F · 37 F · 38 T | ✓ |
+| pity 'weekly' for f2636482 | counter 3 | counter 3, total 3 | ✓ |
+| export_content.py --check | clean | clean (no masked) | ✓ |
+| dashboard vitest | 382 | 382 passed | ✓ |
+| content suite | 56 | 56 OK | ✓ |
+| deployed stamp / Access | 70464d323 / 302 | /api/version → 302 cloudflareaccess (stamp per Chrome) | ✓ |
+
+All prod/repo state matches the kickoff exactly. The two named fixes and every §7 item are
+verified good; the sole blocker is the un-mirrored R3 exemption in `ContentArtValidator.cs`.
+
+## Verdict
+
+**`ARCHITECT_REVIEW_FAIL`** — one concrete, reproducible blocker: the R3 stand-in exemption is
+incomplete. `Assets/Editor/ContentArtValidator.cs` runs the identical R3 masked-check with no
+stand-in exemption and will report `banner_wk_2026_38` (and every future weekly banner carrying an
+`artUrl`) as `masked — FAIL` in the committed `Docs/Reports/content_art.txt` on the next game build,
+contradicting `export --check`. Fix per the instruction above (small, mechanical). Fix 1, Fix 2's
+export half, and all SPEC §7 state are verified sound this pass.
+
+## Files summary (iter-3)
+
+| Path | Change |
+|---|---|
+| [`REDTEAM_REVIEW.md`](Docs/Specs/Active/weekly_rotation_admin/REDTEAM_REVIEW.md) | Appended iter-3 adversarial record — FAIL (one blocker). |
+| [`STATUS.md`](Docs/Specs/Active/weekly_rotation_admin/STATUS.md) | `READY_FOR_REDTEAM` → `ARCHITECT_REVIEW_FAIL`. |
