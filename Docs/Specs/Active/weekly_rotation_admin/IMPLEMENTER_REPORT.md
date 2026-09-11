@@ -1,7 +1,7 @@
 # IMPLEMENTER_REPORT — `weekly_rotation_admin`
 
 **Iteration shape:** `rotations:generator-and-publish-chain`
-**Iteration:** 1
+**Iteration:** 2
 **Canonical screenshot:** `screenshots/rotations_workbench_preview.png` (2880×2600)
 
 ---
@@ -52,7 +52,7 @@ rule G3-Q refuses anything else on a ball row). The pity migration was applied b
 | `Assets/Resources/Art/Gacha/Banners/GachaBanner_Weekly.png` (+ `.meta`) | **NEW** — the Standard Club 1 art re-tinted to `#4A8FE5` by luminance remap (the `TicketIconDerive` approach, gain chosen to keep the source's mean luminance), 882×1448, Sprite import settings copied from `GachaBanner_TestA.png.meta`. |
 | `Tools/content/catalogs.py` | Catalog #21 `rotations` (id `rotationId`); `IS_ACTIVE_COLUMN`; docstring facts. |
 | `Tools/content/seed_from_csv.py` | `seed_rows()` splits an `is_active` CSV column OUT of `data` and uses it as the row flag — the rule the importer and exporter already applied; `rotations.csv` is the first CSV to carry the column at seed time. |
-| `Tools/content/tests/test_catalog_registry.py` | Count 20 → 21; `TestRotationsIsRegistered` (shape, LF, un-materialized, the seeder rule, a `false` cell seeds inactive). Suite 48 → **53**. |
+| `Tools/content/tests/test_catalog_registry.py` | Count 20 → 21; `TestRotationsIsRegistered` (the 52 planned ids present and pinned, LF, `materializedAt` blank-or-instant, the seeder rule, a `false` cell seeds inactive). **iter-2:** the seeded gacha rows and the plan are pinned BY ID, never by count — a rotation publish appends to four catalogs every week. Suite 48 → **53, all passing** (`Ran 53 tests … OK`, re-run AFTER the live publishes). |
 | `Tools/content/README.md`, `Docs/TESTFLIGHT_RUNBOOK.md` | Twenty-one catalogs; the `rotations` row; the seeder note. |
 | `Tools/admin-dashboard/migrations/2026_09_11_content_rotations_seed.sql`, `…/2026_09_11_gacha_pity_group.sql` | Mirrors of the two playlife migrations. |
 | `Docs/Economy/ECONOMY_MASTER.md` | §3: the ball ladder line (one-ball, with the ten-ball caveat) and a "Weekly rotation" paragraph — **Architect to review the wording**. |
@@ -102,7 +102,7 @@ No backend Python changed; `routers/gacha.py` passes the function's JSON through
 | Pity migration: verification block passes; live E2E in §6.4 quoted | **PASS** | **Migration applied by Cesar 2026-09-11** (SQL editor, Part 1 then Part 2; he pasted Part 2's last result `gacha_pull_client_callable_expected_0 = 0` — the batch reaching that SELECT means every ASSERT in the DO block held, and the OLD function would have failed `expected key weekly, got null`). **Live §6.4 on prod, re-derived from the tables, not from the paste:** two test rotations `wk_2026_36` (03:16:35 → 03:36:35Z) and `wk_2026_37` (03:36:35 → 04:06:35Z), quotas Common:1 / Common:1 / Any:0, materialized through the panel (`6 rate rows, 11 pool entries, 1 banner, 2 shop rows` each), banners set free (`costX1 0`) so the ledger stayed untouched, published through PUBLISH ROTATION in one run (`gacha_rates v5, gacha_pools v4, gacha_banners v11, shop_catalog v8, rotations v3`). Pulls as Cratilo (`f2636482-…`): **A x1 → `pity: {counter 1, key "weekly"}`**, **A x1 → `counter 2`**; after A's window: `not_available / window`; **B x1 → `pity: {counter 3, threshold 50, min_rarity Legendary, key "weekly", forced false}, pulls_used 1`** — `golfin_gacha_pulls`: `(banner_wk_2026_36, pity_before 0 → 1)`, `(banner_wk_2026_36, 1 → 2)`, `(banner_wk_2026_37, 2 → 3)`; `golfin_gacha_pity`: `weekly counter=3 total=3 · banner_wk_2026_36 counter=0 total=2 · banner_wk_2026_37 counter=0 total=1`. The counter CONTINUED across the two banners; the cap count stayed per banner. Then both rotations and all 42 generated rows deactivated and published (`rates v6, pools v5, banners v12, shop v9, rotations v4`) — over PostgREST + the `content_publish` RPC because the Chrome Access session expired mid-run (a deactivation-only change set; `--check` clean after); an archived banner inside its window → `not_available / inactive`, an archived shop row → `not_listed / inactive`. |
 | Gacha ops panel per-user pity shows the group key; reset works | **PASS** | `screenshots/users_gacha_tab_pity_group.png` — the drawer's Pity section lists `weekly` with a `GROUP · 2` badge (members in the tooltip), `4 / 50 to Legendary · 4 pulls on this key`, Reset enabled; `resetPity` already keys on `banner_id`, which IS the key, so the DELETE route resets a group row unchanged (mock: `MOCK_PLAYER_PITY.find(p => p.bannerId === "weekly")`). Live read path: `fetchPlayerGacha` resolves a key with no banner of that id to the active banners whose `pityGroup` equals it. |
 | Mock mode exercises the full panel | **PASS** | `MOCK_MODE=1` on :3100: calendar (MISSING / NOT GENERATED / GENERATED / SCHEDULED all seen), create-week (`Created draft rotation wk_2026_37 (2026-09-07T00:00:00Z → 2026-09-14T00:00:00Z)`, defaults copied from the latest row, FNV seed `3136914637`), PREVIEW (pinned week; open week → amber shortfall warnings, `screenshots/rotations_workbench_warnings.png`), MATERIALIZE, typed re-materialize, PUBLISH ROTATION clean and R3-stopped, ARCHIVE ENDED, the JA render (`rotations_workbench_preview_ja.png`), the Users drawer group row. All 9 screenshots are mock frames (the MOCK DATA banner is on every one). |
-| `npm run build` green; vitest green; backend suite green; deployment id + version stamp quoted; Access 302; `/health` and the smoke routes 200 | **PASS** | Deploy #1 `b3d528c0-4148-4269-a20e-ebb9ea47b541` (stamp `05f0f7da1`), #2 `eebbd47e-9ebf-4521-9edc-329aa63fa354` (`d2dc096c7`, the ticket_types fix), #3 `0ff72acc-d587-4baa-bfe6-dae2299453ef` (`f8063af6b`, HEAD of the dashboard); each ran the suite first (375 → 377 → **378 passed**) then the OpenNext build. Live `/api/version` in Chrome: `{"commit":"f8063af6b","stamped":true}`. Shell: `curl https://admin.golfin.world/api/version` → **302** to `cloudflareaccess.com` (Access fronting the origin). API: `flyctl status` both machines **v74**; `/health` → **200** `{"status":"ok"}`; `/api/v1/gacha/tickets` → **403** `Not authenticated`; `/api/v1/content?since=0&catalogs=rotations` → **200** `rotations v2 full`, `…catalogs=gacha_banners` → **200** `v10`. Backend `pytest -q` → **319 passed**. No backend Python changed, so no Fly deploy was made (nothing to ship). |
+| `npm run build` green; vitest green; backend suite green; deployment id + version stamp quoted; Access 302; `/health` and the smoke routes 200 | **PASS** | Content suite **`Ran 53 tests … OK`** re-run after the live publishes and the E2E (iter-2; iter-1 had run it before the publishes, and 8 seed-time count pins then broke — see Deviation 12). `--check: clean` after the last export. Deploy #1 `b3d528c0-4148-4269-a20e-ebb9ea47b541` (stamp `05f0f7da1`), #2 `eebbd47e-9ebf-4521-9edc-329aa63fa354` (`d2dc096c7`, the ticket_types fix), #3 `0ff72acc-d587-4baa-bfe6-dae2299453ef` (`f8063af6b`, HEAD of the dashboard); each ran the suite first (375 → 377 → **378 passed**) then the OpenNext build. Live `/api/version` in Chrome: `{"commit":"f8063af6b","stamped":true}`. Shell: `curl https://admin.golfin.world/api/version` → **302** to `cloudflareaccess.com` (Access fronting the origin). API: `flyctl status` both machines **v74**; `/health` → **200** `{"status":"ok"}`; `/api/v1/gacha/tickets` → **403** `Not authenticated`; `/api/v1/content?since=0&catalogs=rotations` → **200** `rotations v2 full`, `…catalogs=gacha_banners` → **200** `v10`. Backend `pytest -q` → **319 passed**. No backend Python changed, so no Fly deploy was made (nothing to ship). |
 | Strings: no player-facing keys; admin `DICT` en + ja only, every new string listed | **PASS** | **72 new keys**, scripted lint: `missing/empty en or ja: none`, `{var} mismatch between en/ja: none`; `tsc --noEmit` exit 0 (`DictKey` is derived from `DICT`). No `LocalizationText.csv` change. List under § Strings. |
 | `ECONOMY_MASTER.md` §3 gains the ball ladder line + a "weekly rotation" paragraph | **PASS** | Both written under §3, each opening with "Architect to review the wording"; the ball line states the one-ball reality and names the server change a ten-ball listing needs. |
 
@@ -195,6 +195,39 @@ leftover_rows_expected_0 = 0 · leftover_banners_expected_0 = 0 · gacha_pull_cl
     not bundle `GachaBanner_Weekly.png`, and `GachaBannerModel` withholds a banner whose art
     resolves neither by `artUrl` nor by `artSprite`. `banner_wk_2026_38` goes live Monday with
     `artUrl` blank — see the pendings.
+12. **The CSVs carry the E2E's two archived test rotations, and the tests were re-pinned as
+    invariants (iter-2, from the self-review).** `rotations.csv` now has 54 rows — the 52 planned
+    weeks plus `wk_2026_36` / `wk_2026_37` with `is_active=false` — and `gacha_banners.csv`,
+    `gacha_rates.csv`, `gacha_pools.csv`, `shop_catalog.csv` carry their (inactive) rows; the
+    exporter appended an `is_active` column to `gacha_rates.csv` and `gacha_banners.csv` for
+    the first time. They stay: I6 (deactivate, never delete) is the pipeline's own rule, and the
+    exporter mirrors what prod holds. The content suite's seed-time COUNT pins (`gacha_banners 4`,
+    `gacha_rates 6`, `gacha_pools 11`, `rotations 52`, `materializedAt` blank) were the wrong
+    shape for a catalog a rotation appends to every Monday — iter-1 ran the suite before the
+    live publishes and missed that they broke afterwards. They are now pinned BY ID (the seeded
+    rows are present; the 52 planned ids are present and pinned; a set `materializedAt` is an
+    ISO instant; `is_active` follows the CSV cell), which survives every weekly publish.
+
+---
+
+## Iteration 2 — the self-review's fail list
+
+`golfin-self-reviewer` returned `BACK_TO_IMPLEMENTER` on iter-1 with one finding in three parts:
+8 of the 53 content-suite tests failed after the live publishes, and the report had not said so
+(the suite had been run before the publishes); the 54-row `rotations.csv` was not disclosed as a
+deviation. Both addressed, nothing else changed:
+
+1. **Content suite back to green — as invariants, not as today's numbers** (`Tools/content/
+   tests/test_catalog_registry.py`). The reviewer's Option B, but bumping the counts to
+   `7 / 24 / 45` would have failed again on Monday's publish; the seeded gacha rows and the 52
+   planned rotation ids are pinned by id, `materializedAt` blank-or-ISO-instant, `is_active`
+   follows the CSV cell. Option A (delete the two test rotations and their rows from the CSVs)
+   was not taken: I6 says deactivate, never delete, and the exporter mirrors prod. Re-run:
+   **`Ran 53 tests in 0.078s — OK`**.
+2. **Deviation 12** written (above).
+3. The suite result and `--check: clean` are now quoted in checklist row 10.
+
+`catalogs.py`'s CSV-facts docstring says the four catalogs grow by construction.
 
 ---
 
