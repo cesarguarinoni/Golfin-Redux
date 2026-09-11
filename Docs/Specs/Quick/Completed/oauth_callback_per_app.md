@@ -1,6 +1,6 @@
 # Quick: OAuth callback lands in the app that launched it (`oauth_callback_per_app`)
 
-**Date:** 2026-09-11 · **Reported by Cesar:** "Logging in with Google (probably also Apple or
+**Date:** 2026-09-11 · **DONE — Cesar approved 2026-09-11** (shipped as GOLFIN GPS 1.0.0 (2873) + Golfin 1.5.7 (2874)) · **Reported by Cesar:** "Logging in with Google (probably also Apple or
 manual) with both GPS and Game versions installed seems to default to GPS. You can't log into
 Game until you delete GPS from the device. The login should go to the app that launched it."
 
