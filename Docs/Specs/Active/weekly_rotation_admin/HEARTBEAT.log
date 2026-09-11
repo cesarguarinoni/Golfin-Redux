@@ -1,0 +1,9 @@
+=== iter-1 kickoff baseline 2026-09-11T02:11:46Z ===
+HEAD: 2f2a7fc5d9b370bb47e8a9b3f5c24b262b91cbf4
+DIRTY:
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+?? Docs/Specs/Active/weekly_rotation_admin/HEARTBEAT.log
+=== end baseline ===
+2026-09-11T02:11:46Z iter-1 start — read SPEC, catalogs.py/seed/import/export, contentValidate/View/Mutations, CatalogPanel, daily-panel precedent, golfin_gacha_pull body; baselines: content suite 48 OK
+2026-09-11T02:49:34Z iter-1 — dashboard code written; tsc clean; vitest 375/375 (+51); mock :3100 exercised end-to-end (PREVIEW, MATERIALIZE, typed re-materialize, PUBLISH chain green then R3 stop at gacha_banners, ARCHIVE 17 rows, create-week); 9 screenshots via shoot.mjs; migrations composed (seed + pity_group, pglast-parsed); starting live: seed --apply, importer, --check
+2026-09-11T03:05:14Z iter-1 — seed applied (52 rows v1, round trip byte-identical); importer: additive columns 'same' (no-op); dashboard deployed 3x (05f0f7da1 → d2dc096c7 ticket_types fix → f8063af6b), live stamp read in Chrome; wk_2026_38 materialized + published on prod (rates v4, pools v3, banners v10, shop v7, rotations v2); export + --check clean; API v74 smoke ok; report + AI_CONTEXT written; pity E2E waits on the DDL

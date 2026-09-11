@@ -4,6 +4,37 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-11 — weekly_rotation_admin: **the store and the gacha rotate weekly, authored in the admin as one unit** — READY_FOR_SELF_REVIEW, first rotation LIVE on prod for Monday
+
+Catalog #21 `rotations` (52 planned weeks, `wk_2026_38` → `wk_2027_36`, seeded at v1 and
+round-tripped byte-identical), the pure generator `lib/rotation.ts` (pins win, verbatim;
+`mulberry32(seed)` fills only the blanks by rarity quota with the 7-type spread and the
+last-N-rotations exclusion), the **Rotations panel** (8-week calendar, PREVIEW → MATERIALIZE →
+PUBLISH ROTATION in the order gacha_rates → gacha_pools → gacha_banners → shop_catalog →
+rotations, stop on the first refusal, ARCHIVE ENDED = deactivate), validator R1–R4, and the
+pity migration `2026_09_11_gacha_pity_group.sql` (the counter keyed by `pityGroup`, cap still per
+banner). **`wk_2026_38` (DRIVER WEEK · BOGEYB) is materialized and published on prod** —
+shop_catalog v7 (13 rows, 2026-09-14 → 09-21), gacha_banners v10, gacha_pools v3, gacha_rates
+v4, rotations v2 — through the real panel on admin.golfin.world. Dashboard live at `f8063af6b`
+(CF `0ff72acc-d587-4baa-bfe6-dae2299453ef`); vitest 324 → 378; content suite 48 → 53; backend
+319 (no Python changed, no Fly deploy).
+
+**Found on the way:** (1) a `shop_catalog` publish never loaded `ticket_types`, so the Shop
+drawer could not publish at all while `shop_ticket_standard_50` existed (since 2026-08-31) —
+fixed, list derived from the category map (`d2dc096c7`); (2) that ticket row's DRAFT was still
+active from before Cesar's OFF-SALE commit — any shop publish would have put it back on sale;
+aligned with the published row, decision pending; (3) the spec's ten-ball listing cannot ship
+(`golfin_shop_purchase` honours `quantity` for tickets only, G3-Q refuses the rest) — ball rows
+are one ball at the new §3.3 ladder; (4) `char_mike` / `ball_putt_ace` are also shop_stocking
+placeholder listings, so the week lists them twice — the generator now warns; (5) installed
+builds withhold `banner_wk_2026_38` until it has an `artUrl` (they do not bundle
+`GachaBanner_Weekly.png`).
+
+**Waiting on Cesar:** apply the pity migration (DDL; then I run the §6.4 live E2E), art for the
+weekly banner before Monday, the three decisions above. Task folder:
+`Docs/Specs/Active/weekly_rotation_admin/`.
+
+---
 ## 2026-09-11 — standalone lane rewrote `content_art.txt` with the SHELL's picture — FIXED
 
 `punch it standalone` (build 2873) regenerated `Docs/Reports/content_art.txt` as "29 row(s)

@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-09-11 07:17. Do not edit manually.
+> Auto-generated 2026-09-11 11:04. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -12,6 +12,7 @@ Assets/Scripts/Audio/Events/SfxId.cs
 Assets/Scripts/Audio/SfxBusReset.cs
 Assets/Scripts/Audio/SfxLibrary.cs
 Assets/Scripts/Audio/SfxPlayer.cs
+Assets/Scripts/Auth/AppDeepLink.cs
 Assets/Scripts/Auth/AuthFlowState.cs
 Assets/Scripts/Auth/AuthModels.cs
 Assets/Scripts/Auth/AuthRedirectUrl.cs
@@ -24,6 +25,7 @@ Assets/Scripts/Auth/OAuthUrlBuilder.cs
 Assets/Scripts/Auth/PlayerIdentity.cs
 Assets/Scripts/Auth/SupabaseAuthClient.cs
 Assets/Scripts/Auth/SupabaseConfig.cs
+Assets/Scripts/Auth/Tests/AppDeepLinkTests.cs
 Assets/Scripts/Auth/Tests/AuthTests.cs
 Assets/Scripts/Auth/Tests/OAuthTests.cs
 Assets/Scripts/Auth/Tests/RecoveryFlowTests.cs
