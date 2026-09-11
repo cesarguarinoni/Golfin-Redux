@@ -15,16 +15,39 @@
 #   lives in Tools/).
 #
 # EXIT CODES
-#   0  no lock: safe to run a batchmode build
+#   0  no lock and no Editor process: safe to run a batchmode build
 #   4  Temp/UnityLockfile present: the Editor is open (or crashed and left a stale lock)
+#   4  an interactive Editor process has this project open even though the lock is GONE — an
+#      AppleScript `quit` addressed by app name can land on an asset-import WORKER (same binary,
+#      same bundle id), whose shutdown removes the lockfile while the Editor keeps running
+#      (2026-09-11). The lock alone therefore proves nothing; the process list is checked too.
+#      Quit it with Tools/quit-unity.sh, which addresses the Editor by pid.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT="${1:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 LOCK="$PROJECT/Temp/UnityLockfile"
 
+# The interactive Editor: `Unity -projectPath <this repo>` with no batchmode flag. Import workers
+# (`-adb2 -batchMode`) die with the Editor and are not a lock holder in their own right.
+editor_pids() {
+  pgrep -f "Unity.app/Contents/MacOS/Unity .*-projectPath ${PROJECT}" 2>/dev/null \
+    | while read -r pid; do
+        cmd="$(ps -o command= -p "$pid" 2>/dev/null || true)"
+        case "$cmd" in *-batchMode*|*-batchmode*|*-adb2*) ;; *) echo "$pid" ;; esac
+      done
+}
+
 if [[ ! -f "$LOCK" ]]; then
-  echo "[assert-unity-closed] OK — no Unity lock at $LOCK"
+  LIVE="$(editor_pids || true)"
+  if [[ -n "$LIVE" ]]; then
+    echo "ERROR: no lock file, but a Unity Editor process still has this project open (pid ${LIVE//$'\n'/ })." >&2
+    echo "       The lock was released without the Editor exiting — a quit addressed to the app NAME" >&2
+    echo "       hit an import worker instead of the Editor. A batchmode build now would share" >&2
+    echo "       Library/ with the open Editor. Quit it by pid:  Tools/quit-unity.sh" >&2
+    exit 4
+  fi
+  echo "[assert-unity-closed] OK — no Unity lock at $LOCK and no Editor process on $PROJECT"
   exit 0
 fi
 

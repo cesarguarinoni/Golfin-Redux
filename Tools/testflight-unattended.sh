@@ -79,19 +79,14 @@ if [ "$SMOKE" = "1" ]; then
 fi
 
 # ── 1. Unity ───────────────────────────────────────────────────────────────────
-if [ -f "$REPO/Temp/UnityLockfile" ]; then
-  say "Unity holds the project lock — requesting a graceful quit"
-  osascript -e 'tell application "Unity" to quit' >>"$LOG" 2>&1 &
-  for _ in $(seq 1 30); do
-    [ -f "$REPO/Temp/UnityLockfile" ] || break
-    sleep 3
-  done
-  if [ -f "$REPO/Temp/UnityLockfile" ]; then
-    finish 4 "ABORTED — Unity would not quit (unsaved work?). Nothing built, nothing uploaded."
-  fi
-  say "Unity quit; lock released"
+# Tools/quit-unity.sh addresses the EDITOR PROCESS by pid and waits for the pid to exit. The
+# previous `osascript -e 'tell application "Unity" to quit'` resolved the app by bundle id, which
+# the asset-import workers share — the quit landed on a worker, the worker's shutdown removed the
+# lockfile, and the Editor kept running while this script reported "lock released" (2026-09-11).
+if "$REPO/Tools/quit-unity.sh" "$REPO" 90 >>"$LOG" 2>&1; then
+  say "Unity closed (or was not running) — see quit-unity lines above"
 else
-  say "Unity not running"
+  finish 4 "ABORTED — Unity would not quit (unsaved work behind a dialog, or a hang). Nothing built, nothing uploaded."
 fi
 
 # ── 2. Tree ────────────────────────────────────────────────────────────────────

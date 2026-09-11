@@ -124,7 +124,7 @@ What the lane does, in order (`fastlane/Fastfile`):
 | Step | Action | Fails the lane when |
 |---|---|---|
 | 1 | `ensure_git_status_clean` | tree is dirty — the build number is `git rev-list --count HEAD` and would not describe the binary |
-| 2 | `Tools/assert-unity-closed.sh` | the Editor holds `Temp/UnityLockfile` (batchmode can't take it) |
+| 2 | `Tools/assert-unity-closed.sh` | the Editor holds `Temp/UnityLockfile` (batchmode can't take it), or an Editor process has the project open with no lock (a name-addressed quit hit an import worker — quit by pid with `Tools/quit-unity.sh`) |
 | 3 | `Tools/content/export_content.py --check` | the bundled CSVs are behind the PUBLISHED catalogs, or a CSV has drifted from its catalog by id or by value — see § "Step 3: the content gate" |
 | 4 | `Tools/unity-build-ios.sh [gps\|standalone]` → `CIBuild.BuildIOS` / `BuildIOSGps` / `BuildIOSStandalone` | Unity's exit code is non-zero, or `Builds/iOS-Full/Unity-iPhone.xcodeproj` is missing |
 | 5 | `build_app` (xcodebuild archive + export, `-allowProvisioningUpdates`) | signing/archive failure |
@@ -295,8 +295,9 @@ printf 'export LC_ALL=en_US.UTF-8\nexport LANG=en_US.UTF-8\neval "$(/opt/homebre
   its last 120 lines. `[CIBuild] FAILED:` is the line that says why.
 - **"REFUSING TO BUILD: computed build number N <= last-uploaded M"** — the upload guard.
   Commit something; the number is `git rev-list --count HEAD`.
-- **Editor open** — quit Unity. If it crashed, the lock is stale and the script tells you
-  which `rm` clears it.
+- **Editor open** — quit Unity with `Tools/quit-unity.sh` (by pid; a name-addressed AppleScript
+  quit can hit an import worker and strand the Editor without its lock). If it crashed, the lock
+  is stale and the script tells you which `rm` clears it.
 - **Anything after the archive** — the Xcode project in `Builds/iOS-Full` is real and
   current; fall back to Phase 3/4 below by hand rather than re-running Unity.
 

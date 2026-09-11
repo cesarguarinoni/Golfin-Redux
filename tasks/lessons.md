@@ -4350,3 +4350,29 @@ and every redirect the binary asks for must come back on that one scheme.
    `redirect_to` that is not listed is silently replaced by the Site URL (the `auth_email_redirect`
    ordering trap), so a fixed client shipped first turns "steals the other app's login" into
    "has no login".
+
+## Lesson BY — `tell application "Unity" to quit` can quit an IMPORT WORKER, not the Editor (2026-09-11)
+
+Cesar: *"You always fail to quit gracefully and end up force quitting. I think your quit command
+might be flawed."* It was. The Editor spawns asset-import workers from the same binary
+(`Unity -adb2 -batchMode …`), and each registers with LaunchServices under the Editor's bundle id
+— JXA `runningApplicationsWithBundleIdentifier("com.unity3d.UnityEditor5.x")` returned TWO pids.
+AppleScript resolves `application "Unity"` by that bundle id, so the quit event went to whichever
+process the system picked: import worker 4. It quit; the Editor logged *"Unexpected transport
+error from import worker 4 (possible crash)"*; the worker's shutdown removed `Temp/UnityLockfile`;
+the Editor stayed open with its main loop alive (MCP still answered ping). Every script and
+session that then read "lock gone ⇒ Unity quit" — `testflight-unattended.sh` included — was
+declaring success on a false signal, and the batchmode build it went on to start would have
+shared `Library/` with the open Editor.
+
+**The rule.**
+1. Address the quit to the Editor's PID, never the app name: `Tools/quit-unity.sh` finds the
+   `-projectPath` process that is not `-batchMode`/`-adb2` and calls
+   `NSRunningApplication.terminate` on it (JXA; a zero-argument ObjC method is a PROPERTY there —
+   `app.terminate`, no parentheses, and it returns the BOOL). It is the same graceful event the
+   Dock's Quit sends: wantsToQuit, the Save prompt if dirty, layout save, lock release. The
+   Editor was gone in under five seconds.
+2. Success is the PROCESS exiting, not the lockfile vanishing. `assert-unity-closed.sh` now fails
+   on a live Editor process even with no lock.
+3. The MCP ping is the tell between "hung in shutdown" and "never got the quit": a main loop
+   that still answers never received it.

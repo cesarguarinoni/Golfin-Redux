@@ -74,7 +74,12 @@ Apple to surface the build.
 ## Standing permissions (granted by Cesar, 2026-08)
 
 - **Quitting Unity: yes** — but only after reading scene dirty state over MCP. Nothing unsaved →
-  quit and build. **Never force-quit blind.**
+  quit and build. **Never force-quit blind.** Quit with **`Tools/quit-unity.sh`**, never
+  `osascript … tell application "Unity" to quit`: the import workers share the Editor's bundle
+  id, so a quit addressed by NAME can land on a worker — the lockfile vanishes, the Editor stays
+  open, and the next "graceful quit" ends as a force-quit (2026-09-11). The script addresses the
+  Editor by pid and waits for the PROCESS to exit; `assert-unity-closed.sh` now refuses a live
+  Editor even when the lock is gone.
 - **The upload itself: yes** — "punch it" is the authorization. Claude does not re-ask per build.
 - **Sweeping the tree into a commit: yes for ordinary work** (docs, specs, art, data). The commit
   message says plainly what was swept and that nobody reviewed it.
