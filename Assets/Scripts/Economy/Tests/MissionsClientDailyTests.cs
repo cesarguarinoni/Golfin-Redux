@@ -71,11 +71,11 @@ namespace Golfin.Economy.Tests
         }
 
         [Test]
-        public void ForgetDailyForTest_ClearsIt()
+        public void ForgetDaily_ClearsIt()
         {
             _transport.Enqueue(HttpResponse.Status(200, DailyEnvelope));
             Pump.Drain(_missions.FetchDailyRoutine(_ => { }));
-            _missions.ForgetDailyForTest();
+            _missions.ForgetDaily();
             Assert.IsNull(_missions.LastDaily);
         }
     }

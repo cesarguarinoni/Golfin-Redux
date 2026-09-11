@@ -18,7 +18,9 @@ their writes. Fix: `Rise` adopts external writes as its rest + `UiMotion.RestY(r
 and was pushed 439 px down 0.2–1.6 s later (R2 had removed the shimmer that held the space). Fix:
 `MissionsClient.LastDaily` paints the card in the opening frame, rising with the rows; cold path
 holds the collapsed slot at alpha 0 and fades in; the fetch repaints status in place.
-Tests +11; namespaces green (Polish 170, EditMode 341, Economy 118, Net 18). Clip + before/after in
+On Cesar's word the same day: `DailyMissionSessionReset` forgets both daily facts on an ACCOUNT
+SWITCH — keyed on the session's `UserId`, because `SignedIn` also fires on a token refresh.
+Tests +15; namespaces green (Polish 170, EditMode 345, Economy 118, Net 18). Clip + before/after in
 `Docs/Specs/Quick/media/home_carousel_and_daily_timing/`. Record:
 `Docs/Specs/Quick/home_carousel_and_daily_timing.md`. Lessons CA–CC.
 

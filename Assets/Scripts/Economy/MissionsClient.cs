@@ -181,8 +181,12 @@ namespace Golfin.Economy
         /// </summary>
         public DailyMissionResult LastDaily { get; private set; }
 
-        /// <summary>Test seam.</summary>
-        public void ForgetDailyForTest() => LastDaily = null;
+        /// <summary>
+        /// Drop the remembered answer. Called on an account switch
+        /// (<c>DailyMissionSessionReset</c>) — the recipe is per-day and global, but the streak and
+        /// the claimed flag in it belong to the player who fetched it.
+        /// </summary>
+        public void ForgetDaily() => LastDaily = null;
 
         /// <summary>
         /// Claim the daily for one UTC date. Once per player per date.

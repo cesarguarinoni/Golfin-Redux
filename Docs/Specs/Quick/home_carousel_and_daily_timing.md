@@ -79,11 +79,17 @@ top unchanged (1819 → 1819); Home-pill entry — expanded on arrival.
 ## Tests
 `UiMotionTests` +4 (rest adoption, finalizer, `RestY`, noise floor), `BannerSlotShiftTests` +4
 (scaled canvas, raw→scaled re-measure, show restores, both rects rising),
-`MissionsClientDailyTests` +3. Namespaces green: `Golfin.UI.Polish.Tests` 170,
-`GolfinRedux.Tests.EditMode` 341, `Golfin.Economy.Tests` 118, `Golfin.Net.Tests` 18.
+`MissionsClientDailyTests` +3, `DailyMissionSessionResetTests` +4. Namespaces green:
+`Golfin.UI.Polish.Tests` 170, `GolfinRedux.Tests.EditMode` 345, `Golfin.Economy.Tests` 118,
+`Golfin.Net.Tests` 18.
 
-## Not done here
-- Account switch without an app restart: `LastDaily` (like `DailyMissionState` before it) is not
-  cleared on `AuthService.SignedIn`; the fresh fetch overwrites it within a second, and the
-  recipe is per-day and global — only streak/claimed could show the previous account's for that
-  second. An `AuthService.SignedIn` subscriber clearing both is the in-pattern fix if wanted.
+## Account switch (added on Cesar's word, same day)
+
+`DailyMissionSessionReset` (`Assets/Scripts/UI/Home/`, `[RuntimeInitializeOnLoadMethod]`) subscribes
+to `AuthService.SignedIn` and forgets both daily facts — `MissionsClient.ForgetDaily()` and
+`DailyMissionState.Clear()` — **only when the session's `UserId` differs from the one the facts
+were fetched for**. `SignedIn` also fires on a token refresh (its own doc says so, and every other
+subscriber re-fetches for that reason); a blind clear would have blanked the Home pill mid-session.
+Pinned by `DailyMissionSessionResetTests` (first session remembers, refresh forgets nothing,
+another user forgets both, a session without a user id is ignored). Verified at boot: hook
+subscribed, nothing forgotten on the first session.
