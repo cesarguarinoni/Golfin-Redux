@@ -20,3 +20,7 @@ shop_wk_2026_38_club_pwedge_bogeyb_uncommon,club,club_pwedge_bogeyb_uncommon,200
 shop_wk_2026_38_club_swedge_bogeyb_uncommon,club,club_swedge_bogeyb_uncommon,200,,401,false,false,Uncommon,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
 shop_wk_2026_38_club_wood_bogeyb_common,club,club_wood_bogeyb_common,100,,502,false,false,Common,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
 shop_wk_2026_38_club_wood_bogeyb_mythic,club,club_wood_bogeyb_mythic,800,,200,false,false,Mythic,2026-09-14T00:00:00Z,2026-09-21T00:00:00Z,,,,true,wk_2026_38
+shop_wk_2026_36_ball_par_perfect,ball,ball_par_perfect,30,,501,false,false,Common,2026-09-11T03:16:35Z,2026-09-11T03:36:35Z,,,,false,wk_2026_36
+shop_wk_2026_36_club_driver_klyro_common,club,club_driver_klyro_common,100,,500,false,false,Common,2026-09-11T03:16:35Z,2026-09-11T03:36:35Z,,,,false,wk_2026_36
+shop_wk_2026_37_ball_fyloe_soft,ball,ball_fyloe_soft,30,,501,false,false,Common,2026-09-11T03:36:35Z,2026-09-11T04:06:35Z,,,,false,wk_2026_37
+shop_wk_2026_37_club_wood_golfin_common,club,club_wood_golfin_common,100,,500,false,false,Common,2026-09-11T03:36:35Z,2026-09-11T04:06:35Z,,,,false,wk_2026_37
