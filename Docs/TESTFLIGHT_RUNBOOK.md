@@ -92,7 +92,7 @@ runs the same lane body against the `iOS-Standalone` profile — `GOLFIN_GPS;GOL
 the build. It is PLAYLIFE as a thin shell: `StandaloneGate` refuses every golf screen, `Home` is
 rewritten to `GpsHub`, and the boot skips `StarterGate` entirely.
 
-Three things differ from the other three lanes, all of them handled inside the lane:
+Four things differ from the other three lanes, all of them handled inside the lane:
 
 - **A different App Store record.** `com.nextinnovation.golfingps` / app "GOLFIN GPS" /
   Apple ID `6737145432`, same team (`TCUV4A9VTJ`) so no new signing identity. Bundle id, product
@@ -106,6 +106,18 @@ Three things differ from the other three lanes, all of them handled inside the l
   collision that does not exist. `mark-uploaded.sh` takes the record as its second argument.
 - **The scene list is the size story.** No code is stripped out of the project; IL2CPP stripping
   plus the absent hole scenes do the work. Compare the .ipa against the GPS variant's.
+- **No catalog-art report.** `CIBuild.BuildIOSCore` skips `ContentArtValidator`
+  (`GOLFIN/Content/Validate Catalog Art`) when the profile being built is `iOS-Standalone`, and
+  logs one `[CIBuild] catalog-art report SKIPPED` line saying why. The lane stashes the golf
+  `Resources/` folders for the duration of the build, and the validator resolves art exactly the
+  way the runtime does — so it saw every club, ball, item and portrait as missing and rewrote
+  `Docs/Reports/content_art.txt` with a picture of the shell (build 2873: "29 row(s) withheld,
+  799 club row(s) on Placeholder, 2449 missing sprite reference(s)", reverted by hand). That file
+  always describes the **game** build: a standalone run leaves it untouched and the next game
+  lane rewrites it. The skip is judged against the profile being built, not the editor's active
+  one — the active profile persists in `Library/` across runs, so a game lane straight after a
+  standalone one would otherwise skip its own report (`StandaloneIdentityProfileTests` pins
+  this). A standalone run that dirties `content_art.txt` again means the skip has regressed.
 
 `Golfin.EditorTools.CIBuild.BuildIOSStandalone` asserts BOTH defines on the profile before it
 builds, for the reason the GPS lane asserts one: a standalone build that silently lost

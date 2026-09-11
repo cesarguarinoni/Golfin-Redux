@@ -18,6 +18,13 @@
 // literals copied from those loaders (cited per catalog below). A validator that
 // resolved differently from the game would be worse than no validator.
 //
+// NOT RUN FOR THE STANDALONE SHELL. CIBuild.BuildIOSCore skips it when the profile
+// being built is iOS-Standalone: that lane stashes the golf Resources folders for the
+// duration of the build (StandaloneBuildPreprocessor.MoveGolfResourcesOut), so the
+// same resolution that makes this trustworthy would report every sprite missing and
+// overwrite the GAME's report with a picture of the shell (build 2873 did exactly
+// that). Docs/Reports/content_art.txt always describes the game build.
+//
 // CLUBS ARE INCLUDED BUT JUDGED DIFFERENTLY. Clubs keep the Placeholder policy
 // by decision (content_two_way §4): a club with missing art still renders, using
 // the shared Placeholder sprite. So a club miss is reported as "Placeholder",

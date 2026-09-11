@@ -448,11 +448,31 @@ namespace Golfin.EditorTools
         /// Platform-agnostic form of the same question, for the other build-time hooks that have
         /// to know which VARIANT is being produced — <c>BuildStampGenerator</c> picks the shell's
         /// own upload-regression guard file with it, since ASC's uniqueness rule is per record.
+        ///
+        /// <para>Answers from the ACTIVE profile, so it is only trustworthy from inside
+        /// <c>BuildPipeline.BuildPlayer</c> — preprocessors, post-actions — after <c>CIBuild</c>
+        /// has activated the lane's profile. The active profile is a persisted Library setting
+        /// (<c>m_ActiveBuildProfile</c> in <c>Library/EditorUserBuildSettings.asset</c>) that
+        /// outlives the process, so BEFORE that activation it is whatever the previous run left
+        /// behind: a game lane run straight after "punch it standalone" starts with
+        /// iOS-Standalone active. Anything that runs before activation must ask the
+        /// <see cref="IsStandaloneIdentityBuild(BuildProfile)"/> overload about the profile it is
+        /// actually building, or it will call the GAME build a shell.</para>
         /// </summary>
         public static bool IsStandaloneIdentityBuild()
+            => IsStandaloneIdentityBuild(BuildProfile.GetActiveBuildProfile());
+
+        /// <summary>
+        /// The same question about a SPECIFIC profile, for the callers that run before
+        /// <c>BuildProfile.SetActiveBuildProfile</c> (see the parameterless form for why the
+        /// active profile is stale there). The batchmode override still wins, so the standalone
+        /// lane answers true whichever profile is handed in; a null profile carries no defines
+        /// and answers false.
+        /// </summary>
+        public static bool IsStandaloneIdentityBuild(BuildProfile profile)
         {
             if (ForceStandaloneIdentity) return true;
-            return ProfileDefines(BuildProfile.GetActiveBuildProfile())
+            return ProfileDefines(profile)
                    .Any(d => string.Equals(d, Define, StringComparison.Ordinal));
         }
 

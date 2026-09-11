@@ -443,24 +443,47 @@ namespace Golfin.EditorTools
                           $"to disagree with. Every other lane still runs it.");
             }
 
-            // content_two_way §5 — a REPORT, not a gate. Deliberately has no failure path and no
-            // -skip flag: data published ahead of its art is a legitimate state that §4 makes safe,
-            // and a build that fails for it is a validator somebody switches off. It writes
-            // Docs/Reports/content_art_<build>.txt so the archive carries the list of what it
-            // withholds. Wrapped because a REPORT must never be the reason a build dies.
-            try
-            {
-                ContentArtValidator.RunAndReport();
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"{Tag} catalog-art report failed to run ({e.GetType().Name}: " +
-                                 $"{e.Message}) — continuing; it is a report, not a gate.");
-            }
-
             var profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
             if (profile == null)
                 return $"build profile not found: {profilePath}";
+
+            // content_two_way §5 — a REPORT, not a gate. Deliberately has no failure path and no
+            // -skip flag: data published ahead of its art is a legitimate state that §4 makes safe,
+            // and a build that fails for it is a validator somebody switches off. It writes
+            // Docs/Reports/content_art.txt so the archive carries the list of what it withholds.
+            // Wrapped because a REPORT must never be the reason a build dies.
+            //
+            // NOT FOR THE STANDALONE SHELL. By the time this runs, BuildIOSStandalone has moved the
+            // golf catalogs' sprite folders out of Assets/Resources (MoveGolfResourcesOut, R2), and
+            // the validator resolves art exactly the way the runtime does — so it saw every club,
+            // ball, item and portrait as missing and REWROTE the report with a picture of the shell
+            // (build 2873: "29 row(s) withheld, 799 club row(s) on Placeholder, 2449 missing sprite
+            // reference(s)"), a diff that had to be noticed and reverted by hand. The file
+            // describes what the GAME withholds; the shell ships no catalog screen for it to be
+            // about. Skipped, not redirected: a shell-variant report would list the stash, which
+            // nobody needs written down. Judged against the profile being BUILT, not the
+            // parameterless IsStandaloneIdentityBuild(): the active profile is only swapped
+            // below, and it persists across runs, so a game lane run straight after "punch it
+            // standalone" would otherwise skip its own report.
+            if (StandaloneBuildPreprocessor.IsStandaloneIdentityBuild(profile))
+            {
+                Debug.Log($"{Tag} catalog-art report SKIPPED — standalone shell: the golf Resources " +
+                          $"are stashed for this build, so every catalog sprite would read as missing " +
+                          $"and Docs/Reports/content_art.txt would stop describing the GAME build. " +
+                          $"The next game lane rewrites it.");
+            }
+            else
+            {
+                try
+                {
+                    ContentArtValidator.RunAndReport();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"{Tag} catalog-art report failed to run ({e.GetType().Name}: " +
+                                     $"{e.Message}) — continuing; it is a report, not a gate.");
+                }
+            }
 
             BuildProfile.SetActiveBuildProfile(profile);
             Debug.Log($"{Tag} active build profile → {profile.name}");

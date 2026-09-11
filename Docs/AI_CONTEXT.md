@@ -4,6 +4,26 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-11 — standalone lane rewrote `content_art.txt` with the SHELL's picture — FIXED
+
+`punch it standalone` (build 2873) regenerated `Docs/Reports/content_art.txt` as "29 row(s)
+withheld, 799 club row(s) on Placeholder, 2449 missing sprite reference(s)" and it had to be
+`git checkout`-ed before committing. Not a content problem: `CIBuild.BuildIOSStandalone` stashes
+the golf `Resources/` folders (`MoveGolfResourcesOut`) BEFORE `BuildIOSCore`, and the catalog-art
+report ran inside that window, resolving art exactly as the runtime does — so every golf sprite
+read as missing.
+
+**Fix:** `BuildIOSCore` skips `ContentArtValidator.RunAndReport()` when the profile being built
+is the standalone, logging one `[CIBuild] catalog-art report SKIPPED` line; the file always
+describes the GAME build. Judged through a new `IsStandaloneIdentityBuild(BuildProfile)`
+overload, not the parameterless form: that one reads the ACTIVE profile, which is a persisted
+`Library/` setting that outlives batchmode — a game lane run straight after a standalone one
+(exactly 2873 → 2874) starts with iOS-Standalone active until `SetActiveBuildProfile`, and would
+have skipped its own report. `StandaloneIdentityProfileTests` (2/2) pins the overload to the
+profile handed in; GolferGate 5/5, stash + URL-scheme fixtures green, Unity + offline Roslyn both
+0 errors. Runbook: fourth bullet under the standalone variant. Game lanes untouched.
+
+---
 ## 2026-09-11 — oauth_callback_per_app: **the Google/Apple sign-in landed in the OTHER app** — FIXED, one Cesar step gates the shell
 
 Reported from a phone with both the game and the GPS shell installed: logging into the game with
