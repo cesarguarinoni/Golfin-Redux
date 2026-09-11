@@ -240,5 +240,49 @@ class CheckExitCode(unittest.TestCase):
                          "--check writes nothing, including the version file")
 
 
+class TestWeeklyStandinIsNotMaskedArt(unittest.TestCase):
+    """weekly_rotation_admin §4.4 — the one deliberate shared sprite.
+
+    A rotation banner draws `GachaBanner_Weekly` as a bundled stand-in and gets
+    its real art per week through `artUrl`. R3 must not call that "masked" (the
+    client ladder demotes a non-own sprite to a download stand-in), and the
+    conflict half must not call two weeks' different uploads a conflict. An
+    UN-tagged banner on the same sprite is still the accidental case.
+    """
+
+    HEADER = "bannerId,artSprite,artUrl,rotationId\n"
+
+    def _catalog_dir(self, rows: str):
+        import tempfile
+        root = tempfile.mkdtemp()
+        cat = CATALOGS_BY_NAME["gacha_banners"]
+        os.makedirs(os.path.dirname(os.path.join(root, cat.csv_path)))
+        with open(os.path.join(root, cat.csv_path), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(self.HEADER + rows)
+        return cat, root
+
+    def test_two_rotation_banners_on_the_standin_are_clean(self):
+        cat, root = self._catalog_dir(
+            "banner_wk_2026_38,GachaBanner_Weekly,https://x/catalog-art/a.jpg,wk_2026_38\n"
+            "banner_wk_2026_39,GachaBanner_Weekly,https://x/catalog-art/b.jpg,wk_2026_39\n"
+        )
+        self.assertEqual([], export_content.masked_art_report(cat, root))
+        self.assertEqual([], export_content.conflicting_art_report(cat, root))
+
+    def test_an_untagged_banner_on_the_standin_is_still_masked(self):
+        cat, root = self._catalog_dir(
+            "banner_hand_made,GachaBanner_Weekly,https://x/catalog-art/c.jpg,\n"
+        )
+        report = export_content.masked_art_report(cat, root)
+        self.assertEqual(1, len(report))
+        self.assertIn("banner_hand_made", report[0])
+
+    def test_a_tagged_banner_on_another_shared_sprite_is_still_masked(self):
+        cat, root = self._catalog_dir(
+            "banner_wk_2026_40,GachaBanner_StandardClub1,https://x/catalog-art/d.jpg,wk_2026_40\n"
+        )
+        self.assertEqual(1, len(export_content.masked_art_report(cat, root)))
+
+
 if __name__ == "__main__":
     unittest.main()

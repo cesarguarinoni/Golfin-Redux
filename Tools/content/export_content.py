@@ -299,6 +299,30 @@ ART_MASK_RULES: Dict[str, Tuple[str, str, str, Callable[[dict], str]]] = {
 }
 
 
+# ── the one DELIBERATE shared sprite ─────────────────────────────────────────
+#
+# weekly_rotation_admin §4.4 (2026-09-11): every weekly gacha banner is generated
+# with `artSprite = GachaBanner_Weekly` — a bundled STAND-IN — and gets its real
+# art per week through `artUrl`. That is the state R3 exists to refuse, and here
+# it is the design: 52 banners a year cannot each bundle a PNG into the build,
+# and the client ladder (GachaBannerArt.Resolve) only lets a bundled sprite WIN
+# when it is the row's own name — a shared stand-in is demoted to "draw this
+# while the URL downloads" and can never mask the uploaded art. So a banner that
+# belongs to a rotation and names the weekly stand-in is exempt from both R3
+# halves below. Only that exact pair: an un-tagged banner on the stand-in, or a
+# tagged banner on any other shared sprite, is still the accidental case.
+WEEKLY_BANNER_STANDIN = "GachaBanner_Weekly"
+
+
+def is_rotation_standin(catalog_name: str, row: dict) -> bool:
+    """True for a rotation-generated banner drawing the declared weekly stand-in."""
+    return (
+        catalog_name == "gacha_banners"
+        and bool((row.get("rotationId") or "").strip())
+        and (row.get("artSprite") or "").strip() == WEEKLY_BANNER_STANDIN
+    )
+
+
 def _pascal(value: str) -> str:
     """`standard_club1` -> `StandardClub1`. Non-alphanumerics are separators.
 
@@ -340,6 +364,8 @@ def masked_art_report(catalog: Catalog, repo_root: str) -> List[str]:
             url = (row.get(url_col) or "").strip()
             sprite = (row.get(sprite_col) or "").strip()
             if not url or not sprite:
+                continue
+            if is_rotation_standin(catalog.name, row):
                 continue
             expected = own_name(row)
             if sprite != expected:
@@ -400,6 +426,8 @@ def conflicting_art_report(catalog: Catalog, repo_root: str) -> List[str]:
             url = (row.get(url_col) or "").strip()
             sprite = (row.get(sprite_col) or "").strip()
             if not url or not sprite:
+                continue
+            if is_rotation_standin(catalog.name, row):
                 continue
             claims.setdefault(sprite, {}).setdefault(url, []).append(str(row.get(id_col)))
 
