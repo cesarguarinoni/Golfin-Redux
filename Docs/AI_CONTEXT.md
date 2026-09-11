@@ -71,8 +71,14 @@ is ignored). Task folder: `Docs/Specs/Completed/weekly_rotation_admin/`. **Still
 Architect on Tuesday:** one-ball vs ten-ball; the named `rotation_*` audit action; ECONOMY_MASTER
 §3 wording; the two Freda (Supreme) weeks; the four shop_stocking club placeholders
 (`shop_club_driver_gf` collides with `wk_2026_39`); missions/loadouts active-only guard; and
-**`wk_2026_39` needs its own banner `artUrl` before Mon 2026-09-21** (installed builds withhold
-a weekly banner without one).
+**`wk_2026_39` is materialized as DRAFTS with the placeholder art** (same day, on Cesar's
+"Upload placeholder": 6 rates, 12 pool entries, `banner_wk_2026_39` with `artUrl` = its own copy
+of `GachaBanner_Weekly_upload.jpg`, 13 shop rows, seed 3303790807) — **NOT published**: the
+generator warns that `club_driver_gf` is also a permanent listing (`shop_club_driver_gf`, 100 RP),
+so the week would list it twice; PUBLISH ROTATION before Mon 2026-09-21 once that placeholder
+decision is made. Trap: a re-MATERIALIZE resets the banner's `artUrl` to "" (`newBannerRow` in
+`lib/rotation.ts`), so re-upload after any re-generation — or carry the existing draft's `artUrl`
+forward (one-line change, not yet approved).
 
 ---
 ## 2026-09-11 — standalone lane rewrote `content_art.txt` with the SHELL's picture — FIXED
