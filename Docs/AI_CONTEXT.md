@@ -25,8 +25,16 @@ redirects from the authored fields (the game's values stay byte-identical); the 
 Auth 52/52, EditMode 339/339, WireupTests 253/253.
 
 **Supabase allow-list: done** — `golfingps://auth-callback` added through Cesar's logged-in Chrome
-(claude-in-chrome) and read back after reload (7 entries). Remaining: ship both apps — a stale
-shell on the phone still claims `golfin` until `punch it standalone` replaces it. Lesson BX.
+(claude-in-chrome) and read back after reload (7 entries). **Both apps shipped:** GOLFIN GPS
+**1.0.0 (2873)** VALID 10:45 and Golfin **1.5.7 (2874)** VALID 10:59 — each claims only its own
+scheme. Lesson BX.
+
+**Found while shipping: the Unity quit was going to the wrong process** (Cesar: *"you always fail
+to quit gracefully and end up force quitting"*). Import workers share the Editor's bundle id, so
+`tell application "Unity" to quit` hit worker 4 — its shutdown removed the lockfile while the
+Editor kept running. `Tools/quit-unity.sh` now quits by pid and waits for the PROCESS;
+`assert-unity-closed.sh` refuses a live Editor with no lock; `testflight-unattended.sh` uses
+the script; `Tools/asc-build-state.sh` is the Apple-side VALID check. Lesson BY.
 
 ---
 ## 2026-09-10 — map view: **the club button the map hides behind was never re-wired** — SHIPPED, one cause still open
