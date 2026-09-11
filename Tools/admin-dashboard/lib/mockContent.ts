@@ -28,6 +28,9 @@ export const MOCK_CONTENT_CATALOGS: ContentCatalogSummary[] = [
   { name: "gacha_rates", publishedVersion: 9999, isEnabled: true, publishedCount: 6, draftCount: 6, dirtyCount: 0 },
   { name: "gacha_pools", publishedVersion: 9999, isEnabled: true, publishedCount: 6, draftCount: 6, dirtyCount: 0 },
   { name: "ticket_types", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
+  // weekly_rotation_admin §4.7 — two weeks, so the calendar, the workbench and
+  // the five-catalog publish chain are all exercisable with MOCK_MODE=1.
+  { name: "rotations", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
 ];
 
 const row = (
@@ -198,6 +201,30 @@ export const MOCK_CONTENT_PUBLISHED: ContentStoredRow[] = [
   // OFF — `active=false` in the DATA. Deliberately NOT `isActive: false`: the
   // two switches are different things (see gachaBannerState) and the fixture
   // that proves the badge reads the column is one where only the column is off.
+  // ---- rotations (weekly_rotation_admin §4.7) ----------------------------
+  //
+  // Dated to the seed's own first week (2026-09-14) rather than to "now", so
+  // the fixture is a fact that can be read back, not a moving target. The
+  // first week is PINNED to the mock refs above (pins win, so PREVIEW renders
+  // exactly them); the second is unpinned, and with only two mock clubs — both
+  // Common — it fills what it can and WARNS for the rest, which is the amber
+  // path an operator has to be able to see. Both clone `mock_pool`.
+  row("rotations", "wk_2026_38", {
+    rotationId: "wk_2026_38", startUtc: "2026-09-14T00:00:00Z", endUtc: "2026-09-21T00:00:00Z",
+    nameEn: "MOCK PINNED WEEK", nameJa: "モック ピン留め週",
+    clubQuota: "Common:2;Uncommon:0;Rare:0;Mythic:0;Legendary:0;Supreme:0", ballQuota: "Common:1", characterQuota: "Any:1",
+    gachaFeaturedCount: "1", gachaBasePoolId: "mock_pool", featuredWeightMul: "3", excludeWeeks: "4", seed: "9999",
+    pinnedClubs: "mock_club_driver;mock_club_putter", pinnedBalls: "mock_ball_default", pinnedCharacter: "mock_char",
+    pinnedFeatured: "mock_club_driver", materializedAt: "",
+  }),
+  row("rotations", "wk_2026_39", {
+    rotationId: "wk_2026_39", startUtc: "2026-09-21T00:00:00Z", endUtc: "2026-09-28T00:00:00Z",
+    nameEn: "MOCK OPEN WEEK", nameJa: "モック 未ピン週",
+    clubQuota: "Common:3;Uncommon:2;Rare:2;Mythic:1;Legendary:1;Supreme:0", ballQuota: "Common:1;Uncommon:1;Rare:1", characterQuota: "Any:1",
+    gachaFeaturedCount: "2", gachaBasePoolId: "mock_pool", featuredWeightMul: "3", excludeWeeks: "4", seed: "9998",
+    pinnedClubs: "", pinnedBalls: "", pinnedCharacter: "", pinnedFeatured: "", materializedAt: "",
+  }),
+
   row("gacha_banners", "mock_banner_off", {
     bannerId: "mock_banner_off", nameKey: "MOCK OFF BANNER", artSprite: "MOCK-Banner",
     costX1: "9999", costX10: "9999", endUtc: "2099-01-01T00:00:00Z", rulesUrl: "", sortOrder: "3",

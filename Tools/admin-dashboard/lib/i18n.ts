@@ -72,6 +72,8 @@ export const DICT = {
   "nav.gacha-banners": { en: "Gacha Banners", ja: "ガチャバナー" },
   "nav.gacha-pools": { en: "Gacha Pools", ja: "ガチャ排出プール" },
   "nav.ticket-types": { en: "Ticket Types", ja: "チケット種別" },
+  // weekly_rotation_admin §4 — the `rotations` catalog + the Lineup workbench.
+  "nav.rotations": { en: "Rotations", ja: "週替わり" },
 
   "mode.mock": {
     en: "MOCK DATA — running on local fixtures, no Supabase connection",
@@ -1132,6 +1134,7 @@ export const DICT = {
   "c.facet.goal": { en: "Goal", ja: "目標" },
   "c.facet.component": { en: "Component", ja: "コンポーネント" },
   "c.facet.pool": { en: "Pool", ja: "プール" },
+  "c.facet.rotation": { en: "Rotation", ja: "ローテーション" },
   "c.facet.any": { en: "Any {label}", ja: "{label}: すべて" },
   "c.facet.serverNote": {
     en: "Runs as a server query over the whole catalog, combined with the other filters — not a narrowing of the loaded page.",
@@ -1671,6 +1674,10 @@ export const DICT = {
     en: "startAt / endAt set the listing window and saleStartAt / saleEndAt the sale window, as ISO-8601 UTC (2026-09-01T00:00:00Z). endAt is EXCLUSIVE. Empty means no bound. The sale window must sit inside the listing window, and publish blocks on an unreadable or inverted one.",
     ja: "startAt / endAt で出品期間を、saleStartAt / saleEndAt でセール期間を指定します（ISO-8601 UTC 形式、例: 2026-09-01T00:00:00Z）。endAt はその時刻を含みません。空欄は「期限なし」です。セール期間は出品期間の内側に収める必要があり、読み取れない値や前後が逆の場合は公開時にブロックされます。",
   },
+  "sh.rotation.help": {
+    en: "Set by the Rotations workbench when a week is materialized. Leave blank on a permanent listing. A tagged row must sit inside its rotation's window (R2), and a ref the last few rotations already listed warns (R4).",
+    ja: "週替わりの作業台でラインナップを生成すると自動的に設定されます。常設の出品では空欄のままにしてください。タグ付きの行はそのローテーションの期間内に収まる必要があり（R2）、直近のローテーションで既に出品された ref は警告になります（R4）。",
+  },
 
   // ---- gacha catalogs (gacha_admin_catalogs §5) --------------------------
   //
@@ -1705,6 +1712,10 @@ export const DICT = {
   "gb.pity.hint": {
     en: "pityThreshold blank or 0 means NO pity, and then pityMinRarity must be blank too. A rarity used here must have rateBp > 0 in the pool.",
     ja: "pityThreshold が空欄または 0 の場合は天井なしで、pityMinRarity も空欄にしてください。ここで指定するレアリティは、そのプールで rateBp > 0 である必要があります。",
+  },
+  "gb.pityGroup.hint": {
+    en: "Banners sharing a pityGroup share ONE pity counter — the weekly banners use “weekly”, so a player's pity carries over from one week's banner to the next. Every active banner in a group must have identical pityThreshold and pityMinRarity (R3), or publish refuses. rotationId ties the banner to its week (R2).",
+    ja: "同じ pityGroup のバナーは天井カウンターを 1 つ共有します。週替わりバナーは “weekly” を使うため、プレイヤーの天井は翌週のバナーに引き継がれます。グループ内の有効なバナーはすべて pityThreshold と pityMinRarity が同一である必要があり（R3）、異なる場合は公開が拒否されます。rotationId はバナーをその週に紐付けます（R2）。",
   },
   "gb.text": { en: "Card text", ja: "カードの文言" },
   "gb.text.hint": {
@@ -1899,6 +1910,13 @@ export const DICT = {
   "ugac.pity": { en: "Pity", ja: "天井" },
   "ugac.noPity": { en: "No pity counters — this player has not pulled yet.", ja: "天井カウンターはありません（まだ抽選していません）。" },
   "ugac.pityNone": { en: "no pity", ja: "天井なし" },
+  // weekly_rotation_admin §5 — a counter keyed by a pity GROUP, not a banner.
+  "ugac.pityGroup": { en: "group", ja: "グループ" },
+  "ugac.pityGroupHint": {
+    en: "A shared counter: every active banner with this pityGroup advances and resets it. Reset clears it for all of them.",
+    ja: "共有カウンターです。この pityGroup を持つすべての有効なバナーがこのカウンターを進め、リセットします。リセットするとすべてのバナーに反映されます。",
+  },
+  "ugac.pityUsage": { en: "{used} pulls on this key", ja: "このキーでの抽選 {used} 回" },
   "ugac.pityOf": { en: "{counter} / {threshold} to {rarity}", ja: "{rarity} まで {counter} / {threshold}" },
   "ugac.totalPulls": { en: "{used} pulls", ja: "{used} 回抽選" },
   "ugac.totalPullsCapped": { en: "{used} / {limit} pulls", ja: "{used} / {limit} 回抽選" },
@@ -2153,6 +2171,98 @@ export const DICT = {
   "tel.loans.loansN": { en: "{n} loans", ja: "{n} 件" },
   "tel.loans.none": { en: "No loans in this range.", ja: "この期間に貸し出しはありません。" },
   "tel.loans.noEvents": { en: "No loan events in this range.", ja: "この期間に貸し出しイベントはありません。" },
+
+  // ---- rotations (weekly_rotation_admin §4) -------------------------------
+  //
+  // The workbench's verbs are UPPER-CASE in both languages on purpose: they
+  // write or publish, and an operator has to be able to tell them from the
+  // read-only PREVIEW at a glance. Every confirmation names what it touches.
+  "ro.title": { en: "Rotations", ja: "週替わりラインナップ" },
+  "ro.intro": {
+    en: "One row per week: a window, per-rarity quotas, a seed and the planned pins. The workbench turns the selected row into draft rows of shop_catalog, gacha_rates, gacha_pools and gacha_banners; publish is the ordinary drawer, five catalogs in order. Nothing here reaches a player until PUBLISH ROTATION.",
+    ja: "1 行が 1 週間分です。期間、レアリティごとの枠数、シード、計画済みのピン留めを持ちます。作業台は選択した行を shop_catalog / gacha_rates / gacha_pools / gacha_banners のドラフト行に変換し、公開は通常のドロワーで 5 カタログを順番に行います。「ローテーションを公開」するまでプレイヤーには何も届きません。",
+  },
+  "ro.workbench": { en: "Lineup workbench", ja: "ラインナップ作業台" },
+  "ro.calendar": { en: "Next 8 weeks", ja: "今後 8 週間" },
+  "ro.calendar.hint": {
+    en: "From this Monday, on the server clock. Click a week to select it; click a missing week to create its draft row with the latest rotation's settings and a fresh seed.",
+    ja: "今週の月曜日から、サーバー時刻基準です。週をクリックすると選択できます。未作成の週をクリックすると、最新のローテーションの設定と新しいシードでドラフト行を作成します。",
+  },
+  "ro.state.LIVE": { en: "LIVE", ja: "開催中" },
+  "ro.state.SCHEDULED": { en: "SCHEDULED", ja: "公開予定" },
+  "ro.state.GENERATED": { en: "GENERATED", ja: "生成済み（未公開）" },
+  "ro.state.NOT_GENERATED": { en: "NOT GENERATED", ja: "未生成" },
+  "ro.state.ENDED": { en: "ENDED", ja: "終了" },
+  "ro.state.MISSING": { en: "MISSING", ja: "未作成" },
+  "ro.create": { en: "+ Create", ja: "+ 作成" },
+  "ro.created": { en: "Created draft rotation {id} ({start} → {end}). Edit its pins and quotas in the table below, then PREVIEW.", ja: "ドラフトのローテーション {id}（{start} → {end}）を作成しました。下の表でピン留めと枠数を編集してから、プレビューしてください。" },
+  "ro.selected": { en: "Selected rotation", ja: "選択中のローテーション" },
+  "ro.none": { en: "No rotation rows yet — click a week above to create the first one.", ja: "ローテーション行がまだありません。上の週をクリックして最初の行を作成してください。" },
+  "ro.window": { en: "Window", ja: "期間" },
+  "ro.materializedAt": { en: "Materialized", ja: "生成日時" },
+  "ro.notMaterialized": { en: "never", ja: "未生成" },
+  "ro.seed": { en: "Seed", ja: "シード" },
+  "ro.seed.randomize": { en: "Randomize", ja: "ランダム" },
+  "ro.seed.hint": {
+    en: "The same seed always gives the same lineup. Change it and PREVIEW again for a different draw — pins always win and are never re-drawn. MATERIALIZE saves the seed on the row.",
+    ja: "同じシードなら常に同じラインナップになります。別の抽選結果が欲しい場合はシードを変えて再度プレビューしてください。ピン留めは常に優先され、再抽選されません。「生成」するとシードは行に保存されます。",
+  },
+  "ro.preview": { en: "PREVIEW", ja: "プレビュー" },
+  "ro.preview.hint": { en: "Writes nothing. Shows exactly what MATERIALIZE will write.", ja: "何も書き込みません。「生成」が書き込む内容をそのまま表示します。" },
+  "ro.materialize": { en: "MATERIALIZE", ja: "生成" },
+  "ro.materialize.hint": { en: "Writes the previewed rows as DRAFTS of the four catalogs and stamps the rotation row. Publish separately.", ja: "プレビューした行を 4 カタログのドラフトとして書き込み、ローテーション行に生成日時を記録します。公開は別途行います。" },
+  "ro.materialize.confirm.title": { en: "Materialize {id} again?", ja: "{id} を再生成しますか？" },
+  "ro.materialize.confirm.body": {
+    en: "This rotation was already materialized ({at}). Materializing again overwrites its draft rows — shop rows, banner, pool, rates — and deactivates any earlier row of THIS rotation the new lineup no longer contains. Rows of other rotations are never touched. Type the rotation id to confirm.",
+    ja: "このローテーションは既に生成済みです（{at}）。再生成すると、このローテーションのドラフト行（ショップ行・バナー・プール・排出率）を上書きし、新しいラインナップに含まれない以前の行を無効化します。他のローテーションの行には触れません。確認のためローテーション ID を入力してください。",
+  },
+  "ro.materialize.done": {
+    en: "{id}: wrote {rates} rate rows, {pools} pool entries, {banners} banner, {shop} shop rows and the rotation row; {deactivated} stale row(s) deactivated. Drafts only — PUBLISH ROTATION makes it live.",
+    ja: "{id}: 排出率 {rates} 行、プール {pools} 行、バナー {banners} 件、ショップ {shop} 行、ローテーション行を書き込みました。古い行 {deactivated} 件を無効化しました。ドラフトのみです。「ローテーションを公開」で有効になります。",
+  },
+  "ro.publish": { en: "PUBLISH ROTATION", ja: "ローテーションを公開" },
+  "ro.publish.hint": { en: "gacha_rates → gacha_pools → gacha_banners → shop_catalog → rotations, each validated; the first failure stops the chain.", ja: "gacha_rates → gacha_pools → gacha_banners → shop_catalog → rotations の順に、それぞれ検証しながら公開します。最初の失敗で停止します。" },
+  "ro.publish.confirm.title": { en: "Publish five catalogs?", ja: "5 つのカタログを公開しますか？" },
+  "ro.publish.confirm.body": {
+    en: "Publishes, in order: gacha_rates → gacha_pools → gacha_banners → shop_catalog → rotations. Each catalog runs its normal validation and the first failure stops the chain — what was already published stays published. ⚠ This publishes EVERY draft those five catalogs hold, not only this rotation's rows. Review each drawer's diff first, then type PUBLISH.",
+    ja: "gacha_rates → gacha_pools → gacha_banners → shop_catalog → rotations の順に公開します。各カタログは通常の検証を実行し、最初の失敗でチェーンは停止します（既に公開されたものはそのまま残ります）。⚠ この 5 カタログが保持するすべてのドラフトが公開されます。このローテーションの行だけではありません。各ドロワーの差分を確認してから PUBLISH と入力してください。",
+  },
+  "ro.publish.diffs": { en: "Review the diffs before confirming:", ja: "確認前に差分を確認してください:" },
+  "ro.publish.done": { en: "All five catalogs published: {versions}.", ja: "5 つのカタログをすべて公開しました: {versions}。" },
+  "ro.publish.stopped": { en: "Stopped at {catalog}: {message} Nothing after it was published.", ja: "{catalog} で停止しました: {message} それ以降は公開されていません。" },
+  "ro.publish.step.ok": { en: "published", ja: "公開済み" },
+  "ro.publish.step.fail": { en: "FAILED", ja: "失敗" },
+  "ro.archive": { en: "ARCHIVE ENDED", ja: "終了分をアーカイブ" },
+  "ro.archive.hint": { en: "Deactivates (never deletes) the shop rows, banner, pool and rates of every rotation that ended more than 7 days ago. Then PUBLISH ROTATION.", ja: "7 日以上前に終了したすべてのローテーションのショップ行・バナー・プール・排出率を無効化します（削除はしません）。その後「ローテーションを公開」してください。" },
+  "ro.archive.confirm.title": { en: "Archive {n} ended rotation(s)?", ja: "終了したローテーション {n} 件をアーカイブしますか？" },
+  "ro.archive.confirm.body": { en: "{rows} draft row(s) will be deactivated for: {ids}. Nothing is deleted. Publish afterwards to make it live.", ja: "{ids} のドラフト行 {rows} 件を無効化します。削除はしません。反映するには、その後公開してください。" },
+  "ro.archive.done": { en: "{rows} row(s) deactivated across {n} rotation(s). Drafts only — PUBLISH ROTATION makes it live.", ja: "{n} 件のローテーションにわたり {rows} 行を無効化しました。ドラフトのみです。「ローテーションを公開」で反映されます。" },
+  "ro.archive.none": { en: "Nothing to archive — no rotation ended more than 7 days ago with active rows.", ja: "アーカイブ対象はありません。7 日以上前に終了し、有効な行を持つローテーションはありません。" },
+  "ro.confirm.type": { en: "Type {word} to confirm", ja: "確認のため {word} と入力してください" },
+  "ro.lineup.clubs": { en: "Clubs", ja: "クラブ" },
+  "ro.lineup.balls": { en: "Balls", ja: "ボール" },
+  "ro.lineup.characters": { en: "Character", ja: "キャラクター" },
+  "ro.lineup.banner": { en: "Weekly banner", ja: "週替わりバナー" },
+  "ro.lineup.odds": { en: "Effective odds (featured rows boosted ×{mul})", ja: "実効確率（ピックアップ行は ×{mul}）" },
+  "ro.lineup.rows": { en: "Rows this will write", ja: "書き込まれる行" },
+  "ro.lineup.hash": { en: "Lineup hash", ja: "ラインナップハッシュ" },
+  "ro.pinned": { en: "PINNED", ja: "ピン留め" },
+  "ro.featured": { en: "FEATURED", ja: "ピックアップ" },
+  "ro.warnings": { en: "Warnings", ja: "警告" },
+  "ro.blocked": { en: "Blocked — fix the row and PREVIEW again", ja: "ブロック — 行を修正して再度プレビューしてください" },
+  "ro.odds.col.ref": { en: "Prize", ja: "景品" },
+  "ro.odds.col.rarity": { en: "Rarity", ja: "レアリティ" },
+  "ro.odds.col.weight": { en: "Weight", ja: "ウェイト" },
+  "ro.odds.col.p": { en: "Per pull", ja: "1 回あたり" },
+  "ro.unpublished": { en: "unpublished draft", ja: "未公開のドラフト" },
+  "ro.loading": { en: "Loading the catalogs…", ja: "カタログを読み込み中…" },
+  "ro.loadFailed": { en: "Could not load the catalogs", ja: "カタログを読み込めませんでした" },
+  "ro.reload": { en: "Reload", ja: "再読み込み" },
+  "ro.eligible": { en: "{clubs} clubs · {balls} balls · {characters} characters eligible", ja: "対象: クラブ {clubs} · ボール {balls} · キャラクター {characters}" },
+  "ro.editor.pins": {
+    en: "Pins are ;-separated refIds. PINS WIN: the generator uses them verbatim and only fills what is blank from the quotas. A pin that does not resolve blocks the preview.",
+    ja: "ピン留めは ; 区切りの refId です。ピン留めが最優先で、生成器はそのまま使用し、空いている枠だけを枠数から埋めます。解決できないピン留めがあるとプレビューはブロックされます。",
+  },
 } as const satisfies Record<string, Entry>;
 
 export type DictKey = keyof typeof DICT;

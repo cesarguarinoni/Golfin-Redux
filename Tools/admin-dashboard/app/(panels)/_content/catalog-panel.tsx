@@ -53,6 +53,9 @@ export interface CatalogPanelProps {
   hideTitle?: boolean;
   /** Columns `editorExtras` already renders, so the raw field list skips them. */
   editorHiddenColumns?: string[];
+  /** Bump to make the panel refetch its summary and rows — for a `banner` that
+   *  writes drafts of this catalog itself (the Rotations workbench). */
+  reloadToken?: number;
 }
 
 export function CatalogPanel({
@@ -66,6 +69,7 @@ export function CatalogPanel({
   extraFilter,
   hideTitle,
   editorHiddenColumns,
+  reloadToken = 0,
 }: CatalogPanelProps) {
   const translate = useT();
   const view = catalogView(catalog);
@@ -121,7 +125,10 @@ export function CatalogPanel({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [catalog]);
+    // `reloadToken` is a dependency on purpose: bumping it is how a banner
+    // that wrote drafts asks for a refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalog, reloadToken]);
 
   const loadRows = useCallback(async () => {
     try {
@@ -142,7 +149,7 @@ export function CatalogPanel({
     // `facetValues` is intentionally not a dependency: including it would
     // refetch the moment the values arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalog, page, view.limit, view.facets.length, searchQuery, filterKey]);
+  }, [catalog, page, view.limit, view.facets.length, searchQuery, filterKey, reloadToken]);
 
   useEffect(() => {
     void loadSummary();

@@ -117,6 +117,8 @@ export function GachaBannersPanel({ now }: { now: number }) {
         "taglineEn",
         "taglineJa",
         "featuredRefIds",
+        "pityGroup",
+        "rotationId",
       ]}
       banner={
         <div className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3">
@@ -200,6 +202,31 @@ export function GachaBannersPanel({ now }: { now: number }) {
               onChange={(v) => set("guaranteeMinRarityX10", v)}
             />
             <p className="text-[10px] leading-relaxed text-zinc-600">{translate("gb.pity.hint")}</p>
+            {/* weekly_rotation_admin §3.2 / §5. Rendered EXPLICITLY, like the
+                shop's window fields: the four shipped banners predate the
+                column, so an absent key would simply not appear in the raw
+                field list and the row could never be moved into a group. */}
+            <div className="grid grid-cols-2 gap-2 border-t border-surface-800 pt-3">
+              <label className="block">
+                <span className="font-mono text-[10px] text-zinc-500">pityGroup</span>
+                <input
+                  value={draft.pityGroup ?? ""}
+                  onChange={(e) => set("pityGroup", e.target.value.trim())}
+                  placeholder="weekly"
+                  className="mt-0.5 w-full rounded-md border border-surface-700 bg-surface-950 px-2 py-1 font-mono text-[11px] text-zinc-200 placeholder:text-zinc-700 focus:border-accent-500 focus:outline-none"
+                />
+              </label>
+              <label className="block">
+                <span className="font-mono text-[10px] text-zinc-500">rotationId</span>
+                <input
+                  value={draft.rotationId ?? ""}
+                  onChange={(e) => set("rotationId", e.target.value.trim())}
+                  placeholder="wk_2026_38"
+                  className="mt-0.5 w-full rounded-md border border-surface-700 bg-surface-950 px-2 py-1 font-mono text-[11px] text-zinc-200 placeholder:text-zinc-700 focus:border-accent-500 focus:outline-none"
+                />
+              </label>
+            </div>
+            <p className="text-[10px] leading-relaxed text-zinc-600">{translate("gb.pityGroup.hint")}</p>
           </div>
 
           {/* ---- the card's text, per locale ----------------------------- */}

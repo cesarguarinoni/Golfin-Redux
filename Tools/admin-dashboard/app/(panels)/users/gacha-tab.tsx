@@ -207,7 +207,19 @@ export function GachaTab({
             {data.pity.map((row) => (
               <li key={row.bannerId} className="rounded border border-surface-800/70 bg-surface-900/60 px-2 py-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <code className="truncate text-[11px] text-zinc-300">{row.bannerId}</code>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <code className="truncate text-[11px] text-zinc-300">{row.bannerId}</code>
+                    {/* weekly_rotation_admin §5 — the key is a pity GROUP shared by
+                        several banners, not one banner's id. */}
+                    {row.isGroup && (
+                      <span
+                        title={`${t("ugac.pityGroupHint")} ${row.bannerIds.join(", ")}`}
+                        className="shrink-0 rounded border border-violet-500/50 bg-violet-500/10 px-1 py-0.5 text-[9px] font-bold uppercase text-violet-300"
+                      >
+                        {t("ugac.pityGroup")} · {row.bannerIds.length}
+                      </span>
+                    )}
+                  </span>
                   <button
                     type="button"
                     disabled={row.counter === 0}
@@ -229,9 +241,11 @@ export function GachaTab({
                         })}
                   </span>
                   <span>
-                    {row.pullLimit === null
-                      ? t("ugac.totalPulls", { used: row.totalPulls })
-                      : t("ugac.totalPullsCapped", { used: row.totalPulls, limit: row.pullLimit })}
+                    {row.isGroup
+                      ? t("ugac.pityUsage", { used: row.totalPulls })
+                      : row.pullLimit === null
+                        ? t("ugac.totalPulls", { used: row.totalPulls })
+                        : t("ugac.totalPullsCapped", { used: row.totalPulls, limit: row.pullLimit })}
                   </span>
                 </div>
               </li>

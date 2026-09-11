@@ -67,6 +67,26 @@ Decisions of record (Ken-doc §04 as amended by Cesar's comments [a][d][g][i]):
   Rare 400 / Mythic 800 / Legendary 1,500 / Supreme 3,000 RP (workbook `ClubEconomy`, editable).
   Recommendation: rotating shop subset; consider Supreme earn-only (tournament prizes) for
   scarcity. All within "RP only" — no money path.
+- **Ball ladder (NEW, `weekly_rotation_admin` §3.3, 2026-09-11 — Architect to review the
+  wording):** Common 30 / Uncommon 60 / Rare 120 / Mythic 250 / Legendary 500 RP per listing.
+  The spec wrote the ladder as a ten-ball listing (`quantity` 10 — balls stack to 99 and nothing
+  consumes them yet); it ships as a **one-ball** listing at those prices, because
+  `golfin_shop_purchase` honours `quantity` for `ticket` rows only and validator rule G3-Q
+  refuses any other value on a ball row. Turning it into ten balls is a server change (the
+  purchase function + G3-Q), not a content edit. Constants: `Tools/admin-dashboard/lib/rotation.ts`
+  (`BALL_RP_LADDER`, beside the club and character ladders copied from this section); the
+  validator's price band for balls is half-to-double this ladder.
+- **Weekly rotation (NEW, `weekly_rotation_admin`, 2026-09-11 — Architect to review the
+  wording):** every Monday 00:00 UTC the STORE tab lists a rarity-quota'd **Weekly Lineup** —
+  by default 9 clubs (Common 3 / Uncommon 2 / Rare 2 / Mythic 1 / Legendary 1 / Supreme 0,
+  one of every club type before any repeat), 3 balls and 1 locked character, priced from the
+  three ladders above — and the GACHA tab runs a **Weekly Featured** banner cloned from the
+  standard banner whose two featured clubs are rate-up ×3 inside their rarity. A ref sits out
+  the next 4 rotations after it appears; Supreme stays earn-only unless the quota is changed.
+  The year plan (52 weeks, `rotations.csv`) is authored in the admin's Rotations panel and
+  published without a build; pity on the weekly banners is one shared counter (`pityGroup =
+  weekly`) so it survives the week. Nothing leaves the RP economy: no new sink is added, the
+  rotation only decides WHICH of the existing listings are on sale each week.
 - **Gacha realization:** wire a real prize pool (club variants are the natural filler) before
   treating gacha as a sink; odds published per banner `rulesUrl`. **SHIPPED 2026-08-31** — the
   server rolls every pull from the published `gacha_rates` x `gacha_pools`, and the odds are now

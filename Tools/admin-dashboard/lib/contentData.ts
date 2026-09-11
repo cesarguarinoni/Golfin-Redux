@@ -46,6 +46,8 @@ const SEARCH_COLUMN: Record<string, string> = {
   gacha_banners: "nameEn",
   gacha_pools: "refId",
   ticket_types: "key",
+  // weekly_rotation_admin — a week is found by its title ("SPORTS DAY WEEK").
+  rotations: "nameEn",
 };
 
 function mapRow(catalog: string, r: Row): ContentStoredRow {
@@ -225,7 +227,8 @@ const FILTERABLE: Record<string, string[]> = {
   bags: ["rarity"],
   balls: ["brand", "rarity"],
   texts: [],
-  shop_catalog: ["category"],
+  // `rotationId` (weekly_rotation_admin): one week's 13 listings out of hundreds.
+  shop_catalog: ["category", "rotationId"],
   // missions_v1. Every one is a real `data->>'<field>'` query, so a facet on a
   // 162-row start-area table narrows server-side rather than filtering a page.
   missions: ["tier", "startAreaId", "loadoutId", "windPresetId"],

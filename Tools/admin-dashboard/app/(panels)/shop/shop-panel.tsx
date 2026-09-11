@@ -95,7 +95,7 @@ export function ShopPanel() {
       catalog="shop_catalog"
       titleKey="sh.title"
       renderCell={renderCell}
-      editorHiddenColumns={["category", "refId", "startAt", "endAt", "saleStartAt", "saleEndAt"]}
+      editorHiddenColumns={["category", "refId", "startAt", "endAt", "saleStartAt", "saleEndAt", "rotationId"]}
       banner={
         <div className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3">
           <p className="text-xs font-bold text-amber-300">
@@ -175,6 +175,18 @@ export function ShopPanel() {
               })}
             </div>
             <p className="text-[10px] leading-relaxed text-zinc-600">{translate("sh.windows.help")}</p>
+            {/* weekly_rotation_admin §3.2 — explicit for the same reason the
+                windows are: the shipped rows predate the column. */}
+            <label className="block">
+              <span className="font-mono text-[10px] text-zinc-500">rotationId</span>
+              <input
+                value={draft.rotationId ?? ""}
+                onChange={(e) => set("rotationId", e.target.value.trim())}
+                placeholder="wk_2026_38"
+                className="mt-0.5 w-full rounded-md border border-surface-700 bg-surface-950 px-2 py-1 font-mono text-[11px] text-zinc-200 placeholder:text-zinc-700 focus:border-accent-500 focus:outline-none"
+              />
+              <span className="mt-1 block text-[10px] leading-relaxed text-zinc-600">{translate("sh.rotation.help")}</span>
+            </label>
           </div>
         </div>
       )}

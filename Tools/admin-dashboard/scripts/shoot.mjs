@@ -20,9 +20,11 @@
  * taken by CLICKING rather than by a URL nobody can reach by hand. A step is
  * either a button's visible label (`Force return`, optionally `@<n>` to pick
  * the nth match when a label repeats), `row:<text>` to expand the log row that
- * CONTAINS that text, or `fill:<text>`, which types into the first visible
- * textarea through React's own value setter — assigning `.value` alone does not
- * fire onChange, so the button would stay disabled.
+ * CONTAINS that text, `select:<value>` to pick an option in a <select>, or
+ * `fill:<text>`, which types into the first visible
+ * textarea (or, failing that, the text input of an open dialog — the Rotations
+ * typed confirmations) through React's own value setter — assigning `.value`
+ * alone does not fire onChange, so the button would stay disabled.
  *
  * Prefer `row:` over `@<n>` for a log row: an expanded row's button reads
  * "Hide" rather than "Timeline & actions", so it drops out of the match list
@@ -155,15 +157,33 @@ try {
             btn.click();
             return 'expanded row: ' + needle;
           })()`
+        : step.startsWith("select:")
+        ? `(() => {
+            // select:<value> — pick an <option> by value in the first <select>
+            // that has it, through React's own setter so onChange fires.
+            const value = ${JSON.stringify(step.slice(7))};
+            const sel = [...document.querySelectorAll('select')]
+              .find((s) => [...s.options].some((o) => o.value === value));
+            if (!sel) return 'NOT FOUND: a select with option ' + value;
+            const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set;
+            setter.call(sel, value);
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            return 'selected: ' + value;
+          })()`
         : step.startsWith("fill:")
         ? `(() => {
             const text = ${JSON.stringify(step.slice(5))};
-            const ta = document.querySelector('textarea');
-            if (!ta) return 'NOT FOUND: a textarea';
+            // A textarea when the page has one, else the text input inside an
+            // open dialog — the Rotations workbench's typed confirmations
+            // ("type PUBLISH", "type wk_2026_38") are inputs, not textareas.
+            const ta = document.querySelector('textarea')
+              ?? document.querySelector('[role="dialog"] input[type="text"]');
+            if (!ta) return 'NOT FOUND: a textarea or a dialog text input';
             // React tracks the last value it set on the node; assigning .value
             // directly leaves that tracker in step and the change is swallowed.
             const setter = Object.getOwnPropertyDescriptor(
-              window.HTMLTextAreaElement.prototype, 'value').set;
+              ta.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
+              'value').set;
             setter.call(ta, text);
             ta.dispatchEvent(new Event('input', { bubbles: true }));
             return 'filled: ' + text.slice(0, 40);

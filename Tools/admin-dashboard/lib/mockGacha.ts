@@ -101,6 +101,8 @@ export const MOCK_TICKET_TRANSACTIONS: TicketTransactionRow[] = [
 export const MOCK_PLAYER_PITY: PlayerPityRow[] = [
   {
     bannerId: "banner_standard_club1",
+    isGroup: false,
+    bannerIds: ["banner_standard_club1"],
     counter: 0,
     totalPulls: 40,
     threshold: 50,
@@ -108,8 +110,23 @@ export const MOCK_PLAYER_PITY: PlayerPityRow[] = [
     pullLimit: null,
     updatedAt: "2026-09-01T10:12:00.000Z",
   },
+  // A GROUP key (weekly_rotation_admin §5): the counter every weekly banner
+  // shares. Visibly a group so the drawer's badge has something to render.
+  {
+    bannerId: "weekly",
+    isGroup: true,
+    bannerIds: ["banner_wk_2026_38", "banner_wk_2026_39"],
+    counter: 4,
+    totalPulls: 4,
+    threshold: 50,
+    minRarity: "Legendary",
+    pullLimit: null,
+    updatedAt: "2026-09-11T09:00:00.000Z",
+  },
   {
     bannerId: "banner_test_a",
+    isGroup: false,
+    bannerIds: ["banner_test_a"],
     counter: 0,
     totalPulls: 12,
     threshold: null,

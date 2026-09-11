@@ -16,6 +16,15 @@ import { validateArtUrlUnderBucket } from "./banner";
 import { SHOP_CATEGORY_STRICT_BUILD, TICKET_SHOP_BUILD } from "./buildGates";
 import { KNOWN_TOKENS_HINT, isKnown as isKnownClubToken, matches as clubMatchesToken } from "./loadoutTokens";
 import { holeBase, scoreGoal, type WeightRow } from "./missionScore";
+import {
+  BALL_RP_LADDER,
+  parseInstant,
+  parseQuota,
+  parseRefList,
+  recentlyFeaturedRefs,
+  recentRotations,
+  ROTATION_ID_RE,
+} from "./rotation";
 
 export type Severity = "error" | "warning";
 
@@ -101,6 +110,18 @@ const RP_BAND: Record<string, [number, number]> = {
   Supreme: [1500, 6000],
 };
 
+/**
+ * The BALL band — half to double the §3.3 ball ladder (weekly_rotation_admin),
+ * which is what the generator prices a ten-ball listing at. The club band
+ * above starts at 50 RP, so without this every weekly publish would warn about
+ * its own Common ball at 30 RP — a warning that fires every week is one an
+ * operator learns to skip, which is the opposite of what a warning is for.
+ */
+const ballBand = (rarity: string): [number, number] | undefined => {
+  const base = BALL_RP_LADDER[rarity];
+  return base === undefined ? undefined : [Math.round(base / 2), base * 2];
+};
+
 /** Columns a row of each catalog must carry (§D1.1). The id column is added below. */
 const REQUIRED: Record<string, string[]> = {
   clubs: ["id", "name", "type", "rarity", "brand", "basePower", "baseAccuracy", "maxDurability", "startLevel", "maxLevel"],
@@ -134,6 +155,11 @@ const REQUIRED: Record<string, string[]> = {
   gacha_rates: ["id", "poolId", "rarity", "rateBp"],
   gacha_pools: ["id", "poolId", "kind", "refId", "rarity", "weight", "quantity"],
   ticket_types: ["id", "key", "nameEn", "nameJa"],
+  // weekly_rotation_admin §3.1. The pins, the names and `materializedAt` are
+  // optional: a row with no pins is generated from the quotas, and a row that
+  // was never materialized is the normal state of a planned week.
+  rotations: ["rotationId", "startUtc", "endUtc", "clubQuota", "ballQuota", "characterQuota",
+              "gachaFeaturedCount", "gachaBasePoolId", "featuredWeightMul", "excludeWeeks"],
 };
 
 /** Columns that must parse as a number wherever they are present (§D1.3). */
@@ -168,6 +194,7 @@ const NUMERIC: Record<string, string[]> = {
   gacha_rates: ["rateBp"],
   gacha_pools: ["weight", "quantity", "dupeRp"],
   ticket_types: ["id"],
+  rotations: ["gachaFeaturedCount", "featuredWeightMul", "excludeWeeks", "seed"],
 };
 
 /**
@@ -220,6 +247,9 @@ export const ID_COLUMN: Record<string, string> = {
   // An INTEGER written as text, the way level_up_costs' `level` is — it is the
   // `ticketTypeInt` persisted in player saves. Append only, never renumber.
   ticket_types: "id",
+  // `wk_<ISO-year>_<ISO-week>` — the week IS the row; every generated row
+  // references it by this id (weekly_rotation_admin §3.1).
+  rotations: "rotationId",
 };
 
 /**
@@ -339,6 +369,44 @@ export function validateCatalog(
     err(null, null, `Unknown catalog "${catalog}".`);
     return problems;
   }
+
+  // ---- weekly_rotation_admin §4.5 helpers, shared by shop_catalog and gacha_banners ----
+  //
+  // R2: a non-blank `rotationId` must resolve to a `rotations` row, and the
+  // row's own window must lie INSIDE that rotation's window (equal is fine).
+  // A shop row that outlives its week is a listing the calendar cannot see.
+  const rotationRows = (): Map<string, DraftRow> =>
+    catalog === "rotations"
+      ? new Map(rows.map((r) => [r.rowId, r]))
+      : (ctx.otherCatalogs.get("rotations") ?? new Map<string, DraftRow>());
+  const checkRotationTag = (row: DraftRow, startCol: string, endCol: string) => {
+    const rotationId = text(row.data.rotationId).trim();
+    if (!rotationId) return;
+    if (!ctx.otherCatalogs.has("rotations")) {
+      err(row.rowId, "rotationId",
+        `R2: the rotations catalog was not loaded, so rotationId "${rotationId}" could not be checked.`);
+      return;
+    }
+    const rotation = rotationRows().get(rotationId);
+    if (!rotation) {
+      err(row.rowId, "rotationId", `R2: rotationId "${rotationId}" is not a rotations row.`);
+      return;
+    }
+    const rs = parseInstant(rotation.data.startUtc);
+    const re = parseInstant(rotation.data.endUtc);
+    const s = parseInstant(row.data[startCol]);
+    const e = parseInstant(row.data[endCol]);
+    const bad = (v: number | null) => v !== null && Number.isNaN(v);
+    if (bad(rs) || bad(re) || bad(s) || bad(e)) return; // the window rules report unreadable bounds
+    if (rs !== null && (s === null || s < rs)) {
+      err(row.rowId, startCol,
+        `R2: ${startCol} ${text(row.data[startCol]) || "(blank)"} is before rotation ${rotationId} starts (${text(rotation.data.startUtc)}).`);
+    }
+    if (re !== null && (e === null || e > re)) {
+      err(row.rowId, endCol,
+        `R2: ${endCol} ${text(row.data[endCol]) || "(blank)"} is after rotation ${rotationId} ends (${text(rotation.data.endUtc)}).`);
+    }
+  };
   if (rows.length === 0) {
     err(null, null, "No draft rows — publishing an empty catalog would bump the version for nothing.");
     return problems;
@@ -702,18 +770,37 @@ export function validateCatalog(
         }
       }
 
-      // 8. WARN ONLY — the economy band, not a rule.
+      // 8. WARN ONLY — the economy band, not a rule. Balls have their own
+      //    ladder (§3.3 of weekly_rotation_admin, now in ECONOMY_MASTER §3).
       const rarity =
         text(row.data.rarity).trim() ||
         text(target ? ctx.otherCatalogs.get(target)?.get(refId)?.data.rarity : "").trim();
-      const band = RP_BAND[rarity];
+      const band = category === "ball" ? ballBand(rarity) : RP_BAND[rarity];
       if (band && rpCost !== null && (rpCost < band[0] || rpCost > band[1])) {
         warn(
           row.rowId,
           "rpCost",
-          `rpCost ${rpCost} is outside the ${rarity} band ${band[0]}–${band[1]} RP ` +
+          `rpCost ${rpCost} is outside the ${rarity}${category === "ball" ? " ball" : ""} band ${band[0]}–${band[1]} RP ` +
             "(ECONOMY_MASTER.md §3). Publishing anyway — prices are tuned deliberately."
         );
+      }
+
+      // R2 / R4 (weekly_rotation_admin §4.5) — a row that belongs to a rotation.
+      checkRotationTag(row, "startAt", "endAt");
+      if (row.isActive) {
+        const rotationId = text(row.data.rotationId).trim();
+        const rotationRow = rotationId ? rotationRows().get(rotationId) : undefined;
+        if (rotationRow && refId) {
+          const weeks = Math.max(0, Math.trunc(Number(text(rotationRow.data.excludeWeeks).trim() || "0")) || 0);
+          const recent = recentRotations(Array.from(rotationRows().values()), rotationRow, weeks);
+          const listed = recentlyFeaturedRefs(recent, rows.filter((r) => r.rowId !== row.rowId));
+          if (listed.has(refId)) {
+            warn(row.rowId, "refId",
+              `R4: "${refId}" was already listed by one of the last ${weeks} rotation(s) before ` +
+                `${rotationId} (${recent.map((r) => r.rowId).join(", ")}). The generator never repeats ` +
+                "inside excludeWeeks; a hand edit can. Publishing anyway.");
+          }
+        }
       }
     }
   }
@@ -1707,6 +1794,7 @@ export function validateCatalog(
     };
 
     const sortOrders = new Map<string, string[]>();
+    const pityGroups = new Map<string, DraftRow[]>();
 
     for (const row of rows) {
       const poolId = text(row.data.poolId).trim();
@@ -1878,12 +1966,43 @@ export function validateCatalog(
           }
         }
       }
+
+      // R2 (weekly_rotation_admin §4.5) — a banner tagged with a rotation sits inside its week.
+      checkRotationTag(row, "startUtc", "endUtc");
+
+      // R3 — pity groups. Collected here, judged below across the whole catalog.
+      if (row.isActive && isTrue(row.data.active)) {
+        const group = text(row.data.pityGroup).trim();
+        if (group) pityGroups.set(group, [...(pityGroups.get(group) ?? []), row]);
+      }
     }
 
     for (const [sortOrder, ids] of sortOrders) {
       if (ids.length > 1) {
         warn(null, "sortOrder",
           `sortOrder ${sortOrder} is shared by ${ids.join(", ")} — their order on the carousel is arbitrary.`);
+      }
+    }
+
+    // R3 (weekly_rotation_admin §5). Banners sharing a `pityGroup` share ONE
+    // counter in golfin_gacha_pity, so every active banner in a group must
+    // promise the same threshold and the same minimum rarity — a counter at 40
+    // against a threshold of 50 on one banner and 30 on the other is a pity
+    // nobody can explain to a player. Blank and 0 thresholds are the same "no
+    // pity" (decision 2), so they compare equal here too.
+    for (const [group, banners] of pityGroups) {
+      if (banners.length < 2) continue;
+      const key = (b: DraftRow) =>
+        `${num(b.data.pityThreshold) ?? 0}|${text(b.data.pityMinRarity).trim()}`;
+      const first = banners[0]!;
+      for (const b of banners.slice(1)) {
+        if (key(b) !== key(first)) {
+          err(b.rowId, "pityGroup",
+            `R3: pityGroup "${group}" is shared with ${first.rowId}, but pityThreshold/pityMinRarity differ ` +
+              `(${text(first.data.pityThreshold) || "blank"}/${text(first.data.pityMinRarity) || "blank"} vs ` +
+              `${text(b.data.pityThreshold) || "blank"}/${text(b.data.pityMinRarity) || "blank"}). A shared counter ` +
+              "with different thresholds is undefined — make them identical or split the group.");
+        }
       }
     }
   }
@@ -1926,6 +2045,94 @@ export function validateCatalog(
             `Ticket type ${row.rowId} is charged by active banner(s) ${chargedBy.join(", ")}. ` +
               "Deactivate or re-point those banners first — otherwise their cost is in a currency the game hides.");
         }
+      }
+    }
+  }
+
+  // ---- rotations (weekly_rotation_admin §4.5, rule R1) ---------------------
+  //
+  // A rotation is the unit the calendar and the generator both read, so what
+  // is checked here is the SHAPE the generator needs (id, window, quotas, the
+  // base pool) and the one cross-row fact nothing else can see: two active
+  // rotations must not overlap (error) and consecutive ones should touch
+  // (warn). Overlap is the error because the store would list two weeks at
+  // once and two weekly banners would run at once; a gap only means a quiet
+  // week, which may be deliberate.
+  if (catalog === "rotations") {
+    const windows: Array<{ row: DraftRow; start: number; end: number }> = [];
+    for (const row of rows) {
+      if (!ROTATION_ID_RE.test(row.rowId)) {
+        err(row.rowId, "rotationId",
+          `R1: "${row.rowId}" is not wk_<ISO-year>_<ISO-week> (e.g. wk_2026_38).`);
+      }
+      const start = parseInstant(row.data.startUtc);
+      const end = parseInstant(row.data.endUtc);
+      for (const [column, value] of [["startUtc", start], ["endUtc", end]] as const) {
+        if (value === null) {
+          err(row.rowId, column, `R1: ${column} is empty — a rotation is a window.`);
+        } else if (Number.isNaN(value)) {
+          err(row.rowId, column,
+            `R1: "${text(row.data[column])}" is not a readable timestamp. Use an ISO-8601 UTC instant like 2026-09-14T00:00:00Z.`);
+        }
+      }
+      if (start !== null && end !== null && !Number.isNaN(start) && !Number.isNaN(end)) {
+        if (end <= start) {
+          err(row.rowId, "endUtc",
+            `R1: the window ends at or before it starts (${text(row.data.startUtc)} → ${text(row.data.endUtc)}). endUtc is EXCLUSIVE.`);
+        } else if (row.isActive) {
+          windows.push({ row, start, end });
+        }
+      }
+      for (const column of ["clubQuota", "ballQuota", "characterQuota"] as const) {
+        const { error } = parseQuota(row.data[column]);
+        if (error) err(row.rowId, column, `R1: ${column} ${error}`);
+      }
+      const featuredCount = num(row.data.gachaFeaturedCount);
+      if (featuredCount !== null && (!Number.isInteger(featuredCount) || featuredCount < 0)) {
+        err(row.rowId, "gachaFeaturedCount", `R1: gachaFeaturedCount ${featuredCount} must be a whole number ≥ 0.`);
+      }
+      const mul = num(row.data.featuredWeightMul);
+      if (mul !== null && mul <= 0) {
+        err(row.rowId, "featuredWeightMul", `R1: featuredWeightMul ${mul} must be positive — 1 means no rate-up.`);
+      }
+      const weeks = num(row.data.excludeWeeks);
+      if (weeks !== null && (!Number.isInteger(weeks) || weeks < 0)) {
+        err(row.rowId, "excludeWeeks", `R1: excludeWeeks ${weeks} must be a whole number ≥ 0.`);
+      }
+      const basePool = text(row.data.gachaBasePoolId).trim();
+      if (!basePool) {
+        err(row.rowId, "gachaBasePoolId", "R1: gachaBasePoolId is empty — the weekly pool is cloned from it.");
+      } else if (ctx.otherCatalogs.has("gacha_pools")) {
+        const poolRows = Array.from(ctx.otherCatalogs.get("gacha_pools")!.values());
+        if (!poolRows.some((p) => p.isActive && text(p.data.poolId).trim() === basePool)) {
+          err(row.rowId, "gachaBasePoolId",
+            `R1: gachaBasePoolId "${basePool}" has no active gacha_pools entries — there is nothing to clone.`);
+        }
+      }
+      // A pin list is refs separated by ';' — a comma is the one mistake a CSV
+      // hand makes, and it would read as one ref that resolves to nothing.
+      for (const column of ["pinnedClubs", "pinnedBalls", "pinnedCharacter", "pinnedFeatured"] as const) {
+        if (text(row.data[column]).includes(",")) {
+          err(row.rowId, column, `R1: ${column} contains a comma — pins are separated by ';'.`);
+        }
+        const dupes = parseRefList(row.data[column]).filter((ref, i, all) => all.indexOf(ref) !== i);
+        if (dupes.length > 0) err(row.rowId, column, `R1: ${column} lists ${dupes[0]} twice.`);
+      }
+    }
+
+    windows.sort((a, b) => a.start - b.start || a.row.rowId.localeCompare(b.row.rowId));
+    for (let i = 1; i < windows.length; i += 1) {
+      const prev = windows[i - 1]!;
+      const cur = windows[i]!;
+      if (cur.start < prev.end) {
+        err(cur.row.rowId, "startUtc",
+          `R1: ${cur.row.rowId} (${text(cur.row.data.startUtc)} → ${text(cur.row.data.endUtc)}) overlaps ` +
+            `${prev.row.rowId} (${text(prev.row.data.startUtc)} → ${text(prev.row.data.endUtc)}). Two active ` +
+            "rotations cannot run at once — the store would list two weeks and two weekly banners would be live.");
+      } else if (cur.start > prev.end) {
+        warn(cur.row.rowId, "startUtc",
+          `R1: a gap between ${prev.row.rowId} (ends ${text(prev.row.data.endUtc)}) and ${cur.row.rowId} ` +
+            `(starts ${text(cur.row.data.startUtc)}) — no weekly lineup in between. Publishing anyway.`);
       }
     }
   }

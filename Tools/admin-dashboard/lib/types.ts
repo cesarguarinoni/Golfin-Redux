@@ -947,13 +947,23 @@ export interface TicketTransactionRow {
 }
 
 export interface PlayerPityRow {
+  /**
+   * The PITY KEY — `golfin_gacha_pity.banner_id`, which since
+   * weekly_rotation_admin §5 is either a banner id or a `pityGroup` shared by
+   * several banners (the weekly banners all use `weekly`). The column kept its
+   * name; its meaning widened.
+   */
   bannerId: string;
+  /** True when the key is a pity GROUP rather than one banner's id. */
+  isGroup: boolean;
+  /** The active banners that advance this key — one for a banner key. */
+  bannerIds: string[];
   counter: number;
   totalPulls: number;
-  /** The banner's published `pityThreshold`, or null when it has no pity. */
+  /** The banner's (or group's — R3 makes them identical) published `pityThreshold`, or null when it has no pity. */
   threshold: number | null;
   minRarity: string | null;
-  /** The banner's published `maxPullsPerPlayer`, or null when uncapped. */
+  /** The banner's published `maxPullsPerPlayer`, or null when uncapped / a group. */
   pullLimit: number | null;
   updatedAt: string | null;
 }

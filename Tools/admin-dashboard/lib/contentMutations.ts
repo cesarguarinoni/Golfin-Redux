@@ -435,7 +435,10 @@ export async function publishCatalog(
   const otherCatalogs = new Map<string, Map<string, DraftRow>>();
   const needs =
     catalog === "shop_catalog"
-      ? REFERENCED_CATALOGS
+      // + `rotations` (weekly_rotation_admin R2/R4): a row tagged with a
+      // rotation is checked against that rotation's window, and against the
+      // weeks before it.
+      ? [...REFERENCED_CATALOGS, "rotations"]
       : // progress_server_side §2 — the level-cost table's contiguity ceiling is
         // the highest `maxLevel` any character or club can reach, so the rule
         // cannot be checked without them. Drafts, not published rows, for the
@@ -467,10 +470,15 @@ export async function publishCatalog(
               : catalog === "gacha_pools"
                 ? ["gacha_rates", ...GACHA_REFERENCED_CATALOGS]
                 : catalog === "gacha_banners"
-                  ? ["gacha_pools", "gacha_rates", "ticket_types"]
+                  ? ["gacha_pools", "gacha_rates", "ticket_types", "rotations"]
                   : catalog === "ticket_types"
                     ? ["gacha_banners"]
-                    : [];
+                    : // weekly_rotation_admin R1: `gachaBasePoolId` must name a
+                      // pool with active entries — the weekly pool is cloned
+                      // from it, and an empty clone is a banner that pays nothing.
+                      catalog === "rotations"
+                      ? ["gacha_pools"]
+                      : [];
   for (const other of needs) {
     const rows = await fetchAllRows("content_drafts", other);
     otherCatalogs.set(other, new Map(rows.map((r) => [r.rowId, toDraftRow(r)])));

@@ -90,6 +90,13 @@ export const PANELS: readonly PanelDef[] = [
   // request. No draft, no publish, no version. The panel says so.
   { id: "rewards", title: "Rewards", icon: "gift", route: "/rewards" },
   { id: "shop", title: "Shop", icon: "cart", route: "/shop" },
+  // ---- weekly_rotation_admin §4 ------------------------------------------
+  // The `rotations` catalog plus the Lineup workbench: one week of the store
+  // and the weekly gacha banner, generated, previewed, materialized into the
+  // five catalogs and published in order behind one button. Its own entry
+  // rather than a tab under Shop because a rotation is not a shop row — it is
+  // the thing that WRITES shop rows (and gacha rows) for a week.
+  { id: "rotations", title: "Rotations", icon: "cart", route: "/rotations" },
   // ---- gacha_server_pull §6 ----------------------------------------------
   // The OPS panel, and it sits BEFORE the three gacha content panels on purpose
   // (the array is alphabetical, and "Gacha" sorts before "Gacha Banners" in both

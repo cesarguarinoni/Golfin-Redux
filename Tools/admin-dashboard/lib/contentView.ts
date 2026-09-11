@@ -44,6 +44,7 @@ export const CONTENT_CATALOGS = [
   "gacha_rates",
   "gacha_pools",
   "ticket_types",
+  "rotations",
 ] as const;
 
 export type ContentCatalog = (typeof CONTENT_CATALOGS)[number];
@@ -117,7 +118,8 @@ export interface Facet {
     | "c.facet.kind"
     | "c.facet.goal"
     | "c.facet.component"
-    | "c.facet.pool";
+    | "c.facet.pool"
+    | "c.facet.rotation";
 }
 
 const BRAND_FACET: Facet = { column: "brand", labelKey: "c.facet.brand" };
@@ -139,6 +141,9 @@ const MISSION_COMPONENT_FACET: Facet = { column: "component", labelKey: "c.facet
 // with more than one pool live, everything an operator does is scoped to one.
 const GACHA_POOL_FACET: Facet = { column: "poolId", labelKey: "c.facet.pool" };
 const GACHA_KIND_FACET: Facet = { column: "kind", labelKey: "c.facet.kind" };
+
+// weekly_rotation_admin — one week's listings at a glance, 13 among hundreds.
+const ROTATION_FACET: Facet = { column: "rotationId", labelKey: "c.facet.rotation" };
 
 // ---------------------------------------------------------------------------
 // One descriptor per panel
@@ -205,8 +210,11 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
     // it is the difference between selling one ticket and selling ten for the
     // same price, and a column an operator has to open a row to see is a column
     // that gets published wrong. Blank means 1 on every non-ticket row.
-    columns: ["category", "refId", "rpCost", "saleRpCost", "quantity", "sortOrder", "popular", "offer"],
-    facets: [CATEGORY_FACET],
+    // `rotationId` (weekly_rotation_admin §3.2) sits in the table too: it is
+    // what tells a permanent listing from a week's, and a blank one on a
+    // windowed row is the hand-edit R2 exists to catch.
+    columns: ["category", "refId", "rpCost", "saleRpCost", "quantity", "sortOrder", "popular", "offer", "rotationId"],
+    facets: [CATEGORY_FACET, ROTATION_FACET],
     limit: 50,
   },
   // 240 rows, three columns, no facet worth having: every row is a level and the
@@ -295,7 +303,7 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
   gacha_banners: {
     catalog: "gacha_banners",
     columns: ["nameEn", "state", "poolId", "ticketType", "costX1", "costX10",
-              "startUtc", "endUtc", "pityThreshold", "sortOrder", "active"],
+              "startUtc", "endUtc", "pityThreshold", "pityGroup", "sortOrder", "active", "rotationId"],
     facets: [GACHA_POOL_FACET],
     limit: 50,
   },
@@ -316,6 +324,21 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
     columns: ["key", "nameEn", "nameJa", "iconSprite"],
     facets: [],
     limit: 50,
+  },
+
+  // ---- weekly_rotation_admin §3.1 ----------------------------------------
+  //
+  // 52 rows, one per planned week. The table leads with the WINDOW and the
+  // TITLE (what an operator scans for) and ends with `materializedAt`, the
+  // one cell that says whether the week's rows exist yet. The quotas, the seed
+  // and the four pin lists are all editable in the row editor; the Lineup
+  // workbench above the table is where they are actually acted on.
+  rotations: {
+    catalog: "rotations",
+    columns: ["startUtc", "endUtc", "nameEn", "clubQuota", "ballQuota", "characterQuota",
+              "gachaFeaturedCount", "seed", "materializedAt"],
+    facets: [],
+    limit: 60,
   },
 };
 

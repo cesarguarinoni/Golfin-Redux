@@ -622,12 +622,24 @@ export async function fetchPlayerGacha(userId: string): Promise<PlayerGachaRespo
 
   const banners = await catalogRows("gacha_banners");
   const pity: PlayerPityRow[] = ((pityRes.data ?? []) as Row[]).map((r) => {
-    const bannerId = String(r.banner_id ?? "");
-    const banner = banners.get(bannerId);
+    const key = String(r.banner_id ?? "");
+    // The key is a banner id, OR a pityGroup shared by several banners
+    // (weekly_rotation_admin §5). For a group, the threshold shown is the
+    // first active member's — R3 makes every member's identical at publish.
+    const own = banners.get(key);
+    const members = own
+      ? [key]
+      : [...banners.entries()]
+          .filter(([, b]) => String(b.pityGroup ?? "").trim() === key && String(b.active ?? "").trim().toLowerCase() === "true")
+          .map(([id]) => id)
+          .sort();
+    const banner = own ?? (members[0] ? banners.get(members[0]) : undefined);
     const rawThreshold = banner ? String(banner.pityThreshold ?? "").trim() : "";
-    const rawLimit = banner ? String(banner.maxPullsPerPlayer ?? "").trim() : "";
+    const rawLimit = own ? String(own.maxPullsPerPlayer ?? "").trim() : "";
     return {
-      bannerId,
+      bannerId: key,
+      isGroup: !own,
+      bannerIds: members,
       counter: num(r.counter),
       totalPulls: num(r.total_pulls),
       // Blank OR zero is "no pity" — the same rule the function and the
@@ -635,6 +647,8 @@ export async function fetchPlayerGacha(userId: string): Promise<PlayerGachaRespo
       // would never act on.
       threshold: /^\d+$/.test(rawThreshold) && Number(rawThreshold) > 0 ? Number(rawThreshold) : null,
       minRarity: banner ? (str(banner.pityMinRarity) ?? null) : null,
+      // A cap is per BANNER (the function keeps `total_pulls` per banner id for
+      // it), so a group key never shows one.
       pullLimit: /^\d+$/.test(rawLimit) ? Number(rawLimit) : null,
       updatedAt: str(r.updated_at),
     };
