@@ -30,9 +30,10 @@ placeholder listings, so the week lists them twice — the generator now warns; 
 builds withhold `banner_wk_2026_38` until it has an `artUrl` (they do not bundle
 `GachaBanner_Weekly.png`).
 
-**Waiting on Cesar:** apply the pity migration (DDL; then I run the §6.4 live E2E), art for the
-weekly banner before Monday, the three decisions above. Task folder:
-`Docs/Specs/Active/weekly_rotation_admin/`.
+**Pity migration applied by Cesar the same day; §6.4 E2E passed on prod** (two 20-minute test
+rotations, pulls on Cratilo: A x2 → counter 2, B x1 → counter 3 with `key = weekly`, cap per
+banner; both archived and published afterwards). **Waiting on Cesar:** art for the weekly banner
+before Monday, the three decisions above. Task folder: `Docs/Specs/Active/weekly_rotation_admin/`.
 
 ---
 ## 2026-09-11 — standalone lane rewrote `content_art.txt` with the SHELL's picture — FIXED
