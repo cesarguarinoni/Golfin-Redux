@@ -1,4 +1,4 @@
-content_art — build 2874   (GOLFIN/Content/Validate Catalog Art)
+content_art — build 2907   (GOLFIN/Content/Validate Catalog Art)
 
 WARNING-ONLY REPORT. A row whose data is published and whose art ships in a later
 build is a legitimate state: content_two_way §4 withholds it from every visible list
@@ -18,7 +18,7 @@ instead of drawing a blank. This file records what THIS build withholds.
 ── clubs  (799 row(s), 0 with missing art)
    every sprite column resolves.
 
-── gacha_banners  (4 row(s), 0 with missing art)
+── gacha_banners  (7 row(s), 0 with missing art)
    every sprite column resolves.
 
 ── ticket_types  (2 row(s), 0 with missing art)
