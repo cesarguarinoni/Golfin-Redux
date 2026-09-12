@@ -4,6 +4,19 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-12 — punch it GPS: **Golfin 1.5.7 (2907) on TestFlight** — VALID at Apple 19:16
+
+`./Tools/testflight.sh testflight_build_gps` on `6718aee93`, unattended: preflight clean (tree
+clean, Editor closed, `--check: clean` across 21 catalogs), Unity 103 s, archive 312 s, upload
+72 s, `state=VALID` 4 m 42 s after the upload (`Tools/asc-build-state.sh`). 33 commits past the
+previous game-record build (2874): weekly_rotation_admin (catalog #21, pity groups, the artUrl
+carry-forward), home_carousel_and_daily_timing, oauth_callback_per_app, the standalone lane's
+`content_art.txt` fix. The game lane regenerated `content_art.txt` for 2907 — 0 withheld,
+0 missing across 6 catalogs; `gacha_banners` is 7 rows now (the three weekly banners resolve to
+the shared stand-in). Guard file + report committed as `604e83f58`. Testers, release notes and
+the App Store submission stay manual (PUNCH_IT_ROUTINE § Not automated).
+
+---
 ## 2026-09-11 — home_carousel_and_daily_timing: **Home mode cards on the Tee button (Pro Max) + the daily card shoving the mission list** — DONE (Cesar approved 2026-09-11)
 
 Two chat reports with a device screenshot. (1) The Home mode cards overlapped the Tee button —
