@@ -44,3 +44,15 @@ pwk_2026_37_club_wood_golfin_common,pool_wk_2026_37,club,club_wood_golfin_common
 pwk_2026_37_repairkit_common,pool_wk_2026_37,item,repairkit_common,Common,40,1,0,false,false
 pwk_2026_37_repairkit_mythic,pool_wk_2026_37,item,repairkit_mythic,Mythic,30,1,0,false,false
 pwk_2026_37_repairkit_rare,pool_wk_2026_37,item,repairkit_rare,Rare,40,1,0,false,false
+pwk_2026_39_club_awedge_fyloe,pool_wk_2026_39,club,club_awedge_fyloe,Mythic,100,1,160,false,true
+pwk_2026_39_club_driver_gf,pool_wk_2026_39,club,club_driver_gf,Common,100,1,20,false,true
+pwk_2026_39_club_iron7_mireo,pool_wk_2026_39,club,club_iron7_mireo,Rare,100,1,80,false,true
+pwk_2026_39_club_iron9_klyro,pool_wk_2026_39,club,club_iron9_klyro,Uncommon,100,1,40,false,true
+pwk_2026_39_club_iron_gf_mythic,pool_wk_2026_39,club,club_iron_gf_mythic,Mythic,300,1,160,true,true
+pwk_2026_39_club_putter_golfinx,pool_wk_2026_39,club,club_putter_golfinx,Supreme,100,1,600,false,true
+pwk_2026_39_club_pwedge_royal,pool_wk_2026_39,club,club_pwedge_royal,Legendary,100,1,300,false,true
+pwk_2026_39_club_wood_gf,pool_wk_2026_39,club,club_wood_gf,Common,100,1,20,false,true
+pwk_2026_39_club_wood_gf_legendary,pool_wk_2026_39,club,club_wood_gf_legendary,Legendary,300,1,300,true,true
+pwk_2026_39_repairkit_common,pool_wk_2026_39,item,repairkit_common,Common,40,1,0,false,true
+pwk_2026_39_repairkit_mythic,pool_wk_2026_39,item,repairkit_mythic,Mythic,30,1,0,false,true
+pwk_2026_39_repairkit_rare,pool_wk_2026_39,item,repairkit_rare,Rare,40,1,0,false,true

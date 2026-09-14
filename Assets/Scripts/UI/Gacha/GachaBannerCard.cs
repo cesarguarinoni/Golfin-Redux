@@ -4,6 +4,9 @@
 // placeholders: the authored title (JA/EN, title only — no tagline, Cesar 2026-08-31), the art
 // through the CatalogArtCache ladder, the NUMERIC costs, the banner's ticket icon, and the two
 // guarantee lines bound to pityThreshold / pityMinRarity / guaranteeMinRarityX10.
+// gacha_banner_tagline — the two selling lines the artwork is no longer allowed to carry: a
+// brand-coloured RIBBON under the countdown (taglineEn/Ja) and a navy HOOK BAND lower over the art
+// (hookEn/Ja), both localized UI drawn over the image, both hidden when their string is blank.
 //
 // EVERY LINE THIS FILE WRITES IS DATA THE OPERATOR CAN CHANGE WITHOUT A BUILD. That is the whole
 // point of the task, and it is why the card no longer carries a single authored string it also
@@ -14,6 +17,7 @@
 // withheld anything unrollable (§3.1), including a banner whose art does not resolve, so Bind can
 // draw unconditionally instead of guarding every slot with a fallback that would show a broken card.
 #nullable enable
+using System.Text;
 using Golfin.UI.Polish;
 using Golfin.UI.Toast;
 using GolfinRedux.UI;
@@ -62,6 +66,16 @@ namespace GolfinRedux.UI.Gacha
         [SerializeField] private TextMeshProUGUI? _guaranteeLabel;
         [Tooltip("PitySection/PityRow2/PityPill — always hidden: the x10 line carries no number.")]
         [SerializeField] private GameObject?      _guaranteePill;
+
+        [Header("Tagline ribbon + hook band — gacha_banner_tagline §3")]
+        [Tooltip("ArtImage/TaglineRibbon — the brand-coloured plate under the countdown. Hidden when the tagline is blank.")]
+        [SerializeField] private GameObject?      _taglineRibbon;
+        [Tooltip("ArtImage/TaglineRibbon/Label — taglineEn/taglineJa, auto-sized 34–40.")]
+        [SerializeField] private TextMeshProUGUI? _taglineLabel;
+        [Tooltip("ArtImage/TaglineHook — the soft-edged navy band lower over the art. Hidden when the hook is blank.")]
+        [SerializeField] private GameObject?      _hookBand;
+        [Tooltip("ArtImage/TaglineHook/Label — hookEn/hookJa, two lines, `*…*` = accent run.")]
+        [SerializeField] private TextMeshProUGUI? _hookLabel;
 
         // ── Runtime state ──────────────────────────────────────────────────────
 
@@ -112,6 +126,7 @@ namespace GolfinRedux.UI.Gacha
             if (entry == null) return;
 
             BindTitle(entry);
+            BindTaglines(entry);
             BindArt(entry);
             BindCosts(entry);
             BindTicketIcon(entry);
@@ -157,6 +172,71 @@ namespace GolfinRedux.UI.Gacha
             }
 
             _titleText.text = title;
+        }
+
+        // ── Tagline ribbon + hook band (gacha_banner_tagline §3) ───────────────
+
+        /// <summary>The accent colour a <c>*…*</c> run renders in — Figma <c>Tagline/Hook</c>
+        /// (<c>14281:33637</c>), the pink of the ribbon's own gradient.</summary>
+        internal const string AccentHex = "#FF2D9B";
+
+        /// <summary>
+        /// The two selling lines, each drawn only when it has something to say.
+        ///
+        /// <para>
+        /// Language is the TITLE's choice (<see cref="GachaCsvMerge.PickLocalised"/>) — one
+        /// check for the three texts, so a half-filled row cannot show a Japanese title over an
+        /// English ribbon. A pair blank on both sides deactivates its container outright: an empty
+        /// plate over the art is worse than no plate, and <c>STANDARD CLUB 1</c> — whose artwork
+        /// still bakes its own copy — must keep rendering exactly as it did.
+        /// </para>
+        /// </summary>
+        private void BindTaglines(GachaBannerEntry entry)
+        {
+            BindOverlayLine(_taglineRibbon, _taglineLabel, GachaCsvMerge.PickLocalised(entry.TaglineEn, entry.TaglineJa));
+            BindOverlayLine(_hookBand,      _hookLabel,    GachaCsvMerge.PickLocalised(entry.HookEn,    entry.HookJa));
+        }
+
+        private static void BindOverlayLine(GameObject? container, TextMeshProUGUI? label, string text)
+        {
+            bool show = !string.IsNullOrWhiteSpace(text);
+            if (container != null) container.SetActive(show);
+            if (label != null) label.text = show ? FormatTagline(text) : string.Empty;
+        }
+
+        /// <summary>
+        /// Operator copy → TMP rich text. <c>*…*</c> becomes the accent colour; a two-character
+        /// <c>\n</c> becomes a hard line break (the hook is authored as two lines, and the CSV
+        /// pipeline is one line per row).
+        ///
+        /// <para>
+        /// The marker is a single <c>*</c> rather than raw <c>&lt;color&gt;</c> tags because the
+        /// text is operator-edited: a mistyped tag breaks the whole string, a mistyped marker only
+        /// loses its colour. An UNMATCHED <c>*</c> is stripped, never shown — a literal asterisk is
+        /// not something a banner ever needs to say. Shared by both labels; unit-tested in
+        /// <c>GachaBannerTaglineTests</c>.
+        /// </para>
+        /// </summary>
+        internal static string FormatTagline(string? raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return string.Empty;
+
+            string text = raw!.Replace("\\n", "\n");
+            if (text.IndexOf('*') < 0) return text;
+
+            // Split on the marker: even segments are plain, odd ones are accent runs — but only
+            // when a closing marker follows, so the last segment after an unmatched `*` stays plain.
+            var parts = text.Split('*');
+            var sb    = new StringBuilder(text.Length + 32);
+            for (int i = 0; i < parts.Length; i++)
+            {
+                bool accent = (i & 1) == 1 && i < parts.Length - 1;
+                if (accent && parts[i].Length > 0)
+                    sb.Append("<color=").Append(AccentHex).Append('>').Append(parts[i]).Append("</color>");
+                else
+                    sb.Append(parts[i]);
+            }
+            return sb.ToString();
         }
 
         // ── Art ────────────────────────────────────────────────────────────────

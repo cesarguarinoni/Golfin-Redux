@@ -24,3 +24,16 @@ shop_wk_2026_36_ball_par_perfect,ball,ball_par_perfect,30,,501,false,false,Commo
 shop_wk_2026_36_club_driver_klyro_common,club,club_driver_klyro_common,100,,500,false,false,Common,2026-09-11T03:16:35Z,2026-09-11T03:36:35Z,,,,false,wk_2026_36
 shop_wk_2026_37_ball_fyloe_soft,ball,ball_fyloe_soft,30,,501,false,false,Common,2026-09-11T03:36:35Z,2026-09-11T04:06:35Z,,,,false,wk_2026_37
 shop_wk_2026_37_club_wood_golfin_common,club,club_wood_golfin_common,100,,500,false,false,Common,2026-09-11T03:36:35Z,2026-09-11T04:06:35Z,,,,false,wk_2026_37
+shop_wk_2026_39_ball_fairway_threads,ball,ball_fairway_threads,120,,302,false,false,Rare,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_ball_gf,ball,ball_gf,60,,402,false,false,Uncommon,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_ball_soralis,ball,ball_soralis,250,,201,false,false,Mythic,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_char_shae,character,char_shae,3000,,101,false,false,Legendary,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_awedge_gf_rare,club,club_awedge_gf_rare,400,,300,false,false,Rare,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_driver_gf,club,club_driver_gf,100,,500,false,false,Common,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_iron_gf_common,club,club_iron_gf_common,100,,502,false,false,Common,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_iron_gf_mythic,club,club_iron_gf_mythic,800,,200,false,false,Mythic,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_putter_gf_uncommon,club,club_putter_gf_uncommon,200,,401,false,false,Uncommon,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_pwedge_gf_rare,club,club_pwedge_gf_rare,400,,301,false,false,Rare,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_swedge_gf_uncommon,club,club_swedge_gf_uncommon,200,,400,false,false,Uncommon,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_wood_gf,club,club_wood_gf,100,,501,false,false,Common,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39
+shop_wk_2026_39_club_wood_gf_legendary,club,club_wood_gf_legendary,1500,,100,false,false,Legendary,2026-09-21T00:00:00Z,2026-09-28T00:00:00Z,,,,true,wk_2026_39

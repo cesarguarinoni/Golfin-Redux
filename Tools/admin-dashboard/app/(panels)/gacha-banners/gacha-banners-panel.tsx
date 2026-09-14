@@ -15,7 +15,7 @@ import { fetchRows } from "../_content/client";
  * WHAT AN OPERATOR IS ACTUALLY DOING HERE. A banner row is four decisions:
  * WHEN it runs (startUtc / endUtc, on the server clock), WHAT it rolls (poolId),
  * WHAT IT COSTS (ticketType + costX1 / costX10), and WHAT IT SAYS (nameEn /
- * nameJa / taglineEn / taglineJa, plus one artwork). The extras below are those
+ * nameJa / taglineEn / taglineJa / hookEn / hookJa, plus one artwork). The extras below are those
  * four groups, in that order, and the raw field list underneath keeps only what
  * they do not render.
  *
@@ -116,6 +116,8 @@ export function GachaBannersPanel({ now }: { now: number }) {
         "nameJa",
         "taglineEn",
         "taglineJa",
+        "hookEn",
+        "hookJa",
         "featuredRefIds",
         "pityGroup",
         "rotationId",
@@ -233,7 +235,7 @@ export function GachaBannersPanel({ now }: { now: number }) {
           <div className="space-y-3 rounded-lg border border-surface-800 bg-surface-950 p-3">
             <p className="text-[10px] font-medium text-zinc-500">{translate("gb.text")}</p>
             <div className="grid grid-cols-2 gap-2">
-              {(["nameEn", "nameJa", "taglineEn", "taglineJa"] as const).map((column) => (
+              {(["nameEn", "nameJa", "taglineEn", "taglineJa", "hookEn", "hookJa"] as const).map((column) => (
                 <label key={column} className="block">
                   <span className="font-mono text-[10px] text-zinc-500">{column}</span>
                   <input

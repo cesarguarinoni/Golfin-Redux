@@ -1,0 +1,9 @@
+13:26:51.905 Home reached at t=18.7 — tapping real bottom-nav gachaButton.onClick
+13:26:56.002 cards: 0:banner_wk_2026_38, 1:banner_standard_club1, 2:banner_test_a, 3:banner_test_b currentIndex=0
+13:26:56.003 PUBLISHED row: taglineEn='GET BogeyB Drivers & Woods' taglineJa='BogeyB ドライバー＆ウッドが登場' hookEn='3× RATE-UP ON\n*LEGENDARY* GEAR!' hookJa='*レジェンダリー*装備\n確率3倍！' ribbonActive=True hookActive=True ribbonText='GET BogeyB Drivers & Woods' hookText='3× RATE-UP ON⏎<color=#FF2D9B>LEGENDARY</color> GEAR!'
+13:26:58.654 CAPTURE B_published_row_EN -> screenshot_2026-09-14_13-26-57.png
+13:27:00.798 C JA: title='ドライバーウィーク · BOGEYB' ribbonText='BogeyB ドライバー＆ウッドが登場' hookText='<color=#FF2D9B>レジェンダリー</color>装備⏎確率3倍！'
+13:27:03.214 CAPTURE C_published_row_JA -> screenshot_2026-09-14_13-27-02.png
+13:27:07.376 D empty row 'banner_standard_club1': taglineEn='' hookEn='' ribbonActive=False hookActive=False cardPos=(0.00, 42.00)
+13:27:09.704 CAPTURE D_empty_row_no_plates -> screenshot_2026-09-14_13-27-08.png
+13:27:11.016 DONE — exiting play mode

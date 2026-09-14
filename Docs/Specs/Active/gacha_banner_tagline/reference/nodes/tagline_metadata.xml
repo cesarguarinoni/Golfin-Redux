@@ -1,0 +1,8 @@
+<frame id="14280:33549" name="Banner" x="0" y="0" width="882" height="1424">
+  <frame id="14281:33634" name="Tagline/Ribbon" x="0" y="189" width="882" height="64">
+    <text id="14281:33635" name="Label" x="28" y="8" width="539" height="48" />
+  </frame>
+  <frame id="14281:33636" name="Tagline/Hook" x="0" y="1035" width="882" height="188">
+    <text id="14281:33637" name="Label" x="41" y="22" width="800" height="144" />
+  </frame>
+</frame>

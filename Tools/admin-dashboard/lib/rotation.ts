@@ -106,6 +106,16 @@ export const ROTATION_DEFAULTS = {
   gachaBasePoolId: "pool_standard_club1",
   featuredWeightMul: "3",
   excludeWeeks: "4",
+  // gacha_banner_tagline §1.2 — the banner's two selling lines come off the
+  // rotation row; these are what a week that never had them filled in gets.
+  // The tagline pair is the literal the generator wrote for every week before
+  // the columns existed. The hook pair has NO safe literal: the band advertises
+  // a claim ("3× RATE-UP", "DOUBLE LEGENDARY") the plan has to make per week,
+  // so a blank one is HIDDEN by the card rather than defaulted into a promise.
+  taglineEn: "Featured this week",
+  taglineJa: "今週のピックアップ",
+  hookEn: "",
+  hookJa: "",
 } as const;
 
 /** Every column of a `rotations` row, in CSV order — the row editor and the
@@ -114,7 +124,7 @@ export const ROTATION_COLUMNS = [
   "rotationId", "startUtc", "endUtc", "nameEn", "nameJa", "clubQuota", "ballQuota",
   "characterQuota", "gachaFeaturedCount", "gachaBasePoolId", "featuredWeightMul",
   "excludeWeeks", "seed", "pinnedClubs", "pinnedBalls", "pinnedCharacter",
-  "pinnedFeatured", "materializedAt",
+  "pinnedFeatured", "materializedAt", "taglineEn", "taglineJa", "hookEn", "hookJa",
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -770,6 +780,13 @@ export function generateLineup(ctx: LineupContext): Lineup {
   const artUrl = text(ownBanner?.data.artUrl).trim();
   const nameEn = text(data.nameEn).trim() || ROTATION_DEFAULTS.nameEn;
   const nameJa = text(data.nameJa).trim() || ROTATION_DEFAULTS.nameJa;
+  // The ribbon and the hook band are the ROTATION ROW's copy (gacha_banner_tagline
+  // §1.2), read exactly as the names are — so a re-materialize carries the
+  // week's own lines and never reverts them to the old "Featured this week".
+  const taglineEn = text(data.taglineEn).trim() || ROTATION_DEFAULTS.taglineEn;
+  const taglineJa = text(data.taglineJa).trim() || ROTATION_DEFAULTS.taglineJa;
+  const hookEn = text(data.hookEn).trim() || ROTATION_DEFAULTS.hookEn;
+  const hookJa = text(data.hookJa).trim() || ROTATION_DEFAULTS.hookJa;
   rows.gacha_banners.push({
     catalog: "gacha_banners", rowId: bannerId, minBuild: baseBanner?.minBuild ?? 0, isActive: true,
     data: {
@@ -792,8 +809,10 @@ export function generateLineup(ctx: LineupContext): Lineup {
       artUrl,
       nameEn,
       nameJa,
-      taglineEn: "Featured this week",
-      taglineJa: "今週のピックアップ",
+      taglineEn,
+      taglineJa,
+      hookEn,
+      hookJa,
       featuredRefIds: featured.join(";"),
       rotationId,
       pityGroup: WEEKLY_PITY_GROUP,
@@ -1046,6 +1065,13 @@ export function newRotationRow(weekId: string, mondayMs: number, rotations: Cata
     pinnedCharacter: "",
     pinnedFeatured: "",
     materializedAt: "",
+    // The four text columns start at the defaults, like the names: a created
+    // week is edited before it is materialized, and the fields have to exist
+    // for the editor to show them (a blank hook stays hidden on the card).
+    taglineEn: ROTATION_DEFAULTS.taglineEn,
+    taglineJa: ROTATION_DEFAULTS.taglineJa,
+    hookEn: ROTATION_DEFAULTS.hookEn,
+    hookJa: ROTATION_DEFAULTS.hookJa,
   };
 }
 

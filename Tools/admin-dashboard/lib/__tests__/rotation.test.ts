@@ -169,8 +169,10 @@ describe("determinism", () => {
     expect(a.hash).toBe(b.hash);
     // The hash of the unpinned wk_2026_38 lineup over this fixture. A change
     // here is a change to WHAT THE GENERATOR WRITES for a seed it already
-    // wrote — update it only when that is the intent.
-    expect(a.hash).toBe("8838dbcb");
+    // wrote — update it only when that is the intent. (Re-pinned by
+    // gacha_banner_tagline: the banner row gained hookEn/hookJa and the
+    // rotation row its four text columns — that IS the intent.)
+    expect(a.hash).toBe("93ba307b");
   });
 
   it("changing the seed changes the lineup", () => {
@@ -360,8 +362,12 @@ describe("the unpinned draw", () => {
       nameKey: "DRIVER WEEK · BOGEYB",
       nameEn: "DRIVER WEEK · BOGEYB",
       nameJa: "ドライバーウィーク · BOGEYB",
+      // The fixture row has no text columns, so the banner gets the defaults:
+      // the pre-tagline literal for the ribbon, and a BLANK hook (hidden by the card).
       taglineEn: "Featured this week",
       taglineJa: "今週のピックアップ",
+      hookEn: "",
+      hookJa: "",
       artSprite: "GachaBanner_Weekly",
       artUrl: "",
       costX1: "50", costX10: "450", ticketType: "0",
@@ -373,6 +379,32 @@ describe("the unpinned draw", () => {
       sortOrder: "0", active: "true", rotationId: "wk_2026_38",
       featuredRefIds: l.featured.join(";"),
     });
+  });
+
+  it("the ribbon and the hook come off the ROTATION ROW, and a re-materialize keeps them", () => {
+    // gacha_banner_tagline §1.2 / §9.1 — the copy lives in the plan, not in a
+    // literal: the rotation row's own four values land on the banner, and a
+    // second draw of the same week (with the first draw's banner sitting in
+    // the drafts) still reads the ROTATION ROW, never the old literal.
+    const COPY = {
+      taglineEn: "GET BogeyB Drivers & Woods",
+      taglineJa: "BogeyB ドライバー＆ウッドが登場",
+      hookEn: "3× RATE-UP ON\\n*LEGENDARY* GEAR!",
+      hookJa: "*レジェンダリー*装備\\n確率3倍！",
+    };
+    const first = generateLineup(ctx(COPY));
+    expect(first.rows.gacha_banners[0]!.data).toMatchObject(COPY);
+    // The rotation row is written back with the four columns intact.
+    expect(first.rows.rotations[0]!.data).toMatchObject(COPY);
+
+    const materialized = row("banner_wk_2026_38", first.rows.gacha_banners[0]!.data);
+    const again = generateLineup(ctx(COPY, { gachaBanners: [...gachaBanners, materialized] }));
+    expect(again.rows.gacha_banners[0]!.data).toMatchObject(COPY);
+    expect(again.rows.gacha_banners[0]!.data.taglineEn).not.toBe("Featured this week");
+
+    // Whitespace-only cells fall back exactly like a missing column.
+    const blank = generateLineup(ctx({ taglineEn: "  ", hookEn: " " }));
+    expect(blank.rows.gacha_banners[0]!.data).toMatchObject({ taglineEn: "Featured this week", hookEn: "" });
   });
 
   it("a re-draw carries the existing draft banner's artUrl forward; a fresh week writes it blank", () => {
@@ -404,7 +436,7 @@ describe("the unpinned draw", () => {
     expect(r!.rowId).toBe("wk_2026_38");
     expect(r!.data.materializedAt).toBe(NOW);
     expect(r!.data.seed).toBe("3287013188");
-    expect(Object.keys(r!.data)).toHaveLength(18);
+    expect(Object.keys(r!.data)).toHaveLength(22);
     expect(r!.data).not.toHaveProperty("is_active");
   });
 });
@@ -629,7 +661,8 @@ describe("calendar", () => {
       pinnedClubs: "", pinnedBalls: "", pinnedCharacter: "", pinnedFeatured: "", materializedAt: "",
     });
     expect(data.seed).toBe(String(rotationSeed({ rotationId: "wk_2026_45", seed: "" })));
-    expect(Object.keys(data)).toHaveLength(18);
+    expect(data).toMatchObject({ taglineEn: "Featured this week", taglineJa: "今週のピックアップ", hookEn: "", hookJa: "" });
+    expect(Object.keys(data)).toHaveLength(22);
   });
 
   it("archive: rotations ended > 7 days ago, and only their ACTIVE rows, deactivated", () => {

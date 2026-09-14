@@ -37,14 +37,17 @@ using UnityEngine;
 namespace GolfinRedux.UI.Gacha
 {
     /// <summary>
-    /// One row of gacha_banners.csv — all twenty-two columns.
+    /// One row of gacha_banners.csv — all twenty-four columns.
     ///
     /// <para>
     /// The first nine (bannerId … active) have shipped since gacha_screen Stage 2. The other
     /// thirteen arrived with the admin catalog (gacha_admin_catalogs §4) and were parsed into
-    /// nothing until this task; they land here now because the card renders them and the withhold
-    /// rule reads them. <c>taglineEn</c>/<c>taglineJa</c> are the exception and are still parsed
-    /// into nothing — the card is TITLE ONLY (Cesar, 2026-08-31).
+    /// nothing until gacha_client_real_pull; they land here because the card renders them and the
+    /// withhold rule reads them. <c>taglineEn</c>/<c>taglineJa</c> were the exception — parsed
+    /// into nothing while the card was TITLE ONLY (Cesar, 2026-08-31) — until
+    /// <c>gacha_banner_tagline</c> gave the card its ribbon and hook band: the two pairs
+    /// (<see cref="TaglineEn"/>/<see cref="TaglineJa"/>, <see cref="HookEn"/>/<see cref="HookJa"/>)
+    /// are now read and drawn over the art, because the 52 weekly artworks carry no text of their own.
     /// </para>
     /// </summary>
     [Serializable]
@@ -100,6 +103,25 @@ namespace GolfinRedux.UI.Gacha
 
         /// <summary>UI-authored display title, Japanese.</summary>
         public string NameJa { get; set; } = string.Empty;
+
+        // ── gacha_banner_tagline — the two selling lines drawn OVER the art ──────
+        //
+        // Both pairs are catalog columns, not localization keys: the operator (or the rotation
+        // generator) authors them per banner, and the card picks the language the same way it picks
+        // the title. `*…*` marks the accent run; a two-character `\n` is a hard line break — see
+        // GachaBannerCard.FormatTagline. Blank on both sides means the element is not shown at all.
+
+        /// <summary>The brand-coloured RIBBON under the countdown, English ("GET BogeyB Drivers &amp; Woods").</summary>
+        public string TaglineEn { get; set; } = string.Empty;
+
+        /// <summary>The ribbon line, Japanese.</summary>
+        public string TaglineJa { get; set; } = string.Empty;
+
+        /// <summary>The navy HOOK BAND lower over the art, English ("3× RATE-UP ON\n*LEGENDARY* GEAR!").</summary>
+        public string HookEn { get; set; } = string.Empty;
+
+        /// <summary>The hook band, Japanese.</summary>
+        public string HookJa { get; set; } = string.Empty;
 
         /// <summary>Featured prize refs, <c>;</c>-separated. Parsed but NOT rendered — the card's
         /// featured strip is spec D.</summary>
@@ -449,6 +471,10 @@ namespace GolfinRedux.UI.Gacha
                 ArtUrl        = f.Get("artUrl"),
                 NameEn        = f.Get("nameEn"),
                 NameJa        = f.Get("nameJa"),
+                TaglineEn     = f.Get("taglineEn"),
+                TaglineJa     = f.Get("taglineJa"),
+                HookEn        = f.Get("hookEn"),
+                HookJa        = f.Get("hookJa"),
             };
 
             // pityMinRarity only means anything alongside a threshold; a blank one with a threshold

@@ -1,0 +1,122 @@
+=== iter-1 kickoff baseline 2026-09-14T03:31:30Z ===
+HEAD: e4fc1a91869fc042004dd6ab335b91e5fc0bf35d
+DIRTY:
+ M Assets/Art/HoleSelectScreen/Background.png
+ M "Assets/Art/Original UI/MissionScreen/S_Mission_BgTemp.png"
+ M Assets/Prefabs/UI/Modals/TournamentSignupModal.prefab
+ M Assets/Prefabs/UI/Shop/StaminaShopDetailScreen.prefab
+ M Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab
+ M Assets/Resources/HoleImages/MissionsBackground.png
+ M Assets/Scripts/Tournaments/Tests/MapCardStateTests.cs
+ M Assets/Scripts/Tournaments/TournamentCardStateMapper.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/Tournaments/TournamentHoleSelectionScreenController.cs
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+ M Docs/TellCode.md
+ ?? Assets/Background.png
+ ?? Assets/Background.png.meta
+ ?? Assets/Tests/EditMode/ScreenIdSerializationTests.cs
+ ?? Assets/Tests/EditMode/ScreenIdSerializationTests.cs.meta
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202638.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202638.png"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202638_support.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202638_support.png"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202639.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202639.png"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202640.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202640.png"
+ ?? "Claude outputs/WeeklyBanners/PROMPT_RECIPE.md"
+ ?? "Claude outputs/WeeklyBanners/README.md"
+ ?? "Claude outputs/WeeklyBanners/_brand_sheet.png"
+ ?? "Claude outputs/WeeklyBanners/_weeks_38_40_comparison.png"
+ ?? "Claude outputs/WeeklyBanners/_wk38_two_vs_five.png"
+ ?? "Claude outputs/WeeklyBanners/archive/GachaBanner_Wk202638_2club.png"
+ ?? "Claude outputs/WeeklyBanners/weekly_taglines.csv"
+ ?? "Docs/Game Design/WEEKLY_BANNER_VARIATION_SYSTEM.md"
+ ?? Docs/Specs/Active/gacha_banner_tagline/HEARTBEAT.log
+ ?? Docs/Specs/Active/gacha_banner_tagline/SPEC.md
+ ?? Docs/Specs/Active/gacha_banner_tagline/STATUS.md
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/art_wk202638_safe_areas.png
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/card_tagline_v1_wk202638.png
+ ?? Docs/Specs/Quick/finished_tournament_leaderboard_route.md
+=== end baseline ===
+2026-09-14T03:31:30Z iter-1 start — read SPEC, GachaBannerCard/Model, prefab rects (ArtImage 876x1424 pivot 0.5,1 @ (0,856)), rotation.ts, gacha-banners-panel, import/export tools, Figma nodes 14281:33634/33636 re-pulled; baseline export --check: rotations v4 unchanged, gacha_banners v15 behind repo (wk_38 artUrl + wk_39 row), rotations draft wk_2026_39 materializedAt dirty
+2026-09-14T03:42:59Z iter-1 — client + admin + CSVs written: GachaBannerModel (4 props), GachaBannerCard (BindTaglines/FormatTagline), 11 EditMode tests PASS (4 pre-existing unrelated failures: ScreenIdSerializationTests/LoadingTipCatalogTests), vitest 384/384 + tsc 0, content suite 57 OK; sprites baked (make_gacha_tagline_sprites.py) + Sprite import forced; prefab nodes built + 4 refs wired via SerializedObject; TMP sizes measured vs 1:1 node render (cap 28/44 → 35.6/55.2, faceInfo.scale 1.1); next: real-flow play-mode capture
+2026-09-14T03:47:55Z iter-1 — play-mode attempt 1 aborted: another session's GPS edits (MapProjection.cs, GpsRoundsScreenController.cs, S_GR_MapMask.png) triggered a recompile + domain reload mid-play (Editor.log 597641) → ScreenManager.Instance null, nav dead, raw HOME_* keys; exiting play, re-running the real flow
+2026-09-14T03:58:45Z iter-1 — width sweep 52 rows fail=0 (max ribbon EN 753 / JA 795.6 of 820; hook 624 of 800); UIFidelityLinter GachaBannerCard fail=0 warn=13 (all pre-existing elements); other session's play mode ended → running the real-flow captures
+2026-09-14T04:12:16Z iter-1 — captures A–D via the real flow (runner, 3 windows between another session's play sessions); hook alpha compensated for LINEAR colour space (mean |dRGB| 26.5→5.4 vs the 1:1 node render), ribbon kept at 0.96 (3.7); ribbon top margin 8 (caps 17.4/18.0 vs ref 18/19); prefab rebuilt clean after a reparent+save regenerated fileIDs (+433/−1 again); stray contents root removed from ShellScene, scene not dirty; admin deployed e4fc1a918-DIRTY; import PLAN 51/2/1 conflict (wk_2026_39 materializedAt stamp) — publish drawer read, NOT published; report written; STATUS -> IMPLEMENTER_BLOCKED (publish chain needs Cesar's go)
+=== iter-2 kickoff baseline 2026-09-14T04:29:32Z ===
+HEAD: 1442862d76f163b9af11c52e5c5a996d2cb777db
+DIRTY:
+ M Assets/Art/HoleSelectScreen/Background.png
+ M "Assets/Art/Original UI/MissionScreen/S_Mission_BgTemp.png"
+ M Assets/Prefabs/UI/Modals/TournamentSignupModal.prefab
+ M Assets/Prefabs/UI/Shop/StaminaShopDetailScreen.prefab
+ M Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab
+ M Assets/Resources/Data/content_version.txt
+ M Assets/Resources/Data/gacha_banners.csv
+ M Assets/Resources/Data/gacha_pools.csv
+ M Assets/Resources/Data/gacha_rates.csv
+ M Assets/Resources/Data/rotations.csv
+ M Assets/Resources/Data/shop_catalog.csv
+ M Assets/Resources/HoleImages/MissionsBackground.png
+ M Assets/Resources/Prefabs/Gacha/GachaBannerCard.prefab
+ M Assets/Scripts/Tournaments/Tests/MapCardStateTests.cs
+ M Assets/Scripts/Tournaments/TournamentCardStateMapper.cs
+ M Assets/Scripts/UI/Gacha/GachaBannerCard.cs
+ M Assets/Scripts/UI/Gacha/GachaBannerModel.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/Tournaments/TournamentHoleSelectionScreenController.cs
+ M Docs/AI_CONTEXT.md
+ M Docs/Architecture/ARCHITECTURE_AUDIT.md
+ M Docs/TellCode.md
+ M Tools/admin-dashboard/app/(panels)/gacha-banners/gacha-banners-panel.tsx
+ M Tools/admin-dashboard/lib/__tests__/rotation.test.ts
+ M Tools/admin-dashboard/lib/rotation.ts
+ ?? Assets/Art/Gacha/S_GachaTaglineHook.png
+ ?? Assets/Art/Gacha/S_GachaTaglineHook.png.meta
+ ?? Assets/Art/Gacha/S_GachaTaglineRibbon.png
+ ?? Assets/Art/Gacha/S_GachaTaglineRibbon.png.meta
+ ?? Assets/Background.png
+ ?? Assets/Background.png.meta
+ ?? Assets/Tests/EditMode/GachaBannerTaglineTests.cs
+ ?? Assets/Tests/EditMode/GachaBannerTaglineTests.cs.meta
+ ?? Assets/Tests/EditMode/ScreenIdSerializationTests.cs
+ ?? Assets/Tests/EditMode/ScreenIdSerializationTests.cs.meta
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202638.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202638.png"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202638_support.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202638_support.png"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202639.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202639.png"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202640.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202640.png"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202641.jpg"
+ ?? "Claude outputs/WeeklyBanners/GachaBanner_Wk202641.png"
+ ?? "Claude outputs/WeeklyBanners/PROMPT_RECIPE.md"
+ ?? "Claude outputs/WeeklyBanners/README.md"
+ ?? "Claude outputs/WeeklyBanners/_brand_sheet.png"
+ ?? "Claude outputs/WeeklyBanners/_weeks_38_40_comparison.png"
+ ?? "Claude outputs/WeeklyBanners/_weeks_38_41_comparison.png"
+ ?? "Claude outputs/WeeklyBanners/_wk38_two_vs_five.png"
+ ?? "Claude outputs/WeeklyBanners/archive/GachaBanner_Wk202638_2club.png"
+ ?? "Claude outputs/WeeklyBanners/weekly_taglines.csv"
+ ?? "Docs/Game Design/WEEKLY_BANNER_VARIATION_SYSTEM.md"
+ ?? Docs/Scripts/make_gacha_tagline_sprites.py
+ ?? Docs/Specs/Active/gacha_banner_tagline/HEARTBEAT.log
+ ?? Docs/Specs/Active/gacha_banner_tagline/IMPLEMENTER_REPORT.md
+ ?? Docs/Specs/Active/gacha_banner_tagline/SPEC.md
+ ?? Docs/Specs/Active/gacha_banner_tagline/STATUS.md
+ ?? Docs/Specs/Active/gacha_banner_tagline/iter2_capture_runner.log
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/art_wk202638_safe_areas.png
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/card_tagline_v1_wk202638.png
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/card_tagline_v1_wk202638_1x.png
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/nodes/GachaBannerCard_tagline_spec.json
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/nodes/name_map.json
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/nodes/tagline_context.jsx
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/nodes/tagline_metadata.xml
+ ?? Docs/Specs/Active/gacha_banner_tagline/reference/weekly_taglines_52.tsv
+ ?? Docs/Specs/Quick/finished_tournament_leaderboard_route.md
+=== end baseline ===
+2026-09-14T04:29:32Z iter-2 start — Cesar: 'Go on the publish chain'. Chain: rotations v5 (wk_39 stamp) → import PLAN 0/52/2/0 → --apply → wk_39 draft materializedAt restored in the row editor → rotations v6 (52 rows, four text cols) → MATERIALIZE wk_38 + wk_39 (typed confirm) → INCIDENT: dialog re-fired on the auto-advanced selection, wk_40 + wk_41 materialized as drafts (audit 04:20:39–04:21:18), Worker 1102; 64 draft-only rows deleted via PostgREST + 2 rotation drafts reset → REST diff clean → PUBLISH ROTATION: rates v7 / pools v6 / banners v16 / shop v11 / rotations v7 → export (6 files) → --check clean (21 catalogs) → real-flow capture with the published row (iter2_B/C/D) → report updated; STATUS -> READY_FOR_SELF_REVIEW
+2026-09-14T04:32:20Z iter-2 — hook re-run by hand: all implementer gates pass except P4 (another session's ' M Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab', in the iter-1 baseline before this task started); STATUS=READY_FOR_SELF_REVIEW written with the disclosure in the report § Hook status

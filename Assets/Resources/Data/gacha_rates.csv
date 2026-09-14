@@ -23,3 +23,9 @@ pool_wk_2026_37_mythic,pool_wk_2026_37,Mythic,550,false
 pool_wk_2026_37_rare,pool_wk_2026_37,Rare,1200,false
 pool_wk_2026_37_supreme,pool_wk_2026_37,Supreme,50,false
 pool_wk_2026_37_uncommon,pool_wk_2026_37,Uncommon,2500,false
+pool_wk_2026_39_common,pool_wk_2026_39,Common,5500,true
+pool_wk_2026_39_legendary,pool_wk_2026_39,Legendary,200,true
+pool_wk_2026_39_mythic,pool_wk_2026_39,Mythic,550,true
+pool_wk_2026_39_rare,pool_wk_2026_39,Rare,1200,true
+pool_wk_2026_39_supreme,pool_wk_2026_39,Supreme,50,true
+pool_wk_2026_39_uncommon,pool_wk_2026_39,Uncommon,2500,true

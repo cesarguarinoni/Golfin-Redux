@@ -1,0 +1,28 @@
+{
+  "elements": [
+    {
+      "name": "TaglineRibbon",
+      "w": 876.0,
+      "h": 64.0,
+      "radius": -1.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": "",
+      "_generator_w": 882.0,
+      "_note": "w reconciled 882 -> 876 per SPEC.md §4 fidelity table: the Unity ArtImage is inset 3 px each side of the 882 card; both plates are its children and span its full 876 width"
+    },
+    {
+      "name": "TaglineHook",
+      "w": 876.0,
+      "h": 188.0,
+      "radius": -1.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": "",
+      "_generator_w": 882.0,
+      "_note": "w reconciled 882 -> 876 per SPEC.md §4 fidelity table: the Unity ArtImage is inset 3 px each side of the 882 card; both plates are its children and span its full 876 width"
+    }
+  ]
+}

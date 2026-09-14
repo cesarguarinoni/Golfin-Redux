@@ -4,6 +4,28 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 — weekly_banners_to_admin: **weeks 38–41 staged in the admin with their bespoke art** — 40 and 41 are DRAFTS awaiting Cesar's publish
+
+**State on prod after this session**
+- `rotations` Published **v7**; `gacha_banners` Published **v16**, **2 unpublished** (`banner_wk_2026_40`, `banner_wk_2026_41`).
+- wk_2026_38 LIVE (art published), wk_2026_39 SCHEDULED (new G&F art published in v16), wk_2026_40 + wk_2026_41 SCHEDULED as drafts with art uploaded and saved.
+- Art verified byte-identical to `Claude outputs/WeeklyBanners/GachaBanner_Wk2026{39,40,41}.jpg` (md5 match against the catalog-art bucket).
+- Weeks 42–45 deliberately NOT materialized: no bespoke art yet (wk_2026_42 Sports Day failed generation twice — Gemini returned landscape). Materializing them would ship the generic `GachaBanner_Weekly` stand-in.
+
+**Why future weeks roll on their own**
+`GachaBannerModel.GetLiveBanners` filters `StartUtc <= now < EndUtc`, and `shopRow` stamps `startAt`/`endAt` per week. Row ids are rotation-scoped (`banner_<rot>`, `pool_<rot>`, `shop_<rot>_<ref>`), so published future weeks sit dormant until their Monday. Publish once and the calendar advances with no further action.
+
+**⚠️ Gotcha found the hard way — PUBLISH ROTATION discards other weeks' drafts**
+At 04:25 UTC a `rotation_publish wk_2026_38` ran (audit log, five catalogs). It promoted wk_38's lineup and **cleared the whole draft set for those catalogs**, silently destroying the freshly materialized wk_2026_40 and wk_2026_41 rows — both went back to NOT GENERATED, and `gacha_banners` dropped from 10 rows to 8. They had to be re-materialized from scratch. Same seed ⇒ same lineup, so recovery was exact, but nothing warned.
+
+Practical rule until this is fixed: **materialize a week, then publish that week, before materializing the next.** Do not leave several weeks sitting as drafts and then publish one of them.
+
+**Open, not actioned**
+- `materializeLineup` hardcodes `sortOrder: "0"` for every weekly banner (`Tools/admin-dashboard/lib/rotation.ts` ~L801), so the `sortOrder 0 is shared by …` warning grows one row per week and any manual edit is reverted on re-materialize. Harmless in play (one weekly window open at a time), noisy in review. Left alone — publish-critical code, needs Cesar's call.
+- `rotations.csv` locally still shows blank `materializedAt` for 39–41; re-export with `export_content.py --check` when convenient.
+- Cloudflare 1102 "Worker exceeded resource limits" took the whole admin down for ~2 min during the materialize write burst. Recovered on its own; worth watching if more weeks get materialized in one sitting.
+
+---
 ## 2026-09-14 — gps_rounds_map_fills_panel: **the Rounds map fills its card** — rounded with the ring, no gutter
 
 **DONE** — Cesar approved ("Approved"); quick spec moved to `Docs/Specs/Quick/Completed/`.
@@ -20,6 +42,39 @@ tile is requested at exactly `MapW×MapH` (controller; builder + baker read it).
 takes at 8–16× on the corners (jagged hairline → Lanczos-ringing specks → clean); Lesson CF.
 Verified through real navigation with a live tile; frames in the chat. Record:
 `Docs/Specs/Quick/Completed/gps_rounds_map_fills_panel.md`. Commits `e1a49f5a4` + `334bd487c`.
+
+---
+## 2026-09-14 — gacha_banner_tagline: **the gacha card sells again — ribbon + hook band over the textless weekly art** — READY_FOR_SELF_REVIEW (chain published on Cesar's go)
+
+SPEC `Docs/Specs/Active/gacha_banner_tagline/SPEC.md`. The 52 weekly banners are textless by rule, so the
+card now draws the two designed copy lines as localized UI: `ArtImage/TaglineRibbon` (876×64 at art
+y −189, baked `#E4007F→#FF4FA3` @96 %) with `taglineEn/Ja`, and `ArtImage/TaglineHook` (876×188 at
+y −1035, navy `#0B1B3A` alpha 0→0.93→0.93→0) with `hookEn/Ja`; `*…*` → `#FF2D9B`, two-character
+`\n` → line break, blank pair → container inactive, language = the title's own `PickLocalised`.
+`GachaBannerEntry` parses the four; `GachaBannerCard.BindTaglines` + `FormatTagline` (11 EditMode tests
+on the shipping helper). Data: `gacha_banners.csv` +`hookEn,hookJa`; `rotations.csv` +4 columns, all
+52 planned weeks filled from `Claude outputs/WeeklyBanners/weekly_taglines.csv`. Admin: `rotation.ts`
+reads the four off the rotation row (no more `"Featured this week"` literal; carried through a
+re-materialize, hash re-pinned `93ba307b`, vitest 384, tsc 0), gacha-banners editor shows the two new
+textboxes; dashboard DEPLOYED (`/api/version` = `e4fc1a918-DIRTY`). Measured, not assumed: TMP sizes
+35.6 / 55.2 (the `Rubik-SemiBold SDF` asset renders caps 1.1224× per unit — the node render's 28 / 44 px
+caps are matched to the row), ribbon caps centred with a top margin 8, and the hook plate's alpha is
+compensated for the project's LINEAR colour space (`1 − (1 − a)^1.8`; band mean ǀΔRGBǀ vs the 1:1 node
+render 26.5 → 5.4; the ribbon keeps 0.96 verbatim, 3.7). Width sweep over all 104 strings: 0 overflow
+(max 795.6 of 820). Lint fail 0. **Chain, on Cesar's "Go":** `rotations` v5 (the wk_39 `materializedAt`
+stamp the 09-11 MATERIALIZE left unpublished) → `import_content.py` 0/52/2/0 → `--apply` → wk_39's
+CSV-sourced draft had blanked the stamp: restored in its row editor → `rotations` v6 (52 rows, the four
+columns only) → MATERIALIZE wk_38 + wk_39 → PUBLISH ROTATION: rates v7 / pools v6 / **banners v16** /
+shop v11 / rotations v7 (wk_39's 13 shop, 6 rate, 12 pool rows went live with it — drafts since 09-11) →
+export (6 files) → `--check: clean` (21 catalogs). Canonical `screenshots/iter2_B_realflow_published_row_EN.png`:
+real boot → gacha nav → the real card bound from the PUBLISHED v16 row, nothing injected; JA + blank-row
+frames beside it. **Incident, contained:** the workbench's "Materialize again?" confirm re-fired on the
+auto-advanced selection and materialized wk_40 + wk_41 as DRAFTS (audit 04:20:39–04:21:18 UTC, Worker
+1102 for ~30 s); the 64 draft-only rows were deleted via PostgREST and the two stamps reset before the
+chain publish — nothing reached players; dashboard defect filed in the report. Hook: every gate passes
+except P4, which trips on ANOTHER session's ` M Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab`
+(dirty before this task started) — disclosed in the report, STATUS written. Hazard seen twice: other
+sessions' script edits recompiled the Editor mid-play (domain reload); captures re-run in free windows.
 
 ---
 ## 2026-09-14 — result_screen_nav_bars: **the hole-complete result carries both nav bars and a real way out** — awaiting Cesar's approval
