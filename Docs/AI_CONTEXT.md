@@ -4,6 +4,18 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 19:50 — **"punch it" ARMED for 22:22 JST tonight** (`world.golfin.testflight-2222`, one-shot launchd agent, the GAME lane)
+
+Cesar: *"Punch it at 10.22 pm"*. Smoke-fired through launchd at 19:47 (`runs = 1, exit 0`, chain
+proven, marker removed). At 22:22 `Tools/testflight-unattended.sh` quits Unity GRACEFULLY
+(`Tools/quit-unity.sh`; a save dialog = abort, no build), auto-commits the dirty tree (Cesar's
+standing rule — "sweep everything", incl. the four Background.png and the WeeklyBanners renders),
+runs `Tools/testflight.sh` (iOS-Full), confirms `state=VALID` at Apple, then deletes its own
+plist. Content gate cleared by `f94a4e932` (gacha_banners v17 + rotations v8 exported on Cesar's
+word); a further publish before 22:22 without an export makes the gate red again → the lane
+aborts. Log: `Builds/testflight-unattended.log`.
+
+---
 ## 2026-09-14 — finished_tournament_leaderboard_route: **LEADERBOARD on a finished tournament opened Play Hole** — a serialized enum had shifted under seven stored fields; pinned + gated + play guard, real-path PASS — **DONE (Cesar approved 2026-09-14; record in `Docs/Specs/Quick/Completed/`)**
 
 Cesar: *"Entering Leaderboard in a finished Tournament from Tournament select screen goes to Play
