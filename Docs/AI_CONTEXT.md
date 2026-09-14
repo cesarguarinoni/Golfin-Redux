@@ -68,10 +68,13 @@ columns only) → MATERIALIZE wk_38 + wk_39 → PUBLISH ROTATION: rates v7 / poo
 shop v11 / rotations v7 (wk_39's 13 shop, 6 rate, 12 pool rows went live with it — drafts since 09-11) →
 export (6 files) → `--check: clean` (21 catalogs). Canonical `screenshots/iter2_B_realflow_published_row_EN.png`:
 real boot → gacha nav → the real card bound from the PUBLISHED v16 row, nothing injected; JA + blank-row
-frames beside it. **Incident, contained:** the workbench's "Materialize again?" confirm re-fired on the
-auto-advanced selection and materialized wk_40 + wk_41 as DRAFTS (audit 04:20:39–04:21:18 UTC, Worker
-1102 for ~30 s); the 64 draft-only rows were deleted via PostgREST and the two stamps reset before the
-chain publish — nothing reached players; dashboard defect filed in the report. Hook: every gate passes
+frames beside it. **Incident, my misread, corrected:** drafts for wk_40 + wk_41 appeared mid-chain under the same admin
+account; I took them for a "Materialize again?" re-fire and deleted the 64 draft-only rows before publishing —
+they were the PARALLEL `weekly_banners_to_admin` session's deliberate materializes (same Chrome profile);
+it redid both weeks + uploaded their art at 04:26–04:28 UTC, so its drafts are intact (verified via REST);
+nothing published or lost, one redo cost them. Its wk_39 art upload (04:24) rode along in `gacha_banners`
+v16. Lesson: a shared admin account cannot be attributed by `admin_email` — check for a parallel session's
+record before treating unexpected drafts as a runaway. Hook: every gate passes
 except P4, which trips on ANOTHER session's ` M Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab`
 (dirty before this task started) — disclosed in the report, STATUS written. Hazard seen twice: other
 sessions' script edits recompiled the Editor mid-play (domain reload); captures re-run in free windows.
