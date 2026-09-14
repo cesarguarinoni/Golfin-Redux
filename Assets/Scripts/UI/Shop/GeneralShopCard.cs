@@ -575,10 +575,10 @@ namespace GolfinRedux.UI.Shop
                 if (box != null)  box.color = Color.white;
                 if (orig != null) orig.gameObject.SetActive(true);
                 var origNum = Find("PriceBox/Orig/Num")?.GetComponent<TextMeshProUGUI>();
-                if (origNum != null) { origNum.text = entry.RpCost.ToString("N0"); origNum.fontStyle = FontStyles.Normal; }
+                if (origNum != null) { origNum.text = Rp(entry.RpCost); origNum.fontStyle = FontStyles.Normal; }
                 if (saleBg != null)  saleBg.gameObject.SetActive(true);
                 if (saleImg != null) saleImg.color = PriceNavy;
-                if (saleNum != null) saleNum.text = entry.SaleRpCost.ToString("N0");
+                if (saleNum != null) saleNum.text = Rp(entry.SaleRpCost);
                 CenterPriceRow("PriceBox/Orig");
                 CenterPriceRow("PriceBox/SaleBG/Sale");
                 StrikeOriginal(origNum);                  // after centring — it reads the coin/number x
@@ -596,7 +596,7 @@ namespace GolfinRedux.UI.Shop
                 SetActive("PriceBox/Orig/Strike", false);
                 if (saleBg != null)  saleBg.gameObject.SetActive(true);
                 if (saleImg != null) saleImg.color = new Color(0, 0, 0, 0); // transparent — box already navy
-                if (saleNum != null) saleNum.text = entry.RpCost.ToString("N0");
+                if (saleNum != null) saleNum.text = Rp(entry.RpCost);
                 CenterPriceRow("PriceBox/SaleBG/Sale");
                 if (saleRt != null)  // fill the box so the center-anchored price sits in the middle
                 {
@@ -605,6 +605,17 @@ namespace GolfinRedux.UI.Shop
                 }
             }
         }
+
+        /// <summary>
+        /// An RP amount as PLAIN DIGITS — "1500", never "1,500" or "1.500".
+        ///
+        /// <para>This was <c>ToString("N0")</c>, which groups thousands with the CURRENT culture's
+        /// separator: a comma in the Editor, a dot on a device set to ja-JP / most of Europe. So
+        /// the same card read "1,500" in every capture and "1.500" in Cesar's hand (2026-09-14),
+        /// and no separator is wanted on RP at all. <c>int.ToString()</c> with no format never
+        /// groups, in any culture.</para>
+        /// </summary>
+        private static string Rp(int amount) => amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         /// <summary>Gap between the coin and the number, as authored in the prefab
         /// (Num.x − (RpIcon.x + RpIcon.width) = 6 on both rows).</summary>
