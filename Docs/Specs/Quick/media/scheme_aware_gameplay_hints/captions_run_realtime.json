@@ -1,0 +1,19 @@
+{
+  "captions": [
+    {"start": 10.95, "end": 16.12, "text": "Settings › Controls: the tip now\nnames all four schemes"},
+    {"start": 16.12, "end": 26.77, "text": "Flick is the current scheme —\nthe shipping default"},
+    {"start": 26.77, "end": 31.28, "text": "Flick: the first hole opens on\nthe cone tips — 1/6, as before"},
+    {"start": 31.28, "end": 39.01, "text": "2/6 is the cone's aim slide —\nFlick's own instruction"},
+    {"start": 39.01, "end": 41.56, "text": "Switching to Pendulum from the\nin-game gear…"},
+    {"start": 41.56, "end": 54.48, "text": "…the pop-up explains the new\nscheme, then CONFIRM commits it"},
+    {"start": 54.48, "end": 58.63, "text": "Pendulum: the first hole opens on\nthe Pendulum tip — 1/5"},
+    {"start": 58.63, "end": 66.24, "text": "No cone tips for Pendulum —\nthe shared four follow"},
+    {"start": 66.24, "end": 68.85, "text": "Switching to Tap Timing from the\nin-game gear…"},
+    {"start": 68.85, "end": 115.91, "text": "…the pop-up explains the new\nscheme, then CONFIRM commits it"},
+    {"start": 115.91, "end": 134.45, "text": "Tap Timing: the needle tip — 1/5"},
+    {"start": 134.45, "end": 137.93, "text": "Switching to Free Swing from the\nin-game gear…"},
+    {"start": 137.93, "end": 264.60, "text": "…the pop-up explains the new\nscheme, then CONFIRM commits it"},
+    {"start": 264.60, "end": 270.76, "text": "Free Swing: the swing-lane tip — 1/5"},
+    {"start": 270.76, "end": 325.27, "text": "Same physics, same course —\nthe tutorial matches the hand"}
+  ]
+}

@@ -77,7 +77,11 @@ install each, real StartButton → Home → PlayButton → HoleSelection → Act
 `2/6 TIP_ACCURACY` (the shipped six) — `hints=N (expect N)` on all four, loading screen inactive at the reveal,
 Console clean, scheme pref restored after each run. Frames + logs in
 `Docs/Specs/Quick/media/scheme_aware_gameplay_hints/`; the regenerated `LocalizationTextTable.asset`
-(TIP_CONTROLS row only) is committed with them.
+(TIP_CONTROLS row only) is committed with them. **Daily-report clip:**
+`Docs/Specs/Quick/media/scheme_aware_gameplay_hints/scheme_hint_demo_flick_to_pendulum.mp4` (61 s — Controls tip →
+Flick 1/6 → in-game switch → Pendulum 1/5; Tap Timing / Free Swing as stills). The one-take-four-schemes
+recording locked the Mac (four hole loads in one Recorder session; Lesson CD) — the clip is the salvaged
+first 98 s; `ScreenHintSchemeDemoRecorder` is now one single-hole take per scheme, not re-run.
 
 ---
 ## 2026-09-12 — punch it GPS: **Golfin 1.5.7 (2907) on TestFlight** — VALID at Apple 19:16

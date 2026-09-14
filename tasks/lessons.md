@@ -4471,3 +4471,29 @@ things that go in his block are DDL he must apply, deploys he owns, and gate dec
 **Recipe (verified):** `admin.golfin.world/<catalog>` → search → row → untick Active → Save draft
 → Review & publish → read the per-field diff → tick "I have read" → note → Publish now → then
 `Tools/content/export_content.py` so the CSV + `content_version.txt` mirror it → commit.
+
+## Lesson CD — a recorded take is ONE hole load, under a minute; chaining loads locks the Mac (2026-09-14, `scheme_aware_gameplay_hints`)
+
+The daily-report clip for the per-scheme shot-view hints was recorded as ONE take through four
+schemes: four hole loads and three quit/unload cycles under Unity Recorder at 1170×2532 @ 30 fps,
+~4.5 minutes of wall-clock. The frame cap was on (`targetFrameRate 30`, `vSyncCount 0`) and it did
+not matter: each hole came up slower than the last — 3.5 s, 3.3 s, **29 s, 85 s** — the encoder
+queue grew behind the reloads, and Cesar had to stop the run: *"You are locking up the Mac with
+your video."* The raw held 98 s of a 270 s run; the last two schemes were never in the file.
+
+**Rule:** a recorded take loads ONE hole and ends on it — fresh install → boot → the screens on
+the way → the hole → the thing being shown → `ExitPlaymode()`. No quit-to-menu, no second load
+while the Recorder runs. Several schemes / states = several takes, joined afterwards with the ffmpeg
+concat FILTER. `ScreenHintSchemeDemoRecorder` is now one menu item per scheme for exactly this
+reason. The standing memory said "never record a long sweep"; the sharper form is *never record a
+scene reload*.
+
+**Second finding, same take — the Recorder's clock is not wall time.** Its variable-rate
+timestamps advance by Unity's frame delta, which `Time.maximumDeltaTime` clamps at 0.333 s (the
+raw's packet deltas were a wall of exact 0.33 s during every stall). A 3.5 s hole load is 0.66 s
+of video, so captions stamped with `Time.realtimeSinceStartup` ran 1.4 s ahead of the picture by
+the first hint and 2.8 s by the second. Stamp captions with **`Time.time`** (timeScale 1) — it
+advances by the same clamped delta the frames carry — or place them on the video's own timeline
+after the fact, as the salvaged clip was (frame classifier → windows → one frame checked inside
+every window). `LoadingTipsDemoRecorder` and its siblings stamp real time; they get away with it
+because nothing heavy loads between their captions.

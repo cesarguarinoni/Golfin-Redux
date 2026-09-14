@@ -1,0 +1,84 @@
+   0.00s  start scheme=Flick state={"seenScreens":["Logo"],"seenKeys":[]}
+   5.13s  tapped StartButton
+   5.87s  hint up for Home after 0.9s: TIP_RP n=1/2
+   7.28s  NEXT (home continue): 0 -> 0 key=TIP_RP
+   7.78s  NEXT (home CLOSE): 1 -> 1 key=TIP_DAILY
+   9.08s  tapped settings gear
+  10.09s  tapped Controls row
+  10.12s  hint up for SettingsControls after 0.0s: TIP_CONTROLS n=1/1
+  10.95s  CAP Settings › Controls: the tip now / names all four schemes
+  14.97s  NEXT (settings_controls CLOSE): 0 -> 0 key=TIP_CONTROLS
+  16.12s  CAP Flick is the current scheme — / the shipping default
+  18.33s  settings closed
+  19.14s  tapped real PlayButton
+  19.75s  hint up for HoleSelection after 0.5s: TIP_AUTOCLUB n=1/2
+  20.78s  NEXT (holeselection continue): 0 -> 0 key=TIP_AUTOCLUB
+  21.28s  NEXT (holeselection CLOSE): 1 -> 1 key=TIP_SURFACES
+  22.35s  tapped real ActionButton
+  25.87s  hint up for Gameplay after 3.5s: TIP_SWING n=1/6
+  26.77s  CAP Flick: the first hole opens on / the cone tips — 1/6, as before
+  30.20s  NEXT (flick 1->2): 0 -> 0 key=TIP_SWING
+  31.28s  CAP 2/6 is the cone's aim slide — / Flick's own instruction
+  34.31s  NEXT (flick continue): 1 -> 1 key=TIP_ACCURACY
+  34.81s  NEXT (flick continue): 2 -> 2 key=TIP_GRADES
+  35.31s  NEXT (flick continue): 3 -> 3 key=TIP_VIEW
+  35.82s  NEXT (flick continue): 4 -> 4 key=TIP_CLUB
+  36.32s  NEXT (flick CLOSE): 5 -> 5 key=TIP_FORECAST
+  37.59s  tapped in-game gear
+  39.01s  CAP Switching to Pendulum from the / in-game gear…
+  40.25s  tapped segment Pendulum
+  41.56s  SchemeConfirmModal visible=True pending=Pendulum
+  41.56s  CAP …the pop-up explains the new / scheme, then CONFIRM commits it
+  44.81s  tapped CONFIRM
+  44.82s  scheme now Pendulum (expect Pendulum)
+  45.77s  RESET shot-view group: state={"seenScreens":["Logo","Splash","Home","SettingsControls","HoleSelection","Loading"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_CONTROLS","TIP_AUTOCLUB","TIP_SURFACES"]}
+  45.77s  tapped QUIT
+  47.09s  tapped CONFIRM quit
+  47.62s  back on Home after 0.4s; LabScaffold loaded=False
+  48.66s  tapped real PlayButton
+  50.29s  tapped real ActionButton
+  53.56s  hint up for Gameplay after 3.3s: TIP_PENDULUM n=1/5
+  54.48s  CAP Pendulum: the first hole opens on / the Pendulum tip — 1/5
+  57.90s  NEXT (pendulum 1->2): 0 -> 0 key=TIP_PENDULUM
+  58.63s  CAP No cone tips for Pendulum — / the shared four follow
+  61.46s  NEXT (pendulum continue): 1 -> 1 key=TIP_GRADES
+  61.95s  NEXT (pendulum continue): 2 -> 2 key=TIP_VIEW
+  62.45s  NEXT (pendulum continue): 3 -> 3 key=TIP_CLUB
+  62.96s  NEXT (pendulum CLOSE): 4 -> 4 key=TIP_FORECAST
+  64.34s  tapped in-game gear
+  66.24s  CAP Switching to Tap Timing from the / in-game gear…
+  67.52s  tapped segment Needle
+  68.85s  SchemeConfirmModal visible=True pending=Needle
+  68.85s  CAP …the pop-up explains the new / scheme, then CONFIRM commits it
+  72.44s  tapped CONFIRM
+  72.45s  scheme now Needle (expect Needle)
+  73.97s  RESET shot-view group: state={"seenScreens":["Logo","Splash","Home","SettingsControls","HoleSelection","Loading"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_CONTROLS","TIP_AUTOCLUB","TIP_SURFACES"]}
+  74.05s  tapped QUIT
+  75.42s  tapped CONFIRM quit
+  77.84s  back on Home after 0.5s; LabScaffold loaded=False
+  79.73s  tapped real PlayButton
+  83.06s  tapped real ActionButton
+ 114.72s  hint up for Gameplay after 29.3s: TIP_TAPTIMING n=1/5
+ 115.92s  CAP Tap Timing: the needle tip — 1/5
+ 119.74s  NEXT (needle continue): 0 -> 0 key=TIP_TAPTIMING
+ 120.86s  NEXT (needle continue): 1 -> 1 key=TIP_GRADES
+ 127.41s  NEXT (needle continue): 1 -> 1 key=TIP_GRADES
+ 128.17s  NEXT (needle continue): 2 -> 2 key=TIP_VIEW
+ 128.75s  NEXT (needle continue): 3 -> 3 key=TIP_CLUB
+ 129.25s  NEXT (needle CLOSE): 4 -> 4 key=TIP_FORECAST
+ 132.95s  tapped in-game gear
+ 134.45s  CAP Switching to Free Swing from the / in-game gear…
+ 136.04s  tapped segment FreeSwing
+ 137.93s  SchemeConfirmModal visible=True pending=FreeSwing
+ 137.93s  CAP …the pop-up explains the new / scheme, then CONFIRM commits it
+ 142.56s  tapped CONFIRM
+ 142.57s  scheme now FreeSwing (expect FreeSwing)
+ 146.92s  RESET shot-view group: state={"seenScreens":["Logo","Splash","Home","SettingsControls","HoleSelection","Loading"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_CONTROLS","TIP_AUTOCLUB","TIP_SURFACES"]}
+ 146.98s  tapped QUIT
+ 151.90s  tapped CONFIRM quit
+ 165.76s  back on Home after 15.3s; LabScaffold loaded=False
+ 168.74s  tapped real PlayButton
+ 180.13s  tapped real ActionButton
+ 261.84s  hint up for Gameplay after 85.4s: TIP_FREESWING n=1/5
+ 264.60s  CAP Free Swing: the swing-lane tip — 1/5
+ 270.76s  CAP Same physics, same course — / the tutorial matches the hand
