@@ -1,0 +1,38 @@
+{
+  "label": "baseline_shop",
+  "screen": [1170, 2532],
+  "summary": { "pass": 0, "fail": 1, "inconclusive": 0 },
+  "targets": [
+    {
+      "name": "general_shop",
+      "title": "General Shop (STORE tab)",
+      "entry": "Rewards Center ▸ STORE tab.onClick",
+      "scrollRect": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 22, "contentH": 6258, "viewportH": 1674, "scrollable": true,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [577, 1683],
+          "topHit": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 14.299, "tRelease": 14.687,
+          "pass": false
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [414, 1925],
+          "topHit": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/Card_shop_club_iron9_klyro/NameLabel",
+          "dragHandler": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 1312.505, "moved": true,
+          "tPress": 17.824, "tRelease": 18.221,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

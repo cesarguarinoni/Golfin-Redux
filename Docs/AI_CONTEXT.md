@@ -4,6 +4,27 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 — scroll_lists_drag_anywhere: **all 14 remaining lists drag from anywhere** — one rule, 14 sites, sweep-verified
+
+Cesar: *"Do the other 13"* (the audit table had 14). Same fix as the rankings on every site: the
+viewport carries an enabled transparent raycast `Image` (4 clones: enable + alpha 0; 10
+`RectMask2D`-only viewports: `Image` + `CanvasRenderer` added — 7 prefabs via `LoadPrefabContents`,
+4 scene objects via `Undo.AddComponent`). Scene half: the first `SaveScene` baked 2 756 lines of
+anchor churn and a fresh `OpenScene` did the same, so the 8 real hunks were isolated onto HEAD
+(`+122 −2`) and the Editor reloaded from disk. `ScrollDragAnywhereVerify` became a 15-target
+sweep (real boot → real widgets; `ShowScreen`/controller call where a widget needs unreachable
+state, labelled in the JSON; STORE tab, nav-bar pillar memory, empty-slot card, first-visit hints
+all handled). Baseline: 14 FAIL with the press landing behind the list (`CardsPanel`, `RankingsArea`,
+`ModalPanel`, `Backdrop`, `CardBody`, or nothing); after: **15/15 PASS** — 8 lists scroll
+205–969 px, 7 are too short to scroll but resolve the ScrollRect. Evidence: verdict JSONs, 15
+before/after sheets from `SnapPlayModeSafe` stills, a 45 s capped clip of three lists.
+**Incident:** the first after-run (4-min full-res recording, uncapped fps) pegged the CPU until
+Cesar killed Unity → the instrument now applies BotVideoRecorder's frame cap on every session,
+sweeps are JSON + stills, clips only for a named subset (memory
+`feedback_cap_play_mode_frame_rate_never_record_long_sweeps`). Record:
+`Docs/Specs/Quick/scroll_lists_drag_anywhere.md`; PATTERNS §13 updated.
+
+---
 ## 2026-09-14 — rankings_list_drag_anywhere: **the Rankings list scrolls from a press anywhere in it** — 2-line prefab fix, play-mode proven
 
 Cesar: *"to scroll the list of players right now the user has to click exactly on a player and then

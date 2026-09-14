@@ -112,11 +112,8 @@ rankings only.)
 | `ModeSelection`, `MissionSelection`, `HoleSelection`, `TournamentHoleSelection` `CardsScrollView` | fine — image on the rect AND the Viewport |
 | Inventory `Club` / `Ball` / `Item` / `Bags` carousels | fine — image on the rect (Viewport's is disabled, the rect's covers it) |
 
-Not swept here: the request named the rankings; the Shop prefab is in another session's working tree
-right now, and five of the rows above live in other screens' prefabs / the scene. The four clones
-of the rankings block are the same two-line change each; the eight "no graphic" lists need the same
-instrument pointed at them first, because a list whose rows are full-width raycast images (a form)
-only has dead gaps, not a dead body.
+**Swept the same day** — Cesar: *"Do the other 13"* (fourteen rows in this table; the prose said
+thirteen). Every one fixed and re-verified in `Docs/Specs/Quick/scroll_lists_drag_anywhere.md`.
 
 ## Files
 

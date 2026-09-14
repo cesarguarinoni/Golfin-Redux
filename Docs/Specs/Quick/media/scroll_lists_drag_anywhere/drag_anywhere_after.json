@@ -1,0 +1,437 @@
+{
+  "label": "after",
+  "complete": true, "planned": 15,
+  "screen": [1170, 2532],
+  "summary": { "pass": 14, "fail": 0, "inconclusive": 1 },
+  "targets": [
+    {
+      "name": "rankings",
+      "title": "Rankings",
+      "entry": "Home ▸ LeaderboardButton.onClick",
+      "scrollRect": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 30, "contentH": 4004, "viewportH": 1050, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [548, 1430.5],
+          "topHit": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 967.951, "moved": true,
+          "tPress": 19.525, "tRelease": 20.296,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_rankings_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_rankings_after.png",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [109, 1484.5],
+          "topHit": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/RankingsCards(Clone)/RankingsCard/Rank",
+          "dragHandler": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 967.874, "moved": true,
+          "tPress": 23.618, "tRelease": 24.417,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "general_shop",
+      "title": "General Shop (STORE tab)",
+      "entry": "Rewards Center ▸ STORE tab.onClick",
+      "scrollRect": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 22, "contentH": 6258, "viewportH": 1674, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [577, 1683],
+          "topHit": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 966.432, "moved": true,
+          "tPress": 35.896, "tRelease": 36.662,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_general_shop_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_general_shop_after.png",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [414, 1925],
+          "topHit": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/Card_shop_club_iron9_klyro/NameLabel",
+          "dragHandler": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 968.307, "moved": true,
+          "tPress": 39.96, "tRelease": 40.76,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "gacha_rates",
+      "title": "Gacha rates modal",
+      "entry": "GachaBannerCard ▸ RULES button.onClick",
+      "scrollRect": "Canvas/GachaRatesModal/Panel/Content/BodyScroll",
+      "rows": 0, "contentH": 1053.65, "viewportH": 1400, "scrollable": false,
+      "status": "PASS",
+      "note": "handler resolved; list too short to scroll",
+      "cases": [
+        {
+          "name": "empty", "spot": "empty list, viewport centre",
+          "press": [585, 1293],
+          "topHit": "Canvas/GachaRatesModal/Panel/Content/BodyScroll/Viewport",
+          "dragHandler": "Canvas/GachaRatesModal/Panel/Content/BodyScroll",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0.002, "moved": false,
+          "tPress": 50.801, "tRelease": 51.569,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_gacha_rates_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_gacha_rates_after.png",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "stamina_shop",
+      "title": "Stamina shop",
+      "entry": "Roster ▸ BoostButton.onClick",
+      "scrollRect": "Canvas/ScreensRoot/StaminaShopSelectionScreen/SafeArea/CardsPanel/Modal/Bottom97/ScrollArea",
+      "rows": 10, "contentH": 3840, "viewportH": 1860, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [577, 1646],
+          "topHit": "Canvas/ScreensRoot/StaminaShopSelectionScreen/SafeArea/CardsPanel/Modal/Bottom97/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/StaminaShopSelectionScreen/SafeArea/CardsPanel/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 968.415, "moved": true,
+          "tPress": 64.048, "tRelease": 64.816,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_stamina_shop_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_stamina_shop_after.png",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "tournament_selection",
+      "title": "Tournament selection",
+      "entry": "ScreenManager.ShowScreen(TournamentSelection) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 3, "contentH": 1152, "viewportH": 1798, "scrollable": false,
+      "status": "PASS",
+      "note": "handler resolved; list too short to scroll",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [577, 1721],
+          "topHit": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0.002, "moved": false,
+          "tPress": 72.709, "tRelease": 73.478,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_tournament_selection_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_tournament_selection_after.png",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [944, 2047],
+          "topHit": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/TournamentSelectionCard(Clone)/BadgePill/BadgeLabel",
+          "dragHandler": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0.002, "moved": false,
+          "tPress": 76.836, "tRelease": 77.635,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "tournament_leaderboard",
+      "title": "Tournament leaderboard",
+      "entry": "ScreenManager.ShowScreen(TournamentLeaderboard) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 11, "contentH": 1458, "viewportH": 905, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [548, 1372.167],
+          "topHit": "Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 553.004, "moved": true,
+          "tPress": 85.831, "tRelease": 86.601,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_tournament_leaderboard_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_tournament_leaderboard_after.png",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [109, 1426.167],
+          "topHit": "Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/TournamentRankingRow_4/RankingsCard/Rank",
+          "dragHandler": "Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 553.004, "moved": true,
+          "tPress": 89.955, "tRelease": 90.755,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "loan_modal",
+      "title": "Loan modal (recipients)",
+      "entry": "PersistentUI ▸ charactersButton.onClick",
+      "scrollRect": "",
+      "rows": 0, "contentH": 0, "viewportH": 0, "scrollable": false,
+      "status": "INCONCLUSIVE",
+      "note": "open failed: screen did not open: Roster (current StaminaShopSelection)",
+      "cases": [
+      ]
+    },
+    {
+      "name": "item_use",
+      "title": "Item use modal",
+      "entry": "Inventory ▸ Items ▸ UseButton.onClick",
+      "scrollRect": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea",
+      "rows": 15, "contentH": 1720, "viewportH": 951, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [281, 1068.04],
+          "topHit": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 769.005, "moved": true,
+          "tPress": 121.021, "tRelease": 121.789,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_item_use_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_item_use_after.png",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [205.5, 1473.623],
+          "topHit": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/ItemUseClubCardGlowup(Clone)/Mask/Background/CardTop/LevelBadge",
+          "dragHandler": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 769.004, "moved": true,
+          "tPress": 125.036, "tRelease": 125.835,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "bag_club",
+      "title": "Bag club modal",
+      "entry": "BagClubModalController.Open(slot 0, Equip) — the call the slot card makes",
+      "scrollRect": "Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea",
+      "rows": 11, "contentH": 1286, "viewportH": 951, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [281, 1068.04],
+          "topHit": "Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 335.002, "moved": true,
+          "tPress": 135.615, "tRelease": 136.384,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_bag_club_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_bag_club_after.png",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [205.5, 1474.623],
+          "topHit": "Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/BagClubCard(Clone)/Mask/Background/CardTop/LevelBadge",
+          "dragHandler": "Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 335.002, "moved": true,
+          "tPress": 139.669, "tRelease": 140.468,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "gps_vote",
+      "title": "GPS vote",
+      "entry": "GpsHub ▸ VOTE tile.onClick",
+      "scrollRect": "Canvas/ScreensRoot/GpsVoteScreen/ContentContainer/VoteList",
+      "rows": 5, "contentH": 1796, "viewportH": 1591, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 1360],
+          "topHit": "Canvas/ScreensRoot/GpsVoteScreen/ContentContainer/VoteList",
+          "dragHandler": "Canvas/ScreensRoot/GpsVoteScreen/ContentContainer/VoteList",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 205.001, "moved": true,
+          "tPress": 151.355, "tRelease": 152.124,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_gps_vote_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_gps_vote_after.png",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "venue_picker",
+      "title": "Venue picker modal",
+      "entry": "VenuePickerModalController.Open — the call CHOOSE MANUALLY makes (button not on screen yet)",
+      "scrollRect": "Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List",
+      "rows": 60, "contentH": 6232, "viewportH": 1000, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 1682],
+          "topHit": "Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List",
+          "dragHandler": "Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 969.28, "moved": true,
+          "tPress": 163.572, "tRelease": 164.34,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_venue_picker_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_venue_picker_after.png",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "login",
+      "title": "Login form",
+      "entry": "ScreenManager.ShowScreen(Login) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView",
+      "rows": 15, "contentH": 2117, "viewportH": 2117, "scrollable": false,
+      "status": "PASS",
+      "note": "handler resolved; list too short to scroll",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 2041],
+          "topHit": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 172.136, "tRelease": 172.904,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_login_rest.png", "stillAfter": "",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [585, 2092.5],
+          "topHit": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader",
+          "dragHandler": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 176.167, "tRelease": 176.967,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "reset_password",
+      "title": "Reset-password form",
+      "entry": "ScreenManager.ShowScreen(ResetPassword) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView",
+      "rows": 8, "contentH": 2117, "viewportH": 2117, "scrollable": false,
+      "status": "PASS",
+      "note": "handler resolved; list too short to scroll",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 2041],
+          "topHit": "Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 184.632, "tRelease": 185.4,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_reset_password_rest.png", "stillAfter": "",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [585, 2092.5],
+          "topHit": "Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader",
+          "dragHandler": "Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 188.633, "tRelease": 189.433,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "signup",
+      "title": "Sign-up form",
+      "entry": "Login ▸ CreateAccount.onClick",
+      "scrollRect": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView",
+      "rows": 15, "contentH": 2117, "viewportH": 2117, "scrollable": false,
+      "status": "PASS",
+      "note": "handler resolved; list too short to scroll",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 2041],
+          "topHit": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 198.467, "tRelease": 199.235,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_signup_rest.png", "stillAfter": "",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [585, 2092.5],
+          "topHit": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader",
+          "dragHandler": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 202.434, "tRelease": 203.234,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "create_username",
+      "title": "Create-username form",
+      "entry": "ScreenManager.ShowScreen(CreateUsername) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView",
+      "rows": 9, "contentH": 2117, "viewportH": 2117, "scrollable": false,
+      "status": "PASS",
+      "note": "handler resolved; list too short to scroll",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 2024.3],
+          "topHit": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 210.902, "tRelease": 211.67,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_create_username_rest.png", "stillAfter": "",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [585, 2084.15],
+          "topHit": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader",
+          "dragHandler": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 214.87, "tRelease": 215.669,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,332 @@
+{
+  "label": "baseline",
+  "screen": [1170, 2532],
+  "summary": { "pass": 1, "fail": 10, "inconclusive": 4 },
+  "targets": [
+    {
+      "name": "rankings",
+      "title": "Rankings",
+      "entry": "Home ▸ LeaderboardButton.onClick",
+      "scrollRect": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 30, "contentH": 4004, "viewportH": 1050, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [548, 1430.5],
+          "topHit": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 1314.276, "moved": true,
+          "tPress": 11.118, "tRelease": 11.509,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "general_shop",
+      "title": "General Shop",
+      "entry": "PersistentUI ▸ gachaButton.onClick",
+      "scrollRect": "",
+      "rows": 0, "contentH": 0, "viewportH": 0, "scrollable": false,
+      "status": "INCONCLUSIVE",
+      "note": "scroll rect inactive",
+      "cases": [
+      ]
+    },
+    {
+      "name": "gacha_rates",
+      "title": "Gacha rates modal",
+      "entry": "GachaBannerCard ▸ RULES button.onClick",
+      "scrollRect": "Canvas/GachaRatesModal/Panel/Content/BodyScroll",
+      "rows": 0, "contentH": 1014.51, "viewportH": 1400, "scrollable": false,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "empty list, viewport centre",
+          "press": [585, 1293],
+          "topHit": "Canvas/GachaRatesModal/Panel/Background",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 24.212, "tRelease": 24.61,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "name": "stamina_shop",
+      "title": "Stamina shop",
+      "entry": "Roster ▸ BoostButton.onClick",
+      "scrollRect": "Canvas/ScreensRoot/StaminaShopSelectionScreen/SafeArea/CardsPanel/Modal/Bottom97/ScrollArea",
+      "rows": 10, "contentH": 3840, "viewportH": 1860, "scrollable": true,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [577, 1646],
+          "topHit": "Canvas/ScreensRoot/StaminaShopSelectionScreen/SafeArea/CardsPanel",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 35.983, "tRelease": 36.383,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "name": "tournament_selection",
+      "title": "Tournament selection",
+      "entry": "ScreenManager.ShowScreen(TournamentSelection) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 3, "contentH": 1152, "viewportH": 1798, "scrollable": false,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [577, 1721],
+          "topHit": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 45.367, "tRelease": 45.765,
+          "pass": false
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [944, 2047],
+          "topHit": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/TournamentSelectionCard(Clone)/BadgePill/BadgeLabel",
+          "dragHandler": "Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0.009, "moved": false,
+          "tPress": 48.884, "tRelease": 49.282,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "tournament_leaderboard",
+      "title": "Tournament leaderboard",
+      "entry": "ScreenManager.ShowScreen(TournamentLeaderboard) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 11, "contentH": 1458, "viewportH": 905, "scrollable": true,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [548, 1372.167],
+          "topHit": "Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 57.162, "tRelease": 57.561,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "name": "loan_modal",
+      "title": "Loan modal (recipients)",
+      "entry": "PersistentUI ▸ charactersButton.onClick",
+      "scrollRect": "",
+      "rows": 0, "contentH": 0, "viewportH": 0, "scrollable": false,
+      "status": "INCONCLUSIVE",
+      "note": "open failed: screen did not open: Roster (current StaminaShopSelection)",
+      "cases": [
+      ]
+    },
+    {
+      "name": "item_use",
+      "title": "Item use modal",
+      "entry": "Inventory ▸ Items ▸ UseButton.onClick",
+      "scrollRect": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea",
+      "rows": 15, "contentH": 1720, "viewportH": 951, "scrollable": true,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [281, 1068.04],
+          "topHit": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 87.065, "tRelease": 87.45,
+          "pass": false
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [205.5, 1473.623],
+          "topHit": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/ItemUseClubCardGlowup(Clone)/Mask/Background/CardTop/LevelBadge",
+          "dragHandler": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 769.013, "moved": true,
+          "tPress": 90.568, "tRelease": 90.966,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "bag_club",
+      "title": "Bag club modal",
+      "entry": "Inventory ▸ Bags ▸ slot card Button.onClick",
+      "scrollRect": "",
+      "rows": 0, "contentH": 0, "viewportH": 0, "scrollable": false,
+      "status": "INCONCLUSIVE",
+      "note": "open failed: modal did not open: BagsClubModal",
+      "cases": [
+      ]
+    },
+    {
+      "name": "gps_vote",
+      "title": "GPS vote",
+      "entry": "GpsHub ▸ VOTE tile.onClick",
+      "scrollRect": "Canvas/ScreensRoot/GpsVoteScreen/ContentContainer/VoteList",
+      "rows": 5, "contentH": 1796, "viewportH": 1591, "scrollable": true,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 1360],
+          "topHit": "<none>",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 118.196, "tRelease": 118.595,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "name": "venue_picker",
+      "title": "Venue picker modal",
+      "entry": "VenuePickerModalController.Open — the call CHOOSE MANUALLY makes (button not on screen yet)",
+      "scrollRect": "Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List",
+      "rows": 60, "contentH": 6232, "viewportH": 1000, "scrollable": true,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 1682],
+          "topHit": "Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/Backdrop",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 129.452, "tRelease": 129.848,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "name": "login",
+      "title": "Login form",
+      "entry": "ScreenManager.ShowScreen(Login) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView",
+      "rows": 15, "contentH": 2117, "viewportH": 2117, "scrollable": false,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 2041],
+          "topHit": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 137.318, "tRelease": 137.717,
+          "pass": false
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [585, 2092.5],
+          "topHit": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader",
+          "dragHandler": "Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 140.85, "tRelease": 141.252,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "reset_password",
+      "title": "Reset-password form",
+      "entry": "Login ▸ ForgotPassword.onClick",
+      "scrollRect": "",
+      "rows": 0, "contentH": 0, "viewportH": 0, "scrollable": false,
+      "status": "INCONCLUSIVE",
+      "note": "open failed: screen did not open: ResetPassword (current Login)",
+      "cases": [
+      ]
+    },
+    {
+      "name": "signup",
+      "title": "Sign-up form",
+      "entry": "Login ▸ CreateAccount.onClick",
+      "scrollRect": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView",
+      "rows": 15, "contentH": 2117, "viewportH": 2117, "scrollable": false,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 2041],
+          "topHit": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 164.257, "tRelease": 164.656,
+          "pass": false
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [585, 2092.5],
+          "topHit": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader",
+          "dragHandler": "Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 167.797, "tRelease": 168.197,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "create_username",
+      "title": "Create-username form",
+      "entry": "ScreenManager.ShowScreen(CreateUsername) — the call the opening widget makes",
+      "scrollRect": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView",
+      "rows": 9, "contentH": 2117, "viewportH": 2117, "scrollable": false,
+      "status": "FAIL",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 2024.3],
+          "topHit": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody",
+          "dragHandler": "<none>",
+          "handlerIsTarget": false,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 175.628, "tRelease": 176.027,
+          "pass": false
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [585, 2084.15],
+          "topHit": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader",
+          "dragHandler": "Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0, "moved": false,
+          "tPress": 179.148, "tRelease": 179.548,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+ "captions": [
+  {
+   "start": 0.7,
+   "end": 2.3,
+   "text": "1/3  General Shop (STORE tab)"
+  },
+  {
+   "start": 6.465,
+   "end": 7.623,
+   "text": "Press on EMPTY list space\\n(gap between the first two rows), then drag up"
+  },
+  {
+   "start": 7.673,
+   "end": 9.673,
+   "text": "Scrolled 970 px"
+  },
+  {
+   "start": 10.421,
+   "end": 11.582,
+   "text": "Control: press on a label in the\\nfirst row (the press that always worked)"
+  },
+  {
+   "start": 11.632,
+   "end": 13.632,
+   "text": "Scrolled 969 px"
+  },
+  {
+   "start": 15.355,
+   "end": 16.955,
+   "text": "2/3  Item use modal"
+  },
+  {
+   "start": 24.352,
+   "end": 25.5,
+   "text": "Press on EMPTY list space\\n(gap between the first two rows), then drag up"
+  },
+  {
+   "start": 25.55,
+   "end": 27.55,
+   "text": "Scrolled 769 px"
+  },
+  {
+   "start": 28.273,
+   "end": 29.42,
+   "text": "Control: press on a label in the\\nfirst row (the press that always worked)"
+  },
+  {
+   "start": 29.47,
+   "end": 31.47,
+   "text": "Scrolled 769 px"
+  },
+  {
+   "start": 33.183,
+   "end": 34.783,
+   "text": "3/3  Venue picker modal"
+  },
+  {
+   "start": 40.248,
+   "end": 41.392,
+   "text": "Press on EMPTY list space\\n(gap between the first two rows), then drag up"
+  },
+  {
+   "start": 41.442,
+   "end": 43.442,
+   "text": "Scrolled 970 px"
+  }
+ ]
+}

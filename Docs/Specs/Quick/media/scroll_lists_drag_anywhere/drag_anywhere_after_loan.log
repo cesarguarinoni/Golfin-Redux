@@ -1,0 +1,22 @@
+=== drag-anywhere ×1 label=after_loan record=False 2026-09-14 01:54:42Z ===
+tapping the real StartButton
+--- [1/1] loan_modal
+  tapping the real PersistentUI ▸ charactersButton.onClick
+  tapping the real Roster ▸ LendButton.onClick
+  rows=2 content.h=58 viewport.h=432 scrollable=False screen=1170x2532
+  viewport world rect x[219..951] y[910..1342]
+  row[0] FollowedHeader x[219..951] y[1300..1342]
+  row[1] FollowedRows x[585..585] y[1284..1284]
+  candidate 'gap between the first two rows' (585, 1292) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (585.00, 1292.00)
+  still loan_modal_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_loan_loan_modal_rest.png (2320 KB)
+  · empty press=(585.00, 1292.00) @ 13.63s
+      top hit      : Canvas/ScreensRoot/RosterScreen/LoanModal/ModalPanel/RecipientScroll
+      drag handler : Canvas/ScreensRoot/RosterScreen/LoanModal/ModalPanel/RecipientScroll  (target=True)
+  still loan_modal_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_loan_loan_modal_after.png (2320 KB)
+      content.y    : 0 -> 0  moved=False  pass=True
+  (no plain label in the first row — control press skipped)
+  => PASS handler resolved; list too short to scroll
+=== summary ===
+  PASS         loan_modal               handler resolved; list too short to scroll
+verdict -> Docs/Specs/Quick/media/scroll_lists_drag_anywhere/drag_anywhere_after_loan.json  (pass 1 / fail 0 / inconclusive 0)

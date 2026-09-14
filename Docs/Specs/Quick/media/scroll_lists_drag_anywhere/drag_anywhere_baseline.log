@@ -1,0 +1,163 @@
+=== drag-anywhere ×15 label=baseline record=False 2026-09-14 01:16:53Z ===
+tapping the real StartButton
+--- [1/15] rankings
+  tapping the real Home ▸ LeaderboardButton.onClick
+  rows=30 content.h=4004 viewport.h=1050 scrollable=True screen=1170x2532
+  empty spot: gap between the first two rows -> (548.00, 1430.50)
+  · empty press=(548.00, 1430.50) @ 11.12s
+      top hit      : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 1314.3  moved=True  pass=True
+  (no plain label in the first row — control press skipped)
+  => PASS 
+--- [2/15] general_shop
+  tapping the real PersistentUI ▸ gachaButton.onClick
+  scroll rect inactive
+--- [3/15] gacha_rates
+  tapping the real GachaBannerCard ▸ RULES button.onClick
+  rows=0 content.h=1014.5 viewport.h=1400 scrollable=False screen=1170x2532
+  empty spot: empty list, viewport centre -> (585.00, 1293.00)
+  · empty press=(585.00, 1293.00) @ 24.21s
+      top hit      : Canvas/GachaRatesModal/Panel/Background
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  (no plain label in the first row — control press skipped)
+  => FAIL 
+--- [4/15] stamina_shop
+  tapping the real PersistentUI ▸ charactersButton.onClick
+  tapping the real Roster ▸ BoostButton.onClick
+  hint modal: tapping the real NextButton.onClick (#1)
+  rows=10 content.h=3840 viewport.h=1860 scrollable=True screen=1170x2532
+  empty spot: gap between the first two rows -> (577.00, 1646.00)
+  · empty press=(577.00, 1646.00) @ 35.98s
+      top hit      : Canvas/ScreensRoot/StaminaShopSelectionScreen/SafeArea/CardsPanel
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  (no plain label in the first row — control press skipped)
+  => FAIL 
+--- [5/15] tournament_selection
+  hint modal: tapping the real NextButton.onClick (#1)
+  rows=3 content.h=1152 viewport.h=1798 scrollable=False screen=1170x2532
+  empty spot: gap between the first two rows -> (577.00, 1721.00)
+  · empty press=(577.00, 1721.00) @ 45.37s
+      top hit      : Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  · control press=(944.00, 2047.00) @ 48.88s
+      top hit      : Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/TournamentSelectionCard(Clone)/BadgePill/BadgeLabel
+      drag handler : Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => FAIL 
+--- [6/15] tournament_leaderboard
+  rows=11 content.h=1458 viewport.h=905 scrollable=True screen=1170x2532
+  empty spot: gap between the first two rows -> (548.00, 1372.17)
+  · empty press=(548.00, 1372.17) @ 57.16s
+      top hit      : Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  (no plain label in the first row — control press skipped)
+  => FAIL 
+--- [7/15] loan_modal
+  tapping the real PersistentUI ▸ charactersButton.onClick
+  open failed: screen did not open: Roster (current StaminaShopSelection)
+--- [8/15] item_use
+  tapping the real PersistentUI ▸ inventoryButton.onClick
+  hint modal: tapping the real NextButton.onClick (#1)
+  hint modal: tapping the real NextButton.onClick (#2)
+  tapping the real Inventory ▸ ITEMSTab.onClick
+  tapping the real Inventory ▸ Items ▸ UseButton.onClick
+  rows=15 content.h=1720 viewport.h=951 scrollable=True screen=1170x2532
+  empty spot: gap between the first two rows -> (281.00, 1068.04)
+  · empty press=(281.00, 1068.04) @ 87.06s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  · control press=(205.50, 1473.62) @ 90.57s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/ItemUseClubCardGlowup(Clone)/Mask/Background/CardTop/LevelBadge
+      drag handler : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea  (target=True)
+      content.y    : 0 -> 769  moved=True  pass=True
+  => FAIL 
+--- [9/15] bag_club
+  tapping the real Inventory ▸ BAGSTab.onClick
+  tapping the real Inventory ▸ Bags ▸ slot card Button.onClick
+  open failed: modal did not open: BagsClubModal
+--- [10/15] gps_vote
+  tapping the real Home ▸ GpsPill.onClick
+  hint modal: tapping the real NextButton.onClick (#1)
+  hint modal: tapping the real NextButton.onClick (#2)
+  hint modal: tapping the real NextButton.onClick (#3)
+  tapping the real GpsHub ▸ VOTE tile.onClick
+  rows=5 content.h=1796 viewport.h=1591 scrollable=True screen=1170x2532
+  empty spot: gap between the first two rows -> (585.00, 1360.00)
+  · empty press=(585.00, 1360.00) @ 118.20s
+      top hit      : <none>
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  (no plain label in the first row — control press skipped)
+  => FAIL 
+--- [11/15] venue_picker
+  rows=60 content.h=6232 viewport.h=1000 scrollable=True screen=1170x2532
+  empty spot: gap between the first two rows -> (585.00, 1682.00)
+  · empty press=(585.00, 1682.00) @ 129.45s
+      top hit      : Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/Backdrop
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  (no plain label in the first row — control press skipped)
+  => FAIL 
+--- [12/15] login
+  rows=15 content.h=2117 viewport.h=2117 scrollable=False screen=1170x2532
+  empty spot: gap between the first two rows -> (585.00, 2041.00)
+  · empty press=(585.00, 2041.00) @ 137.32s
+      top hit      : Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  · control press=(585.00, 2092.50) @ 140.85s
+      top hit      : Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader
+      drag handler : Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => FAIL 
+--- [13/15] reset_password
+  tapping the real Login ▸ ForgotPassword.onClick
+  open failed: screen did not open: ResetPassword (current Login)
+--- [14/15] signup
+  tapping the real Login ▸ CreateAccount.onClick
+  rows=15 content.h=2117 viewport.h=2117 scrollable=False screen=1170x2532
+  empty spot: gap between the first two rows -> (585.00, 2041.00)
+  · empty press=(585.00, 2041.00) @ 164.26s
+      top hit      : Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  · control press=(585.00, 2092.50) @ 167.80s
+      top hit      : Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader
+      drag handler : Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => FAIL 
+--- [15/15] create_username
+  rows=9 content.h=2117 viewport.h=2117 scrollable=False screen=1170x2532
+  empty spot: gap between the first two rows -> (585.00, 2024.30)
+  · empty press=(585.00, 2024.30) @ 175.63s
+      top hit      : Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  · control press=(585.00, 2084.15) @ 179.15s
+      top hit      : Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader
+      drag handler : Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => FAIL 
+=== summary ===
+  PASS         rankings                 
+  INCONCLUSIVE general_shop             scroll rect inactive
+  FAIL         gacha_rates              
+  FAIL         stamina_shop             
+  FAIL         tournament_selection     
+  FAIL         tournament_leaderboard   
+  INCONCLUSIVE loan_modal               open failed: screen did not open: Roster (current StaminaShopSelection)
+  FAIL         item_use                 
+  INCONCLUSIVE bag_club                 open failed: modal did not open: BagsClubModal
+  FAIL         gps_vote                 
+  FAIL         venue_picker             
+  FAIL         login                    
+  INCONCLUSIVE reset_password           open failed: screen did not open: ResetPassword (current Login)
+  FAIL         signup                   
+  FAIL         create_username          
+verdict -> Docs/Specs/Quick/media/scroll_lists_drag_anywhere/drag_anywhere_baseline.json  (pass 1 / fail 10 / inconclusive 4)

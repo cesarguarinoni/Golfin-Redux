@@ -1,0 +1,24 @@
+=== drag-anywhere ×1 label=baseline_shop record=False 2026-09-14 01:26:29Z ===
+tapping the real StartButton
+--- [1/1] general_shop
+  tapping the real PersistentUI ▸ gachaButton.onClick
+  tapping the real Rewards Center ▸ STORE tab.onClick
+  rows=22 content.h=6258 viewport.h=1674 scrollable=True screen=1170x2532
+  viewport world rect x[55..1099] y[295..1969]
+  row[0] Card_shop_club_iron9_klyro x[88..1066] y[1695..1969]
+  row[1] Card_shop_club_awedge_fyloe x[88..1066] y[1397..1671]
+  row[2] Card_shop_club_pwedge_royal x[88..1066] y[1099..1373]
+  candidate 'gap between the first two rows' (577, 1683) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (577.00, 1683.00)
+  · empty press=(577.00, 1683.00) @ 14.30s
+      top hit      : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  · control press=(414.00, 1925.00) @ 17.82s
+      top hit      : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/Card_shop_club_iron9_klyro/NameLabel
+      drag handler : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 1312.5  moved=True  pass=True
+  => FAIL 
+=== summary ===
+  FAIL         general_shop             
+verdict -> Docs/Specs/Quick/media/scroll_lists_drag_anywhere/drag_anywhere_baseline_shop.json  (pass 0 / fail 1 / inconclusive 0)

@@ -1,0 +1,287 @@
+=== drag-anywhere ×15 label=after record=False 2026-09-14 01:49:53Z ===
+tapping the real StartButton
+--- [1/15] rankings
+  tapping the real Home ▸ LeaderboardButton.onClick
+  rows=30 content.h=4004 viewport.h=1050 scrollable=True screen=1170x2532
+  viewport world rect x[55..1099] y[506.5..1556.5]
+  row[0] RankingsCards(Clone) x[59..1037] y[1442.5..1552.5]
+  row[1] RankingsCards(Clone) x[59..1037] y[1308.5..1418.5]
+  row[2] RankingsCards(Clone) x[59..1037] y[1174.5..1284.5]
+  candidate 'gap between the first two rows' (548, 1430.5) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (548.00, 1430.50)
+  still rankings_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_rankings_rest.png (2813 KB)
+  · empty press=(548.00, 1430.50) @ 19.52s
+      top hit      : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+  still rankings_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_rankings_after.png (2821 KB)
+      content.y    : 0 -> 968  moved=True  pass=True
+  · control press=(109.00, 1484.50) @ 23.62s
+      top hit      : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/RankingsCards(Clone)/RankingsCard/Rank
+      drag handler : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 967.9  moved=True  pass=True
+  => PASS 
+--- [2/15] general_shop
+  tapping the real PersistentUI ▸ gachaButton.onClick
+  tapping the real Rewards Center ▸ STORE tab.onClick
+  rows=22 content.h=6258 viewport.h=1674 scrollable=True screen=1170x2532
+  viewport world rect x[55..1099] y[295..1969]
+  row[0] Card_shop_club_iron9_klyro x[88..1066] y[1695..1969]
+  row[1] Card_shop_club_awedge_fyloe x[88..1066] y[1397..1671]
+  row[2] Card_shop_club_pwedge_royal x[88..1066] y[1099..1373]
+  candidate 'gap between the first two rows' (577, 1683) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (577.00, 1683.00)
+  still general_shop_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_general_shop_rest.png (2789 KB)
+  · empty press=(577.00, 1683.00) @ 35.90s
+      top hit      : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+  still general_shop_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_general_shop_after.png (2854 KB)
+      content.y    : 0 -> 966.4  moved=True  pass=True
+  · control press=(414.00, 1925.00) @ 39.96s
+      top hit      : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/Card_shop_club_iron9_klyro/NameLabel
+      drag handler : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 968.3  moved=True  pass=True
+  => PASS 
+--- [3/15] gacha_rates
+  tapping the real Rewards Center ▸ GACHA tab.onClick
+  tapping the real GachaBannerCard ▸ RULES button.onClick
+  rows=0 content.h=1053.7 viewport.h=1400 scrollable=False screen=1170x2532
+  viewport world rect x[144..1026] y[593..1993]
+  candidate 'empty list, viewport centre' (585, 1293) inView=True insideChild=no
+  empty spot: empty list, viewport centre -> (585.00, 1293.00)
+  still gacha_rates_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_gacha_rates_rest.png (2116 KB)
+  · empty press=(585.00, 1293.00) @ 50.80s
+      top hit      : Canvas/GachaRatesModal/Panel/Content/BodyScroll/Viewport
+      drag handler : Canvas/GachaRatesModal/Panel/Content/BodyScroll  (target=True)
+  still gacha_rates_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_gacha_rates_after.png (2115 KB)
+      content.y    : 0 -> 0  moved=False  pass=True
+  (no plain label in the first row — control press skipped)
+  => PASS handler resolved; list too short to scroll
+--- [4/15] stamina_shop
+  tapping the real PersistentUI ▸ charactersButton.onClick
+  tapping the real Roster ▸ BoostButton.onClick
+  rows=10 content.h=3840 viewport.h=1860 scrollable=True screen=1170x2532
+  viewport world rect x[55..1099] y[158..2018]
+  row[0] StaminaShopCard(Clone) x[88..1066] y[1658..2018]
+  row[1] StaminaShopCard(Clone) x[88..1066] y[1274..1634]
+  row[2] StaminaShopCard(Clone) x[88..1066] y[890..1250]
+  candidate 'gap between the first two rows' (577, 1646) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (577.00, 1646.00)
+  still stamina_shop_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_stamina_shop_rest.png (3438 KB)
+  · empty press=(577.00, 1646.00) @ 64.05s
+      top hit      : Canvas/ScreensRoot/StaminaShopSelectionScreen/SafeArea/CardsPanel/Modal/Bottom97/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/StaminaShopSelectionScreen/SafeArea/CardsPanel/Modal/Bottom97/ScrollArea  (target=True)
+  still stamina_shop_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_stamina_shop_after.png (3487 KB)
+      content.y    : 0 -> 968.4  moved=True  pass=True
+  (no plain label in the first row — control press skipped)
+  => PASS 
+--- [5/15] tournament_selection
+  rows=3 content.h=1152 viewport.h=1798 scrollable=False screen=1170x2532
+  viewport world rect x[55..1099] y[295..2093]
+  row[0] TournamentSelectionCard(Clone) x[88..1066] y[1733..2093]
+  row[1] TournamentSelectionCard(Clone) x[88..1066] y[1349..1709]
+  row[2] TournamentSelectionCard(Clone) x[88..1066] y[965..1325]
+  candidate 'gap between the first two rows' (577, 1721) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (577.00, 1721.00)
+  still tournament_selection_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_tournament_selection_rest.png (2726 KB)
+  · empty press=(577.00, 1721.00) @ 72.71s
+      top hit      : Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+  still tournament_selection_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_tournament_selection_after.png (2726 KB)
+      content.y    : 0 -> 0  moved=False  pass=True
+  · control press=(944.00, 2047.00) @ 76.84s
+      top hit      : Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/TournamentSelectionCard(Clone)/BadgePill/BadgeLabel
+      drag handler : Canvas/ScreensRoot/TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => PASS handler resolved; list too short to scroll
+--- [6/15] tournament_leaderboard
+  rows=11 content.h=1458 viewport.h=905 scrollable=True screen=1170x2532
+  viewport world rect x[55..1099] y[593.2..1498.2]
+  row[0] TournamentRankingRow_4 x[59..1037] y[1384.2..1494.2]
+  row[1] TournamentRankingRow_5 x[59..1037] y[1250.2..1360.2]
+  row[2] TournamentRankingRow_6 x[59..1037] y[1116.2..1226.2]
+  candidate 'gap between the first two rows' (548, 1372.2) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (548.00, 1372.17)
+  still tournament_leaderboard_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_tournament_leaderboard_rest.png (2687 KB)
+  · empty press=(548.00, 1372.17) @ 85.83s
+      top hit      : Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+  still tournament_leaderboard_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_tournament_leaderboard_after.png (2686 KB)
+      content.y    : 0 -> 553  moved=True  pass=True
+  · control press=(109.00, 1426.17) @ 89.95s
+      top hit      : Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/TournamentRankingRow_4/RankingsCard/Rank
+      drag handler : Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 553  moved=True  pass=True
+  => PASS 
+--- [7/15] loan_modal
+  tapping the real PersistentUI ▸ charactersButton.onClick
+  open failed: screen did not open: Roster (current StaminaShopSelection)
+--- [8/15] item_use
+  tapping the real PersistentUI ▸ inventoryButton.onClick
+  tapping the real Inventory ▸ ITEMSTab.onClick
+  tapping the real Inventory ▸ Items ▸ UseButton.onClick
+  rows=15 content.h=1720 viewport.h=951 scrollable=True screen=1170x2532
+  viewport world rect x[139..1015] y[543..1494]
+  row[0] ItemUseClubCardGlowup(Clone) x[191..371] y[1080..1490]
+  row[1] ItemUseClubCardGlowup(Clone) x[395..575] y[1080..1490]
+  row[2] ItemUseClubCardGlowup(Clone) x[599..779] y[1080..1490]
+  candidate 'gap between the first two rows' (281, 1068) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (281.00, 1068.04)
+  still item_use_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_item_use_rest.png (2431 KB)
+  · empty press=(281.00, 1068.04) @ 121.02s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea  (target=True)
+  still item_use_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_item_use_after.png (2514 KB)
+      content.y    : 0 -> 769  moved=True  pass=True
+  · control press=(205.50, 1473.62) @ 125.04s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/ItemUseClubCardGlowup(Clone)/Mask/Background/CardTop/LevelBadge
+      drag handler : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea  (target=True)
+      content.y    : 0 -> 769  moved=True  pass=True
+  => PASS 
+--- [9/15] bag_club
+  tapping the real Inventory ▸ BAGSTab.onClick
+  rows=11 content.h=1286 viewport.h=951 scrollable=True screen=1170x2532
+  viewport world rect x[139..1015] y[543..1494]
+  row[0] BagClubCard(Clone) x[191..371] y[1080..1490]
+  row[1] BagClubCard(Clone) x[395..575] y[1080..1490]
+  row[2] BagClubCard(Clone) x[599..779] y[1080..1490]
+  candidate 'gap between the first two rows' (281, 1068) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (281.00, 1068.04)
+  still bag_club_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_bag_club_rest.png (2494 KB)
+  · empty press=(281.00, 1068.04) @ 135.62s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea  (target=True)
+  still bag_club_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_bag_club_after.png (2513 KB)
+      content.y    : 0 -> 335  moved=True  pass=True
+  · control press=(205.50, 1474.62) @ 139.67s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/BagClubCard(Clone)/Mask/Background/CardTop/LevelBadge
+      drag handler : Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea  (target=True)
+      content.y    : 0 -> 335  moved=True  pass=True
+  => PASS 
+--- [10/15] gps_vote
+  tapping the real Home ▸ GpsPill.onClick
+  tapping the real GpsHub ▸ VOTE tile.onClick
+  rows=5 content.h=1796 viewport.h=1591 scrollable=True screen=1170x2532
+  viewport world rect x[106..1064] y[311..1902]
+  row[0] Card0 x[106..1064] y[1372..1902]
+  row[1] Card1 x[106..1064] y[1116..1348]
+  row[2] Card2 x[106..1064] y[860..1092]
+  candidate 'gap between the first two rows' (585, 1360) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (585.00, 1360.00)
+  still gps_vote_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_gps_vote_rest.png (2580 KB)
+  · empty press=(585.00, 1360.00) @ 151.36s
+      top hit      : Canvas/ScreensRoot/GpsVoteScreen/ContentContainer/VoteList
+      drag handler : Canvas/ScreensRoot/GpsVoteScreen/ContentContainer/VoteList  (target=True)
+  still gps_vote_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_gps_vote_after.png (2687 KB)
+      content.y    : 0 -> 205  moved=True  pass=True
+  (no plain label in the first row — control press skipped)
+  => PASS 
+--- [11/15] venue_picker
+  rows=60 content.h=6232 viewport.h=1000 scrollable=True screen=1170x2532
+  viewport world rect x[136..1034] y[782..1782]
+  row[0] VenueRow0 x[136..1034] y[1686..1782]
+  row[1] VenueRow1 x[136..1034] y[1582..1678]
+  row[2] VenueRow2 x[136..1034] y[1478..1574]
+  candidate 'gap between the first two rows' (585, 1682) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (585.00, 1682.00)
+  still venue_picker_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_venue_picker_rest.png (1540 KB)
+  · empty press=(585.00, 1682.00) @ 163.57s
+      top hit      : Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List
+      drag handler : Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List  (target=True)
+  still venue_picker_after: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_venue_picker_after.png (1539 KB)
+      content.y    : 0 -> 969.3  moved=True  pass=True
+  (no plain label in the first row — control press skipped)
+  => PASS 
+--- [12/15] login
+  rows=15 content.h=2117 viewport.h=2117 scrollable=False screen=1170x2532
+  viewport world rect x[48..1122] y[51..2168]
+  row[0] SectionHeader x[312.5..857.5] y[2065..2120]
+  row[1] EmailLabel x[96..1074] y[1977..2017]
+  row[2] EmailField x[96..1074] y[1842..1929]
+  candidate 'gap between the first two rows' (585, 2041) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (585.00, 2041.00)
+  still login_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_login_rest.png (978 KB)
+  · empty press=(585.00, 2041.00) @ 172.14s
+      top hit      : Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView/Viewport
+      drag handler : Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView  (target=True)
+  still login_after: STALE (identical to the previous still) Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_login_after.png (978 KB)
+      content.y    : 0 -> 0  moved=False  pass=True
+  · control press=(585.00, 2092.50) @ 176.17s
+      top hit      : Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader
+      drag handler : Canvas/ScreensRoot/LoginScreen/CardBorder/CardBody/ScrollView  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => PASS handler resolved; list too short to scroll
+--- [13/15] reset_password
+  rows=8 content.h=2117 viewport.h=2117 scrollable=False screen=1170x2532
+  viewport world rect x[48..1122] y[51..2168]
+  row[0] SectionHeader x[311.7..858.3] y[2065..2120]
+  row[1] NewPasswordLabel x[96..1074] y[1977..2017]
+  row[2] NewPasswordRow x[96..1074] y[1842..1929]
+  candidate 'gap between the first two rows' (585, 2041) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (585.00, 2041.00)
+  still reset_password_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_reset_password_rest.png (977 KB)
+  · empty press=(585.00, 2041.00) @ 184.63s
+      top hit      : Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView/Viewport
+      drag handler : Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView  (target=True)
+  still reset_password_after: STALE (identical to the previous still) Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_reset_password_after.png (977 KB)
+      content.y    : 0 -> 0  moved=False  pass=True
+  · control press=(585.00, 2092.50) @ 188.63s
+      top hit      : Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader
+      drag handler : Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => PASS handler resolved; list too short to scroll
+--- [14/15] signup
+  tapping the real Login ▸ CreateAccount.onClick
+  rows=15 content.h=2117 viewport.h=2117 scrollable=False screen=1170x2532
+  viewport world rect x[48..1122] y[51..2168]
+  row[0] SectionHeader x[283.3..886.7] y[2065..2120]
+  row[1] EmailLabel x[96..1074] y[1977..2017]
+  row[2] EmailField x[96..1074] y[1842..1929]
+  candidate 'gap between the first two rows' (585, 2041) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (585.00, 2041.00)
+  still signup_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_signup_rest.png (1048 KB)
+  · empty press=(585.00, 2041.00) @ 198.47s
+      top hit      : Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView/Viewport
+      drag handler : Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView  (target=True)
+  still signup_after: STALE (identical to the previous still) Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_signup_after.png (1048 KB)
+      content.y    : 0 -> 0  moved=False  pass=True
+  · control press=(585.00, 2092.50) @ 202.43s
+      top hit      : Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader
+      drag handler : Canvas/ScreensRoot/SignUpScreen/CardBorder/CardBody/ScrollView  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => PASS handler resolved; list too short to scroll
+--- [15/15] create_username
+  rows=9 content.h=2117 viewport.h=2117 scrollable=False screen=1170x2532
+  viewport world rect x[48..1122] y[51..2168]
+  row[0] SectionHeader x[290.8..879.2] y[2048.3..2120]
+  row[1] UsernameLabel x[96..1074] y[1948.2..2000.3]
+  row[2] UsernameField x[96..1074] y[1813.2..1900.2]
+  candidate 'gap between the first two rows' (585, 2024.3) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (585.00, 2024.30)
+  still create_username_rest: Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_create_username_rest.png (971 KB)
+  · empty press=(585.00, 2024.30) @ 210.90s
+      top hit      : Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView/Viewport
+      drag handler : Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView  (target=True)
+  still create_username_after: STALE (identical to the previous still) Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_create_username_after.png (971 KB)
+      content.y    : 0 -> 0  moved=False  pass=True
+  · control press=(585.00, 2084.15) @ 214.87s
+      top hit      : Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader
+      drag handler : Canvas/ScreensRoot/CreateUsernameScreen/CardBorder/CardBody/ScrollView  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => PASS handler resolved; list too short to scroll
+=== summary ===
+  PASS         rankings                 
+  PASS         general_shop             
+  PASS         gacha_rates              handler resolved; list too short to scroll
+  PASS         stamina_shop             
+  PASS         tournament_selection     handler resolved; list too short to scroll
+  PASS         tournament_leaderboard   
+  INCONCLUSIVE loan_modal               open failed: screen did not open: Roster (current StaminaShopSelection)
+  PASS         item_use                 
+  PASS         bag_club                 
+  PASS         gps_vote                 
+  PASS         venue_picker             
+  PASS         login                    handler resolved; list too short to scroll
+  PASS         reset_password           handler resolved; list too short to scroll
+  PASS         signup                   handler resolved; list too short to scroll
+  PASS         create_username          handler resolved; list too short to scroll
+verdict -> Docs/Specs/Quick/media/scroll_lists_drag_anywhere/drag_anywhere_after.json  (pass 14 / fail 0 / inconclusive 1)

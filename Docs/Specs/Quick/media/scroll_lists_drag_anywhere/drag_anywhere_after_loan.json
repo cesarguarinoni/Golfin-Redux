@@ -1,0 +1,30 @@
+{
+  "label": "after_loan",
+  "complete": true, "planned": 1,
+  "screen": [1170, 2532],
+  "summary": { "pass": 1, "fail": 0, "inconclusive": 0 },
+  "targets": [
+    {
+      "name": "loan_modal",
+      "title": "Loan modal (recipients)",
+      "entry": "Roster ▸ LendButton.onClick",
+      "scrollRect": "Canvas/ScreensRoot/RosterScreen/LoanModal/ModalPanel/RecipientScroll",
+      "rows": 2, "contentH": 58, "viewportH": 432, "scrollable": false,
+      "status": "PASS",
+      "note": "handler resolved; list too short to scroll",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 1292],
+          "topHit": "Canvas/ScreensRoot/RosterScreen/LoanModal/ModalPanel/RecipientScroll",
+          "dragHandler": "Canvas/ScreensRoot/RosterScreen/LoanModal/ModalPanel/RecipientScroll",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 0.002, "moved": false,
+          "tPress": 13.627, "tRelease": 14.396,
+          "stillRest": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_loan_loan_modal_rest.png", "stillAfter": "Docs/Specs/Quick/media/scroll_lists_drag_anywhere/stills/after_loan_loan_modal_after.png",
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

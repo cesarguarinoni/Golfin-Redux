@@ -1,0 +1,60 @@
+=== drag-anywhere ×3 label=clip record=True 2026-09-14 01:56:34Z ===
+tapping the real StartButton
+--- [1/3] general_shop
+  tapping the real PersistentUI ▸ gachaButton.onClick
+  tapping the real Rewards Center ▸ STORE tab.onClick
+  rows=22 content.h=6258 viewport.h=1674 scrollable=True screen=1170x2532
+  viewport world rect x[55..1099] y[295..1969]
+  row[0] Card_shop_club_iron9_klyro x[88..1066] y[1695..1969]
+  row[1] Card_shop_club_awedge_fyloe x[88..1066] y[1397..1671]
+  row[2] Card_shop_club_pwedge_royal x[88..1066] y[1099..1373]
+  candidate 'gap between the first two rows' (577, 1683) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (577.00, 1683.00)
+  · empty press=(577.00, 1683.00) @ 12.77s
+      top hit      : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 970.3  moved=True  pass=True
+  · control press=(414.00, 1925.00) @ 16.73s
+      top hit      : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/Card_shop_club_iron9_klyro/NameLabel
+      drag handler : Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+      content.y    : 0 -> 968.8  moved=True  pass=True
+  => PASS 
+--- [2/3] item_use
+  tapping the real PersistentUI ▸ inventoryButton.onClick
+  tapping the real Inventory ▸ ITEMSTab.onClick
+  tapping the real Inventory ▸ Items ▸ UseButton.onClick
+  rows=15 content.h=1720 viewport.h=951 scrollable=True screen=1170x2532
+  viewport world rect x[139..1015] y[543..1494]
+  row[0] ItemUseClubCardGlowup(Clone) x[191..371] y[1080..1490]
+  row[1] ItemUseClubCardGlowup(Clone) x[395..575] y[1080..1490]
+  row[2] ItemUseClubCardGlowup(Clone) x[599..779] y[1080..1490]
+  candidate 'gap between the first two rows' (281, 1068) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (281.00, 1068.04)
+  · empty press=(281.00, 1068.04) @ 30.66s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport
+      drag handler : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea  (target=True)
+      content.y    : 0 -> 769  moved=True  pass=True
+  · control press=(205.50, 1473.62) @ 34.58s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/ItemUseClubCardGlowup(Clone)/Mask/Background/CardTop/LevelBadge
+      drag handler : Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea  (target=True)
+      content.y    : 0 -> 769  moved=True  pass=True
+  => PASS 
+--- [3/3] venue_picker
+  rows=60 content.h=6232 viewport.h=1000 scrollable=True screen=1170x2532
+  viewport world rect x[136..1034] y[782..1782]
+  row[0] VenueRow0 x[136..1034] y[1686..1782]
+  row[1] VenueRow1 x[136..1034] y[1582..1678]
+  row[2] VenueRow2 x[136..1034] y[1478..1574]
+  candidate 'gap between the first two rows' (585, 1682) inView=True insideChild=no
+  empty spot: gap between the first two rows -> (585.00, 1682.00)
+  · empty press=(585.00, 1682.00) @ 46.56s
+      top hit      : Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List
+      drag handler : Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List  (target=True)
+      content.y    : 0 -> 970  moved=True  pass=True
+  (no plain label in the first row — control press skipped)
+  => PASS 
+=== summary ===
+  PASS         general_shop             
+  PASS         item_use                 
+  PASS         venue_picker             
+verdict -> Docs/Specs/Quick/media/scroll_lists_drag_anywhere/drag_anywhere_clip.json  (pass 3 / fail 0 / inconclusive 0)

@@ -1,0 +1,96 @@
+{
+  "label": "clip",
+  "complete": true, "planned": 3,
+  "screen": [1170, 2532],
+  "summary": { "pass": 3, "fail": 0, "inconclusive": 0 },
+  "targets": [
+    {
+      "name": "general_shop",
+      "title": "General Shop (STORE tab)",
+      "entry": "Rewards Center ▸ STORE tab.onClick",
+      "scrollRect": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "rows": 22, "contentH": 6258, "viewportH": 1674, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [577, 1683],
+          "topHit": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 970.347, "moved": true,
+          "tPress": 12.772, "tRelease": 13.58,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [414, 1925],
+          "topHit": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/Card_shop_club_iron9_klyro/NameLabel",
+          "dragHandler": "Canvas/ScreensRoot/GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 968.814, "moved": true,
+          "tPress": 16.728, "tRelease": 17.539,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "item_use",
+      "title": "Item use modal",
+      "entry": "Inventory ▸ Items ▸ UseButton.onClick",
+      "scrollRect": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea",
+      "rows": 15, "contentH": 1720, "viewportH": 951, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [281, 1068.04],
+          "topHit": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport",
+          "dragHandler": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 769.005, "moved": true,
+          "tPress": 30.659, "tRelease": 31.457,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        },
+        {
+          "name": "control", "spot": "first row's label",
+          "press": [205.5, 1473.623],
+          "topHit": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/ItemUseClubCardGlowup(Clone)/Mask/Background/CardTop/LevelBadge",
+          "dragHandler": "Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 769.004, "moved": true,
+          "tPress": 34.58, "tRelease": 35.377,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "venue_picker",
+      "title": "Venue picker modal",
+      "entry": "VenuePickerModalController.Open — the call CHOOSE MANUALLY makes (button not on screen yet)",
+      "scrollRect": "Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List",
+      "rows": 60, "contentH": 6232, "viewportH": 1000, "scrollable": true,
+      "status": "PASS",
+      "note": "",
+      "cases": [
+        {
+          "name": "empty", "spot": "gap between the first two rows",
+          "press": [585, 1682],
+          "topHit": "Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List",
+          "dragHandler": "Canvas/ScreensRoot/ScoreUploadScreen/VenuePickerModal/ModalPanel/List",
+          "handlerIsTarget": true,
+          "contentYBefore": 0, "contentYAfter": 969.994, "moved": true,
+          "tPress": 46.555, "tRelease": 47.349,
+          "stillRest": "", "stillAfter": "",
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

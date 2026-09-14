@@ -1,0 +1,62 @@
+=== drag-anywhere ×5 label=baseline_retarget record=False 2026-09-14 01:22:48Z ===
+tapping the real StartButton
+--- [1/5] general_shop
+  tapping the real PersistentUI ▸ gachaButton.onClick
+  tapping the real Rewards Center ▸ STORE tab.onClick
+  rows=22 content.h=6258 viewport.h=1674 scrollable=True screen=1170x2532
+  => INCONCLUSIVE no empty spot inside the viewport (every pixel is a child)
+--- [2/5] gacha_rates
+  tapping the real Rewards Center ▸ GACHA tab.onClick
+  tapping the real GachaBannerCard ▸ RULES button.onClick
+  rows=0 content.h=1132 viewport.h=1400 scrollable=False screen=1170x2532
+  empty spot: empty list, viewport centre -> (585.00, 1293.00)
+  · empty press=(585.00, 1293.00) @ 19.86s
+      top hit      : Canvas/GachaRatesModal/Panel/Background
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  (no plain label in the first row — control press skipped)
+  => FAIL 
+--- [3/5] loan_modal
+  tapping the real PersistentUI ▸ charactersButton.onClick
+  tapping the real Roster ▸ LendButton.onClick
+  rows=2 content.h=58 viewport.h=432 scrollable=False screen=1170x2532
+  empty spot: gap between the first two rows -> (585.00, 1292.00)
+  · empty press=(585.00, 1292.00) @ 31.55s
+      top hit      : Canvas/ScreensRoot/RosterScreen/LoanModal/ModalPanel
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  (no plain label in the first row — control press skipped)
+  => FAIL 
+--- [4/5] bag_club
+  tapping the real PersistentUI ▸ inventoryButton.onClick
+  tapping the real Inventory ▸ BAGSTab.onClick
+  rows=11 content.h=1286 viewport.h=951 scrollable=True screen=1170x2532
+  empty spot: gap between the first two rows -> (281.00, 1068.04)
+  · empty press=(281.00, 1068.04) @ 44.07s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  · control press=(205.50, 1474.62) @ 47.60s
+      top hit      : Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea/Viewport/GridContent/BagClubCard(Clone)/Mask/Background/CardTop/LevelBadge
+      drag handler : Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea  (target=True)
+      content.y    : 0 -> 335  moved=True  pass=True
+  => FAIL 
+--- [5/5] reset_password
+  rows=8 content.h=2117 viewport.h=2117 scrollable=False screen=1170x2532
+  empty spot: gap between the first two rows -> (585.00, 2041.00)
+  · empty press=(585.00, 2041.00) @ 55.47s
+      top hit      : Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody
+      drag handler : <none>  (target=False)
+      content.y    : 0 -> 0  moved=False  pass=False
+  · control press=(585.00, 2092.50) @ 59.00s
+      top hit      : Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView/Viewport/Content/SectionHeader
+      drag handler : Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView  (target=True)
+      content.y    : 0 -> 0  moved=False  pass=True
+  => FAIL 
+=== summary ===
+  INCONCLUSIVE general_shop             no empty spot inside the viewport (every pixel is a child)
+  FAIL         gacha_rates              
+  FAIL         loan_modal               
+  FAIL         bag_club                 
+  FAIL         reset_password           
+verdict -> Docs/Specs/Quick/media/scroll_lists_drag_anywhere/drag_anywhere_baseline_retarget.json  (pass 0 / fail 4 / inconclusive 1)

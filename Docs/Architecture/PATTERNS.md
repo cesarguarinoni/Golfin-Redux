@@ -343,8 +343,12 @@ a drag (`rankings_list_drag_anywhere`).
 - **Verify through the raycast, not the handler.** A harness that calls `sr.OnBeginDrag` directly
   (`GamePolishDemoRecorderC`'s over-scroll clip) skips the failing link and PASSes a dead list;
   `ScrollDragAnywhereVerify` resolves the handler from `EventSystem.RaycastAll` first. The static
-  sweep (`scrollrect_raycast_audit.py`) lists 13 more lists with the shape — four of them clones of
-  the rankings block — pending a decision to sweep.
+  sweep (`scrollrect_raycast_audit.py`) found the shape in 14 more lists — four clones of the
+  rankings block, ten `RectMask2D`-only viewports — all fixed the same way and re-verified in
+  `Docs/Specs/Quick/scroll_lists_drag_anywhere.md`. New lists: give the viewport its image on day one.
+- **Bots cap the frame rate.** A play-mode probe on the shared Editor sets `vSyncCount = 0` and
+  `targetFrameRate = 30` before it starts (and before any `StartRecording`); a four-minute uncapped
+  recorded sweep locked the Editor on 2026-09-14.
 
 ## Quick Reference: File Locations
 
