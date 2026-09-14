@@ -60,6 +60,7 @@ namespace GolfinRedux.UI.Editor
     {
         public const string OutDir   = "Docs/Specs/Quick/media/finished_tournament_leaderboard_route";
         const string ArmedKey        = "TournamentRouteVerify.Armed";
+        const string HoldKey         = "TournamentRouteVerify.Hold";
 
         [InitializeOnLoadMethod]
         static void RegisterHook()
@@ -69,13 +70,21 @@ namespace GolfinRedux.UI.Editor
         }
 
         [MenuItem("GOLFIN/Tournaments/Verify — finished tournament routes (no video)")]
-        public static void Launch()
+        public static void Launch() => Launch(hold: false);
+
+        /// <summary>Same real path, but parks on the first ended tournament's board (play mode stays
+        /// up, no verdict) so the empty-board layout can be measured and re-shot in place.</summary>
+        [MenuItem("GOLFIN/Tournaments/Probe — open an empty tournament board and hold")]
+        public static void LaunchHold() => Launch(hold: true);
+
+        static void Launch(bool hold)
         {
             if (EditorApplication.isPlaying) { Debug.LogWarning("[TournamentRouteVerify] Already playing — stop first."); return; }
             Directory.CreateDirectory(OutDir);
             SessionState.SetBool(ArmedKey, true);
+            SessionState.SetBool(HoldKey, hold);
             EditorApplication.EnterPlaymode();
-            Debug.Log("[TournamentRouteVerify] Armed. Entering play mode...");
+            Debug.Log($"[TournamentRouteVerify] Armed (hold={hold}). Entering play mode...");
         }
 
         static void OnPlayModeChanged(PlayModeStateChange state)
@@ -85,7 +94,9 @@ namespace GolfinRedux.UI.Editor
             SessionState.SetBool(ArmedKey, false);
             var host = new GameObject("[TournamentRouteVerifyRunner]");
             UnityEngine.Object.DontDestroyOnLoad(host);
-            host.AddComponent<TournamentRouteVerifyRunner>().Begin(Time.realtimeSinceStartup);
+            var runner = host.AddComponent<TournamentRouteVerifyRunner>();
+            runner.HoldOnBoard = SessionState.GetBool(HoldKey, false);
+            runner.Begin(Time.realtimeSinceStartup);
         }
     }
 
@@ -102,6 +113,9 @@ namespace GolfinRedux.UI.Editor
         readonly List<string> _planted = new List<string>();
         float _t0;
         string _note = "";
+
+        /// <summary>Park on the ended tournament's board after A1 (probe mode; no verdict, play mode stays up).</summary>
+        public bool HoldOnBoard { get; set; }
 
         public void Begin(float t0)
         {
@@ -146,7 +160,17 @@ namespace GolfinRedux.UI.Editor
 
             // A1 — LEADERBOARD on the Ended card (never entered)
             yield return TapCta(ended, "A1", ScreenId.TournamentLeaderboard, "LEADERBOARD on ended (not entered)");
+            yield return new WaitForSecondsRealtime(3.0f);          // let the board fetch settle (or fail)
+            var shimmerHost = ScreenObject("TournamentLeaderboardScreen")?.transform.Find("ContentArea/BarsArea/RankingsArea/Modal/Shimmer_tournament_leaderboard");
+            Check("A1s", shimmerHost != null && !shimmerHost.gameObject.activeSelf,
+                  $"empty board shimmer after the fetch settled: host active={(shimmerHost != null ? shimmerHost.gameObject.activeSelf.ToString() : "<none>")} (wanted False — a failed or empty fetch ends the wait)");
             yield return Still("A1_leaderboard_from_ended_card");
+            if (HoldOnBoard)
+            {
+                Line($"HOLD: parked on the board of '{endedId}' for inspection — play mode stays up, no verdict written");
+                File.WriteAllText(Path.Combine(TournamentRouteVerify.OutDir, "probe_hold.log"), _log.ToString());
+                yield break;
+            }
             // A2 — the board's own close button (hidden on an empty board: F1)
             yield return LeaveBoard("A2");
 
@@ -415,8 +439,26 @@ namespace GolfinRedux.UI.Editor
                 yield return CloseScreen<TournamentLeaderboardScreenController>("TournamentLeaderboardScreen", checkId, ScreenId.TournamentSelection);
                 yield break;
             }
+            // F1 fix — an empty board shows the empty state's own CLOSE (the same TournamentCloseButton
+            // prefab, at the end of the message). Tap THAT one, exactly as a player would.
+            var emptyClose = screen != null
+                ? screen.transform.Find("ContentArea/BarsArea/RankingsArea/Modal/Bottom97/TournamentLeaderboardEmptyState/CloseSlot/TournamentCloseButton")
+                : null;
+            var emptyButton = emptyClose != null ? emptyClose.GetComponent<Button>() : null;
+            if (emptyButton != null && emptyButton.gameObject.activeInHierarchy && emptyButton.interactable)
+            {
+                var rt = emptyButton.GetComponent<RectTransform>();
+                var c = new Vector3[4]; rt.GetWorldCorners(c);
+                Line($"empty board: tapping the real empty-state {emptyButton.name}.onClick — rect x[{c[0].x:0}..{c[2].x:0}] yTop[{2532 - c[2].y:0}..{2532 - c[0].y:0}] (canvas px)");
+                emptyButton.onClick.Invoke();
+                yield return WaitScreen(ScreenId.TournamentSelection, 6f);
+                Check(checkId, ScreenManager.Instance!.CurrentScreen == ScreenId.TournamentSelection,
+                      $"empty board CLOSE (empty-state button) landed on {ScreenManager.Instance.CurrentScreen} (wanted TournamentSelection)");
+                yield return new WaitForSecondsRealtime(1.0f);
+                yield break;
+            }
             string why = close == null ? "not wired" : (!close.gameObject.activeInHierarchy ? "inactive: " + InactiveAncestor(close.transform) : "not interactable");
-            Finding("F1", $"{checkId}: the board's wired CloseButton is {why} — an empty board (\"No finishers yet\") has no CLOSE; leaving through the real bottom-nav TEE instead");
+            Finding("F1", $"{checkId}: the board's wired CloseButton is {why} and the empty state has no usable CLOSE either — leaving through the real bottom-nav TEE instead");
             yield return TapNamed("NavTeeButton", ScreenId.ModeSelection, "bottom-nav TEE (no CLOSE on the empty board)");
         }
 

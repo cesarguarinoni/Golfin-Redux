@@ -1,12 +1,15 @@
 {
   "task": "finished_tournament_leaderboard_route",
-  "utc": "2026-09-14 05:46:12Z",
+  "utc": "2026-09-14 06:03:07Z",
   "status": "PASS",
   "note": "",
   "checks": [
     { "id": "A1", "pass": true, "detail": "LEADERBOARD on ended (not entered) 'kisarazu_cup' landed on TournamentLeaderboard (wanted TournamentLeaderboard; SelectedTournamentId=kisarazu_cup)" },
+    { "id": "A1s", "pass": true, "detail": "empty board shimmer after the fetch settled: host active=False (wanted False — a failed or empty fetch ends the wait)" },
+    { "id": "A2", "pass": true, "detail": "empty board CLOSE (empty-state button) landed on TournamentSelection (wanted TournamentSelection)" },
     { "id": "S1", "pass": true, "detail": "'kisarazu_cup' after planting: state=EnteredFinished (wanted EnteredFinished)" },
     { "id": "A3", "pass": true, "detail": "LEADERBOARD on entered+finished 'kisarazu_cup' landed on TournamentLeaderboard (wanted TournamentLeaderboard; SelectedTournamentId=kisarazu_cup)" },
+    { "id": "A4", "pass": true, "detail": "empty board CLOSE (empty-state button) landed on TournamentSelection (wanted TournamentSelection)" },
     { "id": "B1", "pass": true, "detail": "hole cards for finished 'kisarazu_cup': next=0 locked=18 finished=0" },
     { "id": "B2", "pass": true, "detail": "BeginTournamentHole('1') on finished 'kisarazu_cup': refusedLog=True stillOnHoleSelection=True GameSession.IsTournament=False" },
     { "id": "B3", "pass": true, "detail": "TournamentHoleSelectionScreen CLOSE landed on TournamentSelection (wanted TournamentSelection)" },
@@ -17,9 +20,7 @@
     { "id": "Z", "pass": true, "detail": "removed 2/2 planted entries (kisarazu_cup, route_verify_live); backend sees none=True" }
   ],
   "findings": [
-    { "id": "F1", "detail": "A2: the board's wired CloseButton is inactive: ScrollArea is inactive — an empty board (\"No finishers yet\") has no CLOSE; leaving through the real bottom-nav TEE instead" },
-    { "id": "F2", "detail": "a schedule applied after sign-in did not reach the session's RemoteTournamentBackend (Backend saw 3 of 4 defs) — TournamentService.EnsureBackendForSession keeps the first wrapper (`_remoteBackend ??=`) and RemoteTournamentBackend._local is readonly" },
-    { "id": "F1", "detail": "A4: the board's wired CloseButton is inactive: ScrollArea is inactive — an empty board (\"No finishers yet\") has no CLOSE; leaving through the real bottom-nav TEE instead" }
+    { "id": "F2", "detail": "a schedule applied after sign-in did not reach the session's RemoteTournamentBackend (Backend saw 3 of 4 defs) — TournamentService.EnsureBackendForSession keeps the first wrapper (`_remoteBackend ??=`) and RemoteTournamentBackend._local is readonly" }
   ],
-  "stills": ["Docs/Specs/Quick/media/finished_tournament_leaderboard_route/A1_leaderboard_from_ended_card.png md5=0eb6685d9662b3dad913173304763e39", "Docs/Specs/Quick/media/finished_tournament_leaderboard_route/A3_leaderboard_from_finished_entered_card.png md5=7fa944ca7534fd7010ad1581a4feaf89", "Docs/Specs/Quick/media/finished_tournament_leaderboard_route/B1_hole_selection_finished_tournament.png md5=10bbf2b241c2799960edd222e1f7827c", "Docs/Specs/Quick/media/finished_tournament_leaderboard_route/C1_hole_selection_live_tournament.png md5=58ba193c4c83f73871df4143b6f6c47b"]
+  "stills": ["Docs/Specs/Quick/media/finished_tournament_leaderboard_route/A1_leaderboard_from_ended_card.png md5=529023f3c02df59cf3b22f09656bc203", "Docs/Specs/Quick/media/finished_tournament_leaderboard_route/A3_leaderboard_from_finished_entered_card.png md5=bdeaf43d873436ed9958b54fc6145564", "Docs/Specs/Quick/media/finished_tournament_leaderboard_route/B1_hole_selection_finished_tournament.png md5=d8e364e4e2a7d239f3dfbd4720f2ea1a", "Docs/Specs/Quick/media/finished_tournament_leaderboard_route/C1_hole_selection_live_tournament.png md5=75e2848dee6cff9100402722bdefbad8"]
 }

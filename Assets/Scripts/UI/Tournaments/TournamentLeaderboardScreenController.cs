@@ -47,6 +47,13 @@ namespace GolfinRedux.UI.Tournaments
         // Relative paths from this screen root to the reused Rankings hierarchy.
         private const string ModalPath       = "ContentArea/BarsArea/RankingsArea/Modal";
 
+        // finished_tournament_leaderboard_route F1 — the empty state's own CLOSE. The grid's
+        // _closeButton sits in Bottom97/ScrollArea/…/CloseSlot, and ApplyBoardChrome hides the whole
+        // ScrollArea on an empty board, so every ENDED tournament with no finishers had no way out
+        // but the nav bar. TournamentLeaderboardEmptyState.prefab now ends with a CloseSlot holding
+        // the same TournamentCloseButton prefab; it is wired here to the same Close.
+        private const string EmptyCloseButtonPath = ModalPath + "/Bottom97/TournamentLeaderboardEmptyState/CloseSlot/TournamentCloseButton";
+
         // Banner pill paths (iter-2 — Defect 6 binding)
         private const string SponsorLabelPath   = "ContentArea/Banner/IdentityPillRow/Pill_SPONSO/Label";
         private const string TournNameLabelPath  = "ContentArea/Banner/IdentityPillRow/Row2/Pill_KASUMI/Label";
@@ -115,6 +122,14 @@ namespace GolfinRedux.UI.Tournaments
         {
             if (_closeButton != null)
                 _closeButton.onClick.AddListener(Close);
+
+            var emptyClose = transform.Find(EmptyCloseButtonPath);
+            var emptyCloseButton = emptyClose != null ? emptyClose.GetComponent<Button>() : null;
+            if (emptyCloseButton != null)
+                emptyCloseButton.onClick.AddListener(Close);
+            else
+                Debug.LogWarning("[TournamentLeaderboard] No CLOSE under the empty state at " + EmptyCloseButtonPath +
+                                 " — an empty board can only be left through the nav bar.");
         }
 
         // ── game_polish_b §D4/§D6 ────────────────────────────────────────────────
@@ -166,8 +181,16 @@ namespace GolfinRedux.UI.Tournaments
             {
                 // The response can land after the player has left; rebuilding a disabled screen
                 // would bind rows nobody is looking at and fight the next OnEnable.
-                if (changed && this != null && isActiveAndEnabled)
+                if (this == null || !isActiveAndEnabled) return;
+                if (changed)
                     PopulateLive(Golfin.Gps.UI.PaintKind.Fetch);
+                else
+                    // The request is OVER without a new board — failed, deduped, or unparseable.
+                    // That ends the wait exactly like a board does: the cold-open shimmer used to
+                    // sit on an empty board forever whenever the fetch failed (offline, or a
+                    // tournament the server no longer serves). Rule from EndBoardWait's own
+                    // summary — every arm which ENDS a wait has to say so — applied to this arm.
+                    EndBoardWait(Golfin.Gps.UI.PaintKind.Fetch, 0);
             });
         }
 

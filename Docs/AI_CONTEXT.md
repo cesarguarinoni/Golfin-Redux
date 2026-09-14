@@ -21,9 +21,12 @@ the HEAD prefab); `TournamentCardStateMapper.IsPlayable` (SPEC §2 Row 2) now gu
 tournament is over. Proof: `GOLFIN ▸ Tournaments ▸ Verify — finished tournament routes` boots
 through the real gate → TEE → mode card → the card's own CTA; it plants an entry on the ended
 `kisarazu_cup` (Register has no time guard) + one in-memory live tournament, PASS 11/11, entries
-removed after. EditMode 380/380 + Tournaments 251/251. **Found on the way, not fixed:** F1 an
-empty board has no CLOSE (`ApplyBoardChrome` hides the ScrollArea the button lives in); F2 a
-schedule applied after sign-in never reaches the session's `RemoteTournamentBackend`
+removed after. EditMode 380/380 + Tournaments 251/251. **Found on the way:** F1 an empty board had
+no CLOSE (`ApplyBoardChrome` hides the ScrollArea the button lives in) — **fixed on Cesar's word**:
+`TournamentLeaderboardEmptyState.prefab` ends with a CloseSlot holding the same
+`TournamentCloseButton` prefab, wired to `Close()`; F1b the cold-open shimmer never ended when the
+board fetch failed — the `changed == false` arm now calls `EndBoardWait`; bot PASS 14/14. Not fixed:
+F2 a schedule applied after sign-in never reaches the session's `RemoteTournamentBackend`
 (`_remoteBackend ??=`); F3 the hole-selection header is authored text. Record:
 `Docs/Specs/Quick/finished_tournament_leaderboard_route.md`; PATTERNS §15; Lesson CJ.
 
