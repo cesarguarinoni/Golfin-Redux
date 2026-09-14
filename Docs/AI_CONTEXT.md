@@ -4,7 +4,7 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## 2026-09-14 — finished_tournament_leaderboard_route: **LEADERBOARD on a finished tournament opened Play Hole** — a serialized enum had shifted under seven stored fields; pinned + gated + play guard, real-path PASS
+## 2026-09-14 — finished_tournament_leaderboard_route: **LEADERBOARD on a finished tournament opened Play Hole** — a serialized enum had shifted under seven stored fields; pinned + gated + play guard, real-path PASS — **DONE (Cesar approved 2026-09-14; record in `Docs/Specs/Quick/Completed/`)**
 
 Cesar: *"Entering Leaderboard in a finished Tournament from Tournament select screen goes to Play
 Hole. You should not be able to play in finished tournaments."* Routing code was right; the

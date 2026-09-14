@@ -147,3 +147,9 @@ on the HEAD prefab — *"stored 10 (TournamentHoleSelection), expected 11"*), `G
   `LoadingTipCatalogTests.ShellSceneCard_…` failed in the full EditMode run (3118/3123). Repaired by a
   12-line structural edit (the `Text` block is byte-identical to `d8fdab6ac` again), reloaded in the
   Editor without a save; both tests green.
+
+## DONE — approved by Cesar 2026-09-14 ("Done")
+
+Commits `12a9aadf9` (the route fix: ScreenId pinned, seven stored ids re-serialized, the hole
+selection refuses finished tournaments), `a9c7b8ae3` (F1 + F1b), `f01240190` (F2 + F3 + F4),
+`76d2a6f1d` (Lesson CK). Media stays in `Docs/Specs/Quick/media/finished_tournament_leaderboard_route/`.
