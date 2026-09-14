@@ -487,8 +487,12 @@ Opened only by `ScreenHintPresenter` (on ShellScene `PersistentUI`, next to `Gam
 `ScreenManager.ScreenChanged` for real screens, `ScreenHintPresenter.NotifyScreenEntered(...)` from
 `GameplaySceneLoader.LoadCoroutine` step 7 (`"Gameplay"`) and `ControlsSubmenu.OnEnable`
 (`"SettingsControls"`). Which tips: `Assets/Resources/Data/ScreenHints.csv` → `ScreenHintResolver` (drops
-`active=0` tips and keys another screen already showed). Once per device: PlayerPrefs `screenhints.state`
-(`GOLFIN ▸ Hints ▸ Reset seen`).
+`active=0` tips, keys another screen already showed, and rows whose optional `scheme` column names a
+`ControlScheme` other than `ControlSchemeService.Current` — the shot view's swing tip is per scheme:
+Flick `TIP_SWING`+`TIP_ACCURACY` (1/6), Pendulum `TIP_PENDULUM`, Tap Timing `TIP_TAPTIMING`, Free Swing
+`TIP_FREESWING` (1/5), then the four shared tips; `scheme_aware_gameplay_hints`). Once per device:
+PlayerPrefs `screenhints.state` (`GOLFIN ▸ Hints ▸ Reset seen`). Per-scheme proof through the real entry
+point: `GOLFIN ▸ Hints ▸ Run verify bot — gameplay (<scheme>)` (restores the player's scheme pref on exit).
 
 ⚠️ **The HoleSelection hints open on the way to every first hole** — the hole card is under the scrim until
 they are closed. A bot that taps `ActionButton` through `onClick.Invoke()` bypasses the scrim, loads the hole

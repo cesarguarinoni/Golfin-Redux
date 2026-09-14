@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-09-11 15:03. Do not edit manually.
+> Auto-generated 2026-09-14 09:17. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -112,6 +112,7 @@ Assets/Scripts/Economy/ServerBalanceSync.cs
 Assets/Scripts/Economy/ShopPurchaseOutcome.cs
 Assets/Scripts/Economy/ShopPurchaseService.cs
 Assets/Scripts/Economy/SpendOutcome.cs
+Assets/Scripts/Economy/Tests/MissionsClientDailyTests.cs
 Assets/Scripts/Economy/Tests/ModeEntryFeeSpendTests.cs
 Assets/Scripts/Economy/Tests/PendingOpsQueueTests.cs
 Assets/Scripts/Economy/Tests/PendingPointsOpLoanTests.cs
@@ -884,6 +885,7 @@ Assets/Scripts/UI/HoleSelection/HoleProgressionService.cs
 Assets/Scripts/UI/HoleSelection/HoleProgressionStoreAdapter.cs
 Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
 Assets/Scripts/UI/Home/DailyMissionPillController.cs
+Assets/Scripts/UI/Home/DailyMissionSessionReset.cs
 Assets/Scripts/UI/Home/LoanOfferPillController.cs
 Assets/Scripts/UI/Home/NoticePageSlider.cs
 Assets/Scripts/UI/HomeScreenController.cs
@@ -1017,6 +1019,7 @@ Assets/Scripts/UI/Polish/PendingSpend.cs
 Assets/Scripts/UI/Polish/ResultChoreography.cs
 Assets/Scripts/UI/Polish/ScreenEntryMotion.cs
 Assets/Scripts/UI/Polish/ShimmerHost.cs
+Assets/Scripts/UI/Polish/Tests/BannerSlotShiftTests.cs
 Assets/Scripts/UI/Polish/Tests/CenterTitleDissolveTests.cs
 Assets/Scripts/UI/Polish/Tests/CountDownTests.cs
 Assets/Scripts/UI/Polish/Tests/GpsPolishMotionTests.cs

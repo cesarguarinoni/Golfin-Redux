@@ -6,12 +6,14 @@
 // ScreenIds (GameplaySceneLoader step 7, ControlsSubmenu.OnEnable). Same shape as
 // TournamentResultPresenter: screen change → eligible? → wait for the modal
 // stack to clear → open. Nothing here decides WHICH tips — that is
-// ScreenHintResolver, which is pure and tested.
+// ScreenHintResolver, which is pure and tested; this class only hands it the
+// player's control scheme at the moment of entry (scheme_aware_gameplay_hints).
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Golfin.Gameplay.UI.Controls;
 using Golfin.UI.Modals;
 using UnityEngine;
 
@@ -88,7 +90,11 @@ namespace GolfinRedux.UI
         {
             if (string.IsNullOrEmpty(screen)) return;
 
-            List<LoadingTip> hints = ScreenHintResolver.HintsFor(screen, _hints, _tips, _state);
+            // The SELECTED scheme, read here rather than cached: the shot view's swing tip is
+            // whichever scheme the player is on when the hole reveals, and whichever scheme
+            // ships as the default is not this class's business.
+            ControlScheme scheme = ControlSchemeService.Current;
+            List<LoadingTip> hints = ScreenHintResolver.HintsFor(screen, _hints, _tips, _state, scheme);
 
             // Architect default a: a screen is seen when it is ENTERED with hints resolved —
             // marked and saved NOW, even when there is nothing left to show for it.
@@ -96,7 +102,7 @@ namespace GolfinRedux.UI
             {
                 _state.seenScreens = ScreenHintStore.With(_state.seenScreens, screen);
                 ScreenHintStore.Save(_state);
-                Debug.Log($"[ScreenHint] {screen} entered for the first time — {hints.Count} hint(s); state={JsonUtility.ToJson(_state)}");
+                Debug.Log($"[ScreenHint] {screen} entered for the first time — {hints.Count} hint(s) for scheme={scheme}; state={JsonUtility.ToJson(_state)}");
             }
 
             if (hints.Count == 0) return;

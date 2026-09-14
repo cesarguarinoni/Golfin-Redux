@@ -4,6 +4,29 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 — scheme_aware_gameplay_hints: **the shot-view hints follow the SELECTED control scheme** — code + EditMode green, play-mode proof pending the shared Editor
+
+Cesar: *"Hints for control scheme (not loading tips) should show depending on what control scheme is
+selected. We are currently shipping with Flicker but that might change in the future."* The first-entry
+shot-view group opened Flick's `TIP_SWING` + the cone-only `TIP_ACCURACY` for every player (the deferral
+`screen_hints` filed as Notion 2241). `ScreenHints.csv` grew an optional 4th column `scheme` (blank =
+every scheme; a `ControlScheme` enum NAME = that scheme only); `ScreenHintResolver.HintsFor` takes the
+scheme as a REQUIRED argument (no default — a default is the hard-wiring being removed) and
+`ScreenHintPresenter` passes `ControlSchemeService.Current` at entry. Gameplay is now nine rows, one
+contiguous order: Flick sees `SWING, ACCURACY, GRADES, VIEW, CLUB, FORECAST` (1/6, byte-for-byte what
+shipped); Pendulum / Tap Timing / Free Swing see `TIP_PENDULUM` / `TIP_TAPTIMING` / `TIP_FREESWING` then
+the shared four (1/5). A misspelt scheme cell drops the row with a warning (never widened to "every
+scheme"). Loading tips untouched (Cesar scoped them out); seen-state model unchanged (a later scheme
+switch is explained by `SchemeConfirmModal` at the switch, not by re-opening the group).
+Tests: `ScreenHintResolverTests` 19/19 (per-scheme table, an ENUM walk that fails when a scheme is added
+without a row, blank-vs-named rows, non-Gameplay screens identical under every scheme);
+`ScreenHintCatalogTests` updated (39 rows, scheme cells validated, `Flik` fixture). Verify bot:
+`GOLFIN ▸ Hints ▸ Run verify bot — gameplay (<scheme>)` — fresh install, real PLAY → hole path, restores
+the player's scheme pref on exit; the full tour reads `Modal.Count` instead of Flick's six.
+Record: `Docs/Specs/Quick/scheme_aware_gameplay_hints.md`. Not done: `TIP_CONTROLS` still says
+"NOT A FLICK FAN?" (a texts publish, flagged for Cesar).
+
+---
 ## 2026-09-12 — punch it GPS: **Golfin 1.5.7 (2907) on TestFlight** — VALID at Apple 19:16
 
 `./Tools/testflight.sh testflight_build_gps` on `6718aee93`, unattended: preflight clean (tree

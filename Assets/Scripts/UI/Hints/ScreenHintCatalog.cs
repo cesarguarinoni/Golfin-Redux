@@ -8,10 +8,16 @@
 // it as a catalog is Notion 2239, deferred). The tip's sprite and active flag
 // are NOT repeated here — they come from the LoadingTips.csv row the key names,
 // so a tip that flips active=1 there starts hinting here with no change.
+//
+// scheme_aware_gameplay_hints (2026-09-14): a row may name a ControlScheme. The
+// shot view's swing tips are per scheme (Flick's cone means nothing to a
+// Pendulum player), and the catalog never assumes which scheme ships as the
+// default — the resolver is handed ControlSchemeService.Current at entry.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Golfin.Gameplay.UI.Controls;
 using UnityEngine;
 
 namespace GolfinRedux.UI
@@ -30,6 +36,19 @@ namespace GolfinRedux.UI
 
         /// <summary>A <c>LoadingTips.csv</c> key.</summary>
         public string key;
+
+        /// <summary>A <see cref="ControlScheme"/> NAME (<c>Flick</c>, <c>Pendulum</c>, <c>Needle</c>,
+        /// <c>FreeSwing</c>) when the row is for one scheme only; empty when it shows for every
+        /// scheme. Kept as the CSV spells it — <see cref="ScreenHintCatalog.Parse"/> has already
+        /// refused anything that is not an enum name, so <see cref="AppliesTo"/> is a plain
+        /// string compare.</summary>
+        public string scheme;
+
+        /// <summary>Whether this row shows while <paramref name="current"/> is the player's
+        /// control scheme: a blank row always, a named row only for its own scheme.</summary>
+        public bool AppliesTo(ControlScheme current)
+            => string.IsNullOrEmpty(scheme)
+            || string.Equals(scheme, current.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>Parses <c>ScreenHints.csv</c>. Malformed rows are dropped with one warning
@@ -83,6 +102,8 @@ namespace GolfinRedux.UI
                     if (line.StartsWith("screen,", StringComparison.OrdinalIgnoreCase)) continue;
                 }
 
+                // Three columns are the original shape; the fourth (scheme) is optional so a
+                // three-column fixture — and any row that means "every scheme" — still parses.
                 string[] cell = line.Split(',');
                 if (cell.Length < 3)
                 {
@@ -110,7 +131,17 @@ namespace GolfinRedux.UI
                     continue;
                 }
 
-                rows.Add(new ScreenHint { screen = screen, order = order, key = key });
+                // A misspelt scheme is dropped, not widened to "every scheme": the safe failure
+                // is one hint missing for one scheme, never Pendulum's tip in front of a Flick
+                // player. Names only, case-sensitive — the same spelling ControlScheme.cs uses.
+                string scheme = cell.Length >= 4 ? cell[3].Trim() : string.Empty;
+                if (scheme.Length > 0 && !Enum.IsDefined(typeof(ControlScheme), scheme))
+                {
+                    Debug.LogWarning($"[ScreenHintCatalog] line {i + 1}: scheme '{scheme}' is not a ControlScheme name — row dropped: {line}");
+                    continue;
+                }
+
+                rows.Add(new ScreenHint { screen = screen, order = order, key = key, scheme = scheme });
             }
 
             return rows;

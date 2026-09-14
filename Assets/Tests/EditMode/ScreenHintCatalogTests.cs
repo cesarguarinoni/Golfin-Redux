@@ -32,6 +32,13 @@ namespace GolfinRedux.Tests.EditMode
         public static readonly Type ResT   = Tips.Find("GolfinRedux.UI.ScreenHintResolver");
         public static readonly Type StoreT = Tips.Find("GolfinRedux.UI.ScreenHintStore");
 
+        /// <summary>The shot-control scheme enum (Golfin.Gameplay.UI, reachable by name like the
+        /// rest). The CSV's <c>scheme</c> cells and the resolver's last argument are its names.</summary>
+        public static readonly Type SchemeT = Tips.Find("Golfin.Gameplay.UI.Controls.ControlScheme");
+
+        public static object Scheme(string name) => Enum.Parse(SchemeT, name);
+        public static string[] SchemeNames => Enum.GetNames(SchemeT);
+
         public const string CsvPath     = "Assets/Resources/Data/ScreenHints.csv";
         public const string TipsCsvPath = "Assets/Resources/Data/LoadingTips.csv";
 
@@ -46,18 +53,20 @@ namespace GolfinRedux.Tests.EditMode
 
         // ── ScreenHint ───────────────────────────────────────────────────────
 
-        public static object Hint(string screen, int order, string key)
+        public static object Hint(string screen, int order, string key, string scheme = "")
         {
             object h = Activator.CreateInstance(HintT)!;
             HintT.GetField("screen")!.SetValue(h, screen);
             HintT.GetField("order")!.SetValue(h, order);
             HintT.GetField("key")!.SetValue(h, key);
+            HintT.GetField("scheme")!.SetValue(h, scheme);
             return h;
         }
 
-        public static string Screen(object h) => (string)HintT.GetField("screen")!.GetValue(h)!;
-        public static int    Order(object h)  => (int)HintT.GetField("order")!.GetValue(h)!;
-        public static string Key(object h)    => (string)HintT.GetField("key")!.GetValue(h)!;
+        public static string Screen(object h)     => (string)HintT.GetField("screen")!.GetValue(h)!;
+        public static int    Order(object h)      => (int)HintT.GetField("order")!.GetValue(h)!;
+        public static string Key(object h)        => (string)HintT.GetField("key")!.GetValue(h)!;
+        public static string SchemeCell(object h) => (string)(HintT.GetField("scheme")!.GetValue(h) ?? "");
 
         /// <summary>A List&lt;ScreenHint&gt; the resolver accepts as IReadOnlyList.</summary>
         public static object Rows(params object[] hints)
@@ -82,10 +91,13 @@ namespace GolfinRedux.Tests.EditMode
 
         // ── Resolver ─────────────────────────────────────────────────────────
 
-        public static string[] HintsFor(string screen, object hints, object tips, object state)
+        /// <summary>The resolver, for one scheme. The default is the shipping default only so the
+        /// rows with a blank scheme cell read naturally in tests; the production call has no
+        /// default and passes <c>ControlSchemeService.Current</c>.</summary>
+        public static string[] HintsFor(string screen, object hints, object tips, object state, string scheme = "Flick")
         {
             var m = ResT.GetMethod("HintsFor", BindingFlags.Public | BindingFlags.Static)!;
-            var result = (IList)m.Invoke(null, new[] { screen, hints, tips, state })!;
+            var result = (IList)m.Invoke(null, new[] { screen, hints, tips, state, Scheme(scheme) })!;
             return result.Cast<object>().Select(Tips.Key).ToArray();
         }
     }
@@ -96,11 +108,25 @@ namespace GolfinRedux.Tests.EditMode
         static List<object> RowList() => Hints.ShippedHints().Cast<object>().ToList();
 
         [Test]
-        public void ShippedCsv_Has36RowsOver18Screens()
+        public void ShippedCsv_Has39RowsOver18Screens()
         {
             List<object> rows = RowList();
-            Assert.That(rows.Count, Is.EqualTo(36), "§2.2 — 36 screen → hint rows");
+            Assert.That(rows.Count, Is.EqualTo(39), "§2.2's 36 rows + the three per-scheme swing tips (scheme_aware_gameplay_hints)");
             Assert.That(rows.Select(Hints.Screen).Distinct().Count(), Is.EqualTo(18), "§2.2 — 18 screens");
+        }
+
+        [Test]
+        public void EverySchemeCell_IsBlank_OrAControlSchemeName()
+        {
+            // The catalog compares the cell to ControlScheme.ToString(), so only the enum's own
+            // spelling may appear — a renamed member fails here, not on device.
+            var valid = new HashSet<string>(Hints.SchemeNames);
+            string[] bad = RowList().Select(Hints.SchemeCell).Where(c => c.Length > 0 && !valid.Contains(c)).Distinct().ToArray();
+            Assert.That(bad, Is.Empty, "scheme cells that are not a ControlScheme name: " + string.Join(", ", bad));
+
+            // Only the shot view is per scheme; every other screen shows the same hints to everyone.
+            string[] scoped = RowList().Where(r => Hints.SchemeCell(r).Length > 0).Select(Hints.Screen).Distinct().ToArray();
+            CollectionAssert.AreEqual(new[] { "Gameplay" }, scoped, "screens with scheme-scoped rows");
         }
 
         [Test]
@@ -164,7 +190,11 @@ namespace GolfinRedux.Tests.EditMode
                 ["GpsRounds"]            = new[] { "TIP_GPS_CHECKIN" },
                 ["GpsGift"]              = new[] { "TIP_GPS_SOCIAL" },
                 ["GpsVote"]              = new[] { "TIP_GPS_SOCIAL" },
-                ["Gameplay"]             = new[] { "TIP_SWING", "TIP_ACCURACY", "TIP_GRADES", "TIP_VIEW", "TIP_CLUB", "TIP_FORECAST" },
+                // scheme_aware_gameplay_hints: the swing tips are per scheme (the cone's two are
+                // Flick's), the last four are shared. One contiguous order over the whole group;
+                // each scheme sees its subsequence (ScreenHintResolverTests pins those).
+                ["Gameplay"]             = new[] { "TIP_SWING", "TIP_ACCURACY", "TIP_PENDULUM", "TIP_TAPTIMING", "TIP_FREESWING",
+                                                   "TIP_GRADES", "TIP_VIEW", "TIP_CLUB", "TIP_FORECAST" },
                 ["SettingsControls"]     = new[] { "TIP_CONTROLS" },
             };
 
@@ -174,6 +204,14 @@ namespace GolfinRedux.Tests.EditMode
             CollectionAssert.AreEquivalent(expected.Keys, actual.Keys);
             foreach (var kv in expected)
                 CollectionAssert.AreEqual(kv.Value, actual[kv.Key], "hints for " + kv.Key);
+
+            // The scheme column, row for row, for the one screen that uses it.
+            var gameplay = RowList().Where(r => Hints.Screen(r) == "Gameplay").OrderBy(Hints.Order)
+                .Select(r => Hints.Key(r) + ":" + Hints.SchemeCell(r)).ToArray();
+            CollectionAssert.AreEqual(
+                new[] { "TIP_SWING:Flick", "TIP_ACCURACY:Flick", "TIP_PENDULUM:Pendulum", "TIP_TAPTIMING:Needle",
+                        "TIP_FREESWING:FreeSwing", "TIP_GRADES:", "TIP_VIEW:", "TIP_CLUB:", "TIP_FORECAST:" },
+                gameplay, "Gameplay key:scheme");
         }
 
         [Test]
@@ -181,18 +219,23 @@ namespace GolfinRedux.Tests.EditMode
         {
             const string csv = "# a comment\n" +
                                "screen,order,key\n" +
-                               "Home,1,TIP_RP\n" +
+                               "Home,1,TIP_RP\n" +            // three columns: scheme = every scheme
                                "\n" +
-                               "Roster,x,TIP_STATS\n" +   // non-integer order → dropped
-                               "Roster,2\n" +             // 2 columns → dropped
-                               "Roster,3,TIP_LEVELUP\n";
+                               "Roster,x,TIP_STATS\n" +       // non-integer order → dropped
+                               "Roster,2\n" +                 // 2 columns → dropped
+                               "Roster,3,TIP_LEVELUP\n" +
+                               "Gameplay,1,TIP_SWING,Flik\n" + // misspelt scheme → dropped, never widened to "every scheme"
+                               "Gameplay,2,TIP_PENDULUM,Pendulum\n" +
+                               "Gameplay,3,TIP_GRADES,\n";     // trailing comma: blank scheme, the shipped shape
 
             LogAssert.Expect(LogType.Warning, new Regex(@"\[ScreenHintCatalog\] line 5.*not an integer"));
             LogAssert.Expect(LogType.Warning, new Regex(@"\[ScreenHintCatalog\] line 6.*expected 3 columns"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"\[ScreenHintCatalog\] line 8.*scheme 'Flik' is not a ControlScheme name"));
 
             var rows = Hints.Parse(csv).Cast<object>().ToList();
-            CollectionAssert.AreEqual(new[] { "TIP_RP", "TIP_LEVELUP" }, rows.Select(Hints.Key).ToArray());
+            CollectionAssert.AreEqual(new[] { "TIP_RP", "TIP_LEVELUP", "TIP_PENDULUM", "TIP_GRADES" }, rows.Select(Hints.Key).ToArray());
             Assert.That(Hints.Order(rows[1]), Is.EqualTo(3));
+            CollectionAssert.AreEqual(new[] { "", "", "Pendulum", "" }, rows.Select(Hints.SchemeCell).ToArray(), "scheme cells");
         }
 
         [Test]

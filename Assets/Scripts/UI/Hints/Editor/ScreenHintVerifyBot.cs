@@ -18,6 +18,13 @@
 // has returned phantom paths and byte-identical stale frames before.
 //
 // Usage: GOLFIN > Hints > Run verify bot (EN) / (JA). Clears the seen-state first.
+//
+// scheme_aware_gameplay_hints: GOLFIN > Hints > Run verify bot — gameplay (<scheme>) is the
+// short form — fresh install, the given control scheme, then ONLY the road to the first hole
+// (PLAY → Home → mode card → HoleSelection → hole card) and the shot-view group, so the
+// per-scheme swing tip is proven through the real entry point without the full tour. The
+// player's own scheme pref is restored when play mode exits. The full tour runs on whatever
+// scheme is selected and reads the group's Count instead of assuming Flick's six.
 using System;
 using System.Collections;
 using System.IO;
@@ -41,6 +48,8 @@ namespace Golfin.EditorTools.Hints
     {
         const string ArmedKey   = "ScreenHintVerifyBot.Armed";
         const string LangKey    = "ScreenHintVerifyBot.Lang";
+        const string ModeKey    = "ScreenHintVerifyBot.Mode";          // "tour" | "gameplay"
+        const string RestoreKey = "ScreenHintVerifyBot.RestoreScheme"; // the pref to put back, or -1
         const string ShellScene = "Assets/Scenes/ShellScene.unity";
 
         [InitializeOnLoadMethod]
@@ -51,12 +60,27 @@ namespace Golfin.EditorTools.Hints
         }
 
         [MenuItem("GOLFIN/Hints/Run verify bot (EN)", priority = 300)]
-        public static void LaunchEn() => Launch("en");
+        public static void LaunchEn() => Launch("en", "tour", null);
 
         [MenuItem("GOLFIN/Hints/Run verify bot (JA)", priority = 301)]
-        public static void LaunchJa() => Launch("ja");
+        public static void LaunchJa() => Launch("ja", "tour", null);
 
-        static void Launch(string lang)
+        [MenuItem("GOLFIN/Hints/Run verify bot — gameplay (Flick)", priority = 320)]
+        public static void LaunchGameplayFlick() => Launch("en", "gameplay", ControlScheme.Flick);
+
+        [MenuItem("GOLFIN/Hints/Run verify bot — gameplay (Pendulum)", priority = 321)]
+        public static void LaunchGameplayPendulum() => Launch("en", "gameplay", ControlScheme.Pendulum);
+
+        [MenuItem("GOLFIN/Hints/Run verify bot — gameplay (Tap Timing)", priority = 322)]
+        public static void LaunchGameplayNeedle() => Launch("en", "gameplay", ControlScheme.Needle);
+
+        [MenuItem("GOLFIN/Hints/Run verify bot — gameplay (Free Swing)", priority = 323)]
+        public static void LaunchGameplayFreeSwing() => Launch("en", "gameplay", ControlScheme.FreeSwing);
+
+        /// <param name="scheme">Null = leave the player's scheme alone. Otherwise the pref is set
+        /// before play mode (the production key, so ControlSchemeService reads it exactly as a
+        /// device would) and put back when play mode exits.</param>
+        static void Launch(string lang, string mode, ControlScheme? scheme)
         {
             if (EditorApplication.isPlaying) { Debug.LogWarning("[HintVerify] Already playing — stop first."); return; }
             if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path != ShellScene)
@@ -65,15 +89,27 @@ namespace Golfin.EditorTools.Hints
             // A FRESH INSTALL: every screen hints again.
             ScreenHintStore.Clear();
 
+            int restore = -1;
+            if (scheme.HasValue)
+            {
+                restore = PlayerPrefs.HasKey(ControlSchemeService.PrefKey) ? PlayerPrefs.GetInt(ControlSchemeService.PrefKey) : -2;
+                PlayerPrefs.SetInt(ControlSchemeService.PrefKey, (int)scheme.Value);
+                PlayerPrefs.Save();
+                ControlSchemeService.ResetCacheForTests();   // statics survive when domain reload is off
+            }
+
             Application.runInBackground = true;
             SessionState.SetBool(ArmedKey, true);
             SessionState.SetString(LangKey, lang);
+            SessionState.SetString(ModeKey, mode);
+            SessionState.SetInt(RestoreKey, restore);
             EditorApplication.EnterPlaymode();
-            Debug.Log("[HintVerify] Armed (" + lang + "), seen-state cleared. Entering play mode…");
+            Debug.Log("[HintVerify] Armed (" + lang + ", " + mode + (scheme.HasValue ? ", scheme=" + scheme.Value : "") + "), seen-state cleared. Entering play mode…");
         }
 
         static void OnPlayModeChanged(PlayModeStateChange state)
         {
+            if (state == PlayModeStateChange.EnteredEditMode) { RestoreScheme(); return; }
             if (!SessionState.GetBool(ArmedKey, false)) return;
             if (state != PlayModeStateChange.EnteredPlayMode) return;
             SessionState.SetBool(ArmedKey, false);
@@ -81,7 +117,21 @@ namespace Golfin.EditorTools.Hints
             TryEnsureIPhone14Selected();
             var host = new GameObject("[ScreenHintVerifyBot]");
             UnityEngine.Object.DontDestroyOnLoad(host);
-            host.AddComponent<ScreenHintVerifyRunner>().Begin(SessionState.GetString(LangKey, "en"));
+            host.AddComponent<ScreenHintVerifyRunner>().Begin(SessionState.GetString(LangKey, "en"), SessionState.GetString(ModeKey, "tour"));
+        }
+
+        /// <summary>Put the player's scheme pref back the way Launch found it — also when the run
+        /// died mid-way, which is why this hangs off the play-mode exit and not the runner's tail.</summary>
+        static void RestoreScheme()
+        {
+            int restore = SessionState.GetInt(RestoreKey, -1);
+            if (restore == -1) return;
+            SessionState.SetInt(RestoreKey, -1);
+            if (restore == -2) PlayerPrefs.DeleteKey(ControlSchemeService.PrefKey);
+            else PlayerPrefs.SetInt(ControlSchemeService.PrefKey, restore);
+            PlayerPrefs.Save();
+            ControlSchemeService.ResetCacheForTests();
+            Debug.Log("[HintVerify] control-scheme pref restored (" + (restore == -2 ? "absent" : ((ControlScheme)restore).ToString()) + ").");
         }
 
         static bool TryEnsureIPhone14Selected()
@@ -103,17 +153,25 @@ namespace Golfin.EditorTools.Hints
 
         readonly StringBuilder _log = new StringBuilder();
         string _lang = "en";
+        string _mode = "tour";
         string _logPath;
         string _lastMd5;
         float _t0;
 
-        public void Begin(string lang)
+        /// <summary>Where the per-scheme runs land (the Quick task's media folder); the full tour
+        /// keeps writing into the screen_hints task folder it was built for.</summary>
+        const string GameplayOutDir = "Docs/Specs/Quick/media/scheme_aware_gameplay_hints";
+
+        string Out => _mode == "gameplay" ? GameplayOutDir : OutDir;
+
+        public void Begin(string lang, string mode)
         {
             _lang = lang;
-            _logPath = Path.Combine(OutDir, "verify_" + lang + ".log");
-            Directory.CreateDirectory(OutDir);
+            _mode = mode;
+            _logPath = Path.Combine(Out, mode == "gameplay" ? "verify_gameplay_" + ControlSchemeService.Current + ".log" : "verify_" + lang + ".log");
+            Directory.CreateDirectory(Out);
             _t0 = Time.realtimeSinceStartup;
-            StartCoroutine(Sequence());
+            StartCoroutine(mode == "gameplay" ? GameplaySequence() : Sequence());
         }
 
         // ── logging / capture ─────────────────────────────────────────────────
@@ -141,7 +199,7 @@ namespace Golfin.EditorTools.Hints
             yield return new WaitForEndOfFrame();
             string src = CaptureHelper.SnapPlayModeSafe("screen_hints_" + label);
             if (string.IsNullOrEmpty(src) || !File.Exists(src)) { Log("SNAP " + label + ": NO FILE (" + src + ")"); yield break; }
-            string dst = Path.Combine(OutDir, label + ".png");
+            string dst = Path.Combine(Out, label + ".png");
             File.Copy(src, dst, true);
             if (File.Exists(src + ".json")) File.Copy(src + ".json", dst + ".json", true);
             string md5 = Md5(dst);
@@ -560,8 +618,10 @@ namespace Golfin.EditorTools.Hints
             Log("GAMEPLAY: hint visible after " + t.ToString("F1") + "s; loading screen active=" + loadingActive + " (expect false) scenes=" +
                 string.Join(",", Enumerable.Range(0, UnityEngine.SceneManagement.SceneManager.sceneCount).Select(i => UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).name)));
             yield return Settle(5f);
+            int total = Modal != null ? Modal.Count : 0;
+            Log("GAMEPLAY: scheme=" + ControlSchemeService.Current + " hints=" + total + " (Flick 6, every other scheme 5 — scheme_aware_gameplay_hints)");
             Describe("GAMEPLAY hint 1");
-            yield return Snap("gameplay_hint_1of6");
+            yield return Snap("gameplay_hint_1of" + total);
 
             // Input under the scrim: what does a raycast at the cone hit?
             var es = EventSystem.current;
@@ -574,12 +634,12 @@ namespace Golfin.EditorTools.Hints
                     + " sortingOrder=" + (hits.Count > 0 ? hits[0].sortingOrder.ToString() : "-") + " openModals=" + ModalController.OpenModalCount);
             }
 
-            for (int i = 2; i <= 6; i++)
+            for (int i = 2; i <= total; i++)
             {
                 yield return TapNext("gameplay " + (i - 1) + "->" + i);
                 yield return Settle(0.7f);
                 Describe("GAMEPLAY hint " + i);
-                if (i == 6) yield return Snap("gameplay_hint_6of6");
+                if (i == total) yield return Snap("gameplay_hint_" + total + "of" + total);
             }
             yield return TapNext("gameplay CLOSE");
             Log("tee-idle timer right after CLOSE: " + TeeIdleTimer());
@@ -592,6 +652,77 @@ namespace Golfin.EditorTools.Hints
             ScreenHintPresenter.NotifyScreenEntered(ScreenHintCatalog.GameplayScreen);
             yield return Settle(1.5f);
             Log("GAMEPLAY re-entry via NotifyScreenEntered: hint visible=" + (Modal != null && Modal.IsVisible()) + " (expect false)");
+
+            Log("DONE");
+            yield return Settle(0.5f);
+            EditorApplication.ExitPlaymode();
+        }
+
+        /// <summary>scheme_aware_gameplay_hints — the road to the first hole and nothing else.
+        /// Same real widgets as the tour (StartButton, the mode card's PlayButton, the hole card's
+        /// ActionButton, the modal's own NextButton); the detours the tour takes for the other
+        /// screens are skipped, their hints are CLOSEd on the way exactly as a player would.</summary>
+        IEnumerator GameplaySequence()
+        {
+            Application.runInBackground = true;
+            var schemeAtBoot = ControlSchemeService.Current;
+            Log("run mode=gameplay scheme=" + schemeAtBoot + " pref=" + PlayerPrefs.GetInt(ControlSchemeService.PrefKey, -1) + " state at boot=" + State());
+
+            float t = 0f;
+            while (t < 25f)
+            {
+                var splash = FindFirstObjectByType<SplashScreenController>();
+                Transform btn = splash == null ? null : splash.transform.Find("StartButton");
+                if (btn != null && btn.gameObject.activeInHierarchy) { btn.GetComponent<Button>()?.onClick.Invoke(); Log("tapped StartButton"); break; }
+                if (ScreenManager.Instance != null && ScreenManager.Instance.CurrentScreen == ScreenId.Home) break;
+                t += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            // Home's two hints: a player closes them before the mode card is tappable.
+            yield return WaitVisible(20f, "Home");
+            yield return Settle(1.5f);
+            yield return CloseGroup("home");
+            yield return Settle(0.5f);
+
+            yield return TapWhenLive("PlayButton");
+            yield return WaitVisible(10f, "HoleSelection");
+            yield return Settle(1.5f);
+            yield return CloseGroup("holeselection");
+            yield return Settle(0.5f);
+            yield return TapWhenLive("ActionButton");
+
+            t = 0f;
+            while (t < 90f)
+            {
+                var m = Modal;
+                if (m != null && m.IsVisible()) break;
+                t += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            var lsc = Resources.FindObjectsOfTypeAll<LoadingScreenController>()
+                .FirstOrDefault(c => c != null && !string.IsNullOrEmpty(c.gameObject.scene.name));
+            bool loadingActive = lsc != null && lsc.gameObject.activeInHierarchy;
+            int total = Modal != null ? Modal.Count : 0;
+            Log("GAMEPLAY: scheme=" + ControlSchemeService.Current + " (unchanged since boot=" + (ControlSchemeService.Current == schemeAtBoot) + ")"
+                + " hint visible after " + t.ToString("F1") + "s; loading screen active=" + loadingActive + " (expect false); hints=" + total
+                + " (expect " + (ControlSchemeService.Current == ControlScheme.Flick ? 6 : 5) + ")");
+            yield return Settle(4f);
+            string tag = ControlSchemeService.Current.ToString().ToLowerInvariant();
+            Describe("GAMEPLAY[" + tag + "] hint 1");
+            yield return Snap("gameplay_" + tag + "_hint_1of" + total);
+            for (int i = 2; i <= total; i++)
+            {
+                yield return TapNext("gameplay[" + tag + "] " + (i - 1) + "->" + i);
+                yield return Settle(0.7f);
+                Describe("GAMEPLAY[" + tag + "] hint " + i);
+                if (i == 2 || i == total) yield return Snap("gameplay_" + tag + "_hint_" + i + "of" + total);
+            }
+            yield return TapNext("gameplay[" + tag + "] CLOSE");
+            yield return WaitHidden(2f);
+            yield return Settle(1f);
+            Log("after CLOSE: state=" + State());
+            yield return Snap("gameplay_" + tag + "_after_close");
 
             Log("DONE");
             yield return Settle(0.5f);
