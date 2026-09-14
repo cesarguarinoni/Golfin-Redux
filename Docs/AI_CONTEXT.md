@@ -4,7 +4,9 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## 2026-09-14 — gps_rounds_map_fills_panel: **the Rounds map fills its card** — rounded with the ring, no gutter — awaiting Cesar's approval
+## 2026-09-14 — gps_rounds_map_fills_panel: **the Rounds map fills its card** — rounded with the ring, no gutter
+
+**DONE** — Cesar approved ("Approved"); quick spec moved to `Docs/Specs/Quick/Completed/`.
 
 Cesar, from the device: *"the google map does not adapt to the container (sharp corners and does
 not touch the borders)."* The builder had taken the node's 918×420 Map Surface at (20,20)
@@ -17,7 +19,7 @@ its stroke (`S_GR_MapPanelRing`) draws ABOVE the map so the clip's staircase nev
 tile is requested at exactly `MapW×MapH` (controller; builder + baker read it). Three measured
 takes at 8–16× on the corners (jagged hairline → Lanczos-ringing specks → clean); Lesson CF.
 Verified through real navigation with a live tile; frames in the chat. Record:
-`Docs/Specs/Quick/gps_rounds_map_fills_panel.md`. Commit `e1a49f5a4`, not pushed.
+`Docs/Specs/Quick/Completed/gps_rounds_map_fills_panel.md`. Commits `e1a49f5a4` + `334bd487c`.
 
 ---
 ## 2026-09-14 — result_screen_nav_bars: **the hole-complete result carries both nav bars and a real way out** — awaiting Cesar's approval
