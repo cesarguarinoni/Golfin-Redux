@@ -1,0 +1,37 @@
+{
+  "target": "rankings",
+  "label": "baseline",
+  "scrollRect": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+  "entry": "Canvas/ScreensRoot/HomeScreen/LeaderboardButton.onClick",
+  "screen": [1170, 2532],
+  "status": "FAIL",
+  "note": "",
+  "cases": [
+    {
+      "name": "gap",
+      "press": [548, 1430.5],
+      "topHit": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea",
+      "dragHandler": "<none>",
+      "handlerIsTarget": false,
+      "contentYBefore": 0,
+      "contentYAfter": 0,
+      "moved": false,
+      "tPress": 11.152,
+      "tRelease": 11.547,
+      "pass": false
+    },
+    {
+      "name": "row_label",
+      "press": [516.142, 1505],
+      "topHit": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/RankingsCards(Clone)/RankingsCard/Name+Level/NameLabel",
+      "dragHandler": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "handlerIsTarget": true,
+      "contentYBefore": 0,
+      "contentYAfter": 1309.566,
+      "moved": true,
+      "tPress": 13.572,
+      "tRelease": 13.971,
+      "pass": true
+    }
+  ]
+}

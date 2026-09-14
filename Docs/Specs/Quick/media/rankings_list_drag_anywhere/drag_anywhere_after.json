@@ -1,0 +1,37 @@
+{
+  "target": "rankings",
+  "label": "after",
+  "scrollRect": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+  "entry": "Canvas/ScreensRoot/HomeScreen/LeaderboardButton.onClick",
+  "screen": [1170, 2532],
+  "status": "PASS",
+  "note": "",
+  "cases": [
+    {
+      "name": "gap",
+      "press": [548, 1430.5],
+      "topHit": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport",
+      "dragHandler": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "handlerIsTarget": true,
+      "contentYBefore": 0,
+      "contentYAfter": 965.262,
+      "moved": true,
+      "tPress": 11.257,
+      "tRelease": 12.049,
+      "pass": true
+    },
+    {
+      "name": "row_label",
+      "press": [516.142, 1505],
+      "topHit": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/RankingsCards(Clone)/RankingsCard/Name+Level/NameLabel",
+      "dragHandler": "Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea",
+      "handlerIsTarget": true,
+      "contentYBefore": 0,
+      "contentYAfter": 967.562,
+      "moved": true,
+      "tPress": 14.089,
+      "tRelease": 14.888,
+      "pass": true
+    }
+  ]
+}

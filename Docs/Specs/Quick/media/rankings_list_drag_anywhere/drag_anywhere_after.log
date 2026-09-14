@@ -1,0 +1,15 @@
+=== drag-anywhere [rankings] label=after record=True 2026-09-14 00:43:31Z ===
+tapping the real StartButton
+tapping the real LeaderboardButton.onClick
+  rows=30 content.h=4004 viewport.h=1050 screen=1170x2532
+  gap: row0.bottom=1442.5 row1.top=1418.5 -> press (548.00, 1430.50)
+--- gap press=(548.00, 1430.50) @ 11.26s
+    top hit      : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport
+    drag handler : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+    content.y    : 0 -> 965.3  moved=True  pass=True
+--- row_label press=(516.14, 1505.00) @ 14.09s
+    top hit      : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/RankingsCards(Clone)/RankingsCard/Name+Level/NameLabel
+    drag handler : Canvas/ScreensRoot/RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea  (target=True)
+    content.y    : 0 -> 967.6  moved=True  pass=True
+=== PASS  ===
+verdict -> Docs/Specs/Quick/media/rankings_list_drag_anywhere/drag_anywhere_after.json

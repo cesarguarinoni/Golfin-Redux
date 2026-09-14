@@ -4,6 +4,26 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 — rankings_list_drag_anywhere: **the Rankings list scrolls from a press anywhere in it** — 2-line prefab fix, play-mode proven
+
+Cesar: *"to scroll the list of players right now the user has to click exactly on a player and then
+drag instead of dragging from anywhere in the list."* Root cause: the `ScrollArea/Viewport` `Image`
+was DISABLED (and the row bodies' images too), so the only raycast targets inside the `ScrollRect`'s
+subtree were the row texts / portrait / RP pill — a press in the 24 px gap, on a row's body or under
+the last row hit `RankingsArea` behind the list and `GetEventHandler<IDragHandler>` resolved nothing.
+Fix: `RankingsScreen.prefab` Viewport `Image` enabled, colour alpha 0 (`cullTransparentMesh` draws
+nothing, `Graphic.Raycast` ignores colour) — 2 lines via `SerializedObject`, no scene change.
+Proof: new `ScrollDragAnywhereVerify` (Polish/Editor) boots through the real gate → `LeaderboardButton`
+→ closes the first-visit hints through their real button → `EventSystem.RaycastAll` at the gap →
+handler from the top hit → dispatch. Baseline `FAIL` (gap: handler none, content 0→0; name-label
+control 0→1309) → after `PASS` (gap: top hit `Viewport`, 0→965 px). Clip + stills + verdict JSON in
+`Docs/Specs/Quick/media/rankings_list_drag_anywhere/`; record `Docs/Specs/Quick/rankings_list_drag_anywhere.md`;
+PATTERNS §13. Shape audit (`Docs/Scripts/scrollrect_raycast_audit.py`): 13 more lists share the
+shape — 4 literal clones of the rankings block (GeneralShop, StaminaShop, TournamentSelection,
+TournamentLeaderboard) + 8 with no raycast graphic at all — NOT swept (decision for Cesar; the Shop
+prefab is in another session's tree). Recorder note: measured lead 0.82 s vs the caption tool's 0.40.
+
+---
 ## 2026-09-14 — scheme_aware_gameplay_hints: **the shot-view hints follow the SELECTED control scheme** — code + EditMode green, play-mode proof pending the shared Editor
 
 Cesar: *"Hints for control scheme (not loading tips) should show depending on what control scheme is

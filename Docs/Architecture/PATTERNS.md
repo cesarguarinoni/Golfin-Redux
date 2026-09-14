@@ -321,6 +321,31 @@ and is only right when the device happens to be the reference resolution. Measur
 (`BannerSlotBinder.SetShiftedDown` re-measures on every hide) and verify layout at a second
 resolution (1290×2796) before calling it done.
 
+## 13. A Scroll List's Viewport Is a Raycast Target (drag from anywhere)
+
+Files: `Assets/Prefabs/UI/Rankings/RankingsScreen.prefab` (`…/ScrollArea/Viewport`),
+`Assets/Scripts/UI/Polish/Editor/ScrollDragAnywhereVerify.cs`, `Docs/Scripts/scrollrect_raycast_audit.py`
+
+A `ScrollRect` never sees a press directly. The EventSystem raycasts, then
+`ExecuteEvents.GetEventHandler<IDragHandler>` walks **up from whatever graphic the press hit**. A
+press on empty list space — the gap between rows, a row's dark body, the space under the last row —
+must therefore land on a raycast-target graphic *inside the ScrollRect's subtree*, or it lands on the
+panel behind the list and nothing scrolls. `RankingsScreen` shipped with the Viewport's `Image`
+disabled and the row bodies' images disabled, so only a player's text / portrait / RP pill could start
+a drag (`rankings_list_drag_anywhere`).
+
+- **The Viewport carries an enabled `Image`, `raycastTarget = 1`, colour alpha 0.** With
+  `CanvasRenderer.cullTransparentMesh` (the default) that draws nothing and still raycasts —
+  `Graphic.Raycast` ignores colour. A `Mask` host keeps its opaque white image instead (the mask
+  hides it); a `RectMask2D` host needs the transparent one.
+- **Children keep priority.** Rows, buttons and the scrollbar draw after the Viewport, so nothing
+  that was tappable loses its tap.
+- **Verify through the raycast, not the handler.** A harness that calls `sr.OnBeginDrag` directly
+  (`GamePolishDemoRecorderC`'s over-scroll clip) skips the failing link and PASSes a dead list;
+  `ScrollDragAnywhereVerify` resolves the handler from `EventSystem.RaycastAll` first. The static
+  sweep (`scrollrect_raycast_audit.py`) lists 13 more lists with the shape — four of them clones of
+  the rankings block — pending a decision to sweep.
+
 ## Quick Reference: File Locations
 
 | Pattern | Character (Roster) | Club (Inventory) | Bag (Inventory) |

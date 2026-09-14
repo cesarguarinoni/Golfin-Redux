@@ -1,0 +1,52 @@
+NO-RAYCAST  Assets/Prefabs/UI/Account/CreateUsernameScreen.prefab        CreateUsernameScreen/CardBorder/CardBody/ScrollView
+            self=[] viewport=[]
+NO-RAYCAST  Assets/Prefabs/UI/Account/LoginScreen.prefab                 LoginScreen/CardBorder/CardBody/ScrollView
+            self=[] viewport=[]
+NO-RAYCAST  Assets/Prefabs/UI/Account/SignUpScreen.prefab                SignUpScreen/CardBorder/CardBody/ScrollView
+            self=[] viewport=[]
+OK          Assets/Prefabs/UI/Gacha/GachaHistoryScreen.prefab            GachaHistoryScreen/GameScreenContent/ContentContainer/MainPanel/CardsContainer
+            self=[] viewport=[('Image', '1', '1')]
+NO-RAYCAST  Assets/Prefabs/UI/Gps/GpsVoteScreen.prefab                   GpsVoteScreen/ContentContainer/VoteList
+            self=[] viewport=[]
+NO-RAYCAST  Assets/Prefabs/UI/Gps/VenuePickerModal.prefab                VenuePickerModal/ModalPanel/List
+            self=[] viewport=[]
+NO-RAYCAST  Assets/Prefabs/UI/Modals/GachaRatesModal.prefab              GachaRatesModal/Panel/Content/BodyScroll
+            self=[] viewport=[]
+NO-RAYCAST  Assets/Prefabs/UI/Modals/LoanModal.prefab                    LoanModal/ModalPanel/RecipientScroll
+            self=[] viewport=[]
+OK          Assets/Prefabs/UI/Rankings/RankingsScreen.prefab             RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea
+            self=[] viewport=[('Image', '1', '1')]
+NO-RAYCAST  Assets/Prefabs/UI/Shop/GeneralShopScreen.prefab              GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea
+            self=[] viewport=[('Image', '0', '1')]
+NO-RAYCAST  Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab     StaminaShopSelectionScreen/SafeArea/CardsPanel/Modal/Bottom97/ScrollArea
+            self=[] viewport=[('Image', '0', '1')]
+OK          Assets/Prefabs/UI/Shop/StoreHistoryScreen.prefab             StoreHistoryScreen/GameScreenContent/ContentContainer/MainPanel/CardsContainer
+            self=[] viewport=[('Image', '1', '1')]
+NO-RAYCAST  Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab TournamentSelectionScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea
+            self=[] viewport=[('Image', '0', '1')]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/InventoryScreen/ContentArea/ClubsContent/ClubsMainSection/ClubCarouselSection/ScrollView
+            self=[('Image', '1', '1')] viewport=[('Image', '0', '1')]
+NO-RAYCAST  Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemUseModal/ModalPanel/ModalContainer/ScrollArea
+            self=[] viewport=[]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/ModeSelectionScreen/CardsContainer/CardsScrollView
+            self=[('Image', '1', '1')] viewport=[('Image', '1', '1')]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/MissionSelectionScreen/Content/CardsContainer/CardsScrollView
+            self=[('Image', '1', '1')] viewport=[('Image', '1', '1')]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/InventoryScreen/ContentArea/BallsContent/BallMainSection/BallCarouselSection/ScrollView
+            self=[('Image', '1', '1')] viewport=[('Image', '0', '1')]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/InventoryScreen/ContentArea/ItemsContent/ItemMainSection/ItemCarousel/ScrollView
+            self=[('Image', '1', '1')] viewport=[('Image', '0', '1')]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/RosterScreen/CarouselSection/ScrollView
+            self=[] viewport=[('Image', '1', '1')]
+NO-RAYCAST  Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/TournamentLeaderboardScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea
+            self=[] viewport=[('Image', '0', '1')]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsContent/BagsMainSection/BagsCarousel/ScrollView
+            self=[('Image', '1', '1')] viewport=[('Image', '0', '1')]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/TournamentHoleSelectionScreen/Content/CardsContainer/CardsScrollView
+            self=[('Image', '1', '1')] viewport=[('Image', '1', '1')]
+NO-RAYCAST  Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/ResetPasswordScreen/CardBorder/CardBody/ScrollView
+            self=[] viewport=[]
+NO-RAYCAST  Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/InventoryScreen/ContentArea/BagsClubModal/ModalPanel/ModalContainer/ScrollArea
+            self=[] viewport=[]
+OK          Assets/Scenes/ShellScene.unity                               Canvas/ScreensRoot/HoleSelectionScreen/Content/CardsContainer/CardsScrollView
+            self=[('Image', '1', '1')] viewport=[('Image', '1', '1')]
