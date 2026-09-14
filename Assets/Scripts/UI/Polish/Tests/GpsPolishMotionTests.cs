@@ -218,9 +218,10 @@ namespace Golfin.UI.Polish.Tests
         {
             // The GPS labels are rarely a bare number. A count-up that dropped "pts" would be a
             // worse bug than not counting at all.
-            Assert.AreEqual("1,240", (string)Invoke("Render", 1240, "N0", null));
-            Assert.AreEqual("1,240 pts", (string)Invoke("Render", 1240, "N0", "{0} pts"));
-            Assert.AreEqual("7 / 24 earned", (string)Invoke("Render", 7, "N0", "{0} / 24 earned"));
+            // Plain digits everywhere (2026-09-14): the pin used to be "1,240" under "N0".
+            Assert.AreEqual("1240", (string)Invoke("Render", 1240, "D", null));
+            Assert.AreEqual("1240 pts", (string)Invoke("Render", 1240, "D", "{0} pts"));
+            Assert.AreEqual("7 / 24 earned", (string)Invoke("Render", 7, "D", "{0} / 24 earned"));
         }
     }
 

@@ -366,9 +366,9 @@ namespace Golfin.Gps.UI
             // the server has not accepted yet and the two must not disagree on one screen.
             if (_statPoints != null)
                 _statPoints.text = PointsService.Instance.HasBalance
-                    ? PointsService.Instance.DisplayBalance.ToString("N0", CultureInfo.InvariantCulture)
+                    ? PointsService.Instance.DisplayBalance.ToString(CultureInfo.InvariantCulture)
                     : (d.TotalPoints.HasValue
-                        ? d.TotalPoints.Value.ToString("N0", CultureInfo.InvariantCulture)
+                        ? d.TotalPoints.Value.ToString(CultureInfo.InvariantCulture)
                         : Unknown);
 
             if (_statBest != null)
@@ -394,7 +394,7 @@ namespace Golfin.Gps.UI
                 ? handicap.Value.ToString("0.0", CultureInfo.InvariantCulture)
                 : Unknown;
             string f = followers.HasValue
-                ? followers.Value.ToString("N0", CultureInfo.InvariantCulture)
+                ? followers.Value.ToString(CultureInfo.InvariantCulture)
                 : Unknown;
             return string.Format(LocalizationManager.Get("GPS_HUB_SUB_FORMAT"), hc, f);
         }
@@ -430,7 +430,7 @@ namespace Golfin.Gps.UI
 
             if (!TryReadNumber(_statPoints.text, out int from) || display <= from)
             {
-                _statPoints.text = display.ToString("N0", CultureInfo.InvariantCulture);
+                _statPoints.text = display.ToString(CultureInfo.InvariantCulture);
                 return;
             }
 

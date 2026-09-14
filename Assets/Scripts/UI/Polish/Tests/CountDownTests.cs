@@ -136,7 +136,7 @@ namespace Golfin.UI.Polish.Tests
             Arm(pum);
             Set(pum, 1000);
             Assert.AreEqual(-1f, ArmedUntil(pum));
-            Assert.AreEqual("1.000", label.text);
+            Assert.AreEqual("1000", label.text);   // plain digits since 2026-09-14 (was "1.000")
             UnityEngine.Object.DestroyImmediate(go);
         }
 

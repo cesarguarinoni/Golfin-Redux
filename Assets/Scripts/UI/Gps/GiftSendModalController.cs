@@ -312,7 +312,7 @@ namespace Golfin.Gps.UI
                       $"(replayed={result.Data?.Replayed}, key={_key}).");
 
             Toast(string.Format(LocalizationManager.Get("GPS_GIFT_SENT"),
-                                _amount.ToString("N0", CultureInfo.InvariantCulture),
+                                _amount.ToString(CultureInfo.InvariantCulture),
                                 _receiverName ?? string.Empty));
             Committed();
         }

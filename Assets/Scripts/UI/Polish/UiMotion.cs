@@ -547,9 +547,12 @@ namespace Golfin.UI.Polish
 
         /// <summary>
         /// Integer count-up. <paramref name="format"/> is applied to the running value with
-        /// <see cref="System.Globalization.CultureInfo.InvariantCulture"/> — the GPS screens
-        /// render "N0" and a locale that swaps the thousands separator mid-tween would be a
-        /// flicker.
+        /// <see cref="System.Globalization.CultureInfo.InvariantCulture"/>.
+        ///
+        /// <para>THE DEFAULT IS PLAIN DIGITS ("D"), NOT "N0" (Cesar, 2026-09-14: no thousands
+        /// separator on any number in the game — "1500", never "1,500" or "1.500"). It was "N0",
+        /// and one site formatted with the CURRENT culture, so the same price read "1,500" in the
+        /// Editor and "1.500" on a Japanese phone. Plain digits are the same in every culture.</para>
         /// </summary>
         /// <param name="wrap">Optional composite format the counted number is dropped INTO —
         /// "{0} pts", "{0} / 24 earned", "Your balance: {0}". The GPS labels are rarely a bare
@@ -557,11 +560,11 @@ namespace Golfin.UI.Polish
         /// count are all localized runs with the figure inside them, and counting up a label
         /// while dropping its surrounding words would be a worse bug than not counting at all.
         /// Null means the label IS the number.</param>
-        /// <param name="culture">Overrides the InvariantCulture default when the caller renders
-        /// its number with a different separator — the top bar counts RP with "." thousands, and
-        /// a tween that drew "1,240" before settling on "1.240" would flicker the separator.</param>
+        /// <param name="culture">Overrides the InvariantCulture default. With plain digits there
+        /// is nothing culture-specific left to render; kept for the <paramref name="wrap"/>
+        /// composite, which may carry culture-formatted text around the figure.</param>
         public static IEnumerator CountUp(TMP_Text label, int from, int to,
-                                          float dur = CountDur, string format = "N0",
+                                          float dur = CountDur, string format = "D",
                                           string? wrap = null,
                                           System.IFormatProvider? culture = null)
         {
@@ -593,7 +596,7 @@ namespace Golfin.UI.Polish
         }
 
         /// <summary>One value, formatted and (optionally) dropped into its surrounding run.</summary>
-        public static string Render(int value, string format = "N0", string? wrap = null,
+        public static string Render(int value, string format = "D", string? wrap = null,
                                     System.IFormatProvider? culture = null)
         {
             var provider = culture ?? System.Globalization.CultureInfo.InvariantCulture;

@@ -166,12 +166,12 @@ namespace GolfinRedux.UI.Tournaments
                 }
                 if (_paidEntryBadge != null) _paidEntryBadge.SetActive(!isFreeEntry);
                 if (_paidEntryAmount != null && !isFreeEntry)
-                    _paidEntryAmount.text = entryRpCost.ToString("N0");
+                    _paidEntryAmount.text = entryRpCost.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
 
             // Reward
             if (_rewardAmountLabel != null)
-                _rewardAmountLabel.text = rewardRp.ToString("N0");
+                _rewardAmountLabel.text = rewardRp.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
             // CTA
             bool silver = UseSilverCta(state);

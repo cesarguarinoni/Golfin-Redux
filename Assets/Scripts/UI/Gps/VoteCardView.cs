@@ -166,7 +166,7 @@ namespace Golfin.Gps.UI
             if (_meta == null) return;
             int? days = vote.DaysLeft(utcNow);
             _meta.text = string.Format(LocalizationManager.Get("GPS_VOTE_META"),
-                                       vote.TotalVotes.ToString("N0", CultureInfo.InvariantCulture),
+                                       vote.TotalVotes.ToString(CultureInfo.InvariantCulture),
                                        Mathf.Max(0, days ?? 0).ToString(CultureInfo.InvariantCulture));
         }
 

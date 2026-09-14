@@ -277,9 +277,10 @@ namespace Golfin.UI.Polish.Tests
         {
             var go = new GameObject("count");
             var label = go.AddComponent<TextMeshProUGUI>();
-            var e = (IEnumerator)Call("CountUp", label, 0, 1240, 0.05f, "N0");
+            // Plain digits, no thousands separator (2026-09-14) — the pin used to be "1,240".
+            var e = (IEnumerator)Call("CountUp", label, 0, 1240, 0.05f, "D");
             Drain(e);
-            Assert.AreEqual("1,240", label.text);
+            Assert.AreEqual("1240", label.text);
         }
 
         [Test]

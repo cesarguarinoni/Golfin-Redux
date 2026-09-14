@@ -107,7 +107,7 @@ namespace GolfinRedux.UI.Shop
         {
             if (_rpCounterLabel == null) return;
             var rpm = Golfin.Roster.RewardPointsManager.Instance;
-            _rpCounterLabel.text = rpm != null ? rpm.GetPoints().ToString("N0") : "0";
+            _rpCounterLabel.text = rpm != null ? rpm.GetPoints().ToString(System.Globalization.CultureInfo.InvariantCulture) : "0";
         }
 
         private void OnRpChanged(int _) => RefreshRpCounter();

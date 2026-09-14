@@ -264,7 +264,7 @@ namespace Golfin.Gps.UI
             // em dash the rest of the GPS surface uses for "not known".
             SetText(row, "Followers", Unknown);
             SetText(row, "Pts", string.Format(LocalizationManager.Get("GPS_GIFT_PTS"),
-                                              s.Points.ToString("N0", CultureInfo.InvariantCulture)));
+                                              s.Points.ToString(CultureInfo.InvariantCulture)));
             SetInitial(row, s.DisplayName);
         }
 
@@ -319,7 +319,7 @@ namespace Golfin.Gps.UI
             SetText(row, "Name", u.DisplayName);
             SetText(row, "Followers",
                     string.Format(LocalizationManager.Get("GPS_GIFT_FOLLOWERS"),
-                                  (u.FollowersCount ?? 0).ToString("N0", CultureInfo.InvariantCulture)));
+                                  (u.FollowersCount ?? 0).ToString(CultureInfo.InvariantCulture)));
             SetInitial(row, u.DisplayName);
         }
 
@@ -370,7 +370,7 @@ namespace Golfin.Gps.UI
                 SetText(_itemCells[i], "ItemName", GiftItemName.Of(item).ToUpperInvariant());
                 SetText(_itemCells[i], "ItemPrice",
                         string.Format(LocalizationManager.Get("GPS_GIFT_PTS"),
-                                      (item.PriceActivityPts ?? 0).ToString("N0", CultureInfo.InvariantCulture)));
+                                      (item.PriceActivityPts ?? 0).ToString(CultureInfo.InvariantCulture)));
                 SetIcon(_itemCells[i], item.Category);
             }
 

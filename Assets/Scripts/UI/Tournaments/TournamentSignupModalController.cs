@@ -513,7 +513,7 @@ namespace GolfinRedux.UI.Tournaments
             if (_entryAmountText != null)
             {
                 _entryAmountText.gameObject.SetActive(!free);
-                if (!free) _entryAmountText.text = feeRP.ToString("N0");
+                if (!free) _entryAmountText.text = feeRP.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
 
             if (_entryLabelText == null) return;

@@ -114,7 +114,7 @@ namespace Golfin.UI.Rankings
         // R2-Fix B: coin + number only — no "RP" suffix. Use thousands separators.
         private static string FormatScore(long score)
         {
-            return score.ToString("N0");
+            return score.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 }

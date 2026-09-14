@@ -514,24 +514,17 @@ namespace Golfin.UI
         }
 
         /// <summary>
-        /// Top-bar counter format: invariant "N0" grouping with a "." thousands separator, so
-        /// 9000 reads "9.000". Both counters share it — the RP pill used the invariant comma
-        /// while the ticket pill printed a bare int, which is two different numbers on one bar.
+        /// Top-bar counter format: PLAIN DIGITS, invariant — 9000 reads "9000". It was "N0" with
+        /// a "." group separator (183d4bd5d, so the RP and ticket pills agreed with each other);
+        /// the decision since (Cesar, 2026-09-14) is no thousands separator on any number in
+        /// the game, so both pills now agree with every other counter as well.
         /// </summary>
-        private static readonly System.Globalization.NumberFormatInfo TopBarNumberFormat = BuildTopBarNumberFormat();
-
-        private static System.Globalization.NumberFormatInfo BuildTopBarNumberFormat()
-        {
-            var nfi = (System.Globalization.NumberFormatInfo)
-                      System.Globalization.CultureInfo.InvariantCulture.NumberFormat.Clone();
-            nfi.NumberGroupSeparator = ".";
-            return nfi;
-        }
+        private static readonly System.Globalization.CultureInfo TopBarNumberFormat =
+            System.Globalization.CultureInfo.InvariantCulture;
 
         /// <summary>
-        /// Read back a counter this class itself rendered. Digits only — "1.240" is NOT parseable
-        /// as an int by any culture-aware parse (the group separator reads as a decimal point and
-        /// int.TryParse rejects the fraction), and the count-up needs the previous value.
+        /// Read back a counter this class itself rendered. Digits only, and tolerant of a "." or
+        /// "," a previous build may have left in the label — the count-up needs the previous value.
         /// </summary>
         private static bool TryParseTopBarNumber(string? text, out int value)
         {
@@ -573,7 +566,7 @@ namespace Golfin.UI
                 return;
             }
 
-            rewardPointsText.text = points.ToString("N0", TopBarNumberFormat);
+            rewardPointsText.text = points.ToString(TopBarNumberFormat);
         }
 
         /// <summary>
@@ -615,7 +608,7 @@ namespace Golfin.UI
                 return;
             }
 
-            ticketCountText.text = count.ToString("N0", TopBarNumberFormat);
+            ticketCountText.text = count.ToString(TopBarNumberFormat);
         }
 
         /// <summary>

@@ -152,11 +152,11 @@ namespace Golfin.UI.Polish
         }
 
         /// <summary>
-        /// Count a label that is a number inside a run of text — "x12", "RANK #4", "1.240 + Trophy".
+        /// Count a label that is a number inside a run of text — "x12", "RANK #4", "1240 + Trophy".
         /// <paramref name="wrap"/> is the composite the figure is dropped into; counting the number
         /// while dropping its surrounding words would be a worse bug than not counting at all.
         /// </summary>
-        public void Count(TMP_Text? label, int to, string wrap = "{0}", string format = "N0")
+        public void Count(TMP_Text? label, int to, string wrap = "{0}", string format = "D")
         {
             if (label == null) return;
             Child(UiMotion.CountUp(label, 0, to, UiMotion.CountDur, format, wrap));
