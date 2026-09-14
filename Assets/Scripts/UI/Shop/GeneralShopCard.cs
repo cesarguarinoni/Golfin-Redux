@@ -92,6 +92,11 @@ namespace GolfinRedux.UI.Shop
 
             if (entry == null) return;
 
+            // A card instance is REUSED across categories. The description belongs to items and
+            // tickets only, so it goes off here and the two binders that own it turn it back on —
+            // the same idempotency argument BindPrice makes for PriceBox.
+            ResetPerKindChrome();
+
             switch (entry.Category)
             {
                 case ShopCategory.Ball:      BindBall(entry);      break;
@@ -389,8 +394,26 @@ namespace GolfinRedux.UI.Shop
 
             for (int i = 0; i <= 4; i++) SetActive($"StatRow_{i}", false);
 
+            // The rows' space carries the item's description — the SAME copy the history tile
+            // and the Item screen show, from the one helper, so the store cannot say something
+            // different from the log (Cesar, 2026-09-14: the store card had none).
+            SetDescription(GachaPrizeCardBinder.ItemDescription(item));
+
             SetText("HMid", rar);
             SetActive("HLevel", false);
+
+            // The two HDiv pipes bracket "| rarity | level". An item has no level, so the SECOND
+            // pipe was left standing at x=496 — straight through the word "Common", which is
+            // wider than the 21 px HMid rect authored for a single club rarity letter. Hide that
+            // one; the first pipe, between the name and the rarity, stays. (Same shape BindTicket
+            // already handles — it hides both, because a ticket has neither.)
+            int seen = 0;
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i);
+                if (child.name != "HDiv") continue;
+                if (++seen == 2) child.gameObject.SetActive(false);
+            }
         }
 
         // ── Ticket variant (gacha_client_real_pull §4.3) ─────────────────────────
@@ -441,6 +464,9 @@ namespace GolfinRedux.UI.Shop
             SetText("DistRow/Txt", "×" + Mathf.Max(1, quantity));
 
             for (int i = 0; i <= 4; i++) SetActive($"StatRow_{i}", false);
+
+            // Same source as the prize card's ticket description — see BindItem.
+            SetDescription(GachaPrizeCardBinder.TicketDescription(type));
 
             SetText("HMid", string.Empty);
             SetActive("HLevel", false);
@@ -496,6 +522,7 @@ namespace GolfinRedux.UI.Shop
 
             Entry = entry;
             _isBall = category == ShopCategory.Ball;
+            ResetPerKindChrome();
 
             switch (category)
             {
@@ -549,10 +576,12 @@ namespace GolfinRedux.UI.Shop
                 if (orig != null) orig.gameObject.SetActive(true);
                 var origNum = Find("PriceBox/Orig/Num")?.GetComponent<TextMeshProUGUI>();
                 if (origNum != null) { origNum.text = entry.RpCost.ToString("N0"); origNum.fontStyle = FontStyles.Normal; }
-                StrikeOriginal(origNum);
                 if (saleBg != null)  saleBg.gameObject.SetActive(true);
                 if (saleImg != null) saleImg.color = PriceNavy;
                 if (saleNum != null) saleNum.text = entry.SaleRpCost.ToString("N0");
+                CenterPriceRow("PriceBox/Orig");
+                CenterPriceRow("PriceBox/SaleBG/Sale");
+                StrikeOriginal(origNum);                  // after centring — it reads the coin/number x
                 if (saleRt != null)   // restore the template's bottom band
                 {
                     saleRt.anchorMin = new Vector2(0, 0); saleRt.anchorMax = new Vector2(1, 0);
@@ -568,12 +597,45 @@ namespace GolfinRedux.UI.Shop
                 if (saleBg != null)  saleBg.gameObject.SetActive(true);
                 if (saleImg != null) saleImg.color = new Color(0, 0, 0, 0); // transparent — box already navy
                 if (saleNum != null) saleNum.text = entry.RpCost.ToString("N0");
+                CenterPriceRow("PriceBox/SaleBG/Sale");
                 if (saleRt != null)  // fill the box so the center-anchored price sits in the middle
                 {
                     saleRt.anchorMin = new Vector2(0, 0); saleRt.anchorMax = new Vector2(1, 1);
                     saleRt.offsetMin = Vector2.zero; saleRt.offsetMax = Vector2.zero;
                 }
             }
+        }
+
+        /// <summary>Gap between the coin and the number, as authored in the prefab
+        /// (Num.x − (RpIcon.x + RpIcon.width) = 6 on both rows).</summary>
+        private const float PriceIconGap = 6f;
+
+        /// <summary>
+        /// Centre the coin AND the number as one group in a price row.
+        ///
+        /// <para>Both are centre-anchored with a LEFT pivot at fixed authored x offsets, tuned for
+        /// a five-character "2,000". The number's rect is centred; the coin is not part of it, so
+        /// a two-digit price sat left of the box's centre with dead space on the right (Cesar,
+        /// 2026-09-14: "only the numbers seem to be centered"). The group's width is the coin plus
+        /// the gap plus the RENDERED number width, and its left edge is half that to the left of
+        /// centre — for every price length, on both the struck row and the pay row.</para>
+        /// </summary>
+        private void CenterPriceRow(string rowPath)
+        {
+            var icon = Find(rowPath + "/RpIcon") as RectTransform;
+            var num  = Find(rowPath + "/Num")?.GetComponent<TextMeshProUGUI>();
+            if (icon == null || num == null) return;
+
+            var numRt = (RectTransform)num.transform;
+            float textW  = num.preferredWidth;
+            float groupW = icon.sizeDelta.x + PriceIconGap + textW;
+            float left   = -groupW * 0.5f;
+
+            icon.anchoredPosition  = new Vector2(left, icon.anchoredPosition.y);
+            numRt.anchoredPosition = new Vector2(left + icon.sizeDelta.x + PriceIconGap, numRt.anchoredPosition.y);
+            // The number's rect is sized to its text so nothing to its right is a phantom
+            // margin the centring would otherwise have to include.
+            numRt.sizeDelta = new Vector2(textW, numRt.sizeDelta.y);
         }
 
         /// <summary>
@@ -667,6 +729,36 @@ namespace GolfinRedux.UI.Shop
         // ── Helpers ─────────────────────────────────────────────────────────────
 
         private Transform Find(string path) => transform.Find(path);
+
+        /// <summary>
+        /// The description block in the stat rows' space, to the right of the art. AUTHORED on
+        /// GeneralShopCard_Club.prefab as <c>Desc</c> (230,−100 · 490×144 · auto-size 14..24) —
+        /// the template every non-ball kind rides. A ball card has no such object and this is
+        /// a silent no-op there, which is correct: a ball's rows are its stat bars.
+        /// </summary>
+        /// <summary>Everything a per-category binder may switch OFF and no other binder switches
+        /// back on — the description block and the two header pipes. Run at the top of both
+        /// dispatchers so a re-bound instance starts from the prefab's state, not the last
+        /// category's.</summary>
+        private void ResetPerKindChrome()
+        {
+            SetDescription(string.Empty);
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i);
+                if (child.name == "HDiv") child.gameObject.SetActive(true);
+            }
+        }
+
+        private void SetDescription(string text)
+        {
+            var t = Find("Desc");
+            if (t == null) return;
+            bool show = !string.IsNullOrWhiteSpace(text);
+            var tmp = t.GetComponent<TextMeshProUGUI>();
+            if (tmp != null) tmp.text = show ? text : string.Empty;
+            t.gameObject.SetActive(show);
+        }
 
         private void SetText(string path, string text)
         {

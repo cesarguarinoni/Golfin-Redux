@@ -79,6 +79,7 @@ namespace GolfinRedux.UI.Shop.EditorTools
 
                 var shop = FindFirstObjectByType<GeneralShopScreenController>(FindObjectsInactive.Include);
                 Save("store_ALL");
+                DumpPriceRows();
                 foreach (var chip in new[] { "ITEMSChip", "TICKETSChip" })
                 {
                     shop?.transform.Find("ContentArea/BarsArea/FilterGroup/CategoryRow/" + chip)?.GetComponent<Button>()?.onClick.Invoke();
@@ -105,6 +106,36 @@ namespace GolfinRedux.UI.Shop.EditorTools
 
                 File.WriteAllText("/tmp/store_filter_frames.txt", "DONE\n");
                 EditorApplication.isPlaying = false;
+            }
+
+            /// <summary>World-space centre of coin+number vs the box, per live card — the
+            /// instrument for "is the price centred", instead of a pixel scan that also sees the
+            /// coin's glow.</summary>
+            private static void DumpPriceRows()
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var card in FindObjectsByType<GeneralShopCard>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                {
+                    var box = card.transform.Find("PriceBox") as RectTransform;
+                    if (box == null || !card.gameObject.activeInHierarchy) continue;
+                    var bc = new Vector3[4]; box.GetWorldCorners(bc);
+                    float boxCx = (bc[0].x + bc[2].x) * 0.5f;
+                    foreach (var row in new[] { "PriceBox/Orig", "PriceBox/SaleBG/Sale" })
+                    {
+                        var r = card.transform.Find(row);
+                        if (r == null || !r.gameObject.activeInHierarchy) continue;
+                        var icon = r.Find("RpIcon") as RectTransform;
+                        var num  = r.Find("Num")?.GetComponent<TMPro.TextMeshProUGUI>();
+                        if (icon == null || num == null) continue;
+                        var ic = new Vector3[4]; icon.GetWorldCorners(ic);
+                        var tb = num.textBounds;                               // rendered glyph bounds, local
+                        var numRt = (RectTransform)num.transform;
+                        Vector3 tMin = numRt.TransformPoint(tb.min), tMax = numRt.TransformPoint(tb.max);
+                        float groupCx = (ic[0].x + tMax.x) * 0.5f;
+                        sb.AppendLine($"{card.name,-34} {row,-22} '{num.text}' iconL={ic[0].x:F1} textR={tMax.x:F1} groupC={groupCx:F1} boxC={boxCx:F1} off={groupCx - boxCx:+0.0;-0.0}  | local iconX={icon.anchoredPosition.x:F1} numX={numRt.anchoredPosition.x:F1} numW={numRt.sizeDelta.x:F1} pref={num.preferredWidth:F1} align={num.alignment}");
+                    }
+                }
+                File.WriteAllText("/tmp/price_rows.txt", sb.ToString());
             }
 
             private static void Save(string label)

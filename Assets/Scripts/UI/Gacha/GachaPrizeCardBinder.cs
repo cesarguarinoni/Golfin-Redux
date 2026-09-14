@@ -204,7 +204,7 @@ namespace GolfinRedux.UI.Gacha
                         badge:       qty,
                         detail:      $"{LocalizationManager.Get("ITEM_RESTORES")} {item.restorePercent}%",
                         stats:       null,
-                        description: LocalizedBody("ITEM_INFO_" + Upper(item.itemId), item.info)));
+                        description: ItemDescription(item)));
                     return;
                 }
 
@@ -231,7 +231,7 @@ namespace GolfinRedux.UI.Gacha
                         badge:       qty,
                         detail:      string.Empty,
                         stats:       null,
-                        description: LocalizedBody("TICKET_INFO_" + Upper(type.Key), null)));
+                        description: TicketDescription(type)));
                     return;
                 }
 
@@ -240,6 +240,23 @@ namespace GolfinRedux.UI.Gacha
                     return;
             }
         }
+
+        // ── The ONE source of the description copy ─────────────────────────────
+        //
+        // Both the prize card (reveal, Prizes grid, both history logs) and the STORE card draw
+        // an item's and a ticket's description from these two methods — so "the store says what
+        // the history says" holds by construction rather than by two call sites agreeing on a
+        // key format. (Cesar, 2026-09-14: the store card had no description at all.)
+
+        /// <summary>The item's body copy — the same text the Item screen prints under ITEM INFO:
+        /// <c>ITEM_INFO_&lt;ID&gt;</c> with the CSV <c>info</c> column as the fallback.</summary>
+        public static string ItemDescription(ItemDataRuntime? item)
+            => item == null ? string.Empty : LocalizedBody("ITEM_INFO_" + Upper(item.itemId), item.info);
+
+        /// <summary>The ticket's body copy — <c>TICKET_INFO_&lt;KEY&gt;</c>. <c>ticket_types.csv</c>
+        /// has no prose column, so a type published after this build simply has none.</summary>
+        public static string TicketDescription(TicketTypeEntry? type)
+            => type == null ? string.Empty : LocalizedBody("TICKET_INFO_" + Upper(type.Key), null);
 
         /// <summary>
         /// A localized body string with the raw CSV copy as its fallback — the ladder

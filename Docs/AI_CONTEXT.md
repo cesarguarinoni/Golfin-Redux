@@ -807,6 +807,29 @@ contain its own event by diffing the notice box's title row frame-by-frame, incl
 case: the "short drag ... does not change" window contains only small motion and no page change.
 
 ---
+## 2026-09-14 — store card: description, sale strike, price centring — DONE
+
+Three things Cesar saw on the STORE card after the Store History close-out, plus one stray pipe
+next to them. All on `GeneralShopCard` + its two prefabs; both history logs untouched.
+
+| ask | what it was | measured |
+|---|---|---|
+| "description for tickets and repair kits … same as the history" | the store card had NO description slot at all — items showed only `RESTORES 50%`, tickets only `×50`. A `Desc` label is now authored on the Club template (the one every non-ball kind rides) in the stat rows' space, 490×144 to the right of the art, auto-size 14..24, fed by `GachaPrizeCardBinder.ItemDescription / TicketDescription` — new public helpers that are ALSO what the prize tile calls, so store and history agree by construction | both cards render the full copy untruncated |
+| "prices are not stricken through so they don't read as slashed" | TMP's font-metric strikethrough measured on the shipped frame as ONE pixel at 73 % down 22 px digits, stopping short of the coin. A real `Strike` bar is authored under `PriceBox/Orig` in both prefabs and sized per bind from the coin's left edge through the digits' `preferredWidth` | before: 1 row (y=640), digits only; after: 4 rows (y=633–636), centred on 624–645, coin through last digit |
+| "prices should be centred including the RP icon" | the coin sat at a fixed authored x tuned for "2,000"; only the number's rect was centred, so short prices drifted left. `CenterPriceRow` places coin + 6 px gap + rendered width as one group at −width/2 on both rows | live rects: `off=+0.0` on every card, struck and pay, 2- and 3-digit |
+| `C|mmon` | the second `HDiv` (the one before the level chip) was left standing on item cards where `HLevel` is hidden, through the word "Common". Hidden on items; both pipes re-shown at the top of `Bind`/`BindForDisplay` so a re-bound instance starts clean | — |
+
+**Scar: my pixel-scan said the centring was ±9 px off after the fix.** It wasn't — I had assumed
+the box centre at x=934 in a 1170 frame; the live `GetWorldCorners` centre is 926. The
+live-rect dump (`StoreFilterFramesRun.DumpPriceRows`) is the instrument for "is it centred";
+a colour scan also sees the coin's glow and my guess at the geometry. Point the instrument at the
+subject before believing a number.
+
+`StoreFilterFramesRun` (Editor-only) shoots store vs history under ITEMS/TICKETS through the real
+"+" / chips / History chip, dismisses the first-visit PRO TIP modal through its own CONTINUE
+button (it now covers every first arrival on the Rewards Center), and dumps the price rows.
+
+---
 ## 2026-09-09 — store_history: **the STORE tab's History chip finally opens something** — awaiting Cesar
 
 Spec `Docs/Specs/Active/store_history/`. Implemented directly (no subagent chain — Cesar asked for
