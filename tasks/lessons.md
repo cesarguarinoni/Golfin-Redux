@@ -4549,3 +4549,53 @@ full-res frame, not eyeballed at fit-to-window — take 1 and take 2 both looked
 a node's geometry contradicts its own container (unpadded child, short of the frame, dead space),
 read it as a placeholder and build the container's interior. Bake the fallback/placeholder
 UNROUNDED when a mask does the rounding — two roundings that disagree leave slivers.
+
+## Lesson CG — a shared admin account cannot be attributed by `admin_email`; unexpected drafts mid-chain are somebody's work until a parallel session's record says otherwise (2026-09-14, `gacha_banner_tagline`)
+
+Ten seconds after my `wk_2026_39` MATERIALIZE, drafts for `wk_2026_40` and `wk_2026_41` appeared
+under the same admin account and the Cloudflare Worker briefly returned 1102. I read that as the
+"Materialize again?" dialog re-firing on the workbench's auto-advanced selection, and — before
+publishing the chain — deleted the 64 draft-only rows it had "created" and reset the two rotation
+stamps. The audit log later showed they were the PARALLEL `weekly_banners_to_admin` session's
+deliberate materializes (every Claude session drives the same logged-in Chrome profile, so every
+write carries Cesar's email). That session had to redo two weeks and re-upload their art; nothing was
+published or lost, and the "dashboard defect" I had filed was withdrawn.
+
+**Rules.**
+- `admin_email` proves nothing about WHICH session wrote a draft. Before treating unexpected rows
+  as a runaway, look for a peer: `ListAgents` (five interactive peers were live), the top of
+  `Docs/AI_CONTEXT.md` (that session's entry was already there), the row timestamps against your
+  own click log (mine were 10 s apart — a human/agent cadence, not a loop).
+- Never delete another writer's drafts to make your own publish drawer clean. A catalog-level
+  publish (`PUBLISH ROTATION` publishes EVERY pending draft of five catalogs) that would carry a
+  peer's rows is a reason to ASK, not to prune — or to publish per catalog and read each drawer.
+- When the CSV importer's PLAN shows a conflict on a row you did not touch, the same question
+  applies: whose draft is it? (`wk_2026_39`'s `materializedAt` stamp was a benign generator write;
+  the fix was publishing it, and the CSV-sourced re-import then blanked the stamp again — restore
+  such a field in the row editor before the second publish.)
+
+## Lesson CH — `PrefabUtility.LoadPrefabContents` roots must never be reparented; a `SaveAsPrefabAsset` after it regenerates every fileID (2026-09-14, `gacha_banner_tagline`)
+
+To measure a TMP label inside a prefab I parented the loaded contents root under a temporary
+WorldSpace canvas, measured, un-parented and saved. The save re-serialised the whole prefab with
+NEW fileIDs (+1874/−1442 on a file whose real change was +433/−1) and `UnloadPrefabContents` threw
+("not part of Prefab contents"); the root also landed as a stray object in `ShellScene`. Restored
+the prefab from HEAD, rebuilt the nodes in a clean `LoadPrefabContents` pass, destroyed the stray.
+**Rules:** measure on `PrefabUtility.InstantiatePrefab(asset)` under a temp canvas (what the
+linter does), edit through `LoadPrefabContents` without touching the root's parent, and check
+`git diff --stat` on the prefab after EVERY save — a fileID rewrite is a review blocker even when
+the scene looks right.
+
+## Lesson CI — this project renders in LINEAR colour space, so a translucent plate baked at the node's alpha reads lighter than Figma over bright art; compensate the alpha in the baker, measured against the 1:1 node render (2026-09-14, `gacha_banner_tagline`)
+
+The hook band's navy at the node's 0.93 alpha measured (77,79,86) over the artwork's glow where
+the 1:1 node render shows (28,43,69) — an sRGB-equivalent alpha of ~0.77, because Figma composites
+in sRGB and Unity blends in linear (`PlayerSettings.colorSpace = Linear`; memory
+`reference_linear_space_alpha_and_canvas_sorting`). Fitting Unity's linear blend against the render
+over 9 500 text-free band pixels gave `a_linear = 1 − (1 − a_srgb)^1.8` (RMS 26.5 → 11.8; 0.93 →
+0.992); the encoded band then measured within a mean ǀΔRGBǀ of 5.4. The compensation is a
+BRIGHT-underlay effect: the ribbon, which sits on the dark title zone, was right at the node's 0.96
+verbatim and overshot when compensated. **Rules:** bake semi-transparent plates from tokens, then
+MEASURE them against the 1:1 node render over the real artwork, and let the docstring say which
+plates are compensated and why. `faceInfo.scale` is the same kind of trap for text: `Rubik-SemiBold
+SDF` is 1.1, so TMP size = Figma px ÷ 1.1224 — the reference render's cap height is the check.

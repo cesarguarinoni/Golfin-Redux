@@ -939,6 +939,28 @@ anchor churn into the scene on a later save.
 
 ---
 
+## Gacha banner card (`Assets/Resources/Prefabs/Gacha/GachaBannerCard.prefab` — `GolfinRedux.UI.Gacha.GachaBannerCard`, spawned by `GachaCarouselController` on the Rewards Center GACHA tab)
+
+Card 882×1720; `ArtImage` 876×1424, pivot (0.5, 1), anchored (0, 856) — i.e. inset 3 px each side and 4 px from the card top. The two selling lines added by `gacha_banner_tagline` (2026-09-14) are CHILDREN of `ArtImage`, anchored top-left, pivot (0, 1), so they follow the art:
+
+```
+GachaBannerCard
+├── BG / Outline (card chrome)
+├── ArtImage                          876×1424, the banner artwork (artUrl via CatalogArtCache)
+│   ├── TaglineRibbon                 876×64 @ (0, −189)  Image S_GachaTaglineRibbon (baked #E4007F→#FF4FA3 @96 %)
+│   │   └── Label                     stretch, inset 28 L/R, top margin 8 — Rubik-SemiBold SDF 35.6, auto 30.3–35.6, cs −0.9, left/midline, white
+│   └── TaglineHook                   876×188 @ (0, −1035) Image S_GachaTaglineHook (baked navy #0B1B3A, alpha 0→0.93→0.93→0, linear-space compensated)
+│       └── Label                     800×144 centred — Rubik-SemiBold SDF 55.2, cs −1.4, centre, white, rich text (`*…*` → #FF2D9B)
+├── BannerTitle / RulesButton / CountdownPill / RatesLabel
+├── PitySection (PityRow1 / PityRow2 / PrizePreviewText)   ← starts at 91 % of the art; the hook band ends at 85.9 %
+├── Separator / CostArea / PullRow
+```
+
+- The four `[SerializeField]` refs (`_taglineRibbon`, `_taglineLabel`, `_hookBand`, `_hookLabel`) are wired ON THE PREFAB (`SetupCardRefs` is a no-op) — same as every other ref on the card.
+- `Bind` hides each container when its pair (`taglineEn/Ja`, `hookEn/Ja`) is blank on both sides; the language is the title's own `GachaCsvMerge.PickLocalised`. A two-character `\n` in the catalog string is a hard line break (`FormatTagline`).
+- Font sizes are the node's px ÷ 1.1224: the `Rubik-SemiBold SDF` asset has `faceInfo.scale 1.1`, so a TMP unit renders a cap 1.1224× the same Figma px (the built title 46.2 = the node's 52 px title). Match the reference render's cap height, not the arithmetic.
+- Both plates are baked by `Docs/Scripts/make_gacha_tagline_sprites.py` (the source of truth; the PNGs are build products).
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`

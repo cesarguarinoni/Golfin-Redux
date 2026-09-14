@@ -92,9 +92,9 @@ Verified through real navigation with a live tile; frames in the chat. Record:
 `Docs/Specs/Quick/Completed/gps_rounds_map_fills_panel.md`. Commits `e1a49f5a4` + `334bd487c`.
 
 ---
-## 2026-09-14 — gacha_banner_tagline: **the gacha card sells again — ribbon + hook band over the textless weekly art** — READY_FOR_SELF_REVIEW (chain published on Cesar's go)
+## 2026-09-14 — gacha_banner_tagline: **the gacha card sells again — ribbon + hook band over the textless weekly art** — DONE (Cesar approved 2026-09-14)
 
-SPEC `Docs/Specs/Active/gacha_banner_tagline/SPEC.md`. The 52 weekly banners are textless by rule, so the
+**DONE** — Cesar: "Done" after the three gates + the sign-off clip; folder moved to `Docs/Specs/Completed/gacha_banner_tagline/`. Lessons CG (shared admin account ≠ attribution), CH (never reparent a `LoadPrefabContents` root), CI (linear-space alpha for translucent plates). The 52 weekly banners are textless by rule, so the
 card now draws the two designed copy lines as localized UI: `ArtImage/TaglineRibbon` (876×64 at art
 y −189, baked `#E4007F→#FF4FA3` @96 %) with `taglineEn/Ja`, and `ArtImage/TaglineHook` (876×188 at
 y −1035, navy `#0B1B3A` alpha 0→0.93→0.93→0) with `hookEn/Ja`; `*…*` → `#FF2D9B`, two-character
