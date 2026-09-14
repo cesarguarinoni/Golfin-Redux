@@ -4519,3 +4519,33 @@ over it, also assert the population's SIZE (`Count >= 2` here): "all of the thin
 hidden" is true of an empty or half-found list. (3) Keep one assertion in every bot that measures
 the OUTCOME through the engine (a raycast, a pixel) rather than through the same enumeration the
 code under test uses — it is the one that cannot inherit the code's blind spot.
+
+## Lesson CF — a rounded clip in uGUI is a stencil Mask with a HARD-alpha shape and the border drawn ABOVE it; a Figma node's "surface" can be a placeholder, not a layout (2026-09-14, `gps_rounds_map_fills_panel`)
+
+Cesar, from the device: *"the google map does not adapt to the container (sharp corners and does
+not touch the borders)."* The Rounds map was a `RawImage` under a `RectMask2D` at the node's
+`918x420 @ (20,20)` inside a 958x560 card — square corners in a navy gutter, 100 px of empty
+panel under the legend. `get_metadata` on the node showed the surface at (0,0) with no padding and
+40 px short of the panel: the frame's map was a **placeholder drawing**, and the `(20,20)` in the
+SPEC's fidelity table was an assumption that got built literally.
+
+Getting the clipped tile to nest in the card's 3 px ring took three measured takes:
+
+1. **`RectMask2D` cannot round anything.** The rounding is a `Mask` (stencil) whose graphic is a
+   baked white shape (`showMaskGraphic = false`). Unity has no rounded RectMask2D; a 9-sliced or
+   fixed-size mask sprite is the tool.
+2. **A stencil clip is a hard one-pixel staircase**, and against a bright border it reads as a
+   jagged hairline. Do not put the clipped edge NEXT to the border — put it UNDER it: bake the
+   card stroke-less, draw the stroke as its own sprite as the panel's LAST child, and run the
+   clipped content 1 px under the stroke's opaque core (inset 2 of 3, radius 50 − 2). What shows
+   is the stroke's own anti-aliased inner edge.
+3. **An anti-aliased mask sprite is WRONG for a stencil.** `Mask` writes stencil where alpha >
+   0.001, and a Lanczos-downsampled shape RINGS — alpha 1..5 two or three texels outside the arc —
+   so the clip grew single dark pixels past the border at every corner. Threshold the mask alpha
+   to 0/255; the shape's contour is the only thing the stencil reads.
+
+**Rules.** A "clip to the container" defect is measured at 8–16× on the corner crops of a
+full-res frame, not eyeballed at fit-to-window — take 1 and take 2 both looked fine at 1×. When
+a node's geometry contradicts its own container (unpadded child, short of the frame, dead space),
+read it as a placeholder and build the container's interior. Bake the fallback/placeholder
+UNROUNDED when a mask does the rounding — two roundings that disagree leave slivers.

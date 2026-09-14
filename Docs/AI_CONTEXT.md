@@ -4,6 +4,22 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 — gps_rounds_map_fills_panel: **the Rounds map fills its card** — rounded with the ring, no gutter — awaiting Cesar's approval
+
+Cesar, from the device: *"the google map does not adapt to the container (sharp corners and does
+not touch the borders)."* The builder had taken the node's 918×420 Map Surface at (20,20)
+literally under a `RectMask2D`: square corners in a 20 px navy gutter, 100 px of empty panel
+under the legend. `get_metadata` shows that surface unpadded and 40 px short of the panel — a
+placeholder drawing, not a layout. Now the surface IS the card's interior: 954×494 at (2,2), one
+pixel under the 3 px ring, top corners r48 by a stencil `Mask` (baked hard-alpha
+`S_GR_MapMask`), straight bottom into a 61 px legend strip; the card is re-baked stroke-less and
+its stroke (`S_GR_MapPanelRing`) draws ABOVE the map so the clip's staircase never meets it. The
+tile is requested at exactly `MapW×MapH` (controller; builder + baker read it). Three measured
+takes at 8–16× on the corners (jagged hairline → Lanczos-ringing specks → clean); Lesson CF.
+Verified through real navigation with a live tile; frames in the chat. Record:
+`Docs/Specs/Quick/gps_rounds_map_fills_panel.md`. Commit `e1a49f5a4`, not pushed.
+
+---
 ## 2026-09-14 — result_screen_nav_bars: **the hole-complete result carries both nav bars and a real way out** — awaiting Cesar's approval
 
 Cesar: *"After playing any hole, there is no way from the Result screen to go back to the main menu.
