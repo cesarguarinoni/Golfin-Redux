@@ -117376,12 +117376,12 @@ GameObject:
   m_Component:
   - component: {fileID: 1676827607}
   - component: {fileID: 1676827608}
+  - component: {fileID: 1676827610}
+  - component: {fileID: 1676827609}
   m_Layer: 0
   m_Name: Viewport
   m_TagString: Untagged
   m_Icon: {fileID: 0}
-  - component: {fileID: 1676827610}
-  - component: {fileID: 1676827609}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
@@ -117419,10 +117419,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
   m_Padding: {x: 0, y: 0, z: 0, w: 0}
   m_Softness: {x: 0, y: 0}
---- !u!1 &1679869180
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
 --- !u!114 &1676827609
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -117461,6 +117457,10 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1676827606}
   m_CullTransparentMesh: 1
+--- !u!1 &1679869180
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6

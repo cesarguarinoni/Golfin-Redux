@@ -436,57 +436,16 @@ namespace GolfinRedux.UI.Tournaments
         /// </summary>
         private void BindHeader(string tournId)
         {
-            var defs = TournamentService.Instance?.Backend?.GetTournaments();
-            TournamentDefinition def = default;
-            bool found = false;
-            if (defs != null)
-            {
-                foreach (var d in defs)
-                {
-                    if (string.Equals(d.Id, tournId, System.StringComparison.Ordinal))
-                    {
-                        def   = d;
-                        found = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!found)
+            // finished_tournament_leaderboard_route F3 — the one binder both tournament screens use
+            // (TournamentHeaderPills); the name goes through TournamentDisplayName's ladder, so a
+            // dashboard-created tournament reads its title instead of a raw key.
+            var def = TournamentHeaderPills.TryFindDef(tournId);
+            if (def == null)
             {
                 Debug.LogWarning(string.Format("[TournamentLeaderboard] Def not found for id={0}; header pills unchanged.", tournId));
                 return;
             }
-
-            // Sponsor label
-            var sponsorLabel = transform.Find(SponsorLabelPath)?.GetComponent<TextMeshProUGUI>();
-            if (sponsorLabel != null)
-            {
-                string sponsor = string.IsNullOrEmpty(def.SponsorKey)
-                    ? "GOLFIN"
-                    : def.SponsorKey.ToUpperInvariant();
-                sponsorLabel.text = LocalizationManager.Get("TOURN_SPONSORED_BY") + " " + sponsor;
-                Debug.Log(string.Format("[TournamentLeaderboard] Header sponsor → '{0}'", sponsorLabel.text));
-            }
-            else
-            {
-                Debug.LogWarning(string.Format("[TournamentLeaderboard] Sponsor label not found at {0}", SponsorLabelPath));
-            }
-
-            // Tournament name label
-            var nameLabel = transform.Find(TournNameLabelPath)?.GetComponent<TextMeshProUGUI>();
-            if (nameLabel != null)
-            {
-                string localizedName = LocalizationManager.Get(def.NameKey);
-                if (string.IsNullOrEmpty(localizedName) || localizedName == def.NameKey)
-                    localizedName = def.NameKey; // fallback — key shown as-is
-                nameLabel.text = localizedName.ToUpperInvariant();
-                Debug.Log(string.Format("[TournamentLeaderboard] Header name → '{0}'", nameLabel.text));
-            }
-            else
-            {
-                Debug.LogWarning(string.Format("[TournamentLeaderboard] Name label not found at {0}", TournNameLabelPath));
-            }
+            TournamentHeaderPills.Bind(transform, SponsorLabelPath, TournNameLabelPath, def, "[TournamentLeaderboard]");
         }
 
         // ── Card binding ──────────────────────────────────────────────────────

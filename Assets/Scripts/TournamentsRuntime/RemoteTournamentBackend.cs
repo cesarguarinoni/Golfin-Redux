@@ -268,11 +268,13 @@ namespace Golfin.Tournaments
         }
 
         // ── Wrapped local backend + seams ─────────────────────────────────────
-        private readonly LocalTournamentBackend                  _local;
+        // _local and _prizeTables are the two members a schedule swap replaces (see Adopt);
+        // everything else is per-session state that outlives every swap.
+        private LocalTournamentBackend                           _local;
         private readonly ITournamentEntryStore                   _store;
         private readonly IRewardPointsService                    _rp;
         private readonly IItemRewardService                      _items;
-        private readonly IReadOnlyDictionary<string, PrizeTable> _prizeTables;
+        private IReadOnlyDictionary<string, PrizeTable>          _prizeTables;
         private readonly ITournamentClock                        _clock;
         private readonly TournamentSubmitQueue                   _queue;
 
@@ -317,6 +319,24 @@ namespace Golfin.Tournaments
             _queue       = queue       ?? new TournamentSubmitQueue();
             _queue.Load();
         }
+
+        /// <summary>
+        /// Point this wrapper at a freshly composed local backend (and that schedule's prize
+        /// tables). TournamentService builds ONE wrapper per session and reuses it across schedule
+        /// swaps — the cached board snapshots, the in-flight guards and the submit queue live here
+        /// and must survive — but every schedule Apply composes a NEW LocalTournamentBackend, and
+        /// until this method existed the wrapper kept delegating definitions, state derivation and
+        /// prize lookups to the one it was born with: a signed-in player kept seeing the previous
+        /// launch's schedule after a live refetch (finished_tournament_leaderboard_route F2).
+        /// </summary>
+        public void Adopt(LocalTournamentBackend local, IReadOnlyDictionary<string, PrizeTable> prizeTables)
+        {
+            _local       = local       ?? throw new ArgumentNullException(nameof(local));
+            _prizeTables = prizeTables ?? throw new ArgumentNullException(nameof(prizeTables));
+        }
+
+        /// <summary>The local backend this wrapper currently delegates to — diagnostics and tests.</summary>
+        public LocalTournamentBackend Local => _local;
 
         // ═════════════════════════════════════════════════════════════════════
         // Delegated — the server does not own these

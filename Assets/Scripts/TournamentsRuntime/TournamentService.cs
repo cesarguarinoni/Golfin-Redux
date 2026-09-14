@@ -110,7 +110,10 @@ namespace Golfin.Tournaments
 
         /// <summary>The remote wrapper, built once per session and REUSED across schedule swaps and
         /// sign-in re-evaluations. Rebuilding it would drop the cached board snapshots and re-read
-        /// the submit queue off disk for no reason.</summary>
+        /// the submit queue off disk for no reason — so every swap hands it the newly composed
+        /// local backend through <see cref="RemoteTournamentBackend.Adopt"/> instead (it used to
+        /// keep the one it was built with, and a signed-in player never saw a schedule that landed
+        /// after sign-in).</summary>
         private RemoteTournamentBackend? _remoteBackend;
 
         private TournamentBackendKind _backendKind = TournamentBackendKind.Local;
@@ -240,13 +243,18 @@ namespace Golfin.Tournaments
 
             if (_backendKind == TournamentBackendKind.Remote)
             {
-                _remoteBackend ??= new RemoteTournamentBackend(
-                    local:       _localBackend,
-                    store:       new SaveBackedEntryStore(),
-                    rp:          new RewardPointsServiceAdapter(),
-                    items:       new ItemRewardServiceAdapter(),
-                    prizeTables: _prizeTables,
-                    clock:       new TimeProviderClock(NetworkTimeProvider.Instance));
+                if (_remoteBackend == null)
+                    _remoteBackend = new RemoteTournamentBackend(
+                        local:       _localBackend,
+                        store:       new SaveBackedEntryStore(),
+                        rp:          new RewardPointsServiceAdapter(),
+                        items:       new ItemRewardServiceAdapter(),
+                        prizeTables: _prizeTables,
+                        clock:       new TimeProviderClock(NetworkTimeProvider.Instance));
+                else if (!ReferenceEquals(_remoteBackend.Local, _localBackend))
+                    // A schedule swap composed a new local backend: the wrapper follows it, keeping
+                    // its board snapshots, in-flight guards and submit queue (F2).
+                    _remoteBackend.Adopt(_localBackend, _prizeTables);
 
                 Backend = _remoteBackend;
             }

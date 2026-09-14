@@ -46,6 +46,13 @@ namespace GolfinRedux.UI.Tournaments
         [Tooltip("Template for a locked future hole (TournamentHoleCard_Locked).")]
         [SerializeField] private GameObject _lockedCardTemplate;
 
+        // finished_tournament_leaderboard_route F3 — the identity pills were authored placeholder
+        // text ("SPONSORED BY PUMA / KASUMIGASEKI OPEN") that nothing rebound, so every
+        // tournament's hole list wore the Stage-1 mockup's header. Same pills as the board, same
+        // binder (TournamentHeaderPills); the ENDS IN pill is TournamentCountdown's.
+        private const string SponsorLabelPath   = "Content/IdentityPillRow/Pill_SPONSO/Label";
+        private const string TournNameLabelPath = "Content/IdentityPillRow/Row2/Pill_KASUMI/Label";
+
         [Header("Scroll container")]
         [Tooltip("Parent transform under CardsScrollView/Viewport/Content — cloned cards are placed here.")]
         [SerializeField] private RectTransform _cardsContent;
@@ -127,6 +134,9 @@ namespace GolfinRedux.UI.Tournaments
                 return;
             }
 
+            TournamentHeaderPills.Bind(transform, SponsorLabelPath, TournNameLabelPath, def, "[TournamentHoleSelection]");
+            string clubName = TournamentVenueLine.ClubName(def);
+
             var entry = backend.GetMyEntry(tournamentId);
             int finishedCount = entry != null ? entry.PerHole.Count : 0;
 
@@ -166,7 +176,7 @@ namespace GolfinRedux.UI.Tournaments
                 _spawnedCards.Add(card);
 
                 // ── Bind hole label (TitleArea / TitleAreaExp) ──────────────
-                BindHoleLabel(card, i + 1, holeId);
+                BindHoleLabel(card, i + 1, holeId, clubName);
 
                 // ── Wire the "Next" card tap to BeginTournamentHole ─────────
                 if (isNext)
@@ -198,7 +208,7 @@ namespace GolfinRedux.UI.Tournaments
                 _cardsScrollRect.verticalNormalizedPosition = 1f;
         }
 
-        private void BindHoleLabel(GameObject card, int holeNumber, string holeId)
+        private void BindHoleLabel(GameObject card, int holeNumber, string holeId, string clubName)
         {
             // Derive par from HoleDatabaseLoader (fallback to "-")
             string parStr = "-";
@@ -213,7 +223,11 @@ namespace GolfinRedux.UI.Tournaments
             // Replace ALL TMP_Text components anywhere in the card whose text
             // contains "Hole" — covers Subtitle (collapsed) and SubtitleExp (expanded)
             // regardless of card template hierarchy depth.
-            string newLabel = $"Lomond Country Club - Hole {holeNumber} - Par {parStr}";
+            // The club is the TOURNAMENT's venue (TournamentVenueLine.ClubName — the localized
+            // "tourn.venue.*" row's club half), not the practice course the template was authored
+            // with: every tournament's cards read "Lomond Country Club" until F3.
+            string club = string.IsNullOrEmpty(clubName) ? "Lomond Country Club" : clubName;
+            string newLabel = $"{club} - Hole {holeNumber} - Par {parStr}";
             var allTexts = card.GetComponentsInChildren<TMP_Text>(true);
             foreach (var tmp in allTexts)
             {

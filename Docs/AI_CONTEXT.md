@@ -25,10 +25,18 @@ removed after. EditMode 380/380 + Tournaments 251/251. **Found on the way:** F1 
 no CLOSE (`ApplyBoardChrome` hides the ScrollArea the button lives in) — **fixed on Cesar's word**:
 `TournamentLeaderboardEmptyState.prefab` ends with a CloseSlot holding the same
 `TournamentCloseButton` prefab, wired to `Close()`; F1b the cold-open shimmer never ended when the
-board fetch failed — the `changed == false` arm now calls `EndBoardWait`; bot PASS 14/14. Not fixed:
-F2 a schedule applied after sign-in never reaches the session's `RemoteTournamentBackend`
-(`_remoteBackend ??=`); F3 the hole-selection header is authored text. Record:
-`Docs/Specs/Quick/finished_tournament_leaderboard_route.md`; PATTERNS §15; Lesson CJ.
+board fetch failed — the `changed == false` arm now calls `EndBoardWait`. **F2 fixed:**
+`RemoteTournamentBackend.Adopt(local, prizeTables)` — the service hands its one-per-session wrapper
+the newly composed local backend on every schedule swap instead of `??=` (a signed-in player kept
+the previous launch's schedule); `RemoteBackendAdoptTests`. **F3 fixed:** `TournamentHeaderPills`
+binds the sponsor/name pills on BOTH tournament screens, hole cards read
+`TournamentVenueLine.ClubName(def) - Hole N - Par P`; `VenueClubNameTests`. **F4 found + fixed:**
+`a231c1a78` (scroll-lists sweep) left ShellScene structurally malformed (a `Viewport`'s component
+refs after `m_Icon`, its new Image/CanvasRenderer blocks inside the `Text` GameObject
+`1679869180`) — Unity self-healed with an error on every open and two EditMode tests failed;
+12-line structural repair. Bot PASS 16/16 (F2/F3 are checks now); full EditMode 3120/3123 (3
+pre-existing skips). Record: `Docs/Specs/Quick/finished_tournament_leaderboard_route.md`;
+PATTERNS §15; Lesson CJ.
 
 ---
 ## 2026-09-14 — weekly_banners_42_45: **four more weekly banners drawn, 38-45 now has art** — files only, nothing in the admin yet

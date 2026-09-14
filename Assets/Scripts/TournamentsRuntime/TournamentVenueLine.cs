@@ -71,6 +71,34 @@ namespace Golfin.Tournaments
             return id + Separator + holeCount + " " + HolesWord();
         }
 
+        /// <summary>The separator every authored <c>tourn.venue.*</c> row uses between the club and
+        /// its hole count — <c>"Kisarazu Higashi CC · 18 Holes"</c>, <c>"木更津東カントリークラブ · 18ホール"</c>.</summary>
+        private const string ClubCountSeparator = " · ";
+
+        /// <summary>
+        /// The CLUB half of the venue line — <c>"Kisarazu Higashi CC"</c> — for surfaces that carry
+        /// their own hole context, such as the tournament hole cards ("{Club} - Hole 3 - Par 4"),
+        /// where repeating "· 18 Holes" on every card would read as noise.
+        ///
+        /// <para>Resolved through <see cref="Resolve(string, int)"/> and then cut at the row's own
+        /// separator, so it follows the same ladder (localized row, else the club id) and the same
+        /// language. A row without the separator is returned whole; the unlocalized fallback
+        /// (<c>"club_x  -  18 Holes"</c>) is cut at its own separator likewise, leaving the id.</para>
+        /// </summary>
+        public static string ClubName(TournamentDefinition? def)
+            => def == null ? string.Empty : ClubName(def.ClubId, def.HoleSet?.Count ?? 0);
+
+        /// <summary>Ladder over raw parts — the form the tests exercise.</summary>
+        public static string ClubName(string? clubId, int holeCount)
+        {
+            string line = Resolve(clubId, holeCount);
+            if (string.IsNullOrEmpty(line)) return string.Empty;
+
+            int cut = line.IndexOf(ClubCountSeparator, System.StringComparison.Ordinal);
+            if (cut < 0) cut = line.IndexOf(Separator, System.StringComparison.Ordinal);
+            return cut > 0 ? line.Substring(0, cut).Trim() : line;
+        }
+
         /// <summary>
         /// The localized word for "Holes", or the English literal when the key has not shipped.
         /// Same echo-check idiom as <see cref="TournamentDisplayName"/>.

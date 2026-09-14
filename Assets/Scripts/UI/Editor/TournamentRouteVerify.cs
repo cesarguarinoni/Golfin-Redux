@@ -29,9 +29,10 @@
 //   F1  the board's TournamentCloseButton lives in Bottom97/ScrollArea/…/CloseSlot and
 //       ApplyBoardChrome deactivates the whole ScrollArea when rankedCount == 0 — an empty board
 //       (every ENDED tournament with no finishers) has no CLOSE; only the nav bar leaves it.
-//   F2  TournamentService.EnsureBackendForSession keeps the FIRST RemoteTournamentBackend
-//       (`_remoteBackend ??=`), whose `_local` is readonly, so a schedule applied AFTER sign-in
-//       never reaches the wrapper the session plays on (this bot swaps the field to keep going).
+//   F2  (now a CHECK) a schedule applied after sign-in reaches the backend the session plays
+//       on — RemoteTournamentBackend.Adopt, called by TournamentService on every swap.
+//   F3  (now a CHECK) the hole selection's header pills and hole labels follow the selected
+//       tournament — TournamentHeaderPills + TournamentVenueLine.ClubName.
 //
 // Menu: GOLFIN ▸ Tournaments ▸ Verify — finished tournament routes (no video)
 // Output: Docs/Specs/Quick/media/finished_tournament_leaderboard_route/route_verify.{json,log}
@@ -242,6 +243,20 @@ namespace GolfinRedux.UI.Editor
             var counts = HoleCardCounts(holeScreen);
             Check("B1", ctrl != null && counts.next == 0 && (counts.locked + counts.finished) > 0,
                   $"hole cards for finished '{endedId}': next={counts.next} locked={counts.locked} finished={counts.finished}");
+            // F3 — the header pills and the hole labels follow the SELECTED tournament, not the
+            // Stage-1 placeholder ("SPONSORED BY PUMA / KASUMIGASEKI OPEN / Lomond Country Club").
+            {
+                string sponsor = TextAt(holeScreen, "Content/IdentityPillRow/Pill_SPONSO/Label");
+                string name    = TextAt(holeScreen, "Content/IdentityPillRow/Row2/Pill_KASUMI/Label");
+                string label   = FirstHoleLabel(holeScreen);
+                var def = backend.GetTournament(endedId);
+                string wantSponsor = "SPONSORED BY " + (def != null && !string.IsNullOrEmpty(def.SponsorKey) ? def.SponsorKey.ToUpperInvariant() : "GOLFIN");
+                bool placeholder = sponsor.Contains("PUMA") || name.Contains("KASUMIGASEKI") || label.StartsWith("Lomond Country Club");
+                bool nameOk = name.Length > 0 && !name.Contains("KASUMIGASEKI") && name.ToUpperInvariant() == name;
+                bool labelOk = label.Contains("Hole 1") && !label.StartsWith("Lomond Country Club");
+                Check("F3", !placeholder && sponsor == wantSponsor && nameOk && labelOk,
+                      $"hole selection header for '{endedId}': sponsor='{sponsor}' (wanted '{wantSponsor}'), name='{name}', first card='{label}'");
+            }
             yield return Still("B1_hole_selection_finished_tournament");
 
             // B2 — BeginTournamentHole refuses through the guard (private; reflection is the adversary's shortcut)
@@ -330,22 +345,12 @@ namespace GolfinRedux.UI.Editor
                 if (apply == null) { Line("WARN TournamentService.Apply not found"); return false; }
                 apply.Invoke(svc, new object[] { schedule, ScheduleSource.DiskCache });
                 int seen = svc.Backend.GetTournaments().Count;
-                Line($"injected live '{LiveId}' ({live.StartUtc:u} → {live.EndUtc:u}) through TournamentService.Apply; Backend sees {seen} defs (schedule has {defs.Count})");
-                if (seen != defs.Count && svc.Backend is RemoteTournamentBackend remote)
-                {
-                    // F2 — the session's RemoteTournamentBackend still wraps the local backend it
-                    // was built with. Swap in the freshly composed one so the control can run.
-                    var localField = typeof(TournamentService).GetField("_localBackend", Priv);
-                    var wrapped    = typeof(RemoteTournamentBackend).GetField("_local", Priv);
-                    var fresh      = localField?.GetValue(svc) as LocalTournamentBackend;
-                    if (fresh != null && wrapped != null)
-                    {
-                        wrapped.SetValue(remote, fresh);
-                        Line($"  swapped RemoteTournamentBackend._local to the freshly composed backend; Backend now sees {svc.Backend.GetTournaments().Count} defs");
-                    }
-                    Finding("F2", $"a schedule applied after sign-in did not reach the session's RemoteTournamentBackend (Backend saw {seen} of {defs.Count} defs) — TournamentService.EnsureBackendForSession keeps the first wrapper (`_remoteBackend ??=`) and RemoteTournamentBackend._local is readonly");
-                }
-                return svc.Backend.GetTournament(LiveId) != null;
+                Line($"injected live '{LiveId}' ({live.StartUtc:u} → {live.EndUtc:u}) through TournamentService.Apply; Backend sees {seen} defs (schedule has {defs.Count}); backend kind={svc.BackendKind}");
+                // F2 — a schedule applied AFTER sign-in must reach the backend the session plays on.
+                // Until the fix the RemoteTournamentBackend kept the local backend it was built
+                // with and this saw 3 of 4; the service now hands the wrapper the new one (Adopt).
+                Check("F2", seen == defs.Count, $"schedule applied after sign-in: Backend ({svc.BackendKind}) sees {seen} of {defs.Count} defs");
+                return seen == defs.Count && svc.Backend.GetTournament(LiveId) != null;
             }
             catch (Exception e) { Line("WARN InjectLiveTournament: " + e.Message); return false; }
         }
@@ -608,6 +613,26 @@ namespace GolfinRedux.UI.Editor
             foreach (var c in cards)
                 Line($"  '{c.TournamentId}' state={c.State} cta='{CtaLabel(c)}' active={c.gameObject.activeInHierarchy}");
             return cards;
+        }
+
+        static string TextAt(GameObject? screen, string path)
+        {
+            var t = screen != null ? screen.transform.Find(path) : null;
+            var tmp = t != null ? t.GetComponent<TMPro.TMP_Text>() : null;
+            return tmp != null ? tmp.text : "<missing " + path + ">";
+        }
+
+        /// <summary>The subtitle of the first spawned hole card ("… - Hole 1 - Par N").</summary>
+        static string FirstHoleLabel(GameObject? screen)
+        {
+            if (screen == null) return "<no screen>";
+            foreach (var t in screen.GetComponentsInChildren<Transform>(false))
+            {
+                if (!t.name.StartsWith("TournamentHoleCard_") || !t.name.EndsWith("(Clone)")) continue;
+                foreach (var tmp in t.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                    if (tmp.text.Contains("Hole 1 ")) return tmp.text;
+            }
+            return "<no hole-1 label>";
         }
 
         static (int next, int locked, int finished) HoleCardCounts(GameObject? holeScreen)

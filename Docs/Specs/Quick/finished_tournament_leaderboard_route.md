@@ -63,9 +63,9 @@ log + stills in `Docs/Specs/Quick/media/finished_tournament_leaderboard_route/`:
 - C0–C3 CONTINUE on a live entered tournament still opens its Next card (positive control)
 - Z the planted entries are removed from the save again
 
-## Run log — 2026-09-14 15:02 JST (re-run after F1; first run 14:44), Editor 6000.3.9f1, signed-in dev profile, schedule from the disk cache
+## Run log — 2026-09-14 17:34 JST (re-run after F2/F3; F1 run 15:02, first run 14:44), Editor 6000.3.9f1, signed-in dev profile, schedule from the disk cache
 
-`route_verify.json` → **PASS**, 14/14 route checks (the bot also CREATES the reported state:
+`route_verify.json` → **PASS**, 16/16 route checks (the bot also CREATES the reported state:
 `Register()` on the local backend has no time guard, so an entry is planted on the ended
 `kisarazu_cup` — a player who entered and whose tournament then ended with holes left — and one
 synthetic live tournament is applied in memory for the positive control; both entries are removed
@@ -76,6 +76,8 @@ from the save again at the end, check Z):
 | A1 | LEADERBOARD on ended `kisarazu_cup` (never entered) | → `TournamentLeaderboard` |
 | A1s | shimmer after the (failing) board fetch settles | host inactive (F1b) |
 | A2 / A4 | the empty board's CLOSE (the empty state's own button) | → `TournamentSelection` (F1) |
+| F2 | a schedule applied after sign-in reaches the session's backend | `Backend (Remote) sees 4 of 4 defs` |
+| F3 | hole selection header + first card for `kisarazu_cup` | `SPONSORED BY MIZUNO` / `KISARAZU CUP` / `Kisarazu Higashi CC - Hole 1 - Par 5` |
 | S1 | after planting, the card reads | `EnteredFinished` / LEADERBOARD |
 | A3 | LEADERBOARD on the entered+ended card (**the report**) | → `TournamentLeaderboard` |
 | B1 | hole selection opened with it selected (the stale route) | next=0 locked=18 finished=0 |
@@ -88,7 +90,7 @@ Stills (real frames, md5 in the JSON): `A1_leaderboard_from_ended_card.png`,
 `A3_leaderboard_from_finished_entered_card.png`, `B1_hole_selection_finished_tournament.png`,
 `C1_hole_selection_live_tournament.png`; `route_verify_sheet.jpg` is the four side by side.
 
-EditMode: `ScreenIdSerializationTests` 14/14 (and the `_leaderboardTarget` site test proven to FAIL
+EditMode (17:34, full unfiltered run 3120 passed / 0 failed / 3 pre-existing skips of 3123, after F4): `ScreenIdSerializationTests` 14/14, `RemoteBackendAdoptTests` 3/3, `VenueClubNameTests` 5/5 (and the `_leaderboardTarget` site test proven to FAIL
 on the HEAD prefab — *"stored 10 (TournamentHoleSelection), expected 11"*), `GolfinRedux.Tests.EditMode`
 380/380, `Golfin.Tournaments.Tests` 251/251 (incl. 6 new `IsPlayable` cases).
 
@@ -113,11 +115,35 @@ on the HEAD prefab — *"stored 10 (TournamentHoleSelection), expected 11"*), `G
   `answerStillComing` true forever. The callback now calls `EndBoardWait(Fetch, 0)` on
   `changed == false` — the file's own rule ("every arm which ENDS a wait has to say so"), applied to
   the failing arm. Bot check A1s: shimmer host inactive after the fetch settles.
-- **F2 — a schedule applied after sign-in never reaches the wrapper the session plays on** (not fixed).
-  `TournamentService.EnsureBackendForSession` keeps the first `RemoteTournamentBackend`
-  (`_remoteBackend ??= …`) and `RemoteTournamentBackend._local` is readonly, so after a mid-session
-  `RefreshSchedule()` / `Apply()` a signed-in player keeps the previous definitions (the bot saw
-  `Backend sees 3 defs (schedule has 4)` and swapped the field to continue).
-- **F3 — the hole-selection header is authored text** (not fixed). "SPONSORED BY PUMA / KASUMIGASEKI
-  OPEN" and the "Lomond Country Club" label prefix are not bound to the selected tournament (only the
-  ENDS-IN pill and "Hole N - Par P" are). Visible in `B1_…png` for `kisarazu_cup`.
+- **F2 — a schedule applied after sign-in never reached the wrapper the session plays on — FIXED
+  (Cesar: "Fix F2 and F3", 2026-09-14 17:34).** `TournamentService` builds one
+  `RemoteTournamentBackend` per session and reuses it across schedule swaps on purpose (board
+  snapshots, in-flight guards and the submit queue live in it), but `EnsureBackendForSession` did
+  `_remoteBackend ??= new …` and the wrapper's `_local` was readonly, so after any `Apply()` that
+  landed after sign-in (a live refetch, the disk cache arriving second) a signed-in player kept the
+  previous definitions. Fix: `RemoteTournamentBackend.Adopt(local, prizeTables)` + `Local`, called
+  by the service whenever the composed local backend changed. Tests: `RemoteBackendAdoptTests`
+  (serves the new schedule; keeps the queue and the entries made before the swap; refuses null).
+  Bot check F2: `schedule applied after sign-in: Backend (Remote) sees 4 of 4 defs` — the same
+  probe that saw 3 of 4 and had to swap the field itself before.
+- **F3 — the hole-selection header was authored text — FIXED with F2.** `TournamentHeaderPills`
+  (`Assets/Scripts/UI/Tournaments/`) is the one binder for the identity pills both tournament
+  screens carry: `Bind(root, sponsorPath, namePath, def, tag)` writes "SPONSORED BY {SPONSOR}" and the
+  `TournamentDisplayName` ladder's name (so a dashboard-created tournament reads its title, not a raw
+  key); the board's `BindHeader` delegates to it, the hole selection calls it on every rebuild. The
+  hole cards read `{TournamentVenueLine.ClubName(def)} - Hole N - Par P` — the club half of the
+  localized `tourn.venue.*` row (EN "Kisarazu Higashi CC", JP "木更津東カントリークラブ"), the id on
+  the unlocalized fallback — instead of the template's "Lomond Country Club". Tests:
+  `VenueClubNameTests` (EN, JP, fallback id, no-separator row, empty). Bot check F3 on the finished
+  `kisarazu_cup`: `sponsor='SPONSORED BY MIZUNO', name='KISARAZU CUP', first card='Kisarazu Higashi
+  CC - Hole 1 - Par 5'`; stills `B1_…png` / `C1_…png`.
+- **F4 — ShellScene.unity was structurally malformed since `a231c1a78` (scroll-lists sweep) — FIXED
+  on the way.** That commit's raw-YAML patch landed at stale offsets on the board's `Viewport`: its
+  two new `- component:` lines went after `m_Icon` instead of into `m_Component:`, and its new
+  Image + CanvasRenderer blocks were inserted *inside* GameObject `1679869180` (the `Text` under
+  `UsernameInputField`), leaving that object's tail dangling off the CanvasRenderer. Unity
+  self-healed on every open and logged *"Problem detected while opening the Scene file"*, which is
+  why `PressFeedbackCoverageTests.EnumeratedTapTargets_HavePressFeedback` and
+  `LoadingTipCatalogTests.ShellSceneCard_…` failed in the full EditMode run (3118/3123). Repaired by a
+  12-line structural edit (the `Text` block is byte-identical to `d8fdab6ac` again), reloaded in the
+  Editor without a save; both tests green.
