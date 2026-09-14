@@ -4,6 +4,40 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 — weekly_banners_42_45: **four more weekly banners drawn, 38-45 now has art** — files only, nothing in the admin yet
+
+Delivered to `Claude outputs/WeeklyBanners/`, all 882x1448, JPEG q95, all under the 500 KB cap:
+
+| Week | Brand | Composition / background | jpg |
+|---|---|---|---|
+| wk_2026_42 | GOLFIN | C5 low-angle tower, EVENING sports festival | 271 KB |
+| wk_2026_43 | PUTT ACE | C6 face-on pair, B6 aurora wash | 251 KB |
+| wk_2026_44 | FAIRLOFT | C7 tilted V, Halloween moon + pumpkins | 251 KB |
+| wk_2026_45 | GOLFINIX | C8 turned pair, B8 speed streaks | 267 KB |
+
+All four verified programmatically: top 18%, hook band 72.7-86% and bottom 91% all dark; no
+lettering at full resolution; no letterbox seam. Contact sheet `_weeks_38_45_comparison.png`
+covers weeks 38-45.
+
+**Adjacency check.** wk_2026_43 and wk_2026_44 are consecutive green weeks (PUTT ACE forest
+green, FAIRLOFT petrol teal), which §5 of the variation system says should not happen. Stage-band
+colour distance is 68.7 and the backgrounds pull them far apart (deep-space aurora against a
+moonlit orange-and-violet course), so they do not read alike. No change made; flagged.
+
+**wk_2026_42 caveat.** Its hero shafts exit the TOP of the frame rather than running down and out
+the bottom like every other week in the set. It took six turns and Cesar has not seen it at size
+yet — worth his eye before it goes in the admin.
+
+**Method corrections are in `Docs/Game Design/WEEKLY_BANNER_VARIATION_SYSTEM.md` §6b** — the
+words "banner" and "aspect ratio 2:3" pull the model to landscape and must not be used; reference
+renders are no longer attached (the upload opens an undriveable native picker, and describing the
+livery in words works better); digits and degree marks need banning explicitly; hover the image
+before clicking download or the click silently does nothing.
+
+**Not done:** none of these four are in the admin. Weeks 42-45 are still NOT GENERATED in the
+rotations workbench — materialize and upload once wk_2026_42 is approved.
+
+---
 ## 2026-09-14 — weekly_banners_to_admin: **weeks 38–41 staged in the admin with their bespoke art** — 40 and 41 are DRAFTS awaiting Cesar's publish
 
 **State on prod after this session**
@@ -15,10 +49,24 @@
 **Why future weeks roll on their own**
 `GachaBannerModel.GetLiveBanners` filters `StartUtc <= now < EndUtc`, and `shopRow` stamps `startAt`/`endAt` per week. Row ids are rotation-scoped (`banner_<rot>`, `pool_<rot>`, `shop_<rot>_<ref>`), so published future weeks sit dormant until their Monday. Publish once and the calendar advances with no further action.
 
-**⚠️ Gotcha found the hard way — PUBLISH ROTATION discards other weeks' drafts**
-At 04:25 UTC a `rotation_publish wk_2026_38` ran (audit log, five catalogs). It promoted wk_38's lineup and **cleared the whole draft set for those catalogs**, silently destroying the freshly materialized wk_2026_40 and wk_2026_41 rows — both went back to NOT GENERATED, and `gacha_banners` dropped from 10 rows to 8. They had to be re-materialized from scratch. Same seed ⇒ same lineup, so recovery was exact, but nothing warned.
+**⚠️ UNEXPLAINED — two materialized weeks vanished around a publish (cause NOT established)**
 
-Practical rule until this is fixed: **materialize a week, then publish that week, before materializing the next.** Do not leave several weeks sitting as drafts and then publish one of them.
+Observed, not inferred:
+- 04:24 UTC — `gacha_banners` panel showed 10 rows; `banner_wk_2026_40` and `_41` present as drafts (4 unpublished).
+- 04:25 UTC — `rotation_publish wk_2026_38` ran across all five catalogs (audit log).
+- After — 8 rows; both weeks back to NOT GENERATED / "Materialized: never". Re-materialized from seed to recover (identical output).
+
+An earlier note here claimed PUBLISH ROTATION discards other weeks' drafts. **That was wrong** — `publishCatalog` (`lib/contentMutations.ts:425`) does `fetchAllRows("content_drafts", catalog)` with no rotation filter and promotes the entire set, so it should have PUBLISHED 40 and 41, not dropped them. `PUBLISH ROTATION` is just that function five times (`lineup-workbench.tsx:233`).
+
+Audit counts don't fit either story: `shop_catalog added 13 · gacha_pools added 12 · gacha_rates added 6` is exactly ONE week's lineup, not two and not zero; `gacha_banners added 0, changed 2`.
+
+Two open suspects:
+1. The `content_publish` Supabase RPC (playlife repo — not readable from here) doing something the TS client doesn't describe.
+2. The Cloudflare 1102 outage ~2 min earlier: the materialize wrote through a failing worker, so some draft writes may never have committed even though the UI rendered them.
+
+**The next publish is the test, at zero cost.** Weeks 40 and 41 are both drafts now. Publishing 40 should also publish 41 (~26 shop rows added). If 41 vanishes instead, it is a real bug and needs a spec.
+
+**Supported by the code regardless:** a catalog publish pushes EVERY pending draft in that catalog. "Publish one week" never publishes only one week — you cannot stage a week you are not ready to ship and then publish something else.
 
 **Open, not actioned**
 - `materializeLineup` hardcodes `sortOrder: "0"` for every weekly banner (`Tools/admin-dashboard/lib/rotation.ts` ~L801), so the `sortOrder 0 is shared by …` warning grows one row per week and any manual edit is reverted on re-materialize. Harmless in play (one weekly window open at a time), noisy in review. Left alone — publish-critical code, needs Cesar's call.
@@ -76,7 +124,10 @@ nothing published or lost, one redo cost them. Its wk_39 art upload (04:24) rode
 v16. Lesson: a shared admin account cannot be attributed by `admin_email` — check for a parallel session's
 record before treating unexpected drafts as a runaway. Hook: every gate passes
 except P4, which trips on ANOTHER session's ` M Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab`
-(dirty before this task started) — disclosed in the report, STATUS written. Hazard seen twice: other
+(dirty before this task started) — disclosed in the report, STATUS written. Three gates PASS (self / reviewer /
+red-team) → `ARCHITECT_REVIEW_PASS`. Video on Cesar's ask: `videos/gacha_tagline_demo.mp4` (39 s, real flow,
+EN → JA via the real Settings overlay → back → the blank-pair STANDARD CLUB 1 → back; new
+`GachaTaglineDemoRecorder`, 1 180 frames flip-checked, captions frame-verified). Hazard seen twice: other
 sessions' script edits recompiled the Editor mid-play (domain reload); captures re-run in free windows.
 
 ---

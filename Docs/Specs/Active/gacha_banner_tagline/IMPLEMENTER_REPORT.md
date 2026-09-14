@@ -35,6 +35,8 @@ The gacha card now draws the two selling lines the weekly artwork can no longer 
 | `Assets/Art/Gacha/S_GachaTaglineRibbon.png.meta` | created — Sprite importer settings |
 | `Assets/Tests/EditMode/GachaBannerTaglineTests.cs` | created — 11 EditMode tests on the shipping `FormatTagline` (marker, unmatched, empty, `\\n`) |
 | `Assets/Tests/EditMode/GachaBannerTaglineTests.cs.meta` | created — Unity meta for the test |
+| `Assets/Scripts/UI/Editor/GachaTaglineDemoRecorder.cs` (+ `.meta`) | created — the sign-off clip recorder (BotVideoRecorder-backed, real widgets, writes `videos/captions.json` + take log) |
+| `Docs/Specs/Active/gacha_banner_tagline/videos/gacha_tagline_demo.mp4` | created — the captioned clip (see § Video) |
 | `Docs/Scripts/make_gacha_tagline_sprites.py` | created — the baker (source of truth for both plates, palette convention) |
 
 **Not this task's — other sessions' in-flight work (each line quoted verbatim from the iter-2 kickoff baseline DIRTY block in HEARTBEAT.log); untouched by this task, listed only because Rule 13 wants every uncommitted path accounted for:**
@@ -87,6 +89,12 @@ The gacha card now draws the two selling lines the weekly artwork can no longer 
 - **Scene loaded:** `Assets/Scenes/ShellScene.unity` (real boot)
 - **Play mode:** Yes — `Application.runInBackground = true`, Game View pinned to iPhone 14 (1170×2532, canvas scale 1)
 - **Hole loaded (if applicable):** n/a
+
+## Video
+
+- **Canonical video:** `videos/gacha_tagline_demo.mp4` — 1170×2532 @ 30 fps, 39.3 s, 5.9 MB, captioned. Recorded by the new `Assets/Scripts/UI/Editor/GachaTaglineDemoRecorder.cs` (`GOLFIN ▸ Gacha ▸ Record tagline demo clip`; BotVideoRecorder / Unity Recorder, armed deferred, 30 fps cap + vSync 0, the documented session-guard override used because two short clips had been recorded hours earlier and the GPU was idle). One take, real widgets throughout: boot → Home (recording starts here) → `PersistentUIManager.gachaButton.onClick` → the live `banner_wk_2026_38` card from the published v16 row (ribbon + hook) → the language toggle through the REAL Settings overlay (gear ▸ Language ▸ 日本語 ▸ close) → title, ribbon and hook flip to the JA pair → back to English the same way → the carousel moved to `STANDARD CLUB 1` (blank pair → no plates, its baked art only) → back to the weekly card. Captions from `videos/captions.json` (stamped by the recorder relative to record start; ≤ 40 chars/line, no `%`, no names), burned in with `Docs/Scripts/build_bot_video.py --mode captionsjson --caption-fontsize 40 --title-seconds 2.8`.
+- **Verified from the encoded file, not by eye:** all 1 180 consecutive frames decoded — 0 Y-flipped (top-band correlation 0.99–1.0 against an upright reference on every 30th frame, no frame matches the flipped signature); caption boxes present with bright text at 1.5 / 6.5 / 13.0 / 20.5 / 31.5 / 37.5 s; caption timing checked against the frames (Settings overlay opens at video 14.8 s vs the gear click at take 14.78 s; the carousel leaves at 28.0 s vs the move at 27.87 s — recorder lead ≈ 0.1 s, so the sidecar's +0.40 / tool's −0.40 nets to the take clock). Take log: `videos/gacha_tagline_take.log` (per-event read-backs: EN ribbon/hook texts, JA texts, `STANDARD CLUB 1 ribbonActive=False hookActive=False`).
+- The raw Recorder mp4 (31.9 MB) was deleted after the encode; a re-caption is a re-record (~1 min through the menu item).
 
 ## Figma fidelity
 
