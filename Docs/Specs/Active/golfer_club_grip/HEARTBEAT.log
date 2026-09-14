@@ -163,3 +163,16 @@ DIRTY:
 === end baseline ===
 [2026-09-14T21:31:56Z] stage 1: wrote HandHingeModel stage-1 members (GripAxisHandLocal, SegmentToLineDistance, SolveFingerK, ThumbAimAlongShaft, MeasureThumbAxis; Version stage1-a), 3 stage-1 tests, HandHingeStage1Tool.cs (menu + RunStage1Batch). Next: batch run -executeMethod, then -runTests.
 [2026-09-14T21:59:19Z] stage 1: delivered. Batch route then MCP route; one-k lead FAIL (inside at k=0.6), trail graze (k 0.73-0.84, tips 41-51 mm out); inscribed supplementary = textbook grip; skinning-once-per-frame defect found+fixed (forceMatrixRecalculationPerRender); 16 frames 1600px; tests 12/13 (lead gate red by design). STATUS -> STAGE_1_REVIEW. STOPPED at the gate; committing.
+
+=== iter-12 (stage 2) kickoff baseline 2026-09-14T22:19:05Z ===
+HEAD: 841685c88c1ba6cfb8d132b2214af8ac794385e6 (841685c88) branch golfer_3d_test
+NOTE: Cesar verdict: stage 1 PASS on the inscribed wrap. Editor open (MCP available).
+NOTE: Library_broken_143700/ pre-existing stale Library backup, untracked (one line).
+DIRTY:
+ M Docs/Specs/Active/golfer_club_grip/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/golfer_club_grip/SPEC.md
+ M Docs/Specs/Active/golfer_club_grip/STATUS.md
+ ?? Library_broken_143700/
+=== end baseline ===
+[2026-09-14T22:23:36Z] stage 2: wrote HandHingeStage2.cs (prefab authoring, §3.12.4 anchors closed-form, §3.12.5 pivot/slide solve, rows, 3 scene-cam frames + gameplay frame, bake write-back), HandHingeModel getters (Version stage2-a), recorder stage-2 hook after the address sample. MCP session expired during refresh; reconnecting.
+[2026-09-14T22:43:37Z] stage 2: delivered. Prefab: HandHingeModel data + anchors + Rig_Hands/IK + ClubSlot re-solved/re-squared. RigBuilder.Build lesson (AU). Palm-rule roll 79/167 vs min-wrist 14/36 (baked). Verify run rows + 5 frames. Tests 13/13 (gate test retargeted to the inscribed wrap). STATUS -> STAGE_2_REVIEW. Committing.

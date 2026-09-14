@@ -102,7 +102,7 @@ namespace Golfin.Gameplay.Golfer
     public sealed class HandHingeModel : MonoBehaviour
     {
         /// <summary>Bumped by hand on every edit; read back by reflection to prove the build loaded.</summary>
-        public const string Version = "stage1-b";
+        public const string Version = "stage2-a";
 
         [SerializeField] Animator anim;
         [SerializeField] HandHingeData data;
@@ -110,6 +110,12 @@ namespace Golfin.Gameplay.Golfer
         [SerializeField] bool applyEveryFrame = false;
         [SerializeField] HandPose lead;
         [SerializeField] HandPose trail;
+
+        /// <summary>Read-only views for the stage tools (the fields stay serialized data).</summary>
+        public HandHingeData Data => data;
+        public HandPose Lead => lead;
+        public HandPose Trail => trail;
+        public bool ApplyEveryFrame => applyEveryFrame;
 
         void LateUpdate()
         {

@@ -1,0 +1,22 @@
+{
+  "mode": "verify",
+  "charScale": 0.75886,
+  "wristResidualDeg": {"lead": 0.00000, "trail": 0.00000},
+  "rows": [
+    {"id": "grip.wrist.residual_l", "verdict": "PASS", "detail": "IK rotated the lead wrist 0.0° from the clip (stop line 40); IK reached the anchor to 0.0° / 0.01 mm"},
+    {"id": "grip.wrist.residual_r", "verdict": "PASS", "detail": "IK rotated the trail wrist 0.0° from the clip (stop line 40); IK reached the anchor to 0.0° / 0.00 mm"},
+    {"id": "grip.wrist.displacement", "verdict": "INFO", "detail": "hand origin moved L 0.00 mm, R 0.00 mm from the clip"},
+    {"id": "grip.hand.onShaft_l", "verdict": "PASS", "detail": "lead tunnel point 0.02 mm off the shaft axis (< 3)"},
+    {"id": "grip.hand.onShaft_r", "verdict": "PASS", "detail": "trail tunnel point 0.01 mm off the shaft axis (< 3)"},
+    {"id": "grip.hands.overlap", "verdict": "PASS", "detail": "trail little MCP station 90.48 mm vs lead index/middle gap 90.49 mm (Δ -0.01, ±8)"},
+    {"id": "grip.heelPad.onTop", "verdict": "FAIL", "detail": "lead dot(−n, toHead) = 0.01768 (> 0.5)"},
+    {"id": "grip.trailPalm.onThumb", "verdict": "FAIL", "detail": "lead thumb 24.00 mm palm-side of the trail MCP plane (0 … 18.97), shaft 21.58 mm (must be further); dot(n, toThumb) = 0.05896"},
+    {"id": "grip.hands.noInterpenetration", "verdict": "PASS", "detail": "closest lead joint to a trail index/middle/ring joint: 11.87 mm (≥ 8)"},
+    {"id": "grip.hands.trailLittleOnLead", "verdict": "INFO", "detail": "closest lead joint to the trail little finger: 3.97 mm (the intended contact)"},
+    {"id": "grip.buttCap.pastHeel", "verdict": "PASS", "detail": "LeftHand origin 7.59 mm down-shaft of ClubStart (6.07 … 15.18); lead little MCP at 35.55 mm"},
+    {"id": "grip.fingers.onShaft_l", "verdict": "PASS", "detail": "bone segments ≥ mesh radius 13.58: min 14.53 mm | index pip/dip/tip 20.40/20.40/23.71 segMin 15.33; middle pip/dip/tip 20.43/20.40/20.38 segMin 14.53; ring pip/dip/tip 20.42/20.42/20.41 segMin 15.43; little pip/dip/tip 20.41/20.39/20.35 segMin 16.60; "},
+    {"id": "grip.fingers.onShaft_r", "verdict": "PASS", "detail": "bone segments ≥ mesh radius 13.58: min 13.78 mm | index pip/dip/tip 20.40/20.43/20.42 segMin 13.86; middle pip/dip/tip 20.40/20.41/24.51 segMin 13.78; ring pip/dip/tip 20.40/20.41/20.40 segMin 14.79; little pip/dip/tip 18.93/19.86/32.94 segMin 15.40; "},
+    {"id": "grip.thumb.downShaft_l", "verdict": "INFO", "detail": "lead thumb proximal 47.5° off the shaft, Thumb3 21.52 mm / tip 29.87 mm from the axis"},
+    {"id": "club.headAtBall", "verdict": "PASS", "detail": "ClubEnd 22.61 mm from the ball in plan (< 50)"}
+  ]
+}

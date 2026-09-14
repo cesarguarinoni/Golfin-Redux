@@ -1,0 +1,11 @@
+{
+  "clubSlotLocalPos": [-0.04624, -0.04489, -0.01398],
+  "clubSlotLocalRot": [-0.12942, 0.92549, 0.35379, 0.03929],
+  "leadAnchorLocalPos": [0.00000, -0.02812, 0.00000],
+  "leadAnchorLocalRot": [-0.43937, 0.89733, 0.01613, -0.03856],
+  "leadWristLocalPos": [-0.05969, -0.07667, 0.02216],
+  "trailAnchorLocalPos": [0.00000, 0.05440, 0.00000],
+  "trailAnchorLocalRot": [-0.37084, -0.55569, 0.41507, 0.61759],
+  "trailWristLocalPos": [0.03696, -0.08966, 0.02254],
+  "pivotYawDeg": -7.75000, "pivotPitchDeg": 7.87500, "slideM": -0.00313, "costDeg": 394.49990
+}

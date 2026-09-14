@@ -618,3 +618,160 @@ Every uncommitted path outside `Docs/Specs/Active/golfer_club_grip/` is listed.
   the gate wants flesh clearance rather than bone clearance, that finger is the first to fail.
 - **The thumb clock and station are start values** (30°, 60 mm) with a convention I chose from the reference; the
   tip-lift finding depends on them only weakly (it is the flex axis, not the aim).
+
+## Stage 1 verdict (Cesar, 2026-09-15)
+
+**PASS on the inscribed wrap.** The per-joint inscribed solve is the stage-1 pose; the one-k solve is retired (SPEC §3.12.6 row 1 annotated). Stage 2 (two hands on one club, static, play mode) is the next kickoff — started the same day.
+
+---
+
+# Stage 2 — two hands on one club, static, at address (SPEC §3.12.4 / §3.12.5 / §3.12.6 row 2, iter-12, 2026-09-15)
+
+**Iteration shape:** `hinge-model:stage2-two-hands-static`. Play mode, address, Hole 06 through the real harness path
+(`GameSession.OnRoundStarted → GolferTestBootstrap → PlaceAtBall`), `Time.captureDeltaTime = 1/60`, IK on. **STOPPED at
+the gate — stage 3 (the swing) is not started.**
+
+**Verdict in one line:** with the anchors solved for the least wrist rotation the hands sit on the shaft to 0.02 mm,
+overlap exactly, the butt cap and face-square rows pass, nothing interpenetrates, and the IK bends the clip's wrists
+14.0° (lead) and 36.3° (trail) — under the 40° stop line. The §3.12.4 *palm-rule* roll, run as written, bends them
+79° and 167° and is a stop-and-show. Two §3.9.6 rows fail by the letter (heel-pad dot, trail-palm-on-thumb band);
+the numbers and four full-res frames are below for Cesar's eye.
+
+## 2.1 What was built
+
+- **Prefab** (`PfGolfer_MixamoNative.prefab`, saved with the define ON via `PrefabUtility`, never in play mode):
+  `HandHingeModel` on the root as data (`applyEveryFrame = 1`, the stage-1 inscribed poses per finger, thumb aims
+  `(−0.093, 0.981, −0.170)` lead / `(0.401, 0.904, −0.149)` trail from the rest-pose axes, 15°/10° thumb hinges);
+  `GripAnchor_Lead` / `GripAnchor_Trail` with `WristTarget` children under `ClubSlot` (+Y = shaft, so a station is
+  a local y); `Rig_Hands` under `GolferRig` with `IK_Lead` / `IK_Trail` (`TwoBoneIKConstraint`, root/mid/tip = upper
+  arm / forearm / hand, target = the `WristTarget`, position and rotation weight 1, no hint);
+  `RigBuilder.layers = [Rig_Grip, Rig_Hands]`. `ClubSlot` position re-solved (§3.12.5), its face-square roll kept.
+- **`HandHingeStage2.cs`** (Editor, gated): prefab authoring, the play-mode stage (`Run`), the bake write-back, the
+  face-roll fix. The verification runner hands control to `Run` at the address sample by reflection when a
+  SessionState flag is set (one branch in `GolferTestVerificationRecorder`, define-agnostic). Menu:
+  `GOLFIN ▸ Golfer Test ▸ Hinge ▸ Stage 2 — …` (solve palm-rule / solve min-wrist / verify / apply bake).
+- **§3.12.4 anchors, closed form.** Per hand the rest-pose axis `(o, d)` in Hand-local space is carried onto the
+  world shaft with `FromToRotation(d, shaftDir)`, then rolled about the shaft; the anchor sits on the axis at the
+  station and carries the hand frame; `WristTarget.localPosition = −fHand` (the hand origin's foot on the axis, Hand-
+  local), so the IK tip lands the hand-local tunnel on the shaft. Stations: lead = `LeftHand` origin 7.6 mm
+  (10 mm·s, s = 1.328/1.75) down-shaft of `ClubStart`; trail = the little MCP's foot at the lead Index/Middle MCP gap
+  (gap read from the lead hand *as anchored*).
+- **§3.12.5 club solve.** Pivot about the head point (yaw about up, pitch about the horizontal normal) plus a slide
+  along the aim; coarse grid ±6° / ±15 mm, four halving refines; deterministic. Cost = Σ wrist rotation the IK must
+  impose + 0.5° per mm of hand displacement (see finding 2). Applied as a new `ClubSlot` local pose under `GripTarget`.
+- **Runtime → prefab round trip.** The solve writes `stage2_bake.json`; `ApplyBakeToPrefab` writes `ClubSlot`, both
+  anchors and both wrist targets into the prefab in edit mode; a **verify** run then measures the prefab as
+  committed with no solve (the gate numbers in §2.3 are from that run).
+- **`HandHingeModel`**: read-only getters for the stage tools; `Version = stage2-a`. **Tests:** the retired one-k gate
+  test replaced by `S1_InscribedWrap_JointsOnContact_BonesOutsideMesh` (both hands) per Cesar's stage-1 verdict —
+  **13 / 13 green** (Editor, after the prefab was baked).
+
+## 2.2 Four findings on the way — three tooling, one model
+
+1. **Animation Rigging binds its targets at `RigBuilder.Build()`.** Three runs with different anchors measured
+   identical hands (94.8° / 116.7°, 131 / 196 mm) — the IK was pulling both hands to the spawn-time anchors (identity
+   under `ClubSlot`). The old harness knew ("logged for authoring into the prefab; nothing is written from here").
+   `RigBuilder.Build()` after writing the anchors fixes it; the IK then reaches the anchors to 0.0° / 0.00 mm.
+   Lesson AU.
+2. **A rotation-only §3.12.5 cost runs to the grid corner.** A 0.9 m club pivoted about its head moves the butt
+   16 mm per degree; minimising wrist rotation alone chose ±15° and put the anchors 0.3–0.47 m from the hands, out
+   of the arms' reach. The cost now adds hand displacement at 0.5° per mm (a chosen weight, stated), range ±6°.
+3. **The clip's hands are a plausible grip already** (rig off, before any solve): lead knuckle row along the shaft
+   at dot 0.957, palm facing away from the target (n·aim = −0.996), n·toHead = −0.004; trail knuckle row 0.770,
+   palm toward the target (n·aim = 0.881); tunnel points 19.5 / 35.9 mm off the axis at stations 58 / 115 mm.
+4. **The §3.12.4 roll rules do not describe this address.** "Back of the lead hand toward the head" can reach at
+   most dot 0.576 here and needs a 65° roll from the clip; that roll misplaces the lead thumb, so "trail palm toward
+   the lead thumb" then solves to a palm facing *away* from the target (177° from the clip). Run as written, with the
+   rig rebuilt: wrist residuals **79.3° / 166.7°**, trail IK 12.6 mm short, hands 5.65 mm apart (`solve_palm_*`).
+   The alternative measured: roll = the §3.12.5 objective on that DOF (closest hand frame to the clip that has the
+   tunnel on the shaft), palm dots *reported* — **14.0° / 36.3°**. That is what was baked. Which roll rule stage 2
+   is judged on is the Architect's / Cesar's call; the palm dots at the baked roll are in §2.3.
+
+Two more, informational: the recorder's `club.faceSquare` read 6.1° of azimuth error after the −6.13° yaw pivot;
+its own solved roll fix (−8.05° about the shaft) was applied to `ClubSlot` **with both anchors counter-rotated** so
+the hands did not move — verify run: edge 90.003°, azimuth 0.000°. And ~40 mm of grip shows above the hands because
+the station rule is on the `LeftHand` *origin* (7.6 mm from the butt cap), which puts the heel pad ~35 mm down the
+grip — the rule as written, not a solver choice.
+
+## 2.3 The numbers — verify run on the baked prefab (Hand-local / world mm; s = 0.759)
+
+| Row | Value | Gate | Verdict |
+|---|---|---|---|
+| `grip.wrist.residual_l` (from the solve run) | IK rotated the lead wrist **14.0°** from the clip; hand origin moved 51.8 mm | < 40° stop line | PASS |
+| `grip.wrist.residual_r` (from the solve run) | **36.3°**; hand origin moved 12.7 mm | < 40° | PASS (3.7° of margin) |
+| IK reach | 0.0° / 0.01 mm lead, 0.0° / 0.00 mm trail | — | PASS |
+| `grip.hand.onShaft_l/_r` | tunnel point 0.02 / 0.01 mm off the axis | < 3 mm | PASS |
+| `grip.hands.overlap` | trail little MCP station 90.48 vs lead Index/Middle gap 90.49 mm (Δ −0.01) | ±8 mm | PASS |
+| `grip.heelPad.onTop` | lead dot(−n, toHead) = **0.018** | > 0.5 | **FAIL** (rule not solved for; finding 4) |
+| `grip.trailPalm.onThumb` (§3.10.6) | lead thumb 24.0 mm palm-side of the trail MCP plane (band 0 … 19.0), shaft axis at 21.6 mm (must be further); dot(n, toThumb) 0.059 | in band and shaft further | **FAIL** (5 mm over; thumb 2.4 mm beyond the axis) |
+| `grip.hands.noInterpenetration` | closest lead joint to a trail index/middle/ring joint 11.87 mm | ≥ 8 | PASS |
+| `grip.hands.trailLittleOnLead` | closest lead joint to the trail little finger 3.97 mm | intended contact | INFO (bone-to-bone 4 mm = flesh overlap; see frames) |
+| `grip.buttCap.pastHeel` | `LeftHand` origin 7.59 mm down-shaft of `ClubStart`; lead little MCP at 35.6 mm | 6.07 … 15.18 mm | PASS |
+| `grip.fingers.onShaft_l` | joints 20.4 ± 0.1 mm (index tip 23.7 at the DIP cap); bone segments ≥ 14.5 mm | joints on the circle, bones ≥ 13.575 | PASS |
+| `grip.fingers.onShaft_r` | index/middle/ring joints 20.4 ± 0.1 (middle tip 24.5 at the cap); little fixed 18.9 / 19.9 / 32.9; segments ≥ 13.78 | same | PASS |
+| `grip.thumb.downShaft_l` | lead thumb proximal 47.5° off the shaft, Thumb3 21.5 mm, tip 29.9 mm from the axis | info | INFO |
+| `club.headAtBall` | `ClubEnd` 22.6 mm from the ball in plan (was 8.6 before the pivot) | < 50 | PASS |
+| `club.faceSquare` (recorder) | edge vs aim 90.003°, azimuth 0.000°, loft −21.1° | 90 ± 5 | PASS |
+| `stance.address.*` (recorder) | distance 0.738 m, clubReachesBall 0.000 m, swingsDownTheAim 0.0°, onGround 0.000 m | as before | PASS |
+
+Solve run, for the record: unpivoted anchors cost rot 16.8° / 39.7°, disp 35.0 / 41.9 mm; refined pivot
+**yaw −6.13°, pitch 0.00°, slide +19.7 mm** → rot 14.0° / 36.3°, disp 51.8 / 12.7 mm. Anchor rolls 157.5° (lead,
+palm dot 0.018) / −149.5° (trail, palm dot 0.059) from the `FromToRotation` base. Baked (after the −8.05° face roll,
+anchors counter-rotated): `ClubSlot` pos `(0.0055, 0.0493, −0.0851)` rot `(−0.1158, 0.8912, 0.4243, 0.1111)`; lead
+anchor `(0, −0.0281, 0)` rot `(−0.3104, 0.6301, 0.3114, −0.6400)`, wrist `(−0.0597, −0.0767, 0.0222)`; trail anchor
+`(0, 0.0544, 0)` rot `(−0.3908, −0.5813, −0.3963, −0.5936)`, wrist `(0.0370, −0.0897, 0.0225)`. Palm-rule run for
+comparison in `stage2_solve_palm_console.txt`. Sources: `evidence/stage2/stage2_verify_numbers.json`,
+`stage2_solve_minwrist_numbers.json`, `stage2_bake_minwrist.json`, `Docs/Diagnostics/_capture/golfer_invariants_mixamo.json`.
+
+## 2.4 Frames (verify run, prefab as committed; scene-cam 1600 × 1600, gameplay 1170 × 2532; all opened and looked at)
+
+Canonical screenshot: `evidence/stage2/verify_awayside.png`
+
+| Frame | What it shows |
+|---|---|
+| `evidence/stage2/verify_awayside.png` | from behind the golfer along the aim: trail hand fully around the grip, lead hand above it, ~40 mm of butt showing above the hands, shaft down to the ball |
+| `evidence/stage2/verify_targetside.png` | from the target side: trail hand in front with its palm toward the target, lead hand behind, shaft entering and leaving through the hands |
+| `evidence/stage2/verify_golferseye.png` | from the head: the backs of both hands on the grip, butt top-right, shaft to the ball |
+| `evidence/stage2/verify_downshaft.png` | the coach's view from in front of the golfer looking back along the shaft: both hands wrapped, trail fingers curling at the bottom, lead fingers above |
+| `evidence/stage2/verify_gameplay.png` | the gameplay camera at address (what the player sees) |
+| `evidence/stage2/solve_minwrist_*.png`, `solve_palm_*.png` | the two solve runs (earlier, tighter framing) for the record |
+
+## 2.5 Stage-2 gate (§3.12.6 row 2), by the letter
+
+| Criterion | Result |
+|---|---|
+| Overlap | PASS (Δ 0.01 mm) |
+| Heel pad | FAIL as the dot rule (0.018); the heel pad is 35 mm down the grip by the station rule |
+| Trail palm on thumb (geometric) | FAIL by 5 mm (thumb 24 mm vs band 19; shaft not further out) |
+| No interpenetration | PASS (11.9 mm; trail little finger on the lead index at 4 mm, the intended contact) |
+| Butt cap 8–20 mm·s | PASS (7.59 mm, band 6.07–15.18 at s = 0.759) |
+| Wrist residuals reported | 14.0° / 36.3°, both under 40 (min-wrist roll); 79.3° / 166.7° under the palm-rule roll |
+| Cesar's eye on the three frames | pending |
+
+Club mount kept (§3.11.1), face-square roll kept (re-squared after the pivot), rig and anchors are data on the prefab
+as §3.12.4 asks. Nothing above the anchor level was touched; the harness's `Assert` rows for face-square and stance
+come from the recorder itself.
+
+## Files modified or created (stage 2)
+
+Every uncommitted path outside `Docs/Specs/Active/golfer_club_grip/` is listed.
+
+| File | One-line summary |
+|---|---|
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab` | `HandHingeModel` (data), anchors + wrist targets under `ClubSlot`, `Rig_Hands` + two IK constraints, layers `[Rig_Grip, Rig_Hands]`, `ClubSlot` re-solved + re-squared |
+| `Assets/Scripts/UI/Editor/HandHingeStage2.cs` (+ `.meta`) | NEW — stage 2 (authoring, solve, measure, frames, bake, face-roll fix) |
+| `Assets/Scripts/UI/Editor/GolferTestVerificationRecorder.cs` | one reflection branch after the address sample handing the run to stage 2 |
+| `Assets/Scripts/Gameplay/Golfer/HandHingeModel.cs` | read-only getters; `Version = stage2-a` |
+| `Assets/Scripts/Gameplay/Golfer/Tests/HandHingeModelTests.cs` | one-k gate test replaced by the inscribed-wrap gate (Cesar's stage-1 verdict) |
+| `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | stage-2 entry; Lesson AU |
+| `Docs/Diagnostics/_capture/*` | harness outputs (`golfer_invariants_mixamo.json`, gameplay PNGs) — the usual scratch, not committed |
+| `Library_broken_143700/` | **Pre-existing** stale Library backup, untracked (in the iter-12 baseline block); untouched |
+
+## What a reviewer should be sceptical about
+
+- **The 0.5° per mm displacement weight is mine.** It is what stopped the pivot running to its bounds; a different
+  weight moves the pivot (currently −6.1° yaw, +20 mm slide) and the residuals with it.
+- **The trail wrist at 36.3° has 3.7° of margin** to the stop line, and that is with the roll chosen to minimise it.
+- **The palm dots at the baked roll are ~0.02 / 0.06** — the rules the spec wrote are not satisfied, they are
+  reported. If the Architect wants them as rules, finding 4 says what that costs in wrist rotation on this clip.
+- **Trail little finger on the lead index at 4 mm bone-to-bone** will read as flesh overlap in a close frame.

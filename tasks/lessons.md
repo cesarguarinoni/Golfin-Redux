@@ -3797,3 +3797,21 @@ throws "Cannot create a new scene additively with an untitled scene unsaved"**. 
 when a real scene is open. And `-batchmode` cannot run while the Editor has the project open — check `tasklist` for
 `Unity.exe` before launching, or the run aborts with "another Unity instance is running with this project open".
 Related: Lesson AP (`SnapPlayModeSafe` timing), [[feedback_unity_refresh_after_cs_edit]].
+
+
+## Lesson AU — Animation Rigging binds its target transforms at `RigBuilder.Build()`; anchors moved at runtime are invisible to the IK until you rebuild (2026-09-15, `golfer_club_grip` stage 2)
+
+Three play-mode runs wrote three different `GripAnchor_*` poses and measured the SAME hands (94.8° / 116.7° wrist
+rotation, 131 / 196 mm displacement) — the `TwoBoneIKConstraint`s were still pulling to the anchors as bound at
+spawn (identity under `ClubSlot`), and both hands landed on one point. The rig WEIGHT changes were honoured (they
+are synced per frame), which is what made it look like the targets were too. The iter-7 harness comment said it:
+"logged for authoring into the prefab; nothing is written from here".
+
+**Rule:** after moving a constraint's target/source transforms from script, call `RigBuilder.Build()` (or bake to the
+prefab and respawn). **Detect:** identical measurements across runs that changed the inputs; "IK reached the anchor
+to N mm" with N in the hundreds. Sister: [[feedback_unity_refresh_after_cs_edit]] (things that look loaded but are not).
+
+Second, same stage: a **rotation-only objective on a 0.9 m lever runs to its bounds** — minimising wrist rotation
+alone pivoted the club ±15° about its head and moved the anchors 0.3–0.47 m from the hands (16 mm per degree at the
+butt). Any solve that moves an attachment must price the displacement it asks the IK to cover, or bound the pivot
+where the arms can reach.

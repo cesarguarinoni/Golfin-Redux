@@ -137,25 +137,30 @@ namespace Golfin.Gameplay.Golfer.Tests
             if (!lead) Assert.That(HandHingeModel.PointToLineDistance(idx, o, d), Is.EqualTo(HandHingeModel.ContactM).Within(1e-5f), "trail: index MCP off the axis");
         }
 
-        // The per-finger k solve lands every wrapped finger's closest segment on the grip surface, ±1.5 mm, k inside [0.6, 1.4].
+        // Stage-1 gate as accepted (Cesar 2026-09-15: PASS on the INSCRIBED wrap; the one-k solve is
+        // retired): every solved joint lands on the contact circle to ±1.5 mm and no bone segment
+        // enters the grip mesh (≥ 13.575 mm). Lead index DIP and trail middle DIP hit the 80° cap
+        // with the tip 3–4 mm short, so the tip is asserted at ±5 mm on those two.
         [TestCase(false)]
         [TestCase(true)]
-        public void S1_SolveK_ClosestWrappedSegmentOnContact(bool right)
+        public void S1_InscribedWrap_JointsOnContact_BonesOutsideMesh(bool right)
         {
             var hand = HandHingeModel.Capture(_anim, right);
             bool lead = !right;
             HandHingeModel.GripAxisHandLocal(_anim, hand, lead, out Vector3 o, out Vector3 d);
             var pose = lead ? HandHingeModel.LeadGripStart() : HandHingeModel.TrailGripStart();
-            HandHingeModel.Apply(_anim, hand, pose);
             var fingers = lead
-                ? new[] { (HandHingeModel.Index, pose.index), (HandHingeModel.Middle, pose.middle), (HandHingeModel.Ring, pose.ring), (HandHingeModel.Little, pose.little) }
-                : new[] { (HandHingeModel.Index, pose.index), (HandHingeModel.Middle, pose.middle), (HandHingeModel.Ring, pose.ring) };
-            foreach (var (finger, flex) in fingers)
+                ? new[] { (HandHingeModel.Index, pose.index.spread), (HandHingeModel.Middle, pose.middle.spread), (HandHingeModel.Ring, pose.ring.spread), (HandHingeModel.Little, pose.little.spread) }
+                : new[] { (HandHingeModel.Index, pose.index.spread), (HandHingeModel.Middle, pose.middle.spread), (HandHingeModel.Ring, pose.ring.spread) };
+            foreach (var (finger, spread) in fingers)
             {
-                var m = HandHingeModel.SolveFingerK(_anim, hand, finger, flex, o, d);
-                Assert.That(m.k, Is.InRange(0.6f, 1.4f), m.name + " k");
-                Assert.That(m.solved, Is.True, $"{m.name}: {m.note} (closest {m.closestWrapped * 1000f:F2} mm, k {m.k:F3})");
-                Assert.That(m.closestWrapped, Is.EqualTo(HandHingeModel.ContactM).Within(HandHingeModel.ContactToleranceM), m.name + " closest wrapped segment");
+                var r = HandHingeModel.SolveFingerInscribed(_anim, hand, finger, spread, o, d);
+                var m = r.metrics;
+                Assert.That(m.pip, Is.EqualTo(HandHingeModel.ContactM).Within(HandHingeModel.ContactToleranceM), m.name + " PIP on the circle");
+                Assert.That(m.dip, Is.EqualTo(HandHingeModel.ContactM).Within(HandHingeModel.ContactToleranceM), m.name + " DIP on the circle");
+                float tipTol = r.dipReached ? HandHingeModel.ContactToleranceM : 0.005f;
+                Assert.That(m.tip, Is.EqualTo(HandHingeModel.ContactM).Within(tipTol), m.name + " tip on the circle (" + m.note + ")");
+                Assert.That(m.minAll, Is.GreaterThanOrEqualTo(HandHingeModel.ShaftRadiusM), m.name + " bone inside the grip mesh");
             }
         }
 

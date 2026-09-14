@@ -1273,6 +1273,18 @@ namespace Golfin.EditorTools
             yield return Snap("golfer_h" + _hole.ToString("00") + "_address");
             LogStance("address", golfer, ballT, shot);
 
+            // golfer_club_grip §3.12.6 stage 2: hand the run to the hinge-model stage at address
+            // (by reflection — the stage class is #if-gated; this file stays define-agnostic).
+            if (SessionState.GetBool("GolferTestVerification.Stage2", false))
+            {
+                var st2 = FindType("Golfin.EditorTools.Golfer.HandHingeStage2");
+                var run = st2?.GetMethod("Run", BindingFlags.Public | BindingFlags.Static);
+                if (run != null) yield return (IEnumerator)run.Invoke(null, new object[] { this, golfer, anim, shot, ballT });
+                else Mark("stage 2 requested but HandHingeStage2.Run was not found (define off?)");
+                yield return Finish();
+                yield break;
+            }
+
             // THE ASSERTION THAT MATCHES THE PICTURE. Everything below measures bone positions,
             // which are only meaningful if the golfer is actually in an Address state — and for
             // most of this task's life he was not. He stood upright with the club dangling for

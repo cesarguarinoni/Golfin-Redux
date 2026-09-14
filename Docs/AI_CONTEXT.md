@@ -4,6 +4,23 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-15 (golfer_club_grip stage 2) — **two hands on one club at address: hands on the shaft, wrists bent 14° / 36°**
+
+STATUS `STAGE_2_REVIEW`, stage 3 NOT started. Cesar passed stage 1 on the inscribed wrap the same day. Built:
+`HandHingeModel` on the prefab as data (inscribed poses, thumb aims), `GripAnchor_*` + `WristTarget` under `ClubSlot`,
+`Rig_Hands` with both `TwoBoneIKConstraint`s back, `ClubSlot` re-solved (§3.12.5) and re-squared; `HandHingeStage2.cs`
+(solve / verify / bake / face-roll fix, hooked into the verification runner at the address sample by reflection).
+Verify run on the prefab as committed: hands on the shaft 0.02 mm, overlap Δ 0.01 mm, butt cap 7.6 mm, no
+interpenetration (11.9 mm), face-square 0.000°, head at ball 22.6 mm; wrist residuals **14.0° lead / 36.3° trail**.
+Two §3.9.6 rows fail by the letter: heel-pad dot 0.018 and trail-palm-on-thumb 5 mm over the band. Tests 13/13.
+
+**Findings:** Animation Rigging binds IK targets at `RigBuilder.Build()` — runtime anchor edits are invisible until a
+rebuild (three runs measured identical hands); a rotation-only §3.12.5 cost runs to the grid corner (added 0.5°/mm hand
+displacement); the clip's hands are already a plausible grip (lead palm −0.996 vs aim, trail +0.881); the §3.12.4
+palm-rule roll bends the wrists 79° / 167° (stop-and-show), the min-wrist roll 14° / 36° — baked the latter, palm dots
+reported. Frames in `evidence/stage2/verify_*.png`; decision on the roll rule is the Architect's / Cesar's.
+
+---
 ## 2026-09-15 (golfer_club_grip stage 1) — **grip pose in hand space: mechanism holds, the §3.12.3 one-k solve does not make a grip**
 
 STATUS `STAGE_1_REVIEW`, stage 2 NOT started. Built: `GripAxisHandLocal` (§3.12.4 axis in Hand-local), the per-finger
