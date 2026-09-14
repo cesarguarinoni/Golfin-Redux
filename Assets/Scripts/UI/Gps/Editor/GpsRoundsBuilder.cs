@@ -59,6 +59,8 @@ namespace Golfin.Gps.UI.Editor
         const string SprModalPanel  = "Assets/Art/UI/Gps/S_GR_ModalPanel.png";
         const string SprModalRing   = "Assets/Art/UI/Gps/S_GR_ModalRing.png";
         const string SprMapFallback = "Assets/Art/UI/Gps/S_GPS_MapFallback.png";
+        const string SprMapMask     = "Assets/Art/UI/Gps/S_GR_MapMask.png";
+        const string SprMapPanelRing = "Assets/Art/UI/Gps/S_GR_MapPanelRing.png";
         const string SprSpotDisc    = "Assets/Art/UI/Gps/S_GR_SpotDisc.png";
         const string SprSpotRing    = "Assets/Art/UI/Gps/S_GR_SpotRing.png";
         const string SprPinFill     = "Assets/Art/UI/Gps/S_GR_PinFill.png";
@@ -339,20 +341,50 @@ namespace Golfin.Gps.UI.Editor
         }
 
         // ── Map Panel — node 14077:33884, 958x560 ─────────────────────────────
+        //
+        // THE SURFACE IS THE PANEL'S INTERIOR, not the node's floating 918x420 r36 rect. Read off
+        // the node, that rect leaves 40 px of panel to its right and 100 px under the legend — a
+        // placeholder, never a layout — and built literally the real tile sat in a navy gutter
+        // with four sharp corners (a RectMask2D clips to a rectangle). Cesar, from the device
+        // (2026-09-14): "the google map does not adapt to the container (sharp corners and does
+        // not touch the borders)". So: the tile runs to the card's 3 px ring on the left, top and
+        // right, its two top corners rounded with the ring, and a straight bottom edge where the
+        // legend strip begins. The rounding is a stencil Mask whose graphic is the baked
+        // S_GR_MapMask — Unity has no rounded RectMask2D — and the fallback tile is baked at the
+        // same size, unrounded, because the mask rounds whatever it holds.
+        //
+        // THE RING IS DRAWN ABOVE THE MAP. A stencil clip is a hard, stair-stepped contour, and
+        // the arc where it met the bright ring was the one place the eye found it (the first take
+        // showed a jagged white hairline at both top corners). So the card sprite is baked
+        // stroke-less, the stroke is its own sprite (S_GR_MapPanelRing) as the panel's LAST child,
+        // and the surface is inset 2 — one pixel under the ring's opaque core — with radius 48:
+        // what shows at the corner is the ring's anti-aliased inner edge over the map, never the
+        // clip. The numbers live in ONE place each: the inset here, the size on the controller
+        // (it is the size the tile is REQUESTED at), the shapes in make_gps_rounds_panels.py
+        // (MAP_SURFACE_*), which must agree.
+
+        /// <summary>How far the map surface sits inside the panel: one pixel under the opaque
+        /// core of the card's 3 px ring (make_gps_rounds_panels.py MAP_SURFACE_INSET).</summary>
+        const float MapInset = 2f;
 
         static void BuildMapPanel(Transform col, SerializedObject so)
         {
             GameObject panel = Card("MapPanel", col, 0, 0, 958, 560, SprMapPanel);
             Pin(panel, 560);
 
-            GameObject surface = Rect("MapSurface", panel.transform, 20, 20, 918, 420);
-            var mask = surface.AddComponent<RectMask2D>();
-            mask.padding = Vector4.zero;
+            const float mapW = GpsRoundsScreenController.MapW;   // 954 = 958 - 2 * MapInset
+            const float mapH = GpsRoundsScreenController.MapH;   // 494 = 560 - MapInset - 61 - 3
+            GameObject surface = Rect("MapSurface", panel.transform, MapInset, MapInset, mapW, mapH);
+            // The mask graphic is never drawn (showMaskGraphic = false); it exists so the stencil
+            // has the rounded shape to write. Everything under the surface is clipped to it.
+            Img(surface, SprMapMask, White, Image.Type.Simple);
+            var mask = surface.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
 
             // The LIVE tile. A RawImage, not an Image: the texture arrives from
             // UnityWebRequestTexture as a Texture2D and wrapping it in a Sprite every fetch would
             // allocate one per pan.
-            GameObject live = Rect("MapTile", surface.transform, 0, 0, 918, 420);
+            GameObject live = Rect("MapTile", surface.transform, 0, 0, mapW, mapH);
             Stretch((RectTransform)live.transform);
             var raw = live.AddComponent<RawImage>();
             raw.color = White;
@@ -362,14 +394,14 @@ namespace Golfin.Gps.UI.Editor
 
             // The stylised fallback sits UNDER the live tile and is visible until one arrives,
             // so the panel is never an empty hole (§C4).
-            GameObject fallback = Rect("MapFallback", surface.transform, 0, 0, 918, 420);
+            GameObject fallback = Rect("MapFallback", surface.transform, 0, 0, mapW, mapH);
             Stretch((RectTransform)fallback.transform);
             Set(so, "_mapFallback", Img(fallback, SprMapFallback, White, Image.Type.Simple));
             fallback.transform.SetAsFirstSibling();
 
             // Pins and the player dot ride a layer whose CENTRE is the tile's centre, because
             // MapProjection.Offset returns an offset from the centre.
-            GameObject pins = Rect("PinLayer", surface.transform, 0, 0, 918, 420);
+            GameObject pins = Rect("PinLayer", surface.transform, 0, 0, mapW, mapH);
             var prt = (RectTransform)pins.transform;
             Stretch(prt);
             Set(so, "_pinLayer", prt);
@@ -381,8 +413,11 @@ namespace Golfin.Gps.UI.Editor
             Set(so, "_playerDot", (RectTransform)dot.transform);
             dot.SetActive(false);
 
-            // Recenter — node 14077:33948, 140x44 r100, inset 16 from the surface's top-right.
-            GameObject re = Rect("Recenter", surface.transform, 762, 16, 140, 44);
+            // Recenter — node 14077:33948, 140x44 r100, inset from the surface's top-right. The
+            // node says 16, measured from a surface that floated 20 inside the panel; now that
+            // the surface meets the ring it is 20, the same breath the legend row keeps from it.
+            const float recenterInset = 20f;
+            GameObject re = Rect("Recenter", surface.transform, mapW - recenterInset - 140, recenterInset, 140, 44);
             Img(re, SprPill, ADark(Color.black, 0.45f), Image.Type.Sliced, 22f);
             GameObject reRim = Rect("Rim", re.transform, 0, 0, 140, 44);
             Stretch((RectTransform)reRim.transform);
@@ -391,8 +426,9 @@ namespace Golfin.Gps.UI.Editor
             TMP("Label", re.transform, 0, 9, 140, 26, "", SB(22), White, FontSemi,
                 TextAlignmentOptions.Top, "GPS_ROUNDS_NEAR_ME");
 
-            // Legend — node 14077:33950, at y 420 inside the 20px-padded panel.
-            GameObject legend = Rect("Legend", panel.transform, 20, 440, 918, 40);
+            // Legend — node 14077:33950, 918x40. The strip under the map is 61 tall between the
+            // surface's bottom edge and the ring's inner edge; the 40 row sits in it, 11 down.
+            GameObject legend = Rect("Legend", panel.transform, 20, MapInset + mapH + 11f, 918, 40);
             float[] dotX = { 24, 202, 418 };
             float[] textX = { 52, 230, 446 };
             float[] textW = { 150, 188, 206 };
@@ -417,6 +453,11 @@ namespace Golfin.Gps.UI.Editor
             // Hidden until a REAL tile lands: Google's attribution over our own drawing would be
             // a false credit (§C4).
             attribution.gameObject.SetActive(false);
+
+            // The card's stroke, last so it draws over the map's clipped edge (see the header).
+            GameObject ring = Rect("Ring", panel.transform, 0, 0, 958, 560);
+            Stretch((RectTransform)ring.transform);
+            Img(ring, SprMapPanelRing, White, Image.Type.Simple);
         }
 
         /// <summary>One map pin: a tintable fill disc with the white rim + centre over it.</summary>
@@ -1105,8 +1146,8 @@ namespace Golfin.Gps.UI.Editor
             {
                 BgRounds,
                 SprMapPanel, SprSpotList, SprHistory, SprActiveCard, SprModalPanel, SprModalRing,
-                SprMapFallback, SprSpotDisc, SprSpotRing, SprPinFill, SprPinRim, SprPlayerDot,
-                SprDot18,
+                SprMapFallback, SprMapMask, SprMapPanelRing, SprSpotDisc, SprSpotRing, SprPinFill,
+                SprPinRim, SprPlayerDot, SprDot18,
                 SprPill, SprPillRing, SprChipRing, SprGoldSeg, SprGold, SprSilver, SprSeparator,
                 IcoPin,
             };

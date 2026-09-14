@@ -15,11 +15,11 @@
 // hardest to see in a screenshot and easiest to see on a phone.
 //
 // SCALE IS SEPARATE FROM ZOOM, and conflating them is the trap. /venue/map asks
-// Google for `size=459x210&scale=2`, which returns a 918x420 IMAGE covering the
-// geographic area of a 459x210 one. So the projection runs in Google pixels and
-// the result is multiplied by `scale` to reach the RawImage's own pixels. Zoom
-// changes what the map covers; scale changes only how many pixels it is drawn
-// with.
+// Google for `size=477x247&scale=2` (half the surface's 954x494), which returns
+// a 954x494 IMAGE covering the geographic area of a 477x247 one. So the
+// projection runs in Google pixels and the result is multiplied by `scale` to
+// reach the RawImage's own pixels. Zoom changes what the map covers; scale
+// changes only how many pixels it is drawn with.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;

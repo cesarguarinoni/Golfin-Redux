@@ -33,6 +33,10 @@ WHAT IS BAKED, AND WHY EACH ONE HAS TO BE
   map fallback the stylised tile from the frame, for when /venue/map cannot answer (§C4). Opaque,
                so no fit — and DELIBERATELY not a pretty map: it is a placeholder, and one that
                looked real would hide an outage instead of showing it.
+  map mask     the white shape the map surface's stencil Mask clips to — the panel's interior,
+               top corners rounded, square bottom (see MAP_SURFACE_*).
+  map ring     the Map Panel's 3 px stroke as its own sprite, drawn ABOVE the map so the stencil
+               clip's staircase never meets it; that card is baked stroke-less (STROKE_ON_TOP).
   spot disc    the 80px icon ring, SPLIT INTO TWO IMAGES — a navy gradient disc and a white
                annulus. The node draws three variants of this ring differing only in stroke
                colour (gold course / green partner / orange food) and the row is ONE template
@@ -166,6 +170,10 @@ CARDS = [
 ]
 
 
+# Cards whose stroke is a SEPARATE sprite drawn above their content (see MAP_SURFACE_* below).
+STROKE_ON_TOP = {"S_GR_MapPanel.png": "S_GR_MapPanelRing.png"}
+
+
 def bake_cards():
     for name, w, h, r, border, bg, x, y, node in CARDS:
         rect = FIT_RECT_OVERRIDE.get(name, (x, y, w, h))
@@ -175,12 +183,32 @@ def bake_cards():
         prev = su.BORDER
         su.BORDER = border
         try:
+            stroke = 0 if name in STROKE_ON_TOP else None
             W, H = su.bake_card(os.path.join(OUT_DIR, name), w, h, r,
-                                BLUE_TOP, BLUE_BOTTOM, fit=fit)
+                                BLUE_TOP, BLUE_BOTTOM, stroke=stroke, fit=fit)
         finally:
             su.BORDER = prev
+        if name in STROKE_ON_TOP:
+            ring_name = STROKE_ON_TOP[name]
+            bake_card_ring(os.path.join(OUT_DIR, ring_name), w, h, r, border)
+            print(f"  {ring_name:24s} {W}x{H}  node {node}  stroke only, drawn above the content")
         fit_txt = "opaque" if fit is None else f"fit rgb={tuple(round(c) for c in fit[0])} a={fit[1]:.3f}"
         print(f"  {name:24s} {W}x{H}  node {node}  {fit_txt}")
+
+
+def bake_card_ring(path, w, h, radius, border):
+    """The card atom's stroke alone: the ring between su.bake_card's outer and inset masks, in
+    `border`, on transparent — the same two masks at the same SCALE, so it lands exactly where
+    the stroke bake_card would have painted."""
+    sc = SCALE
+    W, H, R, S = w * sc, h * sc, radius * sc, su.STROKE * sc
+    outer = su._rounded_mask(W, H, R)
+    inner = Image.new("L", (W, H), 0)
+    inner.paste(su._rounded_mask(W - 2 * S, H - 2 * S, max(0, R - S)), (S, S))
+    img = Image.new("RGBA", (W, H), (border[0], border[1], border[2], 0))
+    img.putalpha(ImageChops.subtract(outer, inner))
+    img.save(path)
+    return W, H
 
 
 # ═════════════════════════════════════════════════════════════════════════════════════
@@ -192,7 +220,37 @@ MAP_BODY = (0x0B, 0x20, 0x38)
 MAP_ROAD = (0x1B, 0x3B, 0x5C)
 MAP_COURSE = (0x14, 0x44, 0x2F)
 
-# name, x, y, w, h  (in the surface's own 918x420 space, from the node's children)
+# ── The map surface IS the panel's interior (gps_rounds_map_fills_panel, 2026-09-14) ─────────
+# The node floats a 918x420 r36 "Map Surface" inside the 958x560 panel and leaves 40 px of panel
+# to its right and 100 px under the legend — a placeholder, never a layout. Built literally, the
+# real tile sat in a navy gutter with four sharp corners (RectMask2D), and Cesar's device
+# screenshot named it: "does not adapt to the container (sharp corners and does not touch the
+# borders)". So the surface is now the interior of the card atom: flush against the 3 px stroke
+# on the left / top / right, its top corners at the stroke's INNER radius (50 - 3) so the tile
+# nests in the ring, and a straight bottom edge where the 60 px legend strip begins.
+#
+# The rounding is a stencil `Mask` on the surface whose graphic is S_GR_MapMask (below); the
+# fallback is baked at the same size and UNROUNDED, because the mask rounds whatever it holds.
+#
+# A stencil clip is a HARD contour — Unity's Mask writes stencil wherever the graphic's alpha is
+# above 0.001, so the arc is a one-pixel staircase — and the arc meets the card's bright 3 px ring,
+# the one place the eye finds a staircase (measured on the first take: a jagged white hairline at
+# both top corners). So the ring is drawn ABOVE the map instead of under it: S_GR_MapPanel is baked
+# WITHOUT its stroke, S_GR_MapPanelRing is that stroke alone, and the surface runs 1 px under the
+# ring's opaque core (inset 2 of a 3 px stroke, corner radius 48 = 50 - 2). What you see at the
+# corner is the ring's own anti-aliased inner edge over the map, never the clip.
+#
+# Keep these numbers in step with GpsRoundsBuilder.BuildMapPanel and
+# GpsRoundsScreenController.MapW / MapH (the tile is requested at exactly this size).
+PANEL_STROKE = 3
+MAP_SURFACE_INSET = 2                                 # 1 px under the ring's opaque core
+MAP_SURFACE_W = 958 - 2 * MAP_SURFACE_INSET           # 954
+MAP_SURFACE_H = 494                                   # 2 + 494 + 61 (legend strip) + 3 = 560
+MAP_SURFACE_R = 50 - MAP_SURFACE_INSET                # 48
+
+# name, x, y, w, h  (in the NODE surface's own 918x420 space, from its children; scaled to the
+# baked size below so the drawing keeps the node's proportions at any surface size)
+MAP_NODE_W, MAP_NODE_H = 918, 420
 MAP_ROADS = [
     (0, 150, 918, 10),
     (0, 300, 918, 8),
@@ -201,27 +259,59 @@ MAP_ROADS = [
 MAP_COURSE_RECT = (560, 190, 300, 180)
 
 
-def bake_map_fallback(path, w=918, h=420, radius=36):
+def bake_map_fallback(path, w=MAP_SURFACE_W, h=MAP_SURFACE_H, radius=0):
     """The stylised tile, for when /venue/map cannot answer.
 
     OPAQUE, so there is no fit: it stands where a photograph would, and anything showing through
     it would read as a rendering bug rather than as a fallback. The pins, the player dot and the
     legend are drawn OVER it by the screen exactly as they are over a real tile, so the panel
     keeps working — only the map underneath is a drawing.
+
+    `radius` 0 by default: the surface's stencil Mask (S_GR_MapMask) rounds the live tile and
+    this one alike, and a second rounding baked in here would leave a sliver of panel showing
+    at every corner the two disagreed on.
     """
     sc = SCALE
     W, H, R = w * sc, h * sc, radius * sc
+    sx, sy = w / float(MAP_NODE_W), h / float(MAP_NODE_H)
 
     img = Image.new("RGBA", (W, H), MAP_BODY + (255,))
     d = ImageDraw.Draw(img)
     for rx, ry, rw, rh in MAP_ROADS:
-        d.rounded_rectangle([rx * sc, ry * sc, (rx + rw) * sc - 1, (ry + rh) * sc - 1],
+        # Roads keep the node's thickness; only their placement and length scale.
+        horizontal = rw > rh
+        x0, y0 = rx * sx * sc, ry * sy * sc
+        x1 = (rx + rw) * sx * sc if horizontal else x0 + rw * sc
+        y1 = y0 + rh * sc if horizontal else (ry + rh) * sy * sc
+        d.rounded_rectangle([x0, y0, x1 - 1, y1 - 1],
                             radius=min(rw, rh) * sc / 2.0, fill=MAP_ROAD + (255,))
     cx, cy, cw, ch = MAP_COURSE_RECT
-    d.rounded_rectangle([cx * sc, cy * sc, (cx + cw) * sc - 1, (cy + ch) * sc - 1],
+    d.rounded_rectangle([cx * sx * sc, cy * sy * sc, (cx + cw) * sx * sc - 1, (cy + ch) * sy * sc - 1],
                         radius=40 * sc, fill=MAP_COURSE + (255,))
 
-    img.putalpha(su._rounded_mask(W, H, R))
+    if R > 0:
+        img.putalpha(su._rounded_mask(W, H, R))
+    img.save(path)
+    return W, H
+
+
+def bake_map_mask(path, w=MAP_SURFACE_W, h=MAP_SURFACE_H, radius=MAP_SURFACE_R):
+    """White coverage for the map surface's stencil `Mask`: top corners at `radius`, bottom square.
+
+    Unity's Mask clips at alpha > 0.001, so only the alpha CONTOUR of this image matters — it is a
+    shape, not an anti-aliasing question, and the alpha is HARD (0 or 255) on purpose: the
+    anti-aliased `_rounded_mask` is Lanczos-downsampled, and Lanczos rings — alpha 1..5 two or
+    three texels OUTSIDE the arc — which the 0.001 threshold reads as "inside", so the clipped
+    tile grew single dark pixels past the ring at every corner (seen on the second take). Baked
+    at SCALE like every other GPS sprite, so the hard contour steps by half a canvas pixel.
+    """
+    sc = SCALE
+    W, H, R = w * sc, h * sc, radius * sc
+    # Round all four corners of a rect R taller than the surface, then keep the top H rows: the
+    # bottom corners fall off the crop, which is what "square bottom" is.
+    alpha = su._rounded_mask(W, H + R, R).crop((0, 0, W, H)).point(lambda a: 255 if a >= 128 else 0)
+    img = Image.new("RGBA", (W, H), (255, 255, 255, 0))
+    img.putalpha(alpha)
     img.save(path)
     return W, H
 
@@ -349,9 +439,11 @@ def main():
     print("cards (fitted over " + BG_ROUNDS + "):")
     bake_cards()
 
-    print("map fallback:")
+    print("map surface (the panel's interior — see MAP_SURFACE_* above):")
     w, h = bake_map_fallback(os.path.join(OUT_DIR, "S_GPS_MapFallback.png"))
-    print(f"  S_GPS_MapFallback.png    {w}x{h}  node 14077:33927")
+    print(f"  S_GPS_MapFallback.png    {w}x{h}  node 14077:33927 drawn at the surface size")
+    w, h = bake_map_mask(os.path.join(OUT_DIR, "S_GR_MapMask.png"))
+    print(f"  S_GR_MapMask.png         {w}x{h}  stencil mask, top corners r{MAP_SURFACE_R}")
 
     print("discs, rings and pins:")
     d = bake_disc(os.path.join(OUT_DIR, "S_GR_SpotDisc.png"), 80, NAVY_TOP, NAVY_BOTTOM)

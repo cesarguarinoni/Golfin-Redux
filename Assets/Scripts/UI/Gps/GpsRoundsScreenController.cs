@@ -61,9 +61,17 @@ namespace Golfin.Gps.UI
         /// <summary>The three chips, in the node's order, and the API's `category` values.</summary>
         private static readonly string[] Categories = { "golf", "range", "food" };
 
-        /// <summary>Map surface size in the RawImage's own pixels (node 14077:33884 Map Surface).</summary>
-        public const int MapW = 918;
-        public const int MapH = 420;
+        /// <summary>
+        /// Map surface size in the RawImage's own pixels — the Map Panel's INTERIOR (the 958x560
+        /// card atom inset 2 under its ring, minus the 61 px legend strip), not the node's floating
+        /// 918x420 placeholder. The live tile fills the card to its ring, top corners rounded with
+        /// it (gps_rounds_map_fills_panel, Cesar 2026-09-14: "the google map does not adapt to the
+        /// container"). The tile is REQUESTED at exactly this size, so this is the one place it is
+        /// written; <c>GpsRoundsBuilder.BuildMapPanel</c> sizes the surface from it and
+        /// <c>make_gps_rounds_panels.py</c> bakes the mask and fallback to match.
+        /// </summary>
+        public const int MapW = 954;
+        public const int MapH = 494;
 
         /// <summary>Static Maps `scale`. The proxy asks for a half-size image at 2×, so one
         /// projection pixel is two RawImage pixels — see <see cref="MapProjection.Offset"/>.</summary>
