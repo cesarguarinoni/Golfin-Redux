@@ -4,6 +4,31 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 — result_screen_nav_bars: **the hole-complete result carries both nav bars and a real way out** — awaiting Cesar's approval
+
+Cesar: *"After playing any hole, there is no way from the Result screen to go back to the main menu.
+Add both nav bars (top and bottom) so players can navigate outside."* The §2d result (Figma
+12988:5223 has the RESULTS top bar + five-slot nav under the cards; both were deferred as "Q3 lock")
+now shows the shared chrome: `PersistentUIManager.ShowBars("RESULT_RESULTS")` (new overload — bars
++ a localized centre title that survives a language toggle and is forgotten by the next
+`HighlightScreen`), the result canvas re-sorted to **-1** (was 900 / widget 32767 — the scrim used to
+cover the bars and eat their taps; Settings at 100 now opens over it), and every root canvas of
+`LabScaffold` hidden for the life of the result (`ShotUI_Canvas` hangs under `LabRoot` — the first
+take hid root GameObjects only and Cesar saw the top bar under the shot HUD; Lesson CE). Leaving:
+`ScreenManager.Navigate` gained a gameplay-exit gate — any shell target but `Loading` while
+`GameplaySceneLoader.IsGameplayLoaded` goes through `ExitToScreen(target, ClearRunState)` (five nav
+slots, the ticket "+", Settings ▸ LOG OUT, one rule; PATTERNS §14); the loader raises
+`GameplayExiting` under the curtain and the result settles the round (progression + rewards, the same
+`SettleRound` REPLAY / PLAY NEXT call) and hides. `ClearRunState` is the shared MENU reset (QUIT uses it
+too). Proof: `GOLFIN ▸ Result Screen ▸ Run nav-bars verify bot` — real boot → PlayButton →
+ActionButton → hole → a REAL putt through `BotSwing` (ball placed 1.2 m from the cup, disclosed) →
+result → raycasts at Home / Tee / gear land on the buttons → gear opens Settings over it → real
+`NavHomeButton.onClick` → Home in 0.3 s, scenes unloaded, `HasPlayed` true, rewards granted: **22/22
+PASS** (`verdict.json`), 17 s captioned clip, four stills. Tests +6 (HoleCompleteModal 11/11, UI 11/11).
+Not done, flagged: the 1v1 result modal (901) still draws its 50 % scrim over the bars it shows.
+Record: `Docs/Specs/Quick/result_screen_nav_bars.md`; media in `Docs/Specs/Quick/media/result_screen_nav_bars/`.
+
+---
 ## 2026-09-14 — scroll_lists_drag_anywhere: **all 14 remaining lists drag from anywhere** — one rule, 14 sites, sweep-verified
 
 **DONE** — Cesar approved ("Done"); both quick specs moved to `Docs/Specs/Quick/Completed/`.

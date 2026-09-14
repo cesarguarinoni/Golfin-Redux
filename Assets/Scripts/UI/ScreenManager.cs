@@ -346,6 +346,33 @@ namespace GolfinRedux.UI
                 return;
             }
 
+            // result_screen_nav_bars — a shell screen is never shown OVER live gameplay. The
+            // hole-complete result screen carries the shared nav bars now, so a nav slot, the
+            // ticket "+" and Settings ▸ Log Out can all reach here while LabScaffold + Hole_NN_Geo
+            // are still loaded. A bare swap would put the target up with the course loaded behind
+            // it and the result screen still in front of it. So the navigation is handed to the
+            // loader's exit — curtain down, the result screen settles and closes (GameplayExiting),
+            // scenes unload, the run state clears (the Stage D MENU contract), and THEN this same
+            // target through ShowScreen, by which time IsGameplayLoaded is false and this gate is a
+            // pass-through. Loading is exempt: the loader's own preload shows it while the previous
+            // hole is still loaded (REPLAY / PLAY NEXT / the next mission). No loader = the
+            // pre-existing bare swap; nothing could unload anyway.
+            if (screenId != ScreenId.Loading && Golfin.UI.GameplayTransition.GameplaySceneLoader.IsGameplayLoaded)
+            {
+                var loader = Golfin.UI.GameplayTransition.GameplaySceneLoader.Instance;
+                if (loader != null)
+                {
+                    if (loader.IsExiting)
+                    {
+                        Debug.Log($"[ScreenManager] {screenId} requested while gameplay is already exiting — ignored (first tap wins).");
+                        return;
+                    }
+                    Debug.Log($"[ScreenManager] {screenId} requested over live gameplay — leaving through GameplaySceneLoader.ExitToScreen first.");
+                    loader.ExitToScreen(screenId, Golfin.UI.GameplayTransition.GameplaySceneLoader.ClearRunState);
+                    return;
+                }
+            }
+
             Debug.Log($"[ScreenManager] ShowScreen called: {screenId} (current: {_currentScreen}, instant: {instant})");
 
             if (_currentScreen == screenId && !instant)

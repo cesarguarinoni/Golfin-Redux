@@ -499,15 +499,12 @@ namespace Golfin.UI.Modals
             // Small frame gap so Hide() completes before the curtain drops.
             yield return null;
 
-            yield return loader.ExitToScreen(ScreenId.Home, () =>
-            {
-                // Full session clear (the Stage D MENU/back-to-Home contract): clears the hole
-                // pointer, IsVersus / IsTournament and the tournament round context, so the next
-                // hole started from Home begins clean. Runs while the screen is still black, so
-                // Home is only ever revealed already-reset.
-                GameSession.ResetSession();
-                HoleContext.Reset();
-            });
+            // Full session clear (the Stage D MENU/back-to-Home contract): clears the hole
+            // pointer, IsVersus / IsTournament and the tournament round context, so the next
+            // hole started from Home begins clean. Runs while the screen is still black, so
+            // Home is only ever revealed already-reset. The same ClearRunState the nav bars use
+            // when a result screen is left through ScreenManager's gameplay-exit gate.
+            yield return loader.ExitToScreen(ScreenId.Home, GameplaySceneLoader.ClearRunState);
 
             Debug.Log("[InGameSettings] Gameplay unloaded — round discarded, no rewards granted.");
         }

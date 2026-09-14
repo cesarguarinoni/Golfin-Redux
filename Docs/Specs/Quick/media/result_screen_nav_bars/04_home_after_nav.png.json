@@ -1,0 +1,10 @@
+{
+  "capturedAt": "2026-09-14T12:05:51.8083280+09:00",
+  "realPlay": true,
+  "playing": true,
+  "fakeStateLocked": false,
+  "shotLayoutApplied": true,
+  "ballViewportY": -303.8400,
+  "loadedScenes": ["Assets/Scenes/ShellScene.unity"],
+  "reason": "real play"
+}

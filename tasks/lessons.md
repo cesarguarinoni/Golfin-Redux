@@ -4497,3 +4497,25 @@ advances by the same clamped delta the frames carry — or place them on the vid
 after the fact, as the salvaged clip was (frame classifier → windows → one frame checked inside
 every window). `LoadingTipsDemoRecorder` and its siblings stamp real time; they get away with it
 because nothing heavy loads between their captions.
+
+## Lesson CE — "hide the HUD" means every ROOT CANVAS, not every root GameObject — and a check that enumerates the wrong population passes vacuously (2026-09-14, `result_screen_nav_bars`)
+
+The result screen was re-sorted under the persistent bars (canvas -1 < PersistentUI 0), which put
+the gameplay scene's overlay canvases (order 0 and 10) above BOTH, so the controller hid them —
+by walking `scene.GetRootGameObjects()` for a `Canvas`. `LabCanvas` is a root GameObject;
+`ShotUI_Canvas` hangs under `LabRoot`, so it stayed on, the player card / hole card / in-game gear
+painted over the new top bar, and Cesar saw it on the first take before the log finished:
+*"Top nav bar is being drawn under the game UI."*
+
+The bot's own `result.hud_hidden` assertion PASSED on that take — it enumerated the same root
+GameObjects, found the one it could see hidden, and said so. The only assertion that caught it was
+the one that did not know what it was looking for: an `EventSystem.RaycastAll` at the gear, whose
+top hit read `LabRoot/ShotUI_Canvas/HoleCard/…/HoleMap`.
+
+**Rules.** (1) A Unity "hide the scene's UI" is `Resources.FindObjectsOfTypeAll<Canvas>()` filtered
+by scene + `isRootCanvas` (+ not WorldSpace) — a root canvas is a canvas with no canvas above it,
+wherever it sits in the hierarchy. (2) When an assertion enumerates a population and then asserts
+over it, also assert the population's SIZE (`Count >= 2` here): "all of the things I found are
+hidden" is true of an empty or half-found list. (3) Keep one assertion in every bot that measures
+the OUTCOME through the engine (a raycast, a pixel) rather than through the same enumeration the
+code under test uses — it is the one that cannot inherit the code's blind spot.

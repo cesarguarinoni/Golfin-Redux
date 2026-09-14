@@ -1,0 +1,11 @@
+{
+  "_note": "times are video-relative + 0.40 (build_bot_video.py subtracts RECORDER_LEAD); measured on take 2: result at 6.67 s, Settings 10.17-12.37 s, Home tap ~14.4 s",
+  "captions": [
+    { "start": 3.4,  "end": 6.8,  "text": "A real putt drops - hole complete" },
+    { "start": 7.3,  "end": 9.0,  "text": "Top bar: RP, tickets, gear + RESULTS" },
+    { "start": 9.0,  "end": 10.5, "text": "Bottom nav: all five slots are live" },
+    { "start": 10.7, "end": 12.7, "text": "Top-bar gear opens Settings over it" },
+    { "start": 12.9, "end": 14.6, "text": "Any nav slot leaves: tapping Home" },
+    { "start": 14.7, "end": 17.4, "text": "Home slot: hole unloads, round settled" }
+  ]
+}

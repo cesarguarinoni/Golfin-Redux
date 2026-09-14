@@ -33,6 +33,36 @@ namespace Golfin.UI.GameplayTransition
         [SerializeField] LoadingScreenController loadingScreen;
         [SerializeField] PersistentUIManager persistentUI;
 
+        /// <summary>
+        /// True while the gameplay host scene is loaded — a hole is live, or its result screen is
+        /// up over it. ScreenManager's gameplay-exit gate keys off this: a shell screen is never
+        /// shown over live gameplay, it is reached through <see cref="ExitToScreen"/>.
+        /// </summary>
+        public static bool IsGameplayLoaded => SceneManager.GetSceneByName(GAMEPLAY_SCENE_NAME).isLoaded;
+
+        /// <summary>True from <see cref="ExitToScreen"/>'s first frame until the target screen is up.</summary>
+        public bool IsExiting { get; private set; }
+
+        /// <summary>
+        /// result_screen_nav_bars — raised by <see cref="ExitToScreen"/> under the curtain, BEFORE the
+        /// gameplay scenes unload. For ShellScene-resident surfaces that belong to the round
+        /// (the hole-complete result screen): settle what the round still owes and close, because
+        /// nothing else will — the unload only takes LabScaffold's own objects with it.
+        /// </summary>
+        public static event System.Action GameplayExiting;
+
+        /// <summary>
+        /// The Stage D MENU / back-to-Home contract: clear the hole pointer, IsVersus / IsTournament,
+        /// the tournament round context and the HUD hole context, so the next hole started from the
+        /// shell begins clean. One home for the two calls, because the in-game QUIT and the
+        /// ScreenManager gameplay-exit gate both leave the run and must agree on what "left" means.
+        /// </summary>
+        public static void ClearRunState()
+        {
+            GameSession.ResetSession();
+            Golfin.Gameplay.UI.HUD.HoleContext.Reset();
+        }
+
         void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -269,12 +299,33 @@ namespace Golfin.UI.GameplayTransition
         /// if the caller dies first, the exit still completes.
         /// </summary>
         public Coroutine ExitToScreen(ScreenId target, System.Action onTornDown = null)
-            => StartCoroutine(ExitRoutine(target, onTornDown));
+        {
+            // One exit at a time. A second request while the curtain is falling (two nav slots
+            // tapped 200 ms apart on the result screen) would run a second curtain + unload on
+            // top of the first and let the later ShowScreen win; the first tap keeps its target.
+            if (IsExiting && _exit != null)
+            {
+                Debug.Log($"[GameplaySceneLoader] ExitToScreen({target}) ignored — an exit is already in flight.");
+                return _exit;
+            }
+            _exit = StartCoroutine(ExitRoutine(target, onTornDown));
+            return _exit;
+        }
+
+        Coroutine _exit;
 
         IEnumerator ExitRoutine(ScreenId target, System.Action onTornDown)
         {
+            IsExiting = true;
+
             var fade = FadeController.Instance;
             if (fade != null) yield return fade.CurtainDown();
+
+            // Under the curtain, before the unload: the result screen (ShellScene-resident, so the
+            // unload does not touch it) settles the round it was showing and closes. Wrapped so a
+            // subscriber can never leave the player behind a black curtain with the hole loaded.
+            try { GameplayExiting?.Invoke(); }
+            catch (System.Exception e) { Debug.LogError($"[GameplaySceneLoader] GameplayExiting subscriber threw: {e}"); }
 
             yield return UnloadGameplay();
 
@@ -291,6 +342,11 @@ namespace Golfin.UI.GameplayTransition
             {
                 Debug.LogWarning($"[GameplaySceneLoader] ScreenManager.Instance is null - cannot route to {target}.");
             }
+
+            // The target is up: a new navigation from here is a plain shell navigation again. Cleared
+            // BEFORE the curtain lifts so a tap on the revealed screen is never swallowed as "exiting".
+            IsExiting = false;
+            _exit = null;
 
             if (fade != null) yield return fade.CurtainUp();
         }

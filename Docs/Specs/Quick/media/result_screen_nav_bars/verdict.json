@@ -1,0 +1,29 @@
+{
+  "task": "result_screen_nav_bars",
+  "verdict": "PASS",
+  "clip": true,
+  "assertions": [
+    {"name": "bars.hidden_during_play", "result": "PASS", "detail": "topBar=False bottomNav=False while the hole is live"},
+    {"name": "holeout.real", "result": "PASS", "detail": "terminal=InCup strokes=1"},
+    {"name": "result.showing", "result": "PASS", "detail": "HoleCompleteWidget.IsShowing after 0.0s"},
+    {"name": "result.bars_visible", "result": "PASS", "detail": "topBar=True bottomNav=True"},
+    {"name": "result.title", "result": "PASS", "detail": "top-bar centre text='RESULTS' expected='RESULTS'"},
+    {"name": "result.sorts_under_bars", "result": "PASS", "detail": "HoleCompleteModal canvas override=True order=-1; widget canvas override=False (order -1); PersistentUI order=0"},
+    {"name": "result.hud_hidden", "result": "PASS", "detail": "LabCanvas(order 10) active=False, LabRoot/ShotUI_Canvas(order 0) active=False"},
+    {"name": "result.tap_home_slot", "result": "PASS", "detail": "press at (108.66, 98.00) -> top hit 'PersistentUI/BottomNavBar/NavHomeButton' (order 0) for NavHomeButton; 3 hits"},
+    {"name": "result.tap_tee_slot", "result": "PASS", "detail": "press at (585.00, 155.00) -> top hit 'PersistentUI/BottomNavBar/NavTeeButton' (order 0) for NavTeeButton; 3 hits"},
+    {"name": "result.tap_gear", "result": "PASS", "detail": "press at (1106.00, 2371.50) -> top hit 'PersistentUI/TopBar/SettingsButton' (order 0) for SettingsButton; 3 hits"},
+    {"name": "result.tap_replay_still_works", "result": "PASS", "detail": "press at (585.00, 1364.50) -> top hit 'Canvas/HoleCompleteModal/HoleCompleteWidget/Root/Card1/ContentRoot/Buttons/ReplayButton' (order -1) for ReplayButton; 2 hits"},
+    {"name": "result.gear_opens_settings", "result": "PASS", "detail": "SettingsController.IsOpen=True after the real gear tap"},
+    {"name": "result.settings_closed", "result": "PASS", "detail": "IsOpen=False"},
+    {"name": "result.still_showing_after_settings", "result": "PASS", "detail": "widget.IsShowing=True LabScaffold loaded=True"},
+    {"name": "nav.home_reached", "result": "PASS", "detail": "CurrentScreen=Home"},
+    {"name": "nav.gameplay_unloaded", "result": "PASS", "detail": "LabScaffold loaded=False holeGeo=False"},
+    {"name": "nav.result_hidden", "result": "PASS", "detail": "widget.IsShowing=False"},
+    {"name": "nav.bars_on_home", "result": "PASS", "detail": "topBar=True bottomNav=True"},
+    {"name": "nav.title_restored", "result": "PASS", "detail": "top-bar centre text='Cratilo' (no longer 'RESULTS')"},
+    {"name": "nav.session_cleared", "result": "PASS", "detail": "CurrentHoleNumber=0 IsVersus=False IsTournament=False"},
+    {"name": "settle.progression_written", "result": "PASS", "detail": "HasPlayed(5)=True (before: False) IsUnlocked(6)=True"},
+    {"name": "settle.rewards_granted", "result": "PASS", "detail": "_rewardsGranted=True; RP 6148 -> 6158"}
+  ]
+}

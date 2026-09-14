@@ -350,6 +350,42 @@ a drag (`rankings_list_drag_anywhere`).
   `targetFrameRate = 30` before it starts (and before any `StartRecording`); a four-minute uncapped
   recorded sweep locked the Editor on 2026-09-14.
 
+## 14. A Shell Screen Is Never Shown Over Live Gameplay (the gameplay-exit gate)
+
+Files: `Assets/Scripts/UI/ScreenManager.cs` (`Navigate`), `Assets/Scripts/UI/GameplayTransition/GameplaySceneLoader.cs`
+(`IsGameplayLoaded`, `IsExiting`, `GameplayExiting`, `ClearRunState`, `ExitToScreen`),
+`Assets/Scripts/UI/Modals/Result/HoleCompleteModalController.cs`, `Assets/Scripts/UI/PersistentUIManager.cs` (`ShowBars(titleKey)`)
+
+Gameplay is two additively loaded scenes (`LabScaffold` + `Hole_NN_Geo`) under the shell; the shell's
+own screen during a hole is `Loading`, hidden. A surface that shows the shared nav bars while those
+scenes are loaded — the hole-complete result screen, since `result_screen_nav_bars` — hands the
+player a dozen ways to ask for a shell screen (five nav slots, the ticket "+", Settings ▸ LOG OUT).
+A bare `ShowScreen` there would put the target up with the course still loaded behind it and the
+result still drawn in front of it.
+
+- **The gate lives in `ScreenManager.Navigate`, after the other gates.** Any target but `Loading`
+  while `GameplaySceneLoader.IsGameplayLoaded` → `loader.ExitToScreen(target, ClearRunState)` and
+  return. `Loading` is exempt because the loader's own preload shows it while the previous hole is
+  still loaded (REPLAY / PLAY NEXT / the next mission). `ExitToScreen`'s own `ShowScreen(target,
+  instant)` runs after the unload, so the gate is a pass-through for it. A second request while
+  `IsExiting` is dropped — the first tap keeps its target.
+- **`ClearRunState` is the one MENU contract** (`GameSession.ResetSession()` + `HoleContext.Reset()`):
+  the in-game QUIT and the gate both pass it, so "left the run" means one thing.
+- **Shell-resident round surfaces close on `GameplayExiting`.** The loader raises it under the
+  curtain, BEFORE the unload; the result screen settles what the round still owes (progression +
+  rewards — the same `SettleRound` REPLAY and PLAY NEXT call) and hides. The unload only takes
+  LabScaffold's own objects, so anything living in ShellScene must listen for this itself.
+- **Such a surface sorts like a screen, not a modal.** `PersistentUI` is at 0 and `SettingsScreen`
+  at 100; the result's canvas is at -1 so the bars draw over its scrim and win the raycast, and the
+  gear opens Settings over it. The gameplay HUD canvases (`LabRoot/ShotUI_Canvas` 0, `LabCanvas` 10)
+  sort above both and are deactivated for the life of the result — every **root canvas** of the
+  scene, not every root GameObject (ShotUI_Canvas hangs under LabRoot; the first take missed it and
+  the top bar was painted under the shot HUD).
+- **The title comes from `PersistentUIManager.ShowBars(titleKey)`.** No `ScreenId` exists for the
+  result, so `HighlightScreen` never runs for it; the override is re-resolved on a language change
+  and forgotten by the next `HighlightScreen`. The nav highlight is left as it was (the player is
+  still inside the pillar they came from).
+
 ## Quick Reference: File Locations
 
 | Pattern | Character (Roster) | Club (Inventory) | Bag (Inventory) |

@@ -18,6 +18,11 @@ namespace Golfin.UI
         // Last screen passed to HighlightScreen — lets a language change re-resolve the centre title.
         private GolfinRedux.UI.ScreenId? _lastHighlightedScreen;
 
+        // result_screen_nav_bars — a centre title that came from ShowBars(titleKey) rather than
+        // from a screen. Wins over _lastHighlightedScreen while set; the next HighlightScreen
+        // (any real navigation) clears it.
+        private string? _centerTitleKeyOverride;
+
         [Header("Top Bar References")]
         public GameObject topBarPanel;
 
@@ -146,6 +151,11 @@ namespace Golfin.UI
         /// <summary>Re-apply the centre title for whatever screen is currently highlighted.</summary>
         private void RefreshTopBarCenterText()
         {
+            if (_centerTitleKeyOverride != null)
+            {
+                ApplyCenterTitle(LocalizationManager.Get(_centerTitleKeyOverride));
+                return;
+            }
             if (_lastHighlightedScreen.HasValue && NavTitleKeyFor(_lastHighlightedScreen.Value) != null)
                 ApplyTopBarCenterText(_lastHighlightedScreen.Value);
         }
@@ -309,6 +319,24 @@ namespace Golfin.UI
             ShowBottomNav(true);
             ApplyDemoTopBarTrim();
             ApplyStandaloneChrome();
+        }
+
+        /// <summary>
+        /// result_screen_nav_bars — both bars with full chrome and a centre title from a
+        /// localization key, for a surface that is NOT a ScreenManager screen. The hole-complete
+        /// result is the caller: it is a modal over the still-loaded gameplay scene, so no screen
+        /// change reaches <see cref="HighlightScreen"/> for it and the title would otherwise stay
+        /// whatever the last shell screen wrote ("SELECT HOLE"). The key is remembered so the
+        /// language toggle re-resolves it in place; the next <see cref="HighlightScreen"/> — any
+        /// real navigation — forgets it. The nav highlight is left as it was: the player is still
+        /// inside the pillar they came from, and a slot lit for a screen that is not one would
+        /// be a lie.
+        /// </summary>
+        public void ShowBars(string centerTitleKey)
+        {
+            ShowBars();
+            _centerTitleKeyOverride = centerTitleKey;
+            ApplyCenterTitle(LocalizationManager.Get(centerTitleKey));
         }
 
         /// <summary>
@@ -726,6 +754,12 @@ namespace Golfin.UI
         /// change can re-resolve it without re-running the nav-highlight pass.
         /// </summary>
         private void ApplyTopBarCenterText(GolfinRedux.UI.ScreenId screenId)
+            => ApplyCenterTitle(CenterTextFor(screenId));
+
+        /// <summary>The instant, authoritative paint of the centre title — see
+        /// <see cref="ApplyTopBarCenterText"/> for the screen-keyed caller and
+        /// <see cref="ShowBars(string)"/> for the key-override one.</summary>
+        private void ApplyCenterTitle(string text)
         {
             if (usernameText == null) return;
 
@@ -736,7 +770,7 @@ namespace Golfin.UI
             if (_centerTextRoutine != null) { StopCoroutine(_centerTextRoutine); _centerTextRoutine = null; }
             if (_centerTextGroup != null) _centerTextGroup.alpha = 1f;
 
-            usernameText.text = CenterTextFor(screenId);
+            usernameText.text = text;
         }
 
         /// <summary>
@@ -881,6 +915,7 @@ namespace Golfin.UI
         public void HighlightScreen(GolfinRedux.UI.ScreenId screenId)
         {
             _lastHighlightedScreen = screenId;
+            _centerTitleKeyOverride = null;   // a real screen change ends any ShowBars(titleKey) title
 
             // ── Drive top-bar center text BEFORE the nav-highlight switch ────────
             // (The switch has a default:return for Leaderboard; text must be set first.)

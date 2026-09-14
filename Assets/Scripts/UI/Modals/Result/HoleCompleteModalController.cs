@@ -26,14 +26,17 @@ namespace Golfin.UI.Modals.Result
     ///     production routing (REPLAY → reload same hole; RETRY → reload same hole;
     ///     PLAY → next hole load + progression write; Hole 18 → COURSE CLEARED toast).
     ///   - Grants rewards on SUCCESS.
-    ///   - Writes hole progression on PLAY NEXT or REPLAY (SUCCESS only). RETRY (FAILED)
-    ///     reloads the same hole without any progression or reward writes.
+    ///   - Writes hole progression on PLAY NEXT, REPLAY or a nav-bar exit (SUCCESS only).
+    ///     RETRY (FAILED) reloads the same hole without any progression or reward writes.
+    ///   - result_screen_nav_bars: shows the shared top bar ("RESULTS") + bottom nav over the
+    ///     cards and closes itself when GameplaySceneLoader.ExitToScreen tears the hole down.
     ///
     /// The VIEW (HoleCompleteWidget) is the unmodified lab widget with Card 1 (current
     /// hole) + Card 2 (next hole). Card 2 is LOCKED when FAILED and next hole was never
     /// unlocked. Card 2 is HIDDEN (SetActive false) when hole == 18.
     ///
-    /// Canvas z-order: child Canvas with overrideSorting=true, sortingOrder=900.
+    /// Canvas z-order: child Canvas with overrideSorting=true at <see cref="ResultSortingOrder"/>
+    /// (-1, the shell screens' own order — under the persistent bars).
     /// </summary>
     public class HoleCompleteModalController : ModalController
     {
@@ -57,17 +60,34 @@ namespace Golfin.UI.Modals.Result
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// result_screen_nav_bars — the result is a SCREEN wearing the shared chrome, not a modal
+        /// over it (Figma 12988:5223: RESULTS title in the top bar, the five nav slots under the
+        /// cards). So it sorts where a shell screen sorts: at the root Canvas's own order (-1),
+        /// UNDER PersistentUI (0) — the bars draw over its scrim and take the taps — and under
+        /// Settings (100), which the top-bar gear opens over it. It used to sit at 900 with the
+        /// widget's own nested canvas at 32767, which put a 92%-black scrim over the bars and
+        /// swallowed every tap on them. The gameplay HUD canvases (ShotUI_Canvas 0, LabCanvas 10)
+        /// sort above this now, which is why <see cref="HideGameplayHud"/> exists.
+        /// </summary>
+        const int ResultSortingOrder = -1;
+
         protected override void Awake()
         {
             base.Awake();
 
-            // Ensure this GO's Canvas sorts above gameplay (900) and below LoadingScreen (1000).
             var canvas = GetComponent<Canvas>();
             if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
             canvas.overrideSorting = true;
-            canvas.sortingOrder    = 900;
+            canvas.sortingOrder    = ResultSortingOrder;
             if (GetComponent<GraphicRaycaster>() == null)
                 gameObject.AddComponent<GraphicRaycaster>();
+
+            // The widget's own Canvas is authored with overrideSorting at 32767 (its LabScaffold
+            // days, above the lab debug canvases). Inherit instead, so the cards and the scrim
+            // sort with this controller — one owner for the result's z-order.
+            var widgetCanvas = _widget != null ? _widget.GetComponent<Canvas>() : null;
+            if (widgetCanvas != null) widgetCanvas.overrideSorting = false;
 
             _progression = HoleProgressionStoreAdapter.Default;
         }
@@ -93,8 +113,17 @@ namespace Golfin.UI.Modals.Result
             if (_widget != null) _widget.Hide();
         }
 
-        void OnEnable()  => GameSession.OnHoleComplete += HandleHoleComplete;
-        void OnDisable() => GameSession.OnHoleComplete -= HandleHoleComplete;
+        void OnEnable()
+        {
+            GameSession.OnHoleComplete            += HandleHoleComplete;
+            GameplaySceneLoader.GameplayExiting   += OnGameplayExiting;
+        }
+
+        void OnDisable()
+        {
+            GameSession.OnHoleComplete            -= HandleHoleComplete;
+            GameplaySceneLoader.GameplayExiting   -= OnGameplayExiting;
+        }
 
         // ── Event handler ─────────────────────────────────────────────────────
 
@@ -127,6 +156,14 @@ namespace Golfin.UI.Modals.Result
 
             // Show the full two-card widget.
             _widget.Show(uiData, () => { /* close handled per-button below */ });
+
+            // result_screen_nav_bars — the shared top bar (RP, tickets, gear, "RESULTS") and the
+            // five-slot nav bar, over the scrim: the way out of a finished hole is the same nav
+            // the rest of the game uses. Shown for the hole cards AND the mission cards, so it
+            // sits before the mission branch below. Leaving through any of it goes through
+            // ScreenManager's gameplay-exit gate → GameplaySceneLoader.ExitToScreen, which raises
+            // GameplayExiting; OnGameplayExiting settles the round and closes this screen.
+            ShowChrome();
 
             // A mission is presented on the SAME cards the player chose it from, not on a result
             // card wearing a SUCCESS title. When that takes, the hole-complete cards are hidden and
@@ -501,6 +538,75 @@ namespace Golfin.UI.Modals.Result
                            : Golfin.Economy.PointsActions.HoleComplete);
         }
 
+        // ── Settle (progression + rewards), on every way out ─────────────────
+
+        /// <summary>
+        /// What a finished hole still owes when the player leaves its result: the progression
+        /// write and the reward grant. REPLAY, PLAY NEXT and — result_screen_nav_bars — a nav-bar
+        /// exit all come through here, so a hole cleared and then left for Home pays out and
+        /// unlocks exactly as one followed by PLAY NEXT. Both callees guard themselves (FAILED
+        /// writes nothing; rewards grant once; a mission pays through its own claim), so calling
+        /// this twice is harmless.
+        /// </summary>
+        void SettleRound()
+        {
+            WriteProgressionIfSuccess();
+            GrantRewards();
+        }
+
+        /// <summary>
+        /// result_screen_nav_bars — GameplaySceneLoader.ExitToScreen is tearing the hole down
+        /// (a nav slot, the ticket "+", Settings ▸ Log Out, or the in-game QUIT). Fires under the
+        /// curtain, before the unload. This screen lives in ShellScene, so the unload would leave
+        /// it standing over the target screen; and its round is over, so it is settled here —
+        /// the one exit that has no button of its own to do it. No-op unless it is actually up.
+        /// </summary>
+        void OnGameplayExiting()
+        {
+            if (_widget == null || !_widget.IsShowing) return;
+            SettleRound();
+            Hide();
+        }
+
+        // ── Chrome (result_screen_nav_bars) ───────────────────────────────────
+
+        /// <summary>
+        /// The shared top bar with "RESULTS" as its centre title, and the bottom nav. The result
+        /// sorts under PersistentUI (see <see cref="ResultSortingOrder"/>), so the bars draw over
+        /// the scrim and the EventSystem hands them the taps; the gameplay HUD, which sorts above
+        /// both, is hidden for the same reason.
+        /// </summary>
+        void ShowChrome()
+        {
+            HideGameplayHud();
+            if (PersistentUIManager.Instance != null)
+                PersistentUIManager.Instance.ShowBars("RESULT_RESULTS");
+        }
+
+        /// <summary>
+        /// The gameplay scene's own overlay canvases (LabRoot/ShotUI_Canvas at 0, LabCanvas at 10)
+        /// sort above this screen AND above the bars — at hole-out the shot view still shows the
+        /// player card, the hole card and its own gear, and with the bars on they painted straight
+        /// over the top bar (Cesar, first run: "Top nav bar is being drawn under the game UI").
+        /// Every ROOT canvas in the scene is deactivated for the life of the result — root
+        /// canvas, not root GameObject: ShotUI_Canvas hangs under LabRoot. Every way off the
+        /// result reloads a hole or unloads the scene, and the unload takes them with it, so
+        /// nothing is restored — a fresh LabScaffold ships them active.
+        /// </summary>
+        void HideGameplayHud()
+        {
+            var gameplay = UnityEngine.SceneManagement.SceneManager.GetSceneByName("LabScaffold");
+            if (!gameplay.IsValid() || !gameplay.isLoaded) return;
+            foreach (var canvas in Resources.FindObjectsOfTypeAll<Canvas>())
+            {
+                if (canvas == null || canvas.gameObject.scene != gameplay) continue;
+                if (!canvas.isRootCanvas || canvas.renderMode == RenderMode.WorldSpace) continue;
+                if (!canvas.gameObject.activeSelf) continue;
+                canvas.gameObject.SetActive(false);
+                Debug.Log($"[HoleCompleteModalController] HUD canvas '{canvas.gameObject.name}' (order {canvas.sortingOrder}) hidden for the result screen.");
+            }
+        }
+
         // ── Progression write ─────────────────────────────────────────────────
 
         void WriteProgressionIfSuccess()
@@ -524,8 +630,7 @@ namespace Golfin.UI.Modals.Result
         void OnReplay()
         {
             int current = _lastSessionData.HoleNumber;
-            WriteProgressionIfSuccess();
-            GrantRewards();
+            SettleRound();
             GameSession.ResetForNewHole();
             Hide();  // delegates to _widget.Hide()
 
@@ -567,8 +672,7 @@ namespace Golfin.UI.Modals.Result
         // PLAY: Card 2 PLAY button — load next hole + write progression + grant rewards.
         void OnPlayNext(int nextHoleNumber)
         {
-            WriteProgressionIfSuccess();
-            GrantRewards();
+            SettleRound();
             GameSession.SetCurrentHole(nextHoleNumber);
 
             var loadingScreen = FindObjectOfType<LoadingScreenController>(includeInactive: true);

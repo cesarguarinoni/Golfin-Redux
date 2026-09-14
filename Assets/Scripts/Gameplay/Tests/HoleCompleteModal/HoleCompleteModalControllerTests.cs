@@ -314,6 +314,62 @@ namespace Golfin.HoleCompleteModal.Tests
                 "ResetForNewHole should reset TurnCount to 1.");
         }
 
+        // ── Tests 8-9: result_screen_nav_bars — leaving through the nav bar settles ──
+        // GameplaySceneLoader.ExitToScreen raises GameplayExiting under the curtain; the modal's
+        // OnGameplayExiting is the handler. A nav-bar exit has no button of its own to write
+        // progression / grant rewards, so the handler must do exactly what REPLAY / PLAY NEXT do —
+        // and only when the result is actually up.
+
+        [Test]
+        public void Modal_GameplayExiting_SettlesTheRoundWhenTheResultIsUp()
+        {
+            var widgetGO = new GameObject("Widget");
+            widgetGO.AddComponent<Canvas>();
+            var widget = widgetGO.AddComponent<HoleCompleteWidget>();
+            // A root child makes IsShowing true after Show() — the state the handler keys on.
+            var root = new GameObject("Root");
+            root.transform.SetParent(widgetGO.transform, false);
+            SetPrivateField(widget, "_root", root);
+            SetPrivateField(_modal, "_widget", widget);
+
+            ModalTestHelper.InvokeHandleHoleComplete(_modal, ModalTestHelper.SuccessData(hole: 5));
+            Assert.IsTrue(widget.IsShowing, "precondition: the result is showing after HandleHoleComplete.");
+            Assert.AreEqual(0, _store.MarkPlayedCallCount, "precondition: nothing settled while the result is up.");
+
+            var exiting = ModalTestHelper.ModalType.GetMethod("OnGameplayExiting",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(exiting, "OnGameplayExiting must exist — the GameplayExiting handler.");
+            exiting.Invoke(_modal, null);
+
+            Assert.AreEqual(5, _store.LastMarkPlayedHole,
+                "A nav-bar exit after SUCCESS must call MarkHolePlayed(current) — same as PLAY NEXT.");
+            Assert.AreEqual(6, _store.LastUnlockHole,
+                "A nav-bar exit after SUCCESS must call UnlockHole(current+1) — same as PLAY NEXT.");
+            var granted = ModalTestHelper.ModalType.GetField("_rewardsGranted",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsTrue((bool)granted.GetValue(_modal),
+                "A nav-bar exit after SUCCESS must grant the hole's rewards (once).");
+
+            UnityEngine.Object.DestroyImmediate(widgetGO);
+        }
+
+        [Test]
+        public void Modal_GameplayExiting_IsANoopWhenNoResultIsUp()
+        {
+            // No widget wired: HandleHoleComplete records the data but shows nothing, which is the
+            // in-game QUIT / tournament exit shape as far as this handler is concerned.
+            ModalTestHelper.InvokeHandleHoleComplete(_modal, ModalTestHelper.SuccessData(hole: 4));
+
+            var exiting = ModalTestHelper.ModalType.GetMethod("OnGameplayExiting",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            exiting.Invoke(_modal, null);
+
+            Assert.AreEqual(0, _store.MarkPlayedCallCount,
+                "GameplayExiting with no result screen up must not write progression.");
+            Assert.AreEqual(0, _store.UnlockHoleCallCount,
+                "GameplayExiting with no result screen up must not unlock anything.");
+        }
+
         // ── Reflection helper ─────────────────────────────────────────────────
 
         static void SetPrivateField(object obj, string fieldName, object value)

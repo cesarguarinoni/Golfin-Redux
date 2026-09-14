@@ -254,6 +254,122 @@ namespace Golfin.UI.Tests
                 "the caller hosts — callers in LabScaffold are destroyed by the unload.");
         }
 
+        // ── Tests 8-10: result_screen_nav_bars ──
+        // The nav bars are live on the hole-complete result screen, so leaving gameplay is no
+        // longer only the in-game QUIT's business: ScreenManager's gate keys off
+        // IsGameplayLoaded, hands the navigation to ExitToScreen with ClearRunState, and the
+        // result screen closes on GameplayExiting. These pin the seams the gate and the modal
+        // depend on; the play-mode driver (ResultScreenNavVerifyBot) proves the whole path.
+
+        [Test]
+        public void IsGameplayLoaded_IsFalseWithoutLabScaffold()
+        {
+            var prop = _gameplayLoaderType.GetProperty("IsGameplayLoaded",
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(prop, "GameplaySceneLoader.IsGameplayLoaded must exist — ScreenManager's " +
+                                   "gameplay-exit gate keys off it.");
+            Assert.IsFalse((bool)prop.GetValue(null),
+                "No LabScaffold is loaded in an EditMode test, so a shell navigation must be a plain swap.");
+        }
+
+        [Test]
+        public void ClearRunState_IsTheMenuContract()
+        {
+            var mi = _gameplayLoaderType.GetMethod("ClearRunState",
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(mi, "GameplaySceneLoader.ClearRunState must exist — the one home for the " +
+                                 "Stage D MENU reset, shared by the in-game QUIT and the nav-bar exit.");
+
+            Golfin.Gameplay.Session.GameSession.SeedSession(7, "char_a", 0);
+            Golfin.Gameplay.Session.GameSession.IsVersus = true;
+            mi.Invoke(null, null);
+
+            Assert.AreEqual(0, Golfin.Gameplay.Session.GameSession.CurrentHoleNumber,
+                "ClearRunState must clear the hole pointer (GameSession.ResetSession).");
+            Assert.IsFalse(Golfin.Gameplay.Session.GameSession.IsVersus,
+                "ClearRunState must clear IsVersus.");
+            Assert.AreEqual(1, Golfin.Gameplay.Session.GameSession.TurnCount,
+                "ClearRunState must reset the per-hole state.");
+        }
+
+        [Test]
+        public void GameplayExiting_IsAStaticEventRaisedByTheExit()
+        {
+            var ev = _gameplayLoaderType.GetEvent("GameplayExiting",
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(ev, "GameplaySceneLoader.GameplayExiting must exist — the result screen " +
+                                 "closes and settles on it.");
+            // Raised from ExitRoutine, under the curtain and before the unload: the source is the
+            // contract here, because the routine itself needs a FadeController and real scenes.
+            string src = System.IO.File.ReadAllText(System.IO.Path.Combine(
+                Application.dataPath, "Scripts/UI/GameplayTransition/GameplaySceneLoader.cs"));
+            int raise  = src.IndexOf("GameplayExiting?.Invoke()", StringComparison.Ordinal);
+            int unload = src.IndexOf("yield return UnloadGameplay();", StringComparison.Ordinal);
+            Assert.Greater(raise, 0, "ExitRoutine must raise GameplayExiting.");
+            Assert.Less(raise, unload,
+                "GameplayExiting must be raised BEFORE the unload — the result screen settles the " +
+                "round while the hole is still there to settle.");
+        }
+
+        [Test]
+        public void ShowBars_WithTitleKey_OwnsTheCentreTitleUntilTheNextHighlight()
+        {
+            // The top bar's centre label is a TextMeshProUGUI; the assembly is not referenced
+            // here, so it is created and read by reflection like everything else in this file.
+            var tmpType = Type.GetType("TMPro.TextMeshProUGUI, Unity.TextMeshPro");
+            Assert.IsNotNull(tmpType, "TMPro.TextMeshProUGUI must resolve.");
+            var labelGO = new GameObject("UsernameText_Test");
+            labelGO.AddComponent<Canvas>();
+            var label = labelGO.AddComponent(tmpType);
+            var textProp = tmpType.GetProperty("text", BindingFlags.Public | BindingFlags.Instance);
+            _persistentUIType.GetField("usernameText", BindingFlags.Public | BindingFlags.Instance)
+                .SetValue(_persistentUI, label);
+            var topBar = new GameObject("TopBar_Test");
+            _persistentUIType.GetField("topBarPanel", BindingFlags.Public | BindingFlags.Instance)
+                .SetValue(_persistentUI, topBar);
+
+            try
+            {
+                var showBars = _persistentUIType.GetMethod("ShowBars", new[] { typeof(string) });
+                Assert.IsNotNull(showBars, "PersistentUIManager.ShowBars(string titleKey) must exist — " +
+                                           "the result screen's chrome call.");
+                showBars.Invoke(_persistentUI, new object[] { "RESULT_RESULTS" });
+
+                var loc = Type.GetType("LocalizationManager, Golfin.Localization");
+                string expected = (string)loc.GetMethod("Get", new[] { typeof(string) }).Invoke(null, new object[] { "RESULT_RESULTS" });
+                Assert.AreEqual(expected, (string)textProp.GetValue(label),
+                    "ShowBars(titleKey) must paint the localized key as the centre title.");
+                Assert.IsTrue(topBar.activeSelf, "ShowBars(titleKey) must show the top bar.");
+                Assert.IsTrue(_bottomNavPanel.activeSelf, "ShowBars(titleKey) must show the bottom nav.");
+
+                // A language change re-resolves the override, not the last highlighted screen.
+                var refresh = _persistentUIType.GetMethod("RefreshTopBarCenterText",
+                    BindingFlags.NonPublic | BindingFlags.Instance);
+                textProp.SetValue(label, "stale");
+                refresh.Invoke(_persistentUI, null);
+                Assert.AreEqual(expected, (string)textProp.GetValue(label),
+                    "RefreshTopBarCenterText must re-apply the title-key override.");
+
+                // Any real navigation forgets it: HighlightScreen(Home) paints the username.
+                var screenIdType = Type.GetType("GolfinRedux.UI.ScreenId, Assembly-CSharp");
+                object home = Enum.Parse(screenIdType, "Home");
+                _persistentUIType.GetMethod("HighlightScreen", BindingFlags.Public | BindingFlags.Instance)
+                    .Invoke(_persistentUI, new[] { home });
+                var overrideField = _persistentUIType.GetField("_centerTitleKeyOverride",
+                    BindingFlags.NonPublic | BindingFlags.Instance);
+                Assert.IsNull(overrideField.GetValue(_persistentUI),
+                    "HighlightScreen must clear the title-key override — the result's title must not " +
+                    "outlive the result.");
+                Assert.AreNotEqual(expected, (string)textProp.GetValue(label),
+                    "After HighlightScreen(Home) the centre title is the username, not RESULTS.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(labelGO);
+                UnityEngine.Object.DestroyImmediate(topBar);
+            }
+        }
+
         // ── Test 7: nobody tears gameplay down outside ExitToScreen ──
 
         [Test]

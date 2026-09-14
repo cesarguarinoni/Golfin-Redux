@@ -383,8 +383,8 @@ MatchMakingModal                                 (root — controller stays acti
 
 ### HoleCompleteModal (HoleCompleteModalController, ShellScene Canvas — `Golfin.UI.Modals.Result`)
 ```
-HoleCompleteModal                                (root — child Canvas overrideSorting=true, sortingOrder=900, + GraphicRaycaster)
-└── HoleCompleteWidget                           (the lab two-card widget reused verbatim — HoleCompleteWidget.cs)
+HoleCompleteModal                                (root — child Canvas overrideSorting=true, sortingOrder=-1 (set in Awake; was 900 until result_screen_nav_bars), + GraphicRaycaster)
+└── HoleCompleteWidget                           (the lab two-card widget reused verbatim — HoleCompleteWidget.cs; its authored Canvas override (32767) is switched OFF in the controller's Awake so it inherits -1)
     ├── DimBackground                            (Image — full-screen scene dim)
     ├── Card1 (HoleCompleteCardWidget)           (current hole)
     │   ├── SuccessHeader / FailedHeader         (one shown per terminal state)
@@ -399,6 +399,18 @@ HoleCompleteModal                                (root — child Canvas override
         └── PlayButton                           (PLAY — loads next hole; hidden when LOCKED)
 ```
 Driven by `HoleCompleteModalController` (subscribes `GameSession.OnHoleComplete`). Card2 reward `CountText`/slot widths were widened (120/180 px) so "x100" fits on one line.
+
+**result_screen_nav_bars (2026-09-14):** the result is a SCREEN wearing the shared chrome, not a
+modal over it. On show the controller calls `PersistentUIManager.ShowBars("RESULT_RESULTS")` (top bar
+with RP / tickets / gear + "RESULTS" centre title, and the five-slot bottom nav) and deactivates every
+root canvas of the loaded `LabScaffold` (`LabRoot/ShotUI_Canvas` @0, `LabCanvas` @10 — they would
+paint over the top bar otherwise). Sorting: `PersistentUI` (0) > result (-1) ⇒ the bars draw over the
+92 % scrim and take the taps; `SettingsScreen` (100) opens over the result from the top-bar gear. Any
+shell navigation while gameplay is loaded (a nav slot, the ticket "+", Settings ▸ LOG OUT) goes through
+`ScreenManager.Navigate`'s gameplay-exit gate → `GameplaySceneLoader.ExitToScreen(target, ClearRunState)`;
+the loader raises `GameplayExiting` under the curtain and the controller settles the round
+(progression + rewards, same as REPLAY / PLAY NEXT) and hides. Driver: `GOLFIN ▸ Result Screen ▸ Run
+nav-bars verify bot` (`Assets/Scripts/UI/Modals/Result/Editor/ResultScreenNavVerifyBot.cs`).
 
 ### Toast (ToastController, ShellScene Canvas — `Golfin.UI.Toast`)
 ```

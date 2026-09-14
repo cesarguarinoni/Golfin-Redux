@@ -1,0 +1,10 @@
+{
+  "capturedAt": "2026-09-14T12:05:38.4468310+09:00",
+  "realPlay": true,
+  "playing": true,
+  "fakeStateLocked": false,
+  "shotLayoutApplied": true,
+  "ballViewportY": -303.8400,
+  "loadedScenes": ["Assets/Scenes/ShellScene.unity", "Assets/Scenes/Physics/LabScaffold.unity", "Assets/Golf/Courses/lomond-country-club/Generated/Hole_03_Geo.unity"],
+  "reason": "real play"
+}

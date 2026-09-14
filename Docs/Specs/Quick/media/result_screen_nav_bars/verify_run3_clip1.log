@@ -1,0 +1,46 @@
+   0.00s  run clip=True screen=1684x1598
+   5.03s  tapped StartButton
+   5.90s  at Home=True after 1.2s
+   7.88s  no hint group on Home
+   7.95s  tapped real PlayButton
+   8.42s  CurrentScreen=HoleSelection
+  10.35s  no hint group on HoleSelection
+  10.35s  tapped real ActionButton
+  13.13s  gameplay ready after 2.8s: hole=4 LabScaffold loaded=True IsGameplayLoaded=True
+  19.13s  no hint group on Gameplay
+  21.04s  recording started
+  22.07s  PASS bars.hidden_during_play — topBar=False bottomNav=False while the hole is live
+  22.08s  SNAP 01_gameplay_before_holeout: NO FILE ()
+  22.08s  before hole-out: HasPlayed(4)=False IsUnlocked(5)=False RP=6148
+  22.08s  hole-out: pin=(-38.7, 16.6, 29.1) ball(tee)=(57.2, 22.4, -25.0)
+  22.13s  SCAFFOLDING: PlaceBallAt((-37.69, 16.55, 28.48), Green) — 1.2 m from the cup (attempt 1)
+  23.98s  putt 1: ball=(-37.69, 16.54, 28.48) dist=1.20 m power=0.16 scheme executor=PendulumBotExecutor
+  27.78s  HOLE COMPLETE after 2.8s — terminal=InCup strokes=1 hole=4 (real putt)
+  27.78s  PASS holeout.real — terminal=InCup strokes=1
+  27.79s  PASS result.showing — HoleCompleteWidget.IsShowing after 0.0s
+  31.31s  PASS result.bars_visible — topBar=True bottomNav=True
+  31.32s  PASS result.title — top-bar centre text='RESULTS' expected='RESULTS'
+  31.32s  PASS result.sorts_under_bars — HoleCompleteModal canvas override=True order=-1; widget canvas override=False (order -1); PersistentUI order=0
+  31.32s  PASS result.hud_hidden — LabCanvas(order 10) active=False, LabRoot/ShotUI_Canvas(order 0) active=False
+  31.32s  PASS result.tap_home_slot — press at (108.66, 98.00) -> top hit 'PersistentUI/BottomNavBar/NavHomeButton' (order 0) for NavHomeButton; 3 hits
+  31.32s  PASS result.tap_tee_slot — press at (585.00, 155.00) -> top hit 'PersistentUI/BottomNavBar/NavTeeButton' (order 0) for NavTeeButton; 3 hits
+  31.32s  PASS result.tap_gear — press at (1106.00, 2371.50) -> top hit 'PersistentUI/TopBar/SettingsButton' (order 0) for SettingsButton; 3 hits
+  31.32s  PASS result.tap_replay_still_works — press at (585.00, 1364.50) -> top hit 'Canvas/HoleCompleteModal/HoleCompleteWidget/Root/Card1/ContentRoot/Buttons/ReplayButton' (order -1) for ReplayButton; 2 hits
+  31.33s  SNAP 02_result_screen_with_bars: NO FILE ()
+  32.21s  PASS result.gear_opens_settings — SettingsController.IsOpen=True after the real gear tap
+  32.22s  SNAP 03_settings_over_result: NO FILE ()
+  32.85s  PASS result.settings_closed — IsOpen=False
+  32.85s  PASS result.still_showing_after_settings — widget.IsShowing=True LabScaffold loaded=True
+  33.65s  tapped real NavHomeButton
+  34.00s  after Home tap (0.3s): CurrentScreen=Home IsGameplayLoaded=False exiting=False holeGeo=False
+  35.01s  PASS nav.home_reached — CurrentScreen=Home
+  35.01s  PASS nav.gameplay_unloaded — LabScaffold loaded=False holeGeo=False
+  35.01s  PASS nav.result_hidden — widget.IsShowing=False
+  35.01s  PASS nav.bars_on_home — topBar=True bottomNav=True
+  35.02s  PASS nav.title_restored — top-bar centre text='Cratilo' (no longer 'RESULTS')
+  35.02s  PASS nav.session_cleared — CurrentHoleNumber=0 IsVersus=False IsTournament=False
+  35.02s  PASS settle.progression_written — HasPlayed(4)=True (before: False) IsUnlocked(5)=True
+  35.02s  PASS settle.rewards_granted — _rewardsGranted=True; RP 6148 -> 6158
+  35.02s  SNAP 04_home_after_nav: NO FILE ()
+  35.02s  DONE — 22/22 PASS
+  41.31s  recording stopped
