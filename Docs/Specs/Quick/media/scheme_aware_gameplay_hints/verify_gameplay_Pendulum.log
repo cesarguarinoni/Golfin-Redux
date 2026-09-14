@@ -1,0 +1,30 @@
+   0.00s  run mode=gameplay scheme=Pendulum pref=1 state at boot={"seenScreens":["Logo"],"seenKeys":[]}
+   4.80s  tapped StartButton
+   5.36s  modal visible for Home after 0.78s
+   6.86s  TAP NextButton (home continue): index 0 -> 0 (swap running=True)
+   7.33s  TAP NextButton (home CLOSE): index 1 -> 1 (swap running=False)
+   7.95s  modal hidden=True openModals=0
+   8.49s  tapped real PlayButton
+   9.08s  modal visible for HoleSelection after 0.48s
+  10.59s  TAP NextButton (holeselection continue): index 0 -> 0 (swap running=True)
+  11.07s  TAP NextButton (holeselection CLOSE): index 1 -> 1 (swap running=False)
+  11.69s  modal hidden=True openModals=0
+  12.23s  tapped real ActionButton
+  15.89s  GAMEPLAY: scheme=Pendulum (unchanged since boot=True) hint visible after 3.7s; loading screen active=False (expect false); hints=5 (expect 5)
+  19.91s  GAMEPLAY[pendulum] hint 1: visible=True n=1/5 key=TIP_PENDULUM counter='1/5' back=ABSENT gold='CONTINUE' plateH=1127.6 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_PENDULUM"]}
+  20.08s  SNAP gameplay_pendulum_hint_1of5 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_pendulum_hint_1of5.png (1170x2532, 2228999 B, md5 9d3ac3e5a295)
+  20.08s  TAP NextButton (gameplay[pendulum] 1->2): index 0 -> 0 (swap running=True)
+  20.79s  GAMEPLAY[pendulum] hint 2: visible=True n=2/5 key=TIP_GRADES counter='2/5' back=PRESENT gold='CONTINUE' plateH=1069.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_PENDULUM","TIP_GRADES"]}
+  20.94s  SNAP gameplay_pendulum_hint_2of5 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_pendulum_hint_2of5.png (1170x2532, 2225815 B, md5 898336184960)
+  20.94s  TAP NextButton (gameplay[pendulum] 2->3): index 1 -> 1 (swap running=True)
+  21.66s  GAMEPLAY[pendulum] hint 3: visible=True n=3/5 key=TIP_VIEW counter='3/5' back=PRESENT gold='CONTINUE' plateH=1127.6 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_PENDULUM","TIP_GRADES","TIP_VIEW"]}
+  21.66s  TAP NextButton (gameplay[pendulum] 3->4): index 2 -> 2 (swap running=True)
+  22.38s  GAMEPLAY[pendulum] hint 4: visible=True n=4/5 key=TIP_CLUB counter='4/5' back=PRESENT gold='CONTINUE' plateH=809.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_PENDULUM","TIP_GRADES","TIP_VIEW","TIP_CLUB"]}
+  22.39s  TAP NextButton (gameplay[pendulum] 4->5): index 3 -> 3 (swap running=True)
+  23.11s  GAMEPLAY[pendulum] hint 5: visible=True n=5/5 key=TIP_FORECAST counter='5/5' back=PRESENT gold='CLOSE' plateH=929.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_PENDULUM","TIP_GRADES","TIP_VIEW","TIP_CLUB","TIP_FORECAST"]}
+  23.27s  SNAP gameplay_pendulum_hint_5of5 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_pendulum_hint_5of5.png (1170x2532, 2224761 B, md5 3c91273112ce)
+  23.27s  TAP NextButton (gameplay[pendulum] CLOSE): index 4 -> 4 (swap running=False)
+  23.27s  modal hidden=True openModals=0
+  24.30s  after CLOSE: state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_PENDULUM","TIP_GRADES","TIP_VIEW","TIP_CLUB","TIP_FORECAST"]}
+  24.47s  SNAP gameplay_pendulum_after_close -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_pendulum_after_close.png (1170x2532, 3327835 B, md5 d38038edfb64)
+  24.48s  DONE

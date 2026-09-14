@@ -1,0 +1,32 @@
+   0.00s  run mode=gameplay scheme=Flick pref=0 state at boot={"seenScreens":["Logo"],"seenKeys":[]}
+   4.81s  tapped StartButton
+   5.32s  modal visible for Home after 0.75s
+   6.84s  TAP NextButton (home continue): index 0 -> 0 (swap running=True)
+   7.29s  TAP NextButton (home CLOSE): index 1 -> 1 (swap running=False)
+   7.92s  modal hidden=True openModals=0
+   8.47s  tapped real PlayButton
+   8.96s  modal visible for HoleSelection after 0.39s
+  10.47s  TAP NextButton (holeselection continue): index 0 -> 0 (swap running=True)
+  10.95s  TAP NextButton (holeselection CLOSE): index 1 -> 1 (swap running=False)
+  11.59s  modal hidden=True openModals=0
+  12.13s  tapped real ActionButton
+  15.27s  GAMEPLAY: scheme=Flick (unchanged since boot=True) hint visible after 3.1s; loading screen active=False (expect false); hints=6 (expect 6)
+  19.29s  GAMEPLAY[flick] hint 1: visible=True n=1/6 key=TIP_SWING counter='1/6' back=ABSENT gold='CONTINUE' plateH=1010.3 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_SWING"]}
+  19.46s  SNAP gameplay_flick_hint_1of6 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_flick_hint_1of6.png (1170x2532, 2359331 B, md5 01f19a8fa35f)
+  19.46s  TAP NextButton (gameplay[flick] 1->2): index 0 -> 0 (swap running=True)
+  20.18s  GAMEPLAY[flick] hint 2: visible=True n=2/6 key=TIP_ACCURACY counter='2/6' back=PRESENT gold='CONTINUE' plateH=1147.6 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_SWING","TIP_ACCURACY"]}
+  20.35s  SNAP gameplay_flick_hint_2of6 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_flick_hint_2of6.png (1170x2532, 2341095 B, md5 52a57c2da844)
+  20.35s  TAP NextButton (gameplay[flick] 2->3): index 1 -> 1 (swap running=True)
+  21.06s  GAMEPLAY[flick] hint 3: visible=True n=3/6 key=TIP_GRADES counter='3/6' back=PRESENT gold='CONTINUE' plateH=1069.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_SWING","TIP_ACCURACY","TIP_GRADES"]}
+  21.06s  TAP NextButton (gameplay[flick] 3->4): index 2 -> 2 (swap running=True)
+  21.76s  GAMEPLAY[flick] hint 4: visible=True n=4/6 key=TIP_VIEW counter='4/6' back=PRESENT gold='CONTINUE' plateH=1127.6 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_SWING","TIP_ACCURACY","TIP_GRADES","TIP_VIEW"]}
+  21.76s  TAP NextButton (gameplay[flick] 4->5): index 3 -> 3 (swap running=True)
+  22.50s  GAMEPLAY[flick] hint 5: visible=True n=5/6 key=TIP_CLUB counter='5/6' back=PRESENT gold='CONTINUE' plateH=809.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_SWING","TIP_ACCURACY","TIP_GRADES","TIP_VIEW","TIP_CLUB"]}
+  22.50s  TAP NextButton (gameplay[flick] 5->6): index 4 -> 4 (swap running=True)
+  23.22s  GAMEPLAY[flick] hint 6: visible=True n=6/6 key=TIP_FORECAST counter='6/6' back=PRESENT gold='CLOSE' plateH=929.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_SWING","TIP_ACCURACY","TIP_GRADES","TIP_VIEW","TIP_CLUB","TIP_FORECAST"]}
+  23.38s  SNAP gameplay_flick_hint_6of6 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_flick_hint_6of6.png (1170x2532, 2333465 B, md5 4daa7967a755)
+  23.38s  TAP NextButton (gameplay[flick] CLOSE): index 5 -> 5 (swap running=False)
+  23.38s  modal hidden=True openModals=0
+  24.39s  after CLOSE: state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_SWING","TIP_ACCURACY","TIP_GRADES","TIP_VIEW","TIP_CLUB","TIP_FORECAST"]}
+  24.62s  SNAP gameplay_flick_after_close -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_flick_after_close.png (1170x2532, 3332900 B, md5 a8043b16270d)
+  24.62s  DONE

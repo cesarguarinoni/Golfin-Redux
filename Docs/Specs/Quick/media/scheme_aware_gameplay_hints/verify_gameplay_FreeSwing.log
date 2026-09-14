@@ -1,0 +1,30 @@
+   0.00s  run mode=gameplay scheme=FreeSwing pref=3 state at boot={"seenScreens":["Logo"],"seenKeys":[]}
+   4.85s  tapped StartButton
+   5.28s  modal visible for Home after 0.66s
+   6.79s  TAP NextButton (home continue): index 0 -> 0 (swap running=True)
+   7.25s  TAP NextButton (home CLOSE): index 1 -> 1 (swap running=False)
+   7.88s  modal hidden=True openModals=0
+   8.42s  tapped real PlayButton
+   8.94s  modal visible for HoleSelection after 0.42s
+  10.46s  TAP NextButton (holeselection continue): index 0 -> 0 (swap running=True)
+  10.92s  TAP NextButton (holeselection CLOSE): index 1 -> 1 (swap running=False)
+  11.56s  modal hidden=True openModals=0
+  12.09s  tapped real ActionButton
+  15.19s  GAMEPLAY: scheme=FreeSwing (unchanged since boot=True) hint visible after 3.1s; loading screen active=False (expect false); hints=5 (expect 5)
+  19.19s  GAMEPLAY[freeswing] hint 1: visible=True n=1/5 key=TIP_FREESWING counter='1/5' back=ABSENT gold='CONTINUE' plateH=1127.6 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_FREESWING"]}
+  19.35s  SNAP gameplay_freeswing_hint_1of5 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_freeswing_hint_1of5.png (1170x2532, 2573770 B, md5 b3365db22cfc)
+  19.35s  TAP NextButton (gameplay[freeswing] 1->2): index 0 -> 0 (swap running=True)
+  20.06s  GAMEPLAY[freeswing] hint 2: visible=True n=2/5 key=TIP_GRADES counter='2/5' back=PRESENT gold='CONTINUE' plateH=1069.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_FREESWING","TIP_GRADES"]}
+  20.22s  SNAP gameplay_freeswing_hint_2of5 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_freeswing_hint_2of5.png (1170x2532, 2557962 B, md5 3ffed060e619)
+  20.22s  TAP NextButton (gameplay[freeswing] 2->3): index 1 -> 1 (swap running=True)
+  20.94s  GAMEPLAY[freeswing] hint 3: visible=True n=3/5 key=TIP_VIEW counter='3/5' back=PRESENT gold='CONTINUE' plateH=1127.6 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_FREESWING","TIP_GRADES","TIP_VIEW"]}
+  20.94s  TAP NextButton (gameplay[freeswing] 3->4): index 2 -> 2 (swap running=True)
+  21.67s  GAMEPLAY[freeswing] hint 4: visible=True n=4/5 key=TIP_CLUB counter='4/5' back=PRESENT gold='CONTINUE' plateH=809.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_FREESWING","TIP_GRADES","TIP_VIEW","TIP_CLUB"]}
+  21.67s  TAP NextButton (gameplay[freeswing] 4->5): index 3 -> 3 (swap running=True)
+  22.41s  GAMEPLAY[freeswing] hint 5: visible=True n=5/5 key=TIP_FORECAST counter='5/5' back=PRESENT gold='CLOSE' plateH=929.0 alpha=1.00 openModals=1 scene=LabScaffold | state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_FREESWING","TIP_GRADES","TIP_VIEW","TIP_CLUB","TIP_FORECAST"]}
+  22.57s  SNAP gameplay_freeswing_hint_5of5 -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_freeswing_hint_5of5.png (1170x2532, 2579674 B, md5 109bc5a8be3a)
+  22.57s  TAP NextButton (gameplay[freeswing] CLOSE): index 4 -> 4 (swap running=False)
+  22.58s  modal hidden=True openModals=0
+  23.61s  after CLOSE: state={"seenScreens":["Logo","Splash","Home","HoleSelection","Loading","Gameplay"],"seenKeys":["TIP_RP","TIP_DAILY","TIP_AUTOCLUB","TIP_SURFACES","TIP_FREESWING","TIP_GRADES","TIP_VIEW","TIP_CLUB","TIP_FORECAST"]}
+  23.79s  SNAP gameplay_freeswing_after_close -> Docs/Specs/Quick/media/scheme_aware_gameplay_hints/gameplay_freeswing_after_close.png (1170x2532, 3800360 B, md5 591d3fbf6913)
+  23.79s  DONE

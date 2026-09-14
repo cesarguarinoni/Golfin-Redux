@@ -47,7 +47,7 @@ TournamentLeaderboard) + 8 with no raycast graphic at all — NOT swept (decisio
 prefab is in another session's tree). Recorder note: measured lead 0.82 s vs the caption tool's 0.40.
 
 ---
-## 2026-09-14 — scheme_aware_gameplay_hints: **the shot-view hints follow the SELECTED control scheme** — code + EditMode green, play-mode proof pending the shared Editor
+## 2026-09-14 — scheme_aware_gameplay_hints: **the shot-view hints follow the SELECTED control scheme** — proven per scheme in play mode, awaiting Cesar's eyeball
 
 Cesar: *"Hints for control scheme (not loading tips) should show depending on what control scheme is
 selected. We are currently shipping with Flicker but that might change in the future."* The first-entry
@@ -71,6 +71,13 @@ text": `TIP_CONTROLS` rewritten EN+JA ("FOUR WAYS TO SWING: FLICK, PENDULUM, TAP
 PICK YOURS IN SETTINGS › CONTROLS. THE SHOT PHYSICS NEVER CHANGE") — importer 0 add / 1 change / 0
 conflict → published **texts v56** → `--check` clean, `content_version.txt` texts=56; the bundled table
 regenerates on the next play-mode entry / build.
+**Play-mode proof (Editor freed 11:04):** `GOLFIN ▸ Hints ▸ Run verify bot — gameplay (<scheme>)` ×4, fresh
+install each, real StartButton → Home → PlayButton → HoleSelection → ActionButton → Lomond hole 2: Pendulum
+`1/5 TIP_PENDULUM`, Tap Timing `1/5 TIP_TAPTIMING`, Free Swing `1/5 TIP_FREESWING`, Flick `1/6 TIP_SWING` +
+`2/6 TIP_ACCURACY` (the shipped six) — `hints=N (expect N)` on all four, loading screen inactive at the reveal,
+Console clean, scheme pref restored after each run. Frames + logs in
+`Docs/Specs/Quick/media/scheme_aware_gameplay_hints/`; the regenerated `LocalizationTextTable.asset`
+(TIP_CONTROLS row only) is committed with them.
 
 ---
 ## 2026-09-12 — punch it GPS: **Golfin 1.5.7 (2907) on TestFlight** — VALID at Apple 19:16
