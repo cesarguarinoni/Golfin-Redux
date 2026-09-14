@@ -4643,3 +4643,17 @@ error are a file-shape defect, not a test defect; (4) repairing the file on disk
 Editor has it open raises the "modified externally — Reload / Ignore" dialog on the next
 refresh (the test runner refreshes): with the in-memory scene clean, **Reload** is the button,
 and a `tests-run` that was queued behind the dialog leaves the 10-minute lease to erase.
+
+## Lesson CL — when a punch is armed and the scene reads clean, QUIT UNITY MYSELF; "leave Unity closed by 22:22" is never Cesar's pending (2026-09-14, `punch it at 22:22`)
+
+Armed the one-shot agent, read `IsDirty: false` over MCP, and still closed the report with
+"leave Unity with no unsaved scene by 22:22 — the only thing the run can't do for you". Cesar:
+*"you could have quit unity. i did it."* The standing permission in `Docs/PUNCH_IT_ROUTINE.md`
+already answers it — *quitting Unity: yes, after reading scene dirty state over MCP; nothing
+unsaved → quit* — and `Tools/quit-unity.sh` is the sanctioned way. The unattended runner would
+also have quit it at fire time, but a graceful quit at 22:22 is the one step that can still
+abort the build (a dialog nobody is there to answer); doing it now, with the scene verified
+clean, removes that failure mode entirely. **Rule:** at arm time, if the scene is clean, quit
+the Editor and say so; if it is dirty, say WHAT is dirty and ask whether to save or discard —
+never hand the quit itself to Cesar. Sister rules: `feedback_minimize_cesar_intervention`,
+`feedback_ask_the_decision_do_the_work`.
