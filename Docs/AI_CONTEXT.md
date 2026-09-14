@@ -47,7 +47,7 @@ TournamentLeaderboard) + 8 with no raycast graphic at all — NOT swept (decisio
 prefab is in another session's tree). Recorder note: measured lead 0.82 s vs the caption tool's 0.40.
 
 ---
-## 2026-09-14 — scheme_aware_gameplay_hints: **the shot-view hints follow the SELECTED control scheme** — proven per scheme in play mode, awaiting Cesar's eyeball
+## 2026-09-14 — scheme_aware_gameplay_hints: **the shot-view hints follow the SELECTED control scheme** — DONE (Cesar approved 2026-09-14)
 
 Cesar: *"Hints for control scheme (not loading tips) should show depending on what control scheme is
 selected. We are currently shipping with Flicker but that might change in the future."* The first-entry
@@ -66,7 +66,7 @@ without a row, blank-vs-named rows, non-Gameplay screens identical under every s
 `ScreenHintCatalogTests` updated (39 rows, scheme cells validated, `Flik` fixture). Verify bot:
 `GOLFIN ▸ Hints ▸ Run verify bot — gameplay (<scheme>)` — fresh install, real PLAY → hole path, restores
 the player's scheme pref on exit; the full tour reads `Modal.Count` instead of Flick's six.
-Record: `Docs/Specs/Quick/scheme_aware_gameplay_hints.md`. Same day, on Cesar's "Go for scheme neutral
+Record: `Docs/Specs/Quick/Completed/scheme_aware_gameplay_hints.md` (media stays in `Docs/Specs/Quick/media/scheme_aware_gameplay_hints/`). Same day, on Cesar's "Go for scheme neutral
 text": `TIP_CONTROLS` rewritten EN+JA ("FOUR WAYS TO SWING: FLICK, PENDULUM, TAP TIMING OR FREE SWING.
 PICK YOURS IN SETTINGS › CONTROLS. THE SHOT PHYSICS NEVER CHANGE") — importer 0 add / 1 change / 0
 conflict → published **texts v56** → `--check` clean, `content_version.txt` texts=56; the bundled table
