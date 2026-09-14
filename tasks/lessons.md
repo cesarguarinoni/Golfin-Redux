@@ -4456,3 +4456,18 @@ down when the card arrived (Cesar: "suddenly appear and displace it"). Separate 
 out: keep the reservation (the card holds its collapsed slot at alpha 0), drop the animation. And
 if the answer is usually already known — the Home pill fetched it seconds earlier — paint it in
 the opening frame (`MissionsClient.LastDaily`) and let the fetch repaint in place.
+
+## Lesson AK — "in the admin" is my job, never Cesar's pending (2026-09-14, second time)
+
+Across four consecutive wrap-ups I listed *"deactivate `SHOP_HISTORY_COMING_SOON` in the admin"*
+under ▶ Your pendings. Cesar: *"You deactivate it, you have chrome control and are logged in."*
+He had already said this on 2026-09-10, and the memory existed — I just didn't consult it when
+writing the pendings block. The job took under two minutes through `claude-in-chrome`.
+
+**Rule:** before writing a pending, ask whether it needs his *hands* or only his *decision*. Admin
+rows, publishes, dashboard reads — his Chrome is logged in, so those need neither. The only
+things that go in his block are DDL he must apply, deploys he owns, and gate decisions.
+
+**Recipe (verified):** `admin.golfin.world/<catalog>` → search → row → untick Active → Save draft
+→ Review & publish → read the per-field diff → tick "I have read" → note → Publish now → then
+`Tools/content/export_content.py` so the CSV + `content_version.txt` mirror it → commit.
