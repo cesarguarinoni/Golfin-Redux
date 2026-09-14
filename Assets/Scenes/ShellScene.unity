@@ -30139,7 +30139,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Tournaments.TournamentHoleSelectionScreenController
   _podiumLeaderboardButton: {fileID: 369267454}
   _closeButton: {fileID: 137968054}
-  _backScreen: 7
+  _backScreen: 12
   _finishedCardTemplate: {fileID: 1533634760}
   _nextCardTemplate: {fileID: 1050067813}
   _lockedCardTemplate: {fileID: 1011324449}
@@ -34666,7 +34666,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Tournaments.TournamentDevEntryButton
   _button: {fileID: 519514347}
-  _target: 11
+  _target: 12
 --- !u!114 &519514347
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -131035,7 +131035,7 @@ MonoBehaviour:
   _titleLabel: {fileID: 0}
   _titleText: TOURNAMENT LEADERBOARD
   _closeButton: {fileID: 1203541205}
-  _backScreen: 9
+  _backScreen: 10
 --- !u!222 &1872046264
 CanvasRenderer:
   m_ObjectHideFlags: 0

@@ -1779,7 +1779,7 @@ MonoBehaviour:
   _deniedDialog: {fileID: 7385592605064485331}
   _deniedBodyText: {fileID: 482983236882442492}
   _deniedBackButton: {fileID: 3238781300087595239}
-  _holeSelectionTarget: 9
+  _holeSelectionTarget: 10
   _panelsToHide: []
 --- !u!1 &2672746298279566035
 GameObject:

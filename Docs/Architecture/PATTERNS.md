@@ -386,6 +386,19 @@ result still drawn in front of it.
   and forgotten by the next `HighlightScreen`. The nav highlight is left as it was (the player is
   still inside the pillar they came from).
 
+## 15. ScreenId Is Stored By Value — Pinned, Append-Only Numbers
+
+`ScreenId` (`Assets/Scripts/UI/ScreenManager.cs`) is held as an INTEGER by every
+`[SerializeField] ScreenId` on a screen controller (`_backScreen`, `_leaderboardTarget`,
+`_holeSelectionTarget`, `_backTarget`, `_returnTarget`, `_target`, `_initialScreen`) in prefabs and in
+ShellScene. Its members carry explicit values (`Logo = 0 … StoreHistory = 34`), and
+`Assets/Tests/EditMode/ScreenIdSerializationTests.cs` pins every name→value, refuses a new member
+below the pinned range, and reads every stored site back from the YAML (by script GUID) against the
+screen its author chose. **A new screen takes the next free number wherever it sits in the list; a
+new serialized ScreenId field gets a row in `Sites`.** Why: on 2026-08-29 `MissionSelection` was
+inserted at 8 without a value and seven stored fields silently named the wrong screen for two weeks
+(`Docs/Specs/Quick/finished_tournament_leaderboard_route.md`, Lesson CJ).
+
 ## Quick Reference: File Locations
 
 | Pattern | Character (Roster) | Club (Inventory) | Bag (Inventory) |

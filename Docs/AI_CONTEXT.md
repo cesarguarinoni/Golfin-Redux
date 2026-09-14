@@ -4,6 +4,30 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-14 — finished_tournament_leaderboard_route: **LEADERBOARD on a finished tournament opened Play Hole** — a serialized enum had shifted under seven stored fields; pinned + gated + play guard, real-path PASS
+
+Cesar: *"Entering Leaderboard in a finished Tournament from Tournament select screen goes to Play
+Hole. You should not be able to play in finished tournaments."* Routing code was right; the
+prefab stored `_leaderboardTarget: 10` from 06-25, and `MissionSelection` was inserted into
+`ScreenId` at index 8 on 08-29 without a value — every stored id ≥ 8 named the screen one slot
+over. Shape audit: 9 `[SerializeField] ScreenId` sites in the project, 7 wrong (LEADERBOARD →
+Play Hole, CONTINUE / signup CONFIRM → Rankings, stamina BACK fallback → tournament list, the
+TOURNAMENTS (TEMP) button → the board, hole-selection CLOSE fallback → ModeSelection since T7).
+Fix: the seven ints re-serialized through `SerializedObject`; `ScreenId` pinned (`Logo = 0 …
+StoreHistory = 34`, next free number for a new member); `ScreenIdSerializationTests` (14: pinned
+values + every YAML site read back by script GUID + every declaration listed — proven to FAIL on
+the HEAD prefab); `TournamentCardStateMapper.IsPlayable` (SPEC §2 Row 2) now guards
+`TournamentHoleSelectionScreenController` — no Next card and `BeginTournamentHole` refuses when the
+tournament is over. Proof: `GOLFIN ▸ Tournaments ▸ Verify — finished tournament routes` boots
+through the real gate → TEE → mode card → the card's own CTA; it plants an entry on the ended
+`kisarazu_cup` (Register has no time guard) + one in-memory live tournament, PASS 11/11, entries
+removed after. EditMode 380/380 + Tournaments 251/251. **Found on the way, not fixed:** F1 an
+empty board has no CLOSE (`ApplyBoardChrome` hides the ScrollArea the button lives in); F2 a
+schedule applied after sign-in never reaches the session's `RemoteTournamentBackend`
+(`_remoteBackend ??=`); F3 the hole-selection header is authored text. Record:
+`Docs/Specs/Quick/finished_tournament_leaderboard_route.md`; PATTERNS §15; Lesson CJ.
+
+---
 ## 2026-09-14 — weekly_banners_42_45: **four more weekly banners drawn, 38-45 now has art** — files only, nothing in the admin yet
 
 Delivered to `Claude outputs/WeeklyBanners/`, all 882x1448, JPEG q95, all under the 500 KB cap:

@@ -5,79 +5,92 @@ using GolfinRedux.Demo;
 
 namespace GolfinRedux.UI
 {
+    /// <summary>
+    /// Every shell screen. <b>Serialized by VALUE</b> — the <c>[SerializeField] ScreenId</c> fields on
+    /// the screen controllers (<c>_backScreen</c>, <c>_leaderboardTarget</c>, <c>_holeSelectionTarget</c>,
+    /// <c>_backTarget</c>, <c>_returnTarget</c>, <c>_target</c>, <c>_initialScreen</c>) live in prefabs
+    /// and in ShellScene as these integers. The values are pinned so that inserting or reordering a
+    /// member can never repoint a stored field: <c>MissionSelection</c> was slotted in at 8 on
+    /// 2026-08-29 without a value, every stored id from 8 upward shifted by one, and a finished
+    /// tournament's LEADERBOARD button opened the hole selection for two weeks
+    /// (<c>Docs/Specs/Quick/finished_tournament_leaderboard_route.md</c>).
+    ///
+    /// Rules, enforced by <c>ScreenIdSerializationTests</c>:
+    ///   - never change an existing value; never reuse a retired one;
+    ///   - a new member takes the next free number, whatever its position in this list.
+    /// </summary>
     public enum ScreenId
     {
-        Logo,
-        Splash,
-        Loading,
-        Home,
-        Roster,
-        Inventory,
-        HoleSelection,
-        ModeSelection,
+        Logo = 0,
+        Splash = 1,
+        Loading = 2,
+        Home = 3,
+        Roster = 4,
+        Inventory = 5,
+        HoleSelection = 6,
+        ModeSelection = 7,
         // missions_v1 §C1 — the Missions campaign browse screen, cloned from HoleSelection.
-        MissionSelection,
-        Leaderboard,
+        MissionSelection = 8,
+        Leaderboard = 9,
         // Tournament screens (Stage 1 scaffolds — separate full screens from the
         // non-tournament HoleSelection / Leaderboard above).
-        TournamentHoleSelection,
-        TournamentLeaderboard,
+        TournamentHoleSelection = 10,
+        TournamentLeaderboard = 11,
         // T7 — Tournament Selection browse screen (Figma 13386:1758, Stage 0–1)
-        TournamentSelection,
+        TournamentSelection = 12,
         // Order 517 — Stamina Boost Shop (Figma 13156:1178 + 13330:1139)
-        StaminaShopSelection,
-        StaminaShopDetail,
+        StaminaShopSelection = 13,
+        StaminaShopDetail = 14,
         // Order 610 — General Shop / Rewards Center (Figma 4079:28230)
-        GeneralShop,
+        GeneralShop = 15,
         // Gacha pillar screen 2 — Gacha History / pull log (Figma 4079:18306)
-        GachaHistory,
+        GachaHistory = 16,
         // Gacha pillar screen 3 — Gacha Prizes / pool preview (Figma 13622:2222)
-        GachaPrizes,
+        GachaPrizes = 17,
         // gps_hub_entry — GPS / PLAYLIFE hub (Figma 14011:32819), reached from the Home promo banner
-        GpsHub,
+        GpsHub = 18,
         // score_upload_flow — Figma 14022:32576…14024:101792. ONE screen, six step roots toggled by
         // ScoreUploadFlowController; reached from the hub's camera centre button and SCREENSHOT tile.
-        ScoreUpload,
+        ScoreUpload = 19,
         // gps_profile_pack — three GPS sub-screens
-        GpsProfile,
-        GpsAvatar,
-        GpsBadges,
+        GpsProfile = 20,
+        GpsAvatar = 21,
+        GpsBadges = 22,
         // auth_golf_profile — the post-signup Golf Profile capture (Figma 14029:33628) and the
         // one-page Welcome tutorial (14029:33929). GPS surface, so both are on GpsGate's list:
         // in a "punch it" build neither is reachable and the Home trigger that offers them is a
         // no-op. Offered ONCE per device on the first Home entry after sign-in.
-        GpsGolfProfile,
-        GpsWelcome,
+        GpsGolfProfile = 23,
+        GpsWelcome = 24,
         // gps_gifts_votes — the last two GPS screens (Figma 14027:101843 / 14028:33534).
         // Gift is reached from the hub's GIFT nav slot and its GIFT action tile; Vote from the
         // hub's VOTE tile and from a vote card's own GIFT button in the other direction.
-        GpsGift,
-        GpsVote,
+        GpsGift = 25,
+        GpsVote = 26,
         // gps_checkin — the Rounds tab (Figma 14076:33800 / 14077:100447). Reached from the hub
         // nav bar's ROUNDS slot, which was deliberately inert until this task: chips + a real map
         // + nearby spots, CHECK IN -> a live round card -> SCORE UPLOAD or CHECK OUT.
-        GpsRounds,
+        GpsRounds = 27,
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
         // These screens are excluded from showBars (pre-game gates); menu music keeps
         // playing across them so the theme is unbroken from Splash to Home.
-        Login,
-        CreateUsername,
-        SignUp,
-        EmailConfirmation,
+        Login = 28,
+        CreateUsername = 29,
+        SignUp = 30,
+        EmailConfirmation = 31,
         // auth_recovery_flow — set-new-password screen, reached only from a type=recovery deep link.
-        ResetPassword,
+        ResetPassword = 32,
         // starting_character_selection — first-run character picker; shares RosterScreen in starter-mode
-        StartingCharacterSelection,
+        StartingCharacterSelection = 33,
 
         // store_history — the STORE pillar's purchase log (Figma 13509:2978), reached from the
         // History chip on the Rewards Center STORE tab. The Gacha History shell re-titled.
         //
-        // ⚠️ APPENDED AT THE END, AND ANY FUTURE MEMBER MUST BE TOO. ScreenId is SERIALIZED —
-        // `_backScreen` / `_returnTarget` fields hold it as an int — so inserting a member in the
-        // middle silently repoints every stored value after it at the wrong screen.
-        StoreHistory
+        // ⚠️ A NEW MEMBER TAKES THE NEXT FREE NUMBER (35, 36, …) — its position in this list is
+        // free, its value is not. See the type summary: the stored fields are these integers.
+        StoreHistory = 34,
     }
 
     /// <summary>

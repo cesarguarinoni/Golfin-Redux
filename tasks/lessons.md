@@ -4599,3 +4599,26 @@ verbatim and overshot when compensated. **Rules:** bake semi-transparent plates 
 MEASURE them against the 1:1 node render over the real artwork, and let the docstring say which
 plates are compensated and why. `faceInfo.scale` is the same kind of trap for text: `Rubik-SemiBold
 SDF` is 1.1, so TMP size = Figma px ÷ 1.1224 — the reference render's cap height is the check.
+
+## Lesson CJ — an enum that is SERIALIZED by value must be pinned with explicit numbers; an insertion in the middle is a silent, project-wide re-wiring, and the audit must enumerate every stored site (2026-09-14, `finished_tournament_leaderboard_route`)
+
+Cesar: *"Entering Leaderboard in a finished Tournament from Tournament select screen goes to Play
+Hole."* The routing code was right. `TournamentSelectionScreen.prefab` stored `_leaderboardTarget:
+10`, written on 06-25 when 10 was `TournamentLeaderboard`; on 08-29 `MissionSelection` was slotted
+into `ScreenId` at index 8 with no value, and every stored id ≥ 8 began naming the screen one slot
+over. Seven of the nine `[SerializeField] ScreenId` sites in the project were wrong for two weeks:
+LEADERBOARD opened Play Hole, CONTINUE and the signup CONFIRM opened the Rankings screen, the
+stamina-shop BACK fallback opened the tournament list, and the TOURNAMENTS (TEMP) button opened the
+board — which `GamePolishProbe` had already met and filed as "an unrelated bug" that "killed a run
+in four separate passes". The `store_history` task (09-09) even added an "append only" comment to
+the enum; advisory, and it never audited the damage already done. **Rules:** (1) a `[SerializeField]`
+enum gets explicit values the day it is first stored, plus a test that pins name→value and refuses a
+new member below the pinned range; (2) the per-site table is the gate — read each stored int back
+from the YAML by script GUID and compare it with the author's screen, so a re-wiring fails in
+EditMode, not on a player's thumb; (3) the fix is a shape (PIPELINE_HARDENING §22): grep every
+declaration of the type, every YAML site, every `(Enum)int` cast, every `propertyPath:` override,
+and publish the verdict for the sites that were fine too. Two probes of the fixed route then found
+what the route had been hiding: an empty tournament board has no CLOSE (`ApplyBoardChrome` hides the
+ScrollArea the button lives in), and a schedule applied after sign-in never reaches the
+`RemoteTournamentBackend` the session plays on (`_remoteBackend ??=`). Record:
+`Docs/Specs/Quick/finished_tournament_leaderboard_route.md`.

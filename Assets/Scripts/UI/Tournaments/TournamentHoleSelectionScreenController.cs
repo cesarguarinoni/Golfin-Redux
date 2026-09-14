@@ -130,7 +130,14 @@ namespace GolfinRedux.UI.Tournaments
             var entry = backend.GetMyEntry(tournamentId);
             int finishedCount = entry != null ? entry.PerHole.Count : 0;
 
-            Debug.Log($"[TournamentHoleSelection] Binding {def.HoleSet.Count} holes; {finishedCount} finished.");
+            // finished_tournament_leaderboard_route — a tournament that is over (or an entry that
+            // is not InProgress) gets no "Next" card: its remaining holes bind as Locked. This
+            // screen used to trust whoever routed to it; the selection card only sends
+            // EnteredActive here, but a stale route or a BACK fallback can land on it with a
+            // finished tournament selected, and BeginTournamentHole refuses the same way below.
+            bool playable = IsPlayable(def, entry);
+
+            Debug.Log($"[TournamentHoleSelection] Binding {def.HoleSet.Count} holes; {finishedCount} finished; playable={playable}.");
 
             for (int i = 0; i < def.HoleSet.Count; i++)
             {
@@ -140,7 +147,7 @@ namespace GolfinRedux.UI.Tournaments
                 bool isNext = false;
                 if (i < finishedCount)
                     template = _finishedCardTemplate;
-                else if (i == finishedCount)
+                else if (i == finishedCount && playable)
                 {
                     template = _nextCardTemplate;
                     isNext = true;
@@ -264,6 +271,19 @@ namespace GolfinRedux.UI.Tournaments
                 return;
             }
 
+            // The rule the selection card routes by (SPEC §2 Row 2), re-checked at the only
+            // place a tournament hole is launched: a finished tournament cannot be played,
+            // whatever route brought the player here. Rebind so a "Next" card that went stale
+            // while the screen was open (the end passed) turns Locked instead of staying live.
+            if (!IsPlayable(def, entry))
+            {
+                Debug.LogWarning($"[TournamentHoleSelection] Refusing to begin hole {holeId}: tournament " +
+                                 $"{tournamentId} is not playable (entry={entry.Status}, " +
+                                 $"endUtc={def.EndUtc:u}, now={System.DateTime.UtcNow:u}).");
+                RebuildCards();
+                return;
+            }
+
             // ── Derive hole number from def.HoleSet index (1-based for GameSession) ──
             // IReadOnlyList<string> has no IndexOf; use LINQ ToList or a manual search.
             int holeIndex = -1;
@@ -319,6 +339,14 @@ namespace GolfinRedux.UI.Tournaments
                                "gameplay scene will not load.");
             }
         }
+
+        /// <summary>
+        /// Row 2 of the selection card's table, on this screen's own data: an InProgress entry
+        /// inside the tournament window. Null entry = not playable (nothing to continue).
+        /// </summary>
+        private static bool IsPlayable(TournamentDefinition def, EntryState entry)
+            => entry != null
+            && TournamentCardStateMapper.IsPlayable(entry.Status, System.DateTime.UtcNow >= def.EndUtc);
 
         // ── Navigation ─────────────────────────────────────────────────────────
 

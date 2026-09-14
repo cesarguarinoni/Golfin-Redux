@@ -116,5 +116,56 @@ namespace Golfin.Tournaments.Tests
             Assert.AreEqual(TournamentCardState.Ended,
                 Map(TournamentState.Ended, EntryStatus.NotEntered, nowPastEnd: true));
         }
+
+        // ── IsPlayable: Row 2 as the hole-selection guard ─────────────────────
+        // TournamentHoleSelectionScreenController refuses BeginTournamentHole and binds no
+        // "Next" card unless this is true, so the four cells below are the whole contract.
+        [Test]
+        public void IsPlayable_InProgress_InWindow_True()
+        {
+            Assert.IsTrue(TournamentCardStateMapper.IsPlayable(EntryStatus.InProgress, nowPastEnd: false));
+        }
+
+        [Test]
+        public void IsPlayable_InProgress_PastEnd_False()
+        {
+            // The tournament ended with holes left — Row 4 turns the card EnteredFinished, and
+            // the hole selection must agree with it.
+            Assert.IsFalse(TournamentCardStateMapper.IsPlayable(EntryStatus.InProgress, nowPastEnd: true));
+        }
+
+        [Test]
+        public void IsPlayable_Finished_False_EvenInWindow()
+        {
+            Assert.IsFalse(TournamentCardStateMapper.IsPlayable(EntryStatus.Finished, nowPastEnd: false));
+        }
+
+        [TestCase(EntryStatus.NotEntered)]
+        [TestCase(EntryStatus.DNF)]
+        public void IsPlayable_NotEnteredOrDnf_False(EntryStatus status)
+        {
+            Assert.IsFalse(TournamentCardStateMapper.IsPlayable(status, nowPastEnd: false));
+            Assert.IsFalse(TournamentCardStateMapper.IsPlayable(status, nowPastEnd: true));
+        }
+
+        [Test]
+        public void IsPlayable_IsExactlyRow2()
+        {
+            // Every (state, status, pastEnd) cell: EnteredActive ⇔ IsPlayable (outside Row 1,
+            // which is Upcoming's override and has no CTA at all).
+            foreach (TournamentState state in System.Enum.GetValues(typeof(TournamentState)))
+            {
+                if (state == TournamentState.Upcoming) continue;
+                foreach (EntryStatus status in System.Enum.GetValues(typeof(EntryStatus)))
+                {
+                    foreach (bool pastEnd in new[] { false, true })
+                    {
+                        bool active = Map(state, status, pastEnd) == TournamentCardState.EnteredActive;
+                        Assert.AreEqual(active, TournamentCardStateMapper.IsPlayable(status, pastEnd),
+                            $"state={state} status={status} pastEnd={pastEnd}");
+                    }
+                }
+            }
+        }
     }
 }

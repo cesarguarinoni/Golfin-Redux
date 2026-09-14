@@ -244,8 +244,8 @@ MonoBehaviour:
   _tabOpenUnderline: {fileID: 4757943287190908854}
   _tabPlayingUnderline: {fileID: 2521871193463827094}
   _tabClosedUnderline: {fileID: 2475065856146377046}
-  _holeSelectionTarget: 9
-  _leaderboardTarget: 10
+  _holeSelectionTarget: 10
+  _leaderboardTarget: 11
   _signupModal: {fileID: 0}
 --- !u!1 &1409015632509670587
 GameObject:

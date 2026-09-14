@@ -49,8 +49,8 @@ namespace Golfin.Tournaments
             if (state == TournamentState.Upcoming)
                 return TournamentCardState.Upcoming;
 
-            // Row 2
-            if (hasEntry && entryStatus == EntryStatus.InProgress && !nowPastEnd)
+            // Row 2 — the one row whose CTA opens a hole; IsPlayable is this row as a predicate.
+            if (hasEntry && IsPlayable(entryStatus, nowPastEnd))
                 return TournamentCardState.EnteredActive;
 
             // Row 3
@@ -72,5 +72,17 @@ namespace Golfin.Tournaments
             // Row 7: no entry + Closed/Ended, or DNF
             return TournamentCardState.Ended;
         }
+
+        /// <summary>
+        /// Can this entry still play a hole? Row 2 of the table above, as the single predicate the
+        /// hole-selection screen guards with: an InProgress entry inside the tournament window.
+        /// A Finished entry has no hole left; a DNF entry was pulled; and once <paramref name="nowPastEnd"/>
+        /// is true the tournament is over whatever the entry says (Row 4 turns it EnteredFinished).
+        /// The selection card only ever routes EnteredActive to the hole selection, so this keeps
+        /// the hole selection honest when it is reached some other way — a stale route, a BACK
+        /// fallback, or the end passing while the player sits on the screen.
+        /// </summary>
+        public static bool IsPlayable(EntryStatus entryStatus, bool nowPastEnd)
+            => entryStatus == EntryStatus.InProgress && !nowPastEnd;
     }
 }

@@ -1,0 +1,60 @@
+[   0.0s] === finished tournament routes 2026-09-14 05:45:28Z ===
+[   5.4s] tapping the real StartButton
+[   6.0s]   screen = Home (wanted Home)
+[   7.5s] tapping the real NavTeeButton.onClick (bottom-nav TEE)
+[   7.8s]   screen = ModeSelection (wanted ModeSelection)
+[   9.6s] tapping the real Tournaments mode card ActionButton.onClick ('ModeCard(Clone)')
+[   9.9s]   screen = TournamentSelection (wanted TournamentSelection)
+[  12.9s] 3 cards on TournamentSelection (as found):
+[  12.9s]   'kisarazu_cup' state=Ended cta='LEADERBOARD' active=True
+[  12.9s]   'lomond_championship' state=Ended cta='LEADERBOARD' active=True
+[  12.9s]   'restricted_test_open' state=Ended cta='LEADERBOARD' active=True
+[  12.9s] tapping the real CtaSilverButton.onClick ('LEADERBOARD') on 'kisarazu_cup' (Ended)
+[  13.2s]   screen = TournamentLeaderboard (wanted TournamentLeaderboard)
+[  13.2s]   PASS A1: LEADERBOARD on ended (not entered) 'kisarazu_cup' landed on TournamentLeaderboard (wanted TournamentLeaderboard; SelectedTournamentId=kisarazu_cup)
+[  16.4s]   still 'A1_leaderboard_from_ended_card': /Users/cesar/Documents/GolfinRedux/Docs/Diagnostics/_capture/A1_leaderboard_from_ended_card_2026-09-14_14-45-44.png md5=0eb6685d9662b3dad913173304763e39
+[  16.4s]   FINDING F1: A2: the board's wired CloseButton is inactive: ScrollArea is inactive — an empty board ("No finishers yet") has no CLOSE; leaving through the real bottom-nav TEE instead
+[  16.4s] tapping the real NavTeeButton.onClick (bottom-nav TEE (no CLOSE on the empty board))
+[  16.6s]   screen = ModeSelection (wanted ModeSelection)
+[  17.7s] planted an InProgress entry on ended 'kisarazu_cup' (Row 4 → EnteredFinished)
+[  17.7s] injected live 'route_verify_live' (2026-09-14 04:45:45Z → 2026-09-15 05:45:45Z) through TournamentService.Apply; Backend sees 3 defs (schedule has 4)
+[  17.7s]   swapped RemoteTournamentBackend._local to the freshly composed backend; Backend now sees 4 defs
+[  17.7s]   FINDING F2: a schedule applied after sign-in did not reach the session's RemoteTournamentBackend (Backend saw 3 of 4 defs) — TournamentService.EnsureBackendForSession keeps the first wrapper (`_remoteBackend ??=`) and RemoteTournamentBackend._local is readonly
+[  17.7s] planted an InProgress entry on live 'route_verify_live' (Row 2 → EnteredActive)
+[  18.5s] tapping the real Tournaments mode card ActionButton.onClick ('ModeCard(Clone)')
+[  18.8s]   screen = TournamentSelection (wanted TournamentSelection)
+[  21.8s] 4 cards on TournamentSelection (after planting):
+[  21.8s]   'kisarazu_cup' state=EnteredFinished cta='LEADERBOARD' active=True
+[  21.8s]   'lomond_championship' state=Ended cta='LEADERBOARD' active=True
+[  21.8s]   'restricted_test_open' state=Ended cta='LEADERBOARD' active=True
+[  21.8s]   'route_verify_live' state=EnteredActive cta='CONTINUE' active=True
+[  21.8s]   PASS S1: 'kisarazu_cup' after planting: state=EnteredFinished (wanted EnteredFinished)
+[  21.8s] tapping the real CtaSilverButton.onClick ('LEADERBOARD') on 'kisarazu_cup' (EnteredFinished)
+[  22.1s]   screen = TournamentLeaderboard (wanted TournamentLeaderboard)
+[  22.1s]   PASS A3: LEADERBOARD on entered+finished 'kisarazu_cup' landed on TournamentLeaderboard (wanted TournamentLeaderboard; SelectedTournamentId=kisarazu_cup)
+[  25.2s]   still 'A3_leaderboard_from_finished_entered_card': /Users/cesar/Documents/GolfinRedux/Docs/Diagnostics/_capture/A3_leaderboard_from_finished_entered_card_2026-09-14_14-45-53.png md5=7fa944ca7534fd7010ad1581a4feaf89
+[  25.2s] result modal is up for the planted entry — tapping its real CLAIM button
+[  27.7s]   FINDING F1: A4: the board's wired CloseButton is inactive: ScrollArea is inactive — an empty board ("No finishers yet") has no CLOSE; leaving through the real bottom-nav TEE instead
+[  27.7s] tapping the real NavTeeButton.onClick (bottom-nav TEE (no CLOSE on the empty board))
+[  28.0s]   screen = ModeSelection (wanted ModeSelection)
+[  29.9s] tapping the real Tournaments mode card ActionButton.onClick ('ModeCard(Clone)')
+[  30.2s]   screen = TournamentSelection (wanted TournamentSelection)
+[  33.2s] adversarial: ShowScreen(TournamentHoleSelection) with 'kisarazu_cup' selected — what the stale route did (from TournamentSelection)
+[  33.5s]   screen = TournamentHoleSelection (wanted TournamentHoleSelection)
+[  35.0s]   PASS B1: hole cards for finished 'kisarazu_cup': next=0 locked=18 finished=0
+[  35.2s]   still 'B1_hole_selection_finished_tournament': /Users/cesar/Documents/GolfinRedux/Docs/Diagnostics/_capture/B1_hole_selection_finished_tournament_2026-09-14_14-46-03.png md5=10bbf2b241c2799960edd222e1f7827c
+[  36.7s]   PASS B2: BeginTournamentHole('1') on finished 'kisarazu_cup': refusedLog=True stillOnHoleSelection=True GameSession.IsTournament=False
+[  36.7s] tapping the real TournamentCloseButton.onClick (wired _closeButton of TournamentHoleSelectionScreenController)
+[  37.0s]   screen = TournamentSelection (wanted TournamentSelection)
+[  37.0s]   PASS B3: TournamentHoleSelectionScreen CLOSE landed on TournamentSelection (wanted TournamentSelection)
+[  38.0s]   PASS C0: 'route_verify_live': state=EnteredActive cta='CONTINUE' (wanted EnteredActive / CONTINUE)
+[  38.0s] tapping the real CtaGoldButton.onClick ('CONTINUE') on 'route_verify_live' (EnteredActive)
+[  38.3s]   screen = TournamentHoleSelection (wanted TournamentHoleSelection)
+[  38.3s]   PASS C1: CONTINUE on live entered 'route_verify_live' landed on TournamentHoleSelection (wanted TournamentHoleSelection; SelectedTournamentId=route_verify_live)
+[  42.8s]   PASS C2: hole cards for live 'route_verify_live': next=1 locked=17 finished=0 (wanted next=1)
+[  43.0s]   still 'C1_hole_selection_live_tournament': /Users/cesar/Documents/GolfinRedux/Docs/Diagnostics/_capture/C1_hole_selection_live_tournament_2026-09-14_14-46-11.png md5=58ba193c4c83f73871df4143b6f6c47b
+[  43.0s] tapping the real TournamentCloseButton.onClick (wired _closeButton of TournamentHoleSelectionScreenController)
+[  43.2s]   screen = TournamentSelection (wanted TournamentSelection)
+[  43.2s]   PASS C3: TournamentHoleSelectionScreen CLOSE landed on TournamentSelection (wanted TournamentSelection)
+[  44.2s]   PASS Z: removed 2/2 planted entries (kisarazu_cup, route_verify_live); backend sees none=True
+[  44.2s] === PASS  ===

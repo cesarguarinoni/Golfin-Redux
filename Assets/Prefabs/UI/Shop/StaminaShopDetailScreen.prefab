@@ -109,7 +109,7 @@ MonoBehaviour:
   _menuRowPrefab: {fileID: 6934894111971909099, guid: 53b2a89d69d6a4f959443b2eedaa436d, type: 3}
   _rpCounterLabel: {fileID: 0}
   _cancelButton: {fileID: 6057065013254744144}
-  _backTarget: 12
+  _backTarget: 13
 --- !u!1001 &337109105894201060
 PrefabInstance:
   m_ObjectHideFlags: 0
