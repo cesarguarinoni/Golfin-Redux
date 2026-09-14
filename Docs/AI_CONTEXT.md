@@ -51,6 +51,42 @@ pre-existing skips). Record: `Docs/Specs/Quick/finished_tournament_leaderboard_r
 PATTERNS §15; Lesson CJ.
 
 ---
+## 2026-09-14 — weekly_rotation_8_weeks_staged: **weeks 38-45 all materialized with bespoke art** — one PUBLISH ROTATION away from a two-month runway
+
+**The earlier disappearance is explained.** Cesar published weeks 40 and 41 and BOTH survived —
+`gacha_banners` went to v17 with all rows intact. So `publishCatalog` does exactly what it reads:
+it promotes the whole draft set and discards nothing. The earlier loss of wk_2026_40/41 was the
+**Cloudflare 1102 outage**, not publish semantics — those materialize writes went through a
+failing worker and never committed server-side even though the UI drew them. The audit counts fit
+(one week's worth of adds, not two). The earlier "publish discards sibling drafts" note was wrong
+and has been corrected in `claude/WEEKLY_BANNERS_ADMIN_STATE.md`.
+
+**Still true and still important:** a catalog publish pushes EVERY pending draft in that catalog.
+You cannot stage a week you are not ready to ship and then publish something else.
+
+**State now**
+
+| Week | Banner | Art |
+|---|---|---|
+| wk_2026_38 | LIVE | published |
+| wk_2026_39 - 41 | SCHEDULED, published | published |
+| wk_2026_42 - 45 | SCHEDULED, **draft** | uploaded, md5-verified, **unpublished** |
+
+- `rotations` v8, 2 unpublished (wk_2026_44/45 `materializedAt` only — bookkeeping, drives the
+  GENERATED vs SCHEDULED badge)
+- `gacha_banners` v17, **4 unpublished** (the whole 42-45 rows, art included)
+- `shop_catalog` v11, **78 unpublished** — more than the 52 rows these four weeks added, so there
+  is PRE-EXISTING pending shop work in the draft set. Given the rule above, publishing shop_catalog
+  ships that too. **Review it before publishing.**
+
+**To finish:** use **PUBLISH ROTATION** (the five-catalog chain), not the single-catalog
+Review & publish drawer. Cesar's last publish used the rotations drawer alone, which is why the
+rotation rows advanced to v8 while the banner rows stayed at v17.
+
+`gacha_banner_tagline` is DONE and approved, so once these publish the ribbon and hook band render
+over the new art for every week.
+
+---
 ## 2026-09-14 — weekly_banners_42_45: **four more weekly banners drawn, 38-45 now has art** — files only, nothing in the admin yet
 
 Delivered to `Claude outputs/WeeklyBanners/`, all 882x1448, JPEG q95, all under the 500 KB cap:

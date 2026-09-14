@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-09-14 09:17. Do not edit manually.
+> Auto-generated 2026-09-14 12:31. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -866,6 +866,7 @@ Assets/Scripts/UI/HUD/PlayerContextPopulator.cs
 Assets/Scripts/UI/HUD/PuttPathPredictor.cs
 Assets/Scripts/UI/Hints/Editor/ScreenHintMenu.cs
 Assets/Scripts/UI/Hints/Editor/ScreenHintModalBuilder.cs
+Assets/Scripts/UI/Hints/Editor/ScreenHintSchemeDemoRecorder.cs
 Assets/Scripts/UI/Hints/Editor/ScreenHintVerifyBot.cs
 Assets/Scripts/UI/Hints/ScreenHintCatalog.cs
 Assets/Scripts/UI/Hints/ScreenHintModalController.cs
@@ -987,6 +988,7 @@ Assets/Scripts/UI/Modals/InGameSettingsModalController.cs
 Assets/Scripts/UI/Modals/ModalBackdropDismiss.cs
 Assets/Scripts/UI/Modals/ModalController.cs
 Assets/Scripts/UI/Modals/ModalScrim.cs
+Assets/Scripts/UI/Modals/Result/Editor/ResultScreenNavVerifyBot.cs
 Assets/Scripts/UI/Modals/Result/HoleCompleteModalController.cs
 Assets/Scripts/UI/Modals/SchemeConfirmModalController.cs
 Assets/Scripts/UI/Modals/VersusResultHandler.cs
@@ -1009,6 +1011,7 @@ Assets/Scripts/UI/Polish/Editor/GamePolishTestReport.cs
 Assets/Scripts/UI/Polish/Editor/GpsNavStillCapture.cs
 Assets/Scripts/UI/Polish/Editor/PressFeedbackScope.cs
 Assets/Scripts/UI/Polish/Editor/RetrofitParityRecorder.cs
+Assets/Scripts/UI/Polish/Editor/ScrollDragAnywhereVerify.cs
 Assets/Scripts/UI/Polish/GameShimmerSites.cs
 Assets/Scripts/UI/Polish/KeyboardInset.cs
 Assets/Scripts/UI/Polish/LayeredPush.cs
@@ -1087,6 +1090,7 @@ Assets/Scripts/UI/ScreenDeactivator.cs
 Assets/Scripts/UI/ScreenManager.cs
 Assets/Scripts/UI/SettingsController.cs
 Assets/Scripts/UI/SettingsMenuItem.cs
+Assets/Scripts/UI/Shop/Editor/StoreFilterFramesRun.cs
 Assets/Scripts/UI/Shop/Editor/StoreHistoryAcceptanceRun.cs
 Assets/Scripts/UI/Shop/Editor/StoreHistoryInstaller.cs
 Assets/Scripts/UI/Shop/GeneralShopCard.cs
@@ -1392,6 +1396,7 @@ Assets/Data/README_HOLES.md.meta
 | ClubContextPopulator | Assets/Scripts/UI/HUD/ClubContextPopulator.cs | Yes |  |
 | LabInventoryStub | Assets/Scripts/UI/HUD/LabInventoryStub.cs | Yes |  |
 | PlayerContextPopulator | Assets/Scripts/UI/HUD/PlayerContextPopulator.cs | Yes |  |
+| ScreenHintSchemeDemoRunner | Assets/Scripts/UI/Hints/Editor/ScreenHintSchemeDemoRecorder.cs | Yes |  |
 | ScreenHintVerifyRunner | Assets/Scripts/UI/Hints/Editor/ScreenHintVerifyBot.cs | Yes |  |
 | ScreenHintPresenter | Assets/Scripts/UI/Hints/ScreenHintPresenter.cs | Yes |  |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | Yes |  |
@@ -1443,6 +1448,7 @@ Assets/Data/README_HOLES.md.meta
 | MissionSelectionScreenController | Assets/Scripts/UI/MissionSelection/MissionSelectionScreenController.cs | Yes |  |
 | ModalBackdropDismiss | Assets/Scripts/UI/Modals/ModalBackdropDismiss.cs |  | IPointerClickHandler |
 | ModalController | Assets/Scripts/UI/Modals/ModalController.cs |  |  |
+| ResultScreenNavVerifyRunner | Assets/Scripts/UI/Modals/Result/Editor/ResultScreenNavVerifyBot.cs | Yes |  |
 | VersusResultHandler | Assets/Scripts/UI/Modals/VersusResultHandler.cs | Yes |  |
 | ModeCardController | Assets/Scripts/UI/ModeSelect/ModeCardController.cs | Yes |  |
 | ModeCarouselController | Assets/Scripts/UI/ModeSelect/ModeCarouselController.cs | Yes |  |
@@ -1457,6 +1463,7 @@ Assets/Data/README_HOLES.md.meta
 | Driver | Assets/Scripts/UI/Polish/Editor/GamePolishProbeC.cs | Yes |  |
 | Runner | Assets/Scripts/UI/Polish/Editor/GpsNavStillCapture.cs | Yes |  |
 | Driver | Assets/Scripts/UI/Polish/Editor/RetrofitParityRecorder.cs | Yes |  |
+| ScrollDragAnywhereRunner | Assets/Scripts/UI/Polish/Editor/ScrollDragAnywhereVerify.cs | Yes |  |
 | KeyboardInsetBinder | Assets/Scripts/UI/Polish/KeyboardInset.cs |  |  |
 | NavSlotHighlight | Assets/Scripts/UI/Polish/NavSlotHighlight.cs | Yes |  |
 | ScreenEntryMotion | Assets/Scripts/UI/Polish/ScreenEntryMotion.cs |  |  |
@@ -1485,6 +1492,7 @@ Assets/Data/README_HOLES.md.meta
 | ScreenManager | Assets/Scripts/UI/ScreenManager.cs | Yes |  |
 | SettingsController | Assets/Scripts/UI/SettingsController.cs | Yes |  |
 | SettingsMenuItem | Assets/Scripts/UI/SettingsMenuItem.cs |  |  |
+| Runner | Assets/Scripts/UI/Shop/Editor/StoreFilterFramesRun.cs | Yes |  |
 | Runner | Assets/Scripts/UI/Shop/Editor/StoreHistoryAcceptanceRun.cs | Yes |  |
 | GeneralShopCard | Assets/Scripts/UI/Shop/GeneralShopCard.cs | Yes |  |
 | GeneralShopScreenController | Assets/Scripts/UI/Shop/GeneralShopScreenController.cs | Yes |  |
@@ -1655,6 +1663,7 @@ Assets/Data/README_HOLES.md.meta
 | PendingHoleSubmit | `public event Action? OnChanged;` |
 | GachaHistoryStore | `public static event Action? OnChanged;` |
 | GachaTicketManager | `public event System.Action<TicketType, int>? OnTicketsChanged;` |
+| GameplaySceneLoader | `public static event System.Action GameplayExiting;` |
 | RoundSpotRowView | `public event Action<RoundSpotRowView>? OnAction;` |
 | HoleCardController | `public event System.Action<HoleCardController> OnCardTapped;` |
 | HoleCardController | `public event System.Action<HoleCardController> OnActionButtonClicked;` |
@@ -1835,7 +1844,7 @@ Assets/Data/README_HOLES.md.meta
 | VoteCreateModalController | Assets/Scripts/UI/Gps/VoteCreateModalController.cs | 6 |
 | GraphicsSubmenu | Assets/Scripts/UI/GraphicsSubmenu.cs | 7 |
 | ScreenHintModalController | Assets/Scripts/UI/Hints/ScreenHintModalController.cs | 9 |
-| ScreenHintPresenter | Assets/Scripts/UI/Hints/ScreenHintPresenter.cs | 2 |
+| only | Assets/Scripts/UI/Hints/ScreenHintPresenter.cs | 2 |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | 3 |
 | HoleCardController | Assets/Scripts/UI/HoleSelection/HoleCardController.cs | 28 |
 | HoleProgressionDebug | Assets/Scripts/UI/HoleSelection/HoleProgressionDebug.cs | 1 |
@@ -1914,7 +1923,7 @@ Assets/Data/README_HOLES.md.meta
 | RosterScreenController | Assets/Scripts/UI/Roster/UI/RosterScreenController.cs | 4 |
 | StartingCharacterConfirmModalController | Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs | 6 |
 | StatBar | Assets/Scripts/UI/Roster/UI/StatBar.cs | 7 |
-| ScreenManager | Assets/Scripts/UI/ScreenManager.cs | 36 |
+| ScreenManager | Assets/Scripts/UI/ScreenManager.cs | 37 |
 | SettingsMenuItem | Assets/Scripts/UI/SettingsMenuItem.cs | 7 |
 | GeneralShopCard | Assets/Scripts/UI/Shop/GeneralShopCard.cs | 4 |
 | StaminaMenuRow | Assets/Scripts/UI/Shop/StaminaMenuRow.cs | 12 |

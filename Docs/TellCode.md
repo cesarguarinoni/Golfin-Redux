@@ -60,6 +60,43 @@
   publish — the seam is proven, the trigger is its own spec.
 
 - **`gacha_server_pull` (B): DONE, approved by Cesar 2026-08-31 (Architect review PASS; its one condition — the `pool_for_build` probe + the §8 revert — was met the same session). Folder is in `Docs/Specs/Completed/`. Next: C (kickoff in SPEC_READY POINTERS).** Detail: Verification 16/16 and 11/11. All three deploy surfaces live (API
+
+- **`gacha_banner_tagline` — SPEC_READY (2026-09-14).** `Docs/Specs/Active/gacha_banner_tagline/SPEC.md`.
+  The card is TITLE ONLY, so the 52 textless weekly banners ship with no selling line — the copy the
+  `STANDARD CLUB 1` artwork bakes in ("GET Drivers, Woods, Irons" / "CHANCE TO GET LEGENDARY GEAR!")
+  has nowhere to live. `taglineEn`/`taglineJa` already exist end to end and are parsed into nothing.
+  This renders them as a magenta ribbon under the countdown and a navy hook band lower over the art,
+  adds `hookEn`/`hookJa` (no migration — `content_rows.data` is a JSON blob), and moves the copy out of
+  the hardcoded literal at `rotation.ts:795` into the rotation plan. All 52 EN+JA pairs are drafted in
+  `Claude outputs/WeeklyBanners/weekly_taglines.csv`. Figma: page `Gacha` `4049:6491`, frame
+  `14280:33516`. ⚠️ §6 corrects the artwork dead zones — the brief's "top 8%" was wrong and clipped the
+  club crowns; real dead zones are top 18%, 72.7–86%, bottom 91%.
+
+### Kickoff · gacha_banner_tagline
+
+```
+Read Docs/Specs/Active/gacha_banner_tagline/SPEC.md and implement it.
+
+Context:
+- The gacha banner card renders title/countdown/costs/pity but no tagline; the 52 weekly
+  banners are textless by rule, so they currently sell nothing. This adds the two designed
+  copy lines as localized UI over the art.
+- Unity: Assets/Scripts/UI/Gacha/GachaBannerCard.cs + GachaBannerModel.cs +
+  Assets/Resources/Prefabs/Gacha/GachaBannerCard.prefab. Admin: Tools/admin-dashboard/lib/rotation.ts
+  (ROTATION_COLUMNS line 113, ROTATION_DEFAULTS, the gacha_banners.push block ~line 795) and the
+  gacha-banners panel column list. Data: gacha_banners.csv + rotations.csv.
+- No migration and no playlife-repo change: content_rows.data is a JSON blob, see
+  import_content.py drop_empty().
+- Minimal diff. Reuse the language check the title already does — do not add a second one.
+  Read the prefab's SERIALIZED rects, not the C# defaults; §4 lists them.
+- Out of scope: hand-editing the 52 in the admin, the no-text-in-artwork rule, regenerating the
+  other 51 artworks, the pre-existing unpublished gacha_banners change.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
   `deployment-01M1B5F2YV1ZJT84RX7RSGN5WW` v64; dashboard `bbfdb132-…` stamped `83564c011`;
   Access 302). **Every SPEC §10 acceptance item is PASS** — parity worst 0.90 pt against a
   ±1.5 tolerance, the full eight-step live E2E, the §5.2 shop ticket sale, and
