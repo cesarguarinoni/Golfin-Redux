@@ -102,7 +102,7 @@ namespace Golfin.Gameplay.Golfer
     public sealed class HandHingeModel : MonoBehaviour
     {
         /// <summary>Bumped by hand on every edit; read back by reflection to prove the build loaded.</summary>
-        public const string Version = "stage2-a";
+        public const string Version = "stage2-b";
 
         [SerializeField] Animator anim;
         [SerializeField] HandHingeData data;
@@ -454,6 +454,10 @@ namespace Golfin.Gameplay.Golfer
         /// Hand bone, so this is the same whatever the fingers are doing.
         /// </summary>
         public static void GripAxisHandLocal(Animator anim, in HandHingeHand hand, bool lead, out Vector3 o, out Vector3 d)
+            => GripAxisHandLocal(anim, hand, lead ? 0.6f : 0f, out o, out d);
+
+        /// <summary>Same axis with the index-end offset as a fraction of the index proximal length (0.6 = the §3.12.4 lead; 0 = the §3.12.4 trail).</summary>
+        public static void GripAxisHandLocal(Animator anim, in HandHingeHand hand, float uOffsetFraction, out Vector3 o, out Vector3 d)
         {
             Transform h = Bone(anim, HandBone(hand.right));
             Vector3 n = hand.palmNormalHandLocal, u = hand.lengthAxisHandLocal;
@@ -461,7 +465,7 @@ namespace Golfin.Gameplay.Golfer
             Vector3 idx = h.InverseTransformPoint(Bone(anim, hand.joints[JointIndex(Index, 0)].bone).position);
             float lProx = hand.joints[JointIndex(Index, 0)].segmentLength;
             Vector3 pLit = lit + n * ContactM;
-            Vector3 pIdx = idx + (lead ? u * (0.6f * lProx) : Vector3.zero) + n * ContactM;
+            Vector3 pIdx = idx + u * (uOffsetFraction * lProx) + n * ContactM;
             o = pLit;
             d = (pIdx - pLit).normalized;
         }

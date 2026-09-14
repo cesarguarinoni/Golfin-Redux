@@ -1,11 +1,12 @@
 {
-  "clubSlotLocalPos": [0.00546, 0.04926, -0.08510],
-  "clubSlotLocalRot": [-0.14530, 0.89678, 0.41514, 0.04830],
-  "leadAnchorLocalPos": [-0.00001, -0.02812, 0.00000],
-  "leadAnchorLocalRot": [-0.33150, 0.67349, 0.28882, -0.59422],
+  "clubSlotLocalPos": [0.00694, 0.04971, -0.08604],
+  "clubSlotLocalRot": [-0.11262, 0.89339, 0.42413, 0.09636],
+  "leadAnchorLocalPos": [0.00000, -0.02812, 0.00000],
+  "leadAnchorLocalRot": [-0.31373, 0.63695, 0.30803, -0.63323],
   "leadWristLocalPos": [-0.05969, -0.07667, 0.02216],
   "trailAnchorLocalPos": [0.00000, 0.05440, 0.00000],
-  "trailAnchorLocalRot": [-0.36203, -0.53815, -0.42277, -0.63293],
+  "trailAnchorLocalRot": [-0.38594, -0.57395, -0.40106, -0.60065],
   "trailWristLocalPos": [0.03696, -0.08966, 0.02254],
-  "pivotYawDeg": -6.12500, "pivotPitchDeg": 0.00000, "slideM": 0.01969, "costDeg": 82.55613
+  "leadStationM": 0.00759, "trailGapOffsetM": 0.00000, "rollMode": "minwrist",
+  "pivotYawDeg": -1.75000, "pivotPitchDeg": 0.00000, "slideM": 0.01781, "costDeg": 81.91428
 }

@@ -20,6 +20,14 @@ displacement); the clip's hands are already a plausible grip (lead palm −0.996
 palm-rule roll bends the wrists 79° / 167° (stop-and-show), the min-wrist roll 14° / 36° — baked the latter, palm dots
 reported. Frames in `evidence/stage2/verify_*.png`; decision on the roll rule is the Architect's / Cesar's.
 
+**Stage 2 redo (same day) — Cesar: "the wrists bend too much compared to real golfers".** Measured: the clip's own
+wrists are 46° / 42° (forearm→hand); the min-wrist bake had 61.7° / 59.9°. Re-solved with the wrist angle as the cost,
+the lead station and trail offset freed, the axis index-end offset as a DOF with a wrappability filter (each candidate
+axis is test-wrapped on the live hand first; the bake re-solves the finger poses for the chosen axes), and a reach
+constraint: **55.0° / 47.7°** baked (lead axis 0.6, trail 0.6, lead station 39 mm). The club pivot cannot buy wrist
+angle within reach; the rest is the actor's posture plus a driver at 0.87 scale on a 1.33 m character. Both bakes kept
+in `evidence/stage2/`; decision (accept / keep min-wrist / shorter club or clip before stage 3) is Cesar's.
+
 ---
 ## 2026-09-15 (golfer_club_grip stage 1) — **grip pose in hand space: mechanism holds, the §3.12.3 one-k solve does not make a grip**
 

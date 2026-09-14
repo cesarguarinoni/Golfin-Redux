@@ -775,3 +775,74 @@ Every uncommitted path outside `Docs/Specs/Active/golfer_club_grip/` is listed.
 - **The palm dots at the baked roll are ~0.02 / 0.06** — the rules the spec wrote are not satisfied, they are
   reported. If the Architect wants them as rules, finding 4 says what that costs in wrist rotation on this clip.
 - **Trail little finger on the lead index at 4 mm bone-to-bone** will read as flesh overlap in a close frame.
+
+## Stage 2 redo — Cesar at the gate: "the wrists seem to bend too much compared to real golfers" (2026-09-15)
+
+### What the number is, and what it was
+
+The stage measures the wrist bend directly now: the forearm-to-hand angle (elbow→wrist vs wrist→middle MCP), split
+into flexion along the palm normal (+ = cupped / extended) and deviation across the hand. `grip.wrist.angle_l/_r`.
+
+| Configuration | lead wrist (flex, dev) | trail wrist (flex, dev) | rotation added to the clip | lead station | frames |
+|---|---|---|---|---|---|
+| **the clip itself** (rig off) | **46.2°** (28.3, −33.0) | **41.8°** (−8.0, 40.7) | — | 58 mm (tunnel 19.5 mm off the axis) | — |
+| min-wrist bake (what Cesar saw) | **61.7°** (27.7, −48.4) | **59.9°** (22.8, 50.7) | 13.3° / 35.4° | 7.6 mm (spec) | `minwrist_bake_frames/` |
+| palm-rule roll (§3.12.4 as written) | — | — | 79.3° / 166.7° | 7.6 mm | `solve_palm_*` |
+| "anatomy" roll (min forearm→hand angle for the roll DOF) | 41.2° (2.0, −41.2) | 44.9° (4.3, 44.5) | 110.6° / 95.4° | 33 mm | `solve_anatomy_*` — not a grip: the hands roll until the club runs along the outside of the hand |
+| **wrist-angle cost, min-wrist roll, free station, wrappable axes — BAKED** | **55.0°** (23.8, −45.5) | **47.7°** (24.8, 37.6) | 13.9° / 31.9° | 39.4 mm | `verify_*` |
+
+So the IK had been adding 15° / 18° to the actor's own wrists, and now adds 9° / 6°. The remaining bend — and it
+is still ~50° — is the actor's posture (46° / 42°) plus the geometry below.
+
+### What was changed at this level, in order, with what each did
+
+1. **Wrist angle measured** (clip vs result), rows `grip.wrist.angle_*`; the solve now predicts it per candidate
+   from the clip's forearm and the anchor hand frame.
+2. **Cost = predicted wrist angle + 0.2° per mm of hand displacement** (was: rotation from the clip + 0.5°/mm);
+   pivot range ±12°, slide ±20 mm. Result: the pivot stayed at ~0° / −4 mm even with cheap displacement — moving the
+   club within the arms' reach does **not** straighten the wrists on this clip.
+3. **Lead station freed** (5–65 mm from the butt; spec 10 mm·s): the solve chose **39 mm** (the clip holds at 58).
+   The butt-cap row fails by the letter (39 vs 6–15 mm) and ~70 mm of grip shows above the hands.
+4. **Trail overlap offset freed ±8 mm**: chose −7.75 (in band); lead-to-trail joint clearance dropped 11.9 → **5.4 mm**
+   (`grip.hands.noInterpenetration` FAIL). Reverting the offset to 0 costs ~1° of wrist.
+5. **Axis index-end offset as a DOF** (lead {0.2 … 0.8}, trail {0 … 0.6}), because the clip's knuckle rows sit 17°
+   (lead) and 40° (trail) off the §3.12.4 axes and that misalignment is the deviation the IK adds. **A fraction the
+   fingers cannot wrap is rejected first** — the stage-1 inscribed solve is run on the live hand per candidate:
+   lead 0.8 rejected (index tip 44 mm out, the axis crosses the index at its middle joint), trail 0.4 rejected.
+   Chosen: lead **0.6** (the spec), trail **0.6** (spec 0). The bake re-solves both finger poses for the chosen
+   axes and writes them to the prefab (`AuthorPrefabStructureForAxes`), so pose and axis can never disagree again
+   (they did once: bake 0.8 put the shaft through the lead index).
+6. **Reach constraint**: shoulder→anchor-hand distance ≤ 97 % of the arm, hard penalty — the first wrist-angle run
+   put the trail anchor 16 mm past the trail arm.
+
+### Where the rest of the bend comes from (measured, not guessed)
+
+- The actor's address already has 46° / 42° of wrist bend, mostly ulnar deviation.
+- Aligning the hand-local axis to the shaft adds the knuckle-row misalignment: 17° lead / 40° trail at the spec axes;
+  with the trail diagonal (0.6) the trail rotation drops to 32°.
+- The club pivot cannot buy wrist angle within reach (finding 2). What would: the hands lower on the shaft line with
+  the arms extended, i.e. a **shorter club for this 1.33 m character** (the driver is at 0.87 scale — the stand-in
+  artefact noted in iter-9: "roster models at R2 height carry full-size clubs") or a closer stance. Both sit above
+  the grip stage. Real-golfer numbers for comparison: lead wrist ~25–35° of deviation with a flat-to-slightly-cupped
+  wrist; trail wrist ~20–30° cupped.
+
+### Verify run on the committed prefab (wrist-angle bake)
+
+hands on the shaft 0.01 / 0.00 mm · overlap Δ −7.76 mm (band ±8) · wrist residual 13.9° / 31.9° · IK reach 0.00 mm ·
+heel-pad dot 0.011 (FAIL, rule not solved) · trail palm on thumb 21.4 vs band 19.0 (FAIL by 2.4 mm) · joint
+clearance 5.43 mm (FAIL, ≥ 8) · butt cap 39.4 mm (FAIL, band 6.1–15.2) · fingers on the shaft: lead joints 20.4,
+segments ≥ 14.5; trail joints 20.4 (index tip 23.3, middle 22.4 at the DIP cap), segments ≥ 13.2 · face square
+90.08° edge / 0.08° azimuth (PASS) · head at ball 24.7 mm (PASS).
+
+Frames (all 1600², looked at): `verify_awayside.png` (canonical), `verify_targetside.png`, `verify_golferseye.png`,
+`verify_downshaft.png`, `verify_gameplay.png`; the min-wrist bake Cesar saw is kept under `minwrist_bake_frames/`.
+Both bakes are in the folder (`stage2_bake_minwrist.json`, `stage2_bake_wristangle.json`); either is one
+`ApplyBakeToPrefab` away.
+
+### The decision this redo needs
+
+The grip mechanism is doing what it can: hands on the shaft, fingers on the circle, wrists within 9° / 6° of the
+actor's. The wrists still bend ~50° because the actor's do and because the club is long for the character. Options,
+in order of how much they change: (a) accept this bake and take the wrist question to the club scale / stance in
+stage 3's set-up; (b) keep the min-wrist bake (cleaner butt cap, 11.9 mm clearance) and the same question; (c) a
+different clip or a shorter club before stage 3. Tests 13/13; nothing above the anchor level was touched.

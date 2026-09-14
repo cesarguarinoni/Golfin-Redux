@@ -56,8 +56,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 502691434881352745}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.3104103, y: 0.63012093, z: 0.31137693, w: -0.64002925}
-  m_LocalPosition: {x: -0.000009901462, y: -0.02812, z: 0.0000014003722}
+  m_LocalRotation: {x: -0.30998966, y: 0.62925935, z: 0.31178966, w: -0.6408793}
+  m_LocalPosition: {x: 0, y: 0.00367, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -373,7 +373,7 @@ Transform:
   m_GameObject: {fileID: 1609187749270777185}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.03696, y: -0.08966, z: 0.02254}
+  m_LocalPosition: {x: 0.05536, y: -0.07625, z: 0.02235}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -752,8 +752,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4504549658261191582}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.1158022, y: 0.8911776, z: 0.42431483, w: 0.11112739}
-  m_LocalPosition: {x: 0.00546, y: 0.04926, z: -0.0851}
+  m_LocalRotation: {x: -0.11601957, y: 0.8904767, z: 0.42576844, w: 0.11095959}
+  m_LocalPosition: {x: 0.00794, y: 0.05179, z: -0.08637}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -887,43 +887,43 @@ MonoBehaviour:
   applyEveryFrame: 1
   lead:
     index:
-      mcp: 5.5
-      pip: 59.7
+      mcp: 5.4403276
+      pip: 59.691204
       dip: 80
       spread: 0
     middle:
-      mcp: 26.2
-      pip: 84.8
-      dip: 77
+      mcp: 26.221107
+      pip: 84.81589
+      dip: 76.987366
       spread: 0
     ring:
-      mcp: 32.2
-      pip: 78.3
-      dip: 72.4
+      mcp: 32.211468
+      pip: 78.38576
+      dip: 72.391754
       spread: 0
     little:
-      mcp: 30.5
-      pip: 69.4
-      dip: 58.2
+      mcp: 30.477573
+      pip: 69.35846
+      dip: 58.142597
       spread: 0
     thumbFlexIntermediate: 15
     thumbFlexDistal: 10
     thumbAimHandLocal: {x: -0.09313148, y: 0.9809572, z: -0.170439}
   trail:
     index:
-      mcp: 42.9
-      pip: 98.3
-      dip: 73.9
+      mcp: 4.749777
+      pip: 66.43843
+      dip: 80
       spread: 4
     middle:
-      mcp: 55.8
-      pip: 81.7
+      mcp: 23.657597
+      pip: 80.92958
       dip: 80
       spread: 0
     ring:
-      mcp: 56.5
-      pip: 84.7
-      dip: 76.3
+      mcp: 34.283813
+      pip: 86.37622
+      dip: 68.06796
       spread: 0
     little:
       mcp: 40
@@ -932,7 +932,7 @@ MonoBehaviour:
       spread: 0
     thumbFlexIntermediate: 15
     thumbFlexDistal: 10
-    thumbAimHandLocal: {x: 0.40077484, y: 0.9039853, z: -0.14896353}
+    thumbAimHandLocal: {x: 0.11903529, y: 0.98232603, z: -0.14445108}
 --- !u!1 &4938480670728552532
 GameObject:
   m_ObjectHideFlags: 0
@@ -1035,8 +1035,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5024089022541317003}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.39081088, y: -0.58124745, z: -0.39631456, w: -0.5935934}
-  m_LocalPosition: {x: 0, y: 0.0544, z: 0}
+  m_LocalRotation: {x: -0.33162028, y: -0.64270055, z: -0.31157026, w: -0.61635053}
+  m_LocalPosition: {x: 0, y: 0.05568, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
