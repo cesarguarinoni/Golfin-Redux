@@ -43,8 +43,11 @@ without a row, blank-vs-named rows, non-Gameplay screens identical under every s
 `ScreenHintCatalogTests` updated (39 rows, scheme cells validated, `Flik` fixture). Verify bot:
 `GOLFIN ▸ Hints ▸ Run verify bot — gameplay (<scheme>)` — fresh install, real PLAY → hole path, restores
 the player's scheme pref on exit; the full tour reads `Modal.Count` instead of Flick's six.
-Record: `Docs/Specs/Quick/scheme_aware_gameplay_hints.md`. Not done: `TIP_CONTROLS` still says
-"NOT A FLICK FAN?" (a texts publish, flagged for Cesar).
+Record: `Docs/Specs/Quick/scheme_aware_gameplay_hints.md`. Same day, on Cesar's "Go for scheme neutral
+text": `TIP_CONTROLS` rewritten EN+JA ("FOUR WAYS TO SWING: FLICK, PENDULUM, TAP TIMING OR FREE SWING.
+PICK YOURS IN SETTINGS › CONTROLS. THE SHOT PHYSICS NEVER CHANGE") — importer 0 add / 1 change / 0
+conflict → published **texts v56** → `--check` clean, `content_version.txt` texts=56; the bundled table
+regenerates on the next play-mode entry / build.
 
 ---
 ## 2026-09-12 — punch it GPS: **Golfin 1.5.7 (2907) on TestFlight** — VALID at Apple 19:16

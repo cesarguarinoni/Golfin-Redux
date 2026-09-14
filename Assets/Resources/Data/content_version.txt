@@ -17,5 +17,5 @@ missions=2
 modes=11
 rotations=4
 shop_catalog=10
-texts=55
+texts=56
 ticket_types=2

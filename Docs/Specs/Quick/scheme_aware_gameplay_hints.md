@@ -74,9 +74,16 @@ Every other screen's rows carry a blank scheme and resolve exactly as before.
   the moment of switching, which is richer than one tip; re-showing the swing tip on the next shot view
   would be a second explanation of the same thing. If Cesar wants it anyway it is a follow-up on the
   store shape (per-scheme seen key), not on this change.
-- `TIP_CONTROLS` copy ("NOT A FLICK FAN? …") still names Flick as the scheme the player is on. It is
-  the Settings › Controls hint, where all four options are on screen; rewording it is a texts publish,
-  flagged, not done.
+- ~~`TIP_CONTROLS` copy ("NOT A FLICK FAN? …")~~ — **done on Cesar's word (2026-09-14, "Go for scheme
+  neutral text")**: EN `FOUR WAYS TO SWING: FLICK, PENDULUM, TAP TIMING OR FREE SWING. PICK YOURS IN
+  <color=#EEDC9A>SETTINGS › CONTROLS</color>. THE SHOT PHYSICS NEVER CHANGE`; JA `スイングは4通り：フリック・
+  振り子・タップタイミング・フリースイング。<color=#EEDC9A>設定 › 操作方法</color>で選べる。ショットの物理は変わらない`.
+  Same row feeds the loading screen (`first` pool, order 8) and the Settings › Controls hint, so the
+  location stays named rather than "here". Importer plan `texts 0 add / 1 change / 1204 same / 0
+  conflict` → `--apply` → `content_publish` → **texts v56** → `export_content.py --check` clean;
+  `content_version.txt` `texts=56`. The bundled `LocalizationTextTable.asset` regenerates on the next
+  play-mode entry / build (its two hooks). Figma's `Loading Tips — OFFICIAL` still carries the old
+  sentence — copy lives in `texts`, the frame is the Architect's to sync.
 
 ## Acceptance
 
