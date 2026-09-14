@@ -484,7 +484,7 @@ SHOP_TAB_STORE,STORE,ストア,true
 SHOP_TAB_GIFTS,GIFTS,ギフト,true
 SHOP_FILTER_POPULAR,POPULAR,人気,true
 SHOP_FILTER_OFFERS,OFFERS,オファー,true
-SHOP_HISTORY_COMING_SOON,Store history is coming soon.,ストア履歴は近日公開です。,true
+SHOP_HISTORY_COMING_SOON,Store history is coming soon.,ストア履歴は近日公開です。,false
 SHOP_HISTORY,STORE HISTORY,ストア履歴,true
 SHOP_HISTORY_AMOUNT,AMOUNT: {0},数量: {0},true
 SHOP_HISTORY_ACQUIRED,ACQUIRED {0},入手日 {0},true
