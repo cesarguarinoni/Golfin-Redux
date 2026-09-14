@@ -548,7 +548,8 @@ namespace GolfinRedux.UI.Shop
                 if (box != null)  box.color = Color.white;
                 if (orig != null) orig.gameObject.SetActive(true);
                 var origNum = Find("PriceBox/Orig/Num")?.GetComponent<TextMeshProUGUI>();
-                if (origNum != null) { origNum.text = entry.RpCost.ToString("N0"); origNum.fontStyle = FontStyles.Strikethrough; }
+                if (origNum != null) { origNum.text = entry.RpCost.ToString("N0"); origNum.fontStyle = FontStyles.Normal; }
+                StrikeOriginal(origNum);
                 if (saleBg != null)  saleBg.gameObject.SetActive(true);
                 if (saleImg != null) saleImg.color = PriceNavy;
                 if (saleNum != null) saleNum.text = entry.SaleRpCost.ToString("N0");
@@ -563,6 +564,7 @@ namespace GolfinRedux.UI.Shop
                 // no discount: the whole box is the navy "pay" chip, price CENTERED in the square.
                 if (box != null)  box.color = PriceNavy;
                 if (orig != null) orig.gameObject.SetActive(false);
+                SetActive("PriceBox/Orig/Strike", false);
                 if (saleBg != null)  saleBg.gameObject.SetActive(true);
                 if (saleImg != null) saleImg.color = new Color(0, 0, 0, 0); // transparent — box already navy
                 if (saleNum != null) saleNum.text = entry.RpCost.ToString("N0");
@@ -572,6 +574,40 @@ namespace GolfinRedux.UI.Shop
                     saleRt.offsetMin = Vector2.zero; saleRt.offsetMax = Vector2.zero;
                 }
             }
+        }
+
+        /// <summary>
+        /// The strike across the ORIGINAL price on a sale — a real 4 px bar from the coin's left
+        /// edge to the end of the digits, in the digits' own colour.
+        ///
+        /// <para>It replaces <c>FontStyles.Strikethrough</c>, which was measured on the shipped
+        /// frame at 1170 wide as a ONE-pixel line at 73 % of the glyph height (y=640 across digits
+        /// spanning 624–645), stopping short of the coin. TMP's strike is placed by the font
+        /// asset's underline metrics, not by the digits' visual centre, and its thickness is the
+        /// font's underline thickness scaled by the 30 px size — a hairline on 22 px-tall SemiBold
+        /// numerals, which is why the price did not read as slashed (Cesar, 2026-09-14). The bar is
+        /// AUTHORED in both card prefabs (net-new; there is no strike element in the family to
+        /// clone) and only sized here, so nothing is built at runtime per card.</para>
+        /// </summary>
+        private void StrikeOriginal(TextMeshProUGUI origNum)
+        {
+            var strike = Find("PriceBox/Orig/Strike") as RectTransform;
+            var icon   = Find("PriceBox/Orig/RpIcon") as RectTransform;
+            if (strike == null || icon == null || origNum == null) return;
+
+            var numRt = (RectTransform)origNum.transform;
+            // Left edge of the coin → right edge of the rendered digits. Both siblings are
+            // centre-anchored with a left pivot, so anchoredPosition.x IS each one's left edge in
+            // the same frame the strike uses.
+            float left  = icon.anchoredPosition.x;
+            float right = numRt.anchoredPosition.x + origNum.preferredWidth;
+
+            strike.anchoredPosition = new Vector2(left, numRt.anchoredPosition.y);
+            strike.sizeDelta        = new Vector2(Mathf.Max(0f, right - left), strike.sizeDelta.y);
+
+            var img = strike.GetComponent<Image>();
+            if (img != null) img.color = origNum.color;
+            strike.gameObject.SetActive(true);
         }
 
         // ── BUY ───────────────────────────────────────────────────────────────────
