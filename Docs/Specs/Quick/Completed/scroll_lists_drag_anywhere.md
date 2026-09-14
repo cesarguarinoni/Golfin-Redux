@@ -4,6 +4,8 @@
 more lists: *"Do the other 13."* (The audit table had fourteen rows — the prose count in the
 rankings spec was one short; all fourteen are here.)
 
+**Approved:** 2026-09-14, Cesar: *"Done"*.
+
 ## The shape
 
 A `ScrollRect` only receives a drag when the EventSystem raycast lands on a graphic **inside its
@@ -47,7 +49,7 @@ makes, and the JSON says so) → first-visit hints closed through their real CON
 finder proves an empty spot inside the viewport and inside no child → `EventSystem.RaycastAll`
 there → drag dispatched only to what the raycast resolved → `content.anchoredPosition` measured.
 
-`media/scroll_lists_drag_anywhere/drag_anywhere_baseline*.json` (HEAD, three runs while the
+`../media/scroll_lists_drag_anywhere/drag_anywhere_baseline*.json` (HEAD, three runs while the
 openers were being taught the shop's STORE tab, the nav bar's pillar memory and the bag modal's
 empty-slot card) vs `drag_anywhere_after.json` + `drag_anywhere_after_loan.json` (fixed):
 
@@ -80,9 +82,9 @@ handler resolution — the exact link that was broken — and the sheets show a 
 before and after, which is what a list that cannot scroll should do (the `SnapPlayModeSafe`
 md5 check flagged them as identical on purpose).
 
-- `media/scroll_lists_drag_anywhere/after_<list>_sheet.jpg` — fifteen sheets, sanctioned
+- `../media/scroll_lists_drag_anywhere/after_<list>_sheet.jpg` — fifteen sheets, sanctioned
   `CaptureCore.SnapPlayModeSafe` stills: at rest with the press marker | after release.
-- `media/scroll_lists_drag_anywhere/scroll_lists_drag_anywhere_clip.mp4` — 45 s, three of the
+- `../media/scroll_lists_drag_anywhere/scroll_lists_drag_anywhere_clip.mp4` — 45 s, three of the
   scrolling lists (STORE grid, SELECT CLUB modal, venue picker) at the real boot → real taps;
   marker burned in post from the JSON; every caption window checked against a decoded frame;
   header-band flip scan clean (max jump 28, all at screen changes).

@@ -4,6 +4,8 @@
 now the user has to click exactly on a player and then drag instead of dragging from anywhere in the
 list."*
 
+**Approved:** 2026-09-14, Cesar: *"Done"*.
+
 ## Problem
 
 `RankingsScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea` is the `ScrollRect`.
@@ -14,7 +16,7 @@ prefab nothing in that subtree covered the empty list space:
 | Object | Graphic | State |
 |---|---|---|
 | `ScrollArea` (the ScrollRect) | none | — |
-| `ScrollArea/Viewport` | `Image`, `raycastTarget = 1` | **`m_Enabled: 0`** ([RankingsScreen.prefab:1138](../../../Assets/Prefabs/UI/Rankings/RankingsScreen.prefab)) — a disabled Graphic is not in the `GraphicRegistry`, so it never raycasts |
+| `ScrollArea/Viewport` | `Image`, `raycastTarget = 1` | **`m_Enabled: 0`** ([RankingsScreen.prefab:1138](../../../../Assets/Prefabs/UI/Rankings/RankingsScreen.prefab)) — a disabled Graphic is not in the `GraphicRegistry`, so it never raycasts |
 | `RankingsCards` row root / `RankingsCard` body | `Image` | disabled (`RankingsCards.prefab`) |
 | row `Rank`, `NameLabel`, `RartityLabel`, `LevelLabel`, `Mask/Portrait`, `RewardPoints/Background`+`Icon`, `Divider` | enabled, raycast on | the ONLY hittable pixels |
 
@@ -28,7 +30,7 @@ Measured at HEAD, real boot (StartButton → Home ▸ `LeaderboardButton.onClick
 | gap between rank 4 and rank 5 — `(548, 1430.5)`, 12 px below row 0, 12 px above row 1 | `…/RankingsArea` (the panel behind the list) | **none** | **0 → 0** |
 | rank 4's `NameLabel` — `(516, 1505)` | `…/RankingsCards(Clone)/RankingsCard/Name+Level/NameLabel` | `…/ScrollArea` ✓ | 0 → 1309.6 |
 
-`media/rankings_list_drag_anywhere/drag_anywhere_baseline.json` — verdict `FAIL`, control press `PASS`
+`../media/rankings_list_drag_anywhere/drag_anywhere_baseline.json` — verdict `FAIL`, control press `PASS`
 (the instrument scrolls when the raycast resolves, so the FAIL is the list's, not the harness's).
 
 ## Fix
@@ -54,14 +56,14 @@ leave the gaps and the space under the last row dead).
 
 ## Evidence (after)
 
-`media/rankings_list_drag_anywhere/drag_anywhere_after.json` — verdict **`PASS`**:
+`../media/rankings_list_drag_anywhere/drag_anywhere_after.json` — verdict **`PASS`**:
 
 | Press | Top raycast hit | Resolved `IDragHandler` | `content.y` after drag |
 |---|---|---|---|
 | gap `(548, 1430.5)` | `…/ScrollArea/Viewport` | `…/ScrollArea` ✓ | **0 → 965.3** |
 | `NameLabel` `(516, 1505)` | the label | `…/ScrollArea` ✓ | 0 → 967.6 |
 
-- `media/rankings_list_drag_anywhere/rankings_list_drag_anywhere_after.mp4` — 10 s, 1170×2532, real
+- `../media/rankings_list_drag_anywhere/rankings_list_drag_anywhere_after.mp4` — 10 s, 1170×2532, real
   boot → StartButton → Home ▸ LeaderboardButton, both presses. The green square is the press point,
   burned in post from the JSON (the game frame is untouched); the list moving under it is the drag.
 - `after_gap_press.jpg` / `after_gap_mid.jpg` / `after_gap_after.jpg` — at rest with the marker in the
@@ -93,7 +95,7 @@ scrolled frame for the caption's whole window).
 ## Shape audit (PIPELINE_HARDENING rule 15) — every `ScrollRect`, including the ones that are fine
 
 Static check on the YAML: does the ScrollRect object **or** its Viewport carry an **enabled**
-`raycastTarget` graphic? (`Docs/Specs/Quick/media/…` has the script's output; play-mode verified for
+`raycastTarget` graphic? (`../media/…` has the script's output; play-mode verified for
 rankings only.)
 
 | List | Verdict |
@@ -113,7 +115,7 @@ rankings only.)
 | Inventory `Club` / `Ball` / `Item` / `Bags` carousels | fine — image on the rect (Viewport's is disabled, the rect's covers it) |
 
 **Swept the same day** — Cesar: *"Do the other 13"* (fourteen rows in this table; the prose said
-thirteen). Every one fixed and re-verified in `Docs/Specs/Quick/scroll_lists_drag_anywhere.md`.
+thirteen). Every one fixed and re-verified in `scroll_lists_drag_anywhere.md` (beside this file).
 
 ## Files
 

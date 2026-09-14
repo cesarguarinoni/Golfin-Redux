@@ -6,6 +6,8 @@
 ---
 ## 2026-09-14 — scroll_lists_drag_anywhere: **all 14 remaining lists drag from anywhere** — one rule, 14 sites, sweep-verified
 
+**DONE** — Cesar approved ("Done"); both quick specs moved to `Docs/Specs/Quick/Completed/`.
+
 Cesar: *"Do the other 13"* (the audit table had 14). Same fix as the rankings on every site: the
 viewport carries an enabled transparent raycast `Image` (4 clones: enable + alpha 0; 10
 `RectMask2D`-only viewports: `Image` + `CanvasRenderer` added — 7 prefabs via `LoadPrefabContents`,
