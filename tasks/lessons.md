@@ -4622,3 +4622,24 @@ what the route had been hiding: an empty tournament board has no CLOSE (`ApplyBo
 ScrollArea the button lives in), and a schedule applied after sign-in never reaches the
 `RemoteTournamentBackend` the session plays on (`_remoteBackend ??=`). Record:
 `Docs/Specs/Quick/finished_tournament_leaderboard_route.md`.
+
+## Lesson CK — a raw-YAML scene patch applied at stale offsets silently splits GameObject blocks; Unity "fixes" it on every open with an ERROR, and only a full unfiltered EditMode run notices (2026-09-14, `finished_tournament_leaderboard_route` F4)
+
+`a231c1a78` (the scroll-lists sweep, a parallel session) patched `ShellScene.unity` by line
+offset while another commit had shifted the file: the board `Viewport`'s two `- component:`
+lines landed after `m_Icon` instead of inside `m_Component:`, and its new Image/CanvasRenderer
+blocks were inserted INSIDE the `Text` GameObject `1679869180`, leaving that object's tail
+dangling off the CanvasRenderer. The scene still opened — Unity heals such blocks at load and
+logs *"Problem detected while opening the Scene file … GameObject '' does not reference
+component RectTransform. Fixing."* — so nothing visible broke; two EditMode tests that open
+the scene failed on the unexpected error log, and they were only seen because the whole
+suite was run unfiltered after an unrelated fix. **Rules:** (1) a scene edit goes through the
+Unity API (SerializedObject → SaveScene, then isolate your hunks) — a text patch is only for
+value-in-place edits and must be re-anchored on CONTENT, never on line numbers; (2) after any
+scene commit, scan it: every non-stripped component's `m_GameObject` must be listed in that
+GameObject's `m_Component` (a ten-line script; `unref.py` in this task's scratchpad); (3) run
+the WHOLE EditMode suite unfiltered before a close-out — the failures that name a scene-open
+error are a file-shape defect, not a test defect; (4) repairing the file on disk while the
+Editor has it open raises the "modified externally — Reload / Ignore" dialog on the next
+refresh (the test runner refreshes): with the in-memory scene clean, **Reload** is the button,
+and a `tests-run` that was queued behind the dialog leaves the 10-minute lease to erase.
