@@ -116,6 +116,63 @@ namespace Golfin.Gameplay.Golfer.Tests
             Assert.That(n.magnitude, Is.EqualTo(1f).Within(1e-4f));
             Assert.That(Vector3.Dot(th.position - idx.position, n), Is.GreaterThan(0f));
         }
+
+        // ── stage 1 (§3.12.3 / §3.12.4) ───────────────────────────────────────────────
+
+        // The axis is one contact distance off the little-finger MCP on both hands, and runs little → index.
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        public void S1_GripAxis_ContactOffLittleMcp_RunsTowardIndex(bool right, bool lead)
+        {
+            var hand = HandHingeModel.Capture(_anim, right);
+            HandHingeModel.GripAxisHandLocal(_anim, hand, lead, out Vector3 o, out Vector3 d);
+            Transform h = _anim.GetBoneTransform(HandHingeModel.HandBone(right));
+            Vector3 lit = h.InverseTransformPoint(_anim.GetBoneTransform(hand.joints[HandHingeModel.JointIndex(HandHingeModel.Little, 0)].bone).position);
+            Vector3 idx = h.InverseTransformPoint(_anim.GetBoneTransform(hand.joints[HandHingeModel.JointIndex(HandHingeModel.Index, 0)].bone).position);
+            Assert.That(d.magnitude, Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(HandHingeModel.PointToLineDistance(lit, o, d), Is.EqualTo(HandHingeModel.ContactM).Within(1e-5f), "little MCP off the axis");
+            Assert.That(Vector3.Dot(idx - lit, d), Is.GreaterThan(0f), "butt → head must run little → index");
+            // the axis is on the PALM side of the knuckle row
+            Assert.That(Vector3.Dot(o - lit, hand.palmNormalHandLocal), Is.GreaterThan(0f));
+            if (!lead) Assert.That(HandHingeModel.PointToLineDistance(idx, o, d), Is.EqualTo(HandHingeModel.ContactM).Within(1e-5f), "trail: index MCP off the axis");
+        }
+
+        // The per-finger k solve lands every wrapped finger's closest segment on the grip surface, ±1.5 mm, k inside [0.6, 1.4].
+        [TestCase(false)]
+        [TestCase(true)]
+        public void S1_SolveK_ClosestWrappedSegmentOnContact(bool right)
+        {
+            var hand = HandHingeModel.Capture(_anim, right);
+            bool lead = !right;
+            HandHingeModel.GripAxisHandLocal(_anim, hand, lead, out Vector3 o, out Vector3 d);
+            var pose = lead ? HandHingeModel.LeadGripStart() : HandHingeModel.TrailGripStart();
+            HandHingeModel.Apply(_anim, hand, pose);
+            var fingers = lead
+                ? new[] { (HandHingeModel.Index, pose.index), (HandHingeModel.Middle, pose.middle), (HandHingeModel.Ring, pose.ring), (HandHingeModel.Little, pose.little) }
+                : new[] { (HandHingeModel.Index, pose.index), (HandHingeModel.Middle, pose.middle), (HandHingeModel.Ring, pose.ring) };
+            foreach (var (finger, flex) in fingers)
+            {
+                var m = HandHingeModel.SolveFingerK(_anim, hand, finger, flex, o, d);
+                Assert.That(m.k, Is.InRange(0.6f, 1.4f), m.name + " k");
+                Assert.That(m.solved, Is.True, $"{m.name}: {m.note} (closest {m.closestWrapped * 1000f:F2} mm, k {m.k:F3})");
+                Assert.That(m.closestWrapped, Is.EqualTo(HandHingeModel.ContactM).Within(HandHingeModel.ContactToleranceM), m.name + " closest wrapped segment");
+            }
+        }
+
+        // Segment-to-line distance: exact on a known configuration.
+        [Test]
+        public void S1_SegmentToLineDistance_IsExact()
+        {
+            Vector3 o = Vector3.zero, d = Vector3.right;
+            // segment from (0,1,0) to (2,3,0): closest point is the start, distance 1
+            Assert.That(HandHingeModel.SegmentToLineDistance(new Vector3(0, 1, 0), new Vector3(2, 3, 0), o, d, out float t), Is.EqualTo(1f).Within(1e-6f));
+            Assert.That(t, Is.EqualTo(0f).Within(1e-6f));
+            // segment crossing the line: distance 0 in the interior
+            Assert.That(HandHingeModel.SegmentToLineDistance(new Vector3(0, -1, 0), new Vector3(0, 1, 0), o, d, out t), Is.EqualTo(0f).Within(1e-6f));
+            Assert.That(t, Is.EqualTo(0.5f).Within(1e-6f));
+            // parallel segment at height 2
+            Assert.That(HandHingeModel.SegmentToLineDistance(new Vector3(-1, 2, 0), new Vector3(1, 2, 0), o, d, out _), Is.EqualTo(2f).Within(1e-6f));
+        }
     }
 #else
     [TestFixture]

@@ -441,3 +441,180 @@ Every uncommitted path outside `Docs/Specs/Active/golfer_club_grip/` is listed.
 ## Stage 0 verdict (Cesar, 2026-09-10)
 
 **PASS.** Fist triple for the gate accepted as **75 / 95 / 50** (SPEC §3.12.6 row 0 updated). Stage 1 (grip pose in hand space, cylinder r = 13.575 mm on the §3.12.4 axis, per-finger k bisection) is the next kickoff.
+
+---
+
+# Stage 1 — the grip pose in hand space (SPEC §3.12.3 / §3.12.4 / §3.12.6 row 1, iter-11, 2026-09-15)
+
+**Iteration shape:** `hinge-model:stage1-grip-in-hand-space`. Edit mode only, each hand alone with its debug cylinder,
+no club, no rig, no play mode; the prefab is untouched. **STOPPED at the gate — stage 2 is not started.**
+
+**Verdict in one line:** the mechanism holds (axes fixed, joints land where they are sent to 0.01 mm), but the
+§3.12.3 one-k solve against the §3.12.4 axis does not produce a grip on this hand — the lead hand cannot get outside
+the surface at any k, and the trail hand "reaches the surface" by grazing it with the middle knuckle, tips 41–51 mm
+away. The reasons are geometric and measured below; a per-joint *inscribed* wrap on the same axis does produce a
+grip (supplementary, §1.4). Which of the two defines stage 1 is the Architect's / Cesar's call.
+
+## 1.1 What was built
+
+- **`HandHingeModel` stage-1 members** (`Version = stage1-b`): `GripAxisHandLocal` (§3.12.4 — through
+  `LittleProximal + n·c` and `IndexProximal [+ u·0.6·L_prox] + n·c`, butt → head = little → index, Hand-local, from
+  the MCPs which are rigid to the Hand bone); `SegmentToLineDistance` (exact, convex-in-t); `MeasureFingerAxis`
+  (joint and segment distances to the axis); `SolveFingerK` (§3.12.3 — one k ∈ [0.6, 1.4] on the triple, 24-step
+  bisection so the closest wrapped segment = contact 20.405 mm); `ThumbAimAlongShaft` (1 o'clock = 30° from top
+  toward +n, station 60 mm down-shaft; conventions in the file header); `LeadGripStart` / `TrailGripStart` = the
+  §3.12.3 tables; and, supplementary, `SolveJointToContact` / `SolveFingerInscribed`.
+- **Cross-section convention written down** (file header): +n = trail side (the shaft sits between the palm and the
+  trail hand), −n = target side, −u (wrist) = "top" where the heel pad closes over, +u = under the grip. "1 o'clock
+  viewed from the butt" = −u rotated 30° toward +n. The trail hand is the mirror and uses the same formula.
+- **`HandHingeStage1Tool.cs`** (Editor, `#if`-gated; menu `GOLFIN ▸ Golfer Test ▸ Hinge ▸ Stage 1 …` and a batch entry
+  `RunStage1Batch`): temp scene, prefab instance, `RigBuilder` off, per hand → axis, a cylinder of r = 13.575 mm as a
+  child of the Hand bone on that axis, start pose, solve, thumb, measure, four 1600 px frames (down-shaft from the
+  butt, palm side, back, top), JSON. Then the supplementary inscribed pass into `supplementary_inscribed/`.
+- **Three stage-1 EditMode tests** added to `HandHingeModelTests`: axis one contact off the little MCP and running
+  little → index on both hands; segment-to-line exactness; and the gate itself (`S1_SolveK_ClosestWrappedSegmentOnContact`,
+  both hands) — **12 / 13 green; the lead-hand gate test is red on purpose** (it is the stage-1 gate in NUnit form
+  and it fails for the reason in §1.3; it is not `[Ignore]`d because hiding the red is the rubber-stamp failure mode).
+  Run twice: in Unity batch mode (`-runTests -testPlatform EditMode`, results XML in the scratchpad) and again through
+  the Editor once it came back — identical 12 / 13.
+- **Two tooling defects found and fixed on the way**, both now in `tasks/lessons.md` (Lesson AT):
+  1. A `SkinnedMeshRenderer` is skinned **once per editor frame**; every `Camera.Render` in the same frame reuses it.
+     The first trail-hand frames showed the REST pose with correctly posed bones (the mesh was skinned when the lead
+     hand rendered). `forceMatrixRecalculationPerRender = true` on the skins fixes it; set in both stage tools.
+     Stage-0 frames were unaffected (both hands were posed before the first render there) — verified by reasoning,
+     and the stage-0 tool got the same fix for future runs.
+  2. Batch mode boots into an untitled scene and refuses an additive `NewScene` beside it; both tools now replace an
+     untitled scene (single) and go additive only when a real scene is open.
+- **Process note.** At kickoff the Editor was closed, so stage 1 was driven through **Unity batch mode**
+  (`-batchmode -executeMethod … RunStage1Batch`, then `-runTests`). The Editor was opened mid-stage (MCP reconnected,
+  batch locked out), and the final runs are through the Editor over MCP. Same code, same numbers both ways.
+
+## 1.2 The numbers — one-k solve (§3.12.3 start values, §3.12.4 axis), Hand-local millimetres
+
+Contact = 13.575 + 6.83 = **20.405 mm**, tolerance ±1.5. "closest wrapped" = min(PIP, mid segment, distal segment)
+— the proximal segment is excluded because its MCP end sits at contact by construction. "min all" = min over all
+three segments. "bone in mesh" = min all < 13.575 (a phalanx bone inside the grip mesh).
+
+| Hand | Finger | k | closest wrapped | Δ vs contact | seg prox / mid / dist | joints MCP / PIP / DIP / tip | min all | bone in mesh | solver note |
+|---|---|---|---|---|---|---|---|---|---|
+| lead | index | 0.600 | **6.62** | −13.78 | 7.07 / 6.62 / 25.37 | 24.97 / 7.34 / 25.37 / 51.55 | 6.62 | **yes** | inside even at k = 0.6 |
+| lead | middle | 0.600 | **15.23** | −5.18 | 13.60 / 15.23 / 29.62 | 22.71 / 15.72 / 29.62 / 54.78 | 13.60 | no | inside even at k = 0.6 |
+| lead | ring | 0.600 | **15.92** | −4.49 | 15.41 / 15.92 / 26.52 | 22.76 / 17.04 / 26.52 / 47.96 | 15.41 | no | inside even at k = 0.6 |
+| lead | little | 0.600 | **15.64** | −4.76 | 12.92 / 15.64 / 21.28 | 20.41 / 15.99 / 21.28 / 34.68 | 12.92 | **yes** | inside even at k = 0.6 |
+| trail | index | 0.839 | **20.40** | 0.00 | 14.72 / 20.40 / 34.83 | 20.41 / 20.72 / 34.83 / 50.63 | 14.72 | no | on surface |
+| trail | middle | 0.746 | **20.41** | +0.00 | 19.52 / 20.41 / 28.80 | 23.64 / 23.04 / 28.80 / 47.44 | 19.52 | no | on surface |
+| trail | ring | 0.730 | **20.40** | 0.00 | 17.79 / 20.40 / 28.40 | 23.26 / 22.40 / 28.40 / 41.04 | 17.79 | no | on surface |
+| trail | little | fixed 40/60/30 | 17.61 | −2.80 | 15.41 / 17.61 / 19.85 | 20.41 / 18.93 / 19.86 / 32.92 | 15.41 | no | not solved (rides on the lead index) |
+
+| Hand | Thumb2 | Thumb3 | thumb tip | proximal vs shaft | wrist → +30 mm segment (heel-pad proxy) |
+|---|---|---|---|---|---|
+| lead | 40.93 | **21.55** | 29.89 | 47.5° | 76.63 |
+| trail | 38.86 | **21.78** | 29.94 | 44.4° | 72.63 |
+
+Axes (Hand-local): lead `o = (0.0376, 0.0938, −0.0223)`, `d = (−0.7898, 0.6134, −0.0049)`; trail
+`o = (−0.0366, 0.0898, −0.0225)`, `d = (0.9248, 0.3804, −0.0034)`. Source: `evidence/stage1/stage1_numbers.json`,
+`stage1_console.txt`.
+
+## 1.3 Why, measured — three level-1 findings
+
+1. **The lead axis runs under the proximal phalanges.** §3.12.4 puts the lead axis through a point 0.6·L_prox
+   *along* the index proximal and 20.4 mm palm-side of it. A finger's PIP sweeps a 30 mm circle about its MCP; at
+   0.6 × 55° = 33° of MCP flexion the index PIP is already 7.3 mm from the axis, i.e. inside the shaft. Every lead
+   finger is inside the surface at the most-open k the spec allows, so there is nothing to bisect. (Sanity:
+   the same k on the trail axis, which has no u-offset, is outside — trail index k = 0.6 gives PIP ≈ 27 mm.)
+2. **"Closest segment on the surface" is met by a graze, not a wrap.** On the trail hand the bisection stops at the
+   first k where the PIP touches the side of the cylinder (k 0.73–0.84, MCP 37–42°) with the middle and distal
+   phalanges pointing away: tips at 41–51 mm. Analytically the PIP of a 30 mm proximal reaches the contact circle
+   at sin θ = 15 / c ⇒ θ ≈ 47° for c = 20.4, and is *inside* it for any larger MCP flexion; a wrap needs the PIP
+   there (or inside, with the chord outside the mesh) and ~95° more at the PIP. A one-parameter scale of a triple
+   whose MCP is 50–75° cannot get there without driving the PIP through the shaft.
+3. **"Nothing inside" cannot be met by a wrapped finger measured on bone segments against r + half-thickness.** A
+   30 mm phalanx lying as a chord between two joints on a 20.4 mm circle is 20.4 − √(20.4² − 15²) = **6.6 mm inside**
+   at mid-length. The trail proximal segments already show it at the graze (14.7 / 17.8 mm). The feasible reading is
+   *bone outside the grip mesh* (segment ≥ 13.575 mm): every inscribed solve below satisfies it (min 13.78 mm), the
+   one-k lead index and little do not (6.6 / 12.9 mm).
+
+Two more, informational: **the thumb tip lifts off** (Thumb3 on the surface at 21.6–21.8 mm, tip at 29.9 mm) — the
+fixed 15° / 10° flexes turn about `cross(thumbDir, palmNormal)`, which for a thumb lying along the shaft on top is
+*away* from the shaft; and **the heel pad is not under the axis** (73–77 mm from the wrist segment) — the §3.12.4
+axis runs along the knuckle row, so the reference's "heel pad closes over the top" would need the butt-end landmark
+below the little MCP toward the wrist, not at it.
+
+## 1.4 Supplementary — the inscribed wrap on the same axis (NOT the §3.12.3 solve; data for the decision)
+
+Per finger, proximal to distal: bend each joint until its child joint (the tip for the distal) lands on the contact
+circle; hinge axes unchanged; spread kept; start from rest. `evidence/stage1/supplementary_inscribed/`.
+
+| Hand | Finger | MCP / PIP / DIP solved | joints MCP / PIP / DIP / tip | seg prox / mid / dist | min all | bone in mesh | note |
+|---|---|---|---|---|---|---|---|
+| lead | index | 5.5 / 59.7 / **80.0 (cap)** | 24.97 / 20.39 / 20.41 / 23.72 | 18.88 / 15.33 / 18.15 | 15.33 | no | tip 3.3 mm short at the DIP cap |
+| lead | middle | 26.2 / 84.8 / 77.0 | 22.71 / 20.39 / 20.38 / 20.41 | 17.55 / 14.51 / 16.04 | 14.51 | no | all three on the circle |
+| lead | ring | 32.2 / 78.3 / 72.4 | 22.76 / 20.41 / 20.40 / 20.41 | 18.15 / 15.41 / 16.54 | 15.41 | no | all three on the circle |
+| lead | little | 30.5 / 69.4 / 58.2 | 20.41 / 20.40 / 20.41 / 20.41 | 16.59 / 18.37 / 17.86 | 16.59 | no | all four on the circle |
+| trail | index | 42.9 / 98.3 / 73.9 | 20.41 / 20.40 / 20.43 / 20.40 | 14.47 / 13.87 / 17.18 | 13.87 | no | all four on the circle |
+| trail | middle | 55.8 / 81.7 / **80.0 (cap)** | 23.64 / 20.40 / 20.41 / 24.50 | 17.70 / 13.78 / 16.32 | 13.78 | no (0.2 mm) | tip 4.1 mm short at the DIP cap |
+| trail | ring | 56.5 / 84.7 / 76.3 | 23.26 / 20.40 / 20.41 / 20.41 | 16.33 / 14.79 / 16.27 | 14.79 | no | all three on the circle |
+
+The trail numbers are the textbook power grip (MCP ≈ 45–55°, PIP ≈ 80–100°, DIP ≈ 75°); the lead index sits
+almost straight at the knuckle (5.5°) because the lead axis passes under it — consistent with the reference's
+"handle runs through the middle joint of the forefinger". Thumb and little finger are as in §1.2.
+
+## 1.5 Frames (16, all 1600 × 1600, greyscale variance 2786–6026; floor 5.0) — every one opened and looked at
+
+Canonical screenshot: `evidence/stage1/trail_right_palm.png`
+
+| Frame | What it shows |
+|---|---|
+| `evidence/stage1/lead_left_downshaft.png` / `_palm` / `_back` / `_top` | lead, one-k at k = 0.6: cylinder in the crook, proximal phalanges emerging from inside it, thumb along the top |
+| `evidence/stage1/trail_right_downshaft.png` / `_palm` / `_back` / `_top` | trail, one-k: fingers hooked over the cylinder at the middle knuckle, tips out in the air, thumb along the shaft |
+| `evidence/stage1/supplementary_inscribed/trail_right_inscribed_*.png` | trail, inscribed: fingers all the way round, tips back to the palm side; the down-shaft view is a closed ring around the cross-section |
+| `evidence/stage1/supplementary_inscribed/lead_left_inscribed_*.png` | lead, inscribed: middle/ring/little wrapped, index nearly straight at the knuckle, cylinder enclosed in the down-shaft view |
+
+## 1.6 Stage-1 gate (§3.12.6 row 1), by the letter
+
+| Criterion | one-k, lead | one-k, trail | inscribed (supplementary) |
+|---|---|---|---|
+| Cylinder inside the curled fingers | FAIL (fingers inside the cylinder) | **partial** — hooked at the knuckle, not enclosed | PASS on the frames |
+| Under the heel pad | FAIL — axis 73–77 mm from the wrist segment (axis definition) | same | same |
+| Thumb along it | Thumb3 on the surface, proximal 44–48° off the shaft, tip lifts to 30 mm | same | same |
+| Closest wrapped segment within ±1.5 mm | FAIL, 4/4 inside at k = 0.6 | PASS 3/3 (by a graze) | joints on the circle to 0.01 mm; chords 6–7 mm inside by geometry |
+| Nothing inside (r + t) | FAIL | FAIL (proximal chords 14.7 / 17.8) | FAIL by that definition; PASS as bone-outside-mesh (≥ 13.78) |
+| EditMode tests | 12 / 13 — the lead gate test is the red one | | |
+
+Nothing above the hinge level was touched; the club, rig and anchors are untouched; the prefab is untouched.
+
+## 1.7 Acceptance for this stage
+
+| Item | Result | Evidence |
+|---|---|---|
+| §3.12.4 axis in hand space, defined not fitted | PASS | `S1_GripAxis_*` both hands; axes in §1.2 |
+| Debug cylinder r = 13.575 mm on the axis, child of the Hand bone | PASS | frames; `HandHingeStage1Tool.OneHand` |
+| §3.12.3 start pose + per-finger k bisection run | PASS (run) / **FAIL (gate)** | §1.2, §1.3 |
+| Two angles per hand, each hand alone with its cylinder | PASS (four angles) | §1.5 |
+| Numbers per finger (k, closest segment, inside) | PASS | §1.2, JSON |
+| Club / rig / anchors / prefab untouched | PASS | `git status`: no `.prefab` change |
+| Define off | not re-run this stage — every addition sits inside the existing `#if GOLFIN_GOLFER_TEST` regions and the `#else` shells are byte-identical to stage 0 (verified there, 1/1) | |
+| Profile | `iOS-Full-Golfer` (Cesar's standing rule) | |
+
+## Files modified or created (stage 1)
+
+Every uncommitted path outside `Docs/Specs/Active/golfer_club_grip/` is listed.
+
+| File | One-line summary |
+|---|---|
+| `Assets/Scripts/Gameplay/Golfer/HandHingeModel.cs` | stage-1 members (§1.1) + supplementary inscribed solver; `Version = stage1-b` |
+| `Assets/Scripts/Gameplay/Golfer/Tests/HandHingeModelTests.cs` | three `S1_*` tests (one red on purpose, §1.1) |
+| `Assets/Scripts/UI/Editor/HandHingeStage1Tool.cs` (+ `.meta`) | NEW — stage-1 tool, menu + batch entry |
+| `Assets/Scripts/UI/Editor/HandHingeStage0Tool.cs` | untitled-scene handling + `forceMatrixRecalculationPerRender` (no behaviour change for stage-0 evidence) |
+| `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | stage-1 entry; Lesson AT |
+| `Library_broken_143700/` | **Pre-existing** stale Library backup, untracked (in the iter-11 baseline block); untouched |
+
+## What a reviewer should be sceptical about
+
+- **The inscribed solve is per joint.** §3.12.1 blames per-joint solving for the claws; the difference here is that
+  the axes are fixed and each joint is solved so its child lands ON the circle, not against a cap. The frames are the
+  evidence that it does not claw; the two DIP-cap hits (80°) are the place to look.
+- **"Bone outside the mesh" is my reading of "nothing inside".** The margin on the trail middle chord is 0.2 mm; if
+  the gate wants flesh clearance rather than bone clearance, that finger is the first to fail.
+- **The thumb clock and station are start values** (30°, 60 mm) with a convention I chose from the reference; the
+  tip-lift finding depends on them only weakly (it is the flex axis, not the aim).

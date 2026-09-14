@@ -4,6 +4,26 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-15 (golfer_club_grip stage 1) — **grip pose in hand space: mechanism holds, the §3.12.3 one-k solve does not make a grip**
+
+STATUS `STAGE_1_REVIEW`, stage 2 NOT started. Built: `GripAxisHandLocal` (§3.12.4 axis in Hand-local), the per-finger
+k bisection, thumb aim at 1 o'clock, `HandHingeStage1Tool` (debug cylinder r = 13.575 mm as a child of the Hand bone,
+four 1600 px frames per hand, JSON; menu + a `-batchmode -executeMethod` entry), three stage-1 tests (12/13 green — the
+lead-hand gate test is red on purpose). Driven first through Unity batch mode (Editor was closed), then over MCP when
+the Editor came back; same numbers.
+
+**Findings, measured (report § Stage 1):** (1) the lead axis (through the index middle joint) runs under the proximal
+phalanges — every lead finger is inside the surface at the most-open k; (2) "closest segment on the surface" is met by a
+graze — trail fingers touch at the middle knuckle with tips 41–51 mm out; (3) a 30 mm phalanx chord between two joints
+on a 20.4 mm circle is 6.6 mm inside it, so "nothing inside" on bone-vs-(r + t) cannot be met by any wrap. A
+supplementary **inscribed** per-joint wrap on the same axis gives the textbook grip (trail MCP/PIP/DIP ≈ 43/98/74,
+bone outside the mesh everywhere) — frames in `evidence/stage1/supplementary_inscribed/`. Decision on which defines
+stage 1 is the Architect's / Cesar's.
+
+**Tooling lessons (Lesson AT):** a SkinnedMeshRenderer is skinned once per editor frame — multi-render tools need
+`forceMatrixRecalculationPerRender`; batch mode boots into an untitled scene that refuses an additive NewScene.
+
+---
 ## 2026-09-10 (golfer_club_grip stage 0) — **hinge-model hand built; fist test at the gate**
 
 SPEC §3.12 (Architect, `ARCHITECT_DECISION_HINGE_MODEL.md`): the close-out is withdrawn, the grip is back in scope

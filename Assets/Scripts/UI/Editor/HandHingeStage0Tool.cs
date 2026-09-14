@@ -86,7 +86,11 @@ namespace Golfin.EditorTools.Golfer
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
 
             Scene prevActive = SceneManager.GetActiveScene();
-            Scene temp = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            // Batch mode boots into an untitled scene, and Unity refuses an additive NewScene beside
+            // one; replace it instead (nothing to preserve). In the Editor a real scene is open and
+            // must not be touched, so go additive and close the temp scene afterwards.
+            bool untitled = string.IsNullOrEmpty(prevActive.path);
+            Scene temp = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, untitled ? NewSceneMode.Single : NewSceneMode.Additive);
             GameObject inst = null, camGo = null;
             var sb = new StringBuilder();
             try
@@ -95,7 +99,14 @@ namespace Golfin.EditorTools.Golfer
                 inst.transform.position = new Vector3(0f, 500f, 0f);      // nowhere near the open scene
                 foreach (var b in inst.GetComponentsInChildren<Behaviour>(true))
                     if (b.GetType().Name == "RigBuilder") b.enabled = false;   // stage 0: no rig
-                foreach (var s in inst.GetComponentsInChildren<SkinnedMeshRenderer>(true)) s.updateWhenOffscreen = true;
+                foreach (var s in inst.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    s.updateWhenOffscreen = true;
+                    // A SkinnedMeshRenderer is skinned ONCE per editor frame; every Camera.Render in the same
+                    // frame reuses it. Without this, frames taken after the pose changed (the second hand,
+                    // the supplementary pass) silently show the FIRST render's pose with the new bones.
+                    s.forceMatrixRecalculationPerRender = true;
+                }
 
                 var anim = inst.GetComponentInChildren<Animator>(true);
                 var pose = HandPose.Uniform(mcp, pip, dip, thumbInter, thumbDistal);
@@ -135,8 +146,11 @@ namespace Golfin.EditorTools.Golfer
             {
                 if (camGo != null) Object.DestroyImmediate(camGo);
                 if (inst != null) Object.DestroyImmediate(inst);
-                if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
-                EditorSceneManager.CloseScene(temp, true);
+                if (!untitled)
+                {
+                    if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
+                    EditorSceneManager.CloseScene(temp, true);
+                }
             }
             return sb.ToString();
         }

@@ -150,3 +150,16 @@ DIRTY:
 [2026-09-10T03:57:16Z] stage 0: HandHingeData.cs split fixed the asset (m_Script guid 2e50a92d…, reloads 15/15 joints). Re-ran fist 65/85/40: numbers bit-identical to run 1 (deterministic). Tips 28.3-41.5 mm from the MCP plane (gate 8-20: OUT OF BAND on all 8), adjacent tips 17.4-26.1 mm (>=8 PASS), no crossing, min adjacent phalanx clearance 17.1 mm. Sweep 70/90/45 .. 90/100/60: 75/95/50 puts 7/8 tips in band (right index 21.8). Supplementary frames at 75/95/50 in evidence/stage0/supplementary_75_95_50/. Next: define-OFF pass (switch to iOS-Full-GPS, recompile, test, switch back).
 [2026-09-10T04:04:36Z] stage 0: define-OFF pass observed (iOS-Full-GPS: 143 defines, 0 members on all gated types, 1/1 test; back to iOS-Full-Golfer: 144 defines, Version stage0-b, 8/8). Report Stage 0 section written, STATUS -> STAGE_0_REVIEW, AI_CONTEXT updated. STOPPED at the gate; committing.
 [2026-09-10T04:29:17Z] stage 0 VERDICT (Cesar): PASS, 75/95/50 accepted. SPEC row 0 + STATUS + report + AI_CONTEXT updated. Stage 1 not started (one stage per kickoff).
+
+=== iter-11 (stage 1) kickoff baseline 2026-09-14T21:31:56Z ===
+HEAD: 1b0b741a4f36e04d55abcccbce31f2ee9f2a4938 (1b0b741a4) branch golfer_3d_test
+NOTE: Unity Editor not running (closed cleanly 2026-09-10 13:32 JST); MCP unavailable this session, batch mode used instead.
+NOTE: Library_broken_143700/ is the same pre-existing stale Library backup as iter-10 (untracked, summarised as one line).
+DIRTY:
+ M Assets/Scripts/Gameplay/Golfer/HandHingeModel.cs
+ M Assets/Scripts/Gameplay/Golfer/Tests/HandHingeModelTests.cs
+ M Docs/Specs/Active/golfer_club_grip/STATUS.md
+ ?? Library_broken_143700/
+=== end baseline ===
+[2026-09-14T21:31:56Z] stage 1: wrote HandHingeModel stage-1 members (GripAxisHandLocal, SegmentToLineDistance, SolveFingerK, ThumbAimAlongShaft, MeasureThumbAxis; Version stage1-a), 3 stage-1 tests, HandHingeStage1Tool.cs (menu + RunStage1Batch). Next: batch run -executeMethod, then -runTests.
+[2026-09-14T21:59:19Z] stage 1: delivered. Batch route then MCP route; one-k lead FAIL (inside at k=0.6), trail graze (k 0.73-0.84, tips 41-51 mm out); inscribed supplementary = textbook grip; skinning-once-per-frame defect found+fixed (forceMatrixRecalculationPerRender); 16 frames 1600px; tests 12/13 (lead gate red by design). STATUS -> STAGE_1_REVIEW. STOPPED at the gate; committing.

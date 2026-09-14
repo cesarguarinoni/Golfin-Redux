@@ -3777,3 +3777,23 @@ there — or any reload.
 30 lines of data". After creating any new `.asset`, grep its `m_Script` line for a `guid` before citing it.
 Sister lessons: [[feedback_unity_refresh_after_cs_edit]] (things that look loaded but are not), Lesson R (`.cs.meta`
 travels with the `.cs`).
+
+
+## Lesson AT — a SkinnedMeshRenderer is skinned ONCE per editor frame; the second `Camera.Render` in the same frame shows the FIRST pose with the new bones (2026-09-15, `golfer_club_grip` stage 1)
+
+The stage-1 tool posed the lead hand, rendered four frames, then posed the trail hand and rendered four more — all
+inside one `script-execute` (one editor frame). The trail bones were verifiably flexed before and after its render
+(PIP 20.7 mm from the axis, logged), yet every trail PNG showed straight fingers: the Body skin had been skinned when
+the lead hand rendered, with the trail still at rest, and the later renders reused it. Stage 0 never hit this because
+both hands were posed before the first render.
+
+**Fix:** `skinnedMeshRenderer.forceMatrixRecalculationPerRender = true` on every skin of a throw-away render rig
+(set next to `updateWhenOffscreen = true`). **Detect:** log a bone read-back immediately before the render and compare
+with the image — bones right + image wrong = stale skinning, not a pose bug.
+
+Second, from the same session: **Unity batch mode boots into an untitled scene and `NewScene(EmptyScene, Additive)`
+throws "Cannot create a new scene additively with an untitled scene unsaved"**. Replace the untitled scene
+(`NewSceneMode.Single`) when `SceneManager.GetActiveScene().path` is empty; go additive (and close afterwards) only
+when a real scene is open. And `-batchmode` cannot run while the Editor has the project open — check `tasklist` for
+`Unity.exe` before launching, or the run aborts with "another Unity instance is running with this project open".
+Related: Lesson AP (`SnapPlayModeSafe` timing), [[feedback_unity_refresh_after_cs_edit]].
