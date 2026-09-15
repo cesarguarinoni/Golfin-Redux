@@ -4,6 +4,23 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-15 12:40 — Hole 6 tee-off reference captures (no UI) — DONE (Cesar: "Done")
+
+One-off, no spec folder. Cesar asked for a screen capture of Hole 6 at tee-off with no interface,
+then the same with the ORIGINAL daytime-with-clouds sky. Delivered both at 1170×2532 through the
+REAL flow (Editor launched by me — it was closed; MCP driven over `Tools/unity-mcp-call.py` since
+the session's `ai-game-developer` client never attached): play → auto sign-in → `PlayButton` →
+Hole 6 card `ActionButton` → `Hole_06_Geo` loaded → 14 overlay canvases + the two
+`TrajectoryRenderer` aim lines disabled in play mode → `GOLFIN/Capture/Snap Game View`
+(sidecar `realPlay: true`). **Sky:** `SkyRandomizer` rolls one of nine presets per run (first run
+"Morning (Cloudy)" = grey overcast, second "Afternoon (Clear)"); the shipped look is the
+`Classic` preset (`Assets/Skybox/Sky-2.mat` + the hole scenes' original 45°/135° sun, 1.2) —
+applied after the load via `SkyRandomizer.ApplyTo(hole, Classic, 0f)`, nothing written to assets.
+Files (gitignored, local): `Docs/Diagnostics/_capture/hole06_teeoff_noui_classicsky_1170x2532.png`
+(the one he approved), `hole06_teeoff_noui_1170x2532.png` (grey), `hole06_teeoff_withui_1170x2532.png`.
+Editor left running on ShellScene, clean, out of play mode.
+
+---
 ## 2026-09-15 — iap_plumbing: **DONE (Cesar: "Done and punch it game") — real-money pipeline LIVE in sandbox; TestFlight build punched with the commit; only the on-device sandbox purchase + the window close remain**
 
 **Close-out (11:xx JST).** Review chain: golfin-reviewer PASS → golfin-redteam-reviewer PASS
