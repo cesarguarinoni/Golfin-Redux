@@ -3834,3 +3834,18 @@ trades against reach belongs in the grid; (2) the pick rule started with two of 
 each failed a different ungraded row by under 1 mm (finger chord 1 mm inside the mesh, overlap 0.03 mm out of band).
 Encode the graded rows as the pick constraints from the start, wrist sum as the only objective, and log a per-config
 table so the trade-off (here ≈ 16° of wrist per 10 mm of hand height) can be read off without another run.
+
+## Lesson AY — a posture requirement and a wrist requirement can be jointly infeasible for one actor; measure the conflict as a table before touching the stance again (2026-09-15, `golfer_club_grip` stage 2 stance edit)
+
+Cesar asked for hands off the knees AND a real-golfer pose by the guidelines AND real wrists. On the Mixamo actor the
+three cannot be met together: with both hands on the shaft the trail arm is fully extended in every feasible
+configuration, so the hands are either out front (guideline place, wrists 46° / 54°) or pulled in under the chest
+(wrists 26° / 9°, 40–70 mm off the thighs). Four scans and a two-DOF stance sweep were needed to see that the
+line does not move with any torso bend inside the band. What would have shortened it: (1) encode every guideline as
+a graded row FIRST and run the scan with per-row penalties, so the fewest-violation pick and the "least wrist" pick
+are both printed from one run; (2) when a stance DOF moves the shoulders, add the matching translation DOF for the
+club (stand closer) in the same patch — a rotation-about-the-head grid cannot follow the shoulders; (3) compare the
+clip and the bake with the SAME finger pose (a rest-pose clip reads 81 mm over the knee, a posed one 133 mm). The
+stance rig itself (hips lift with the feet pinned by leg IK + spine bend, Pivot-space OverrideTransforms as data) is
+right and cheap: 20 mm of lift takes the knees from 31° to 16–18° and costs nothing else. Keep it at zero until a clip
+needs it.

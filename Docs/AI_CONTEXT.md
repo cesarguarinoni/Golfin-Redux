@@ -41,6 +41,17 @@ height, so raising the hands without the cost is a **stance edit** (less torso b
 gate. Full-body frames added (`verify_stance_*.png`). Tests 13/13. Lessons AW (Bash heredoc un-escapes `\\n`) and
 AX (IK in the loop; pick by the graded rules).
 
+**Stance edit (same day) — Cesar: "hands clearly touch the knees", keep a real-golfer pose by the guidelines; then
+"we are going to switch character model — write the findings for the Architect".** Built as prefab data: a stance rig
+(hips lift with the feet pinned by leg IK, spine bend about the target line; Animation Rigging OverrideTransforms in
+Pivot space, layers before the grip), a stance sweep, posture rows from published guidelines, a stand-closer scan DOF.
+Measured: 20 mm of lift fixes the knees (31° → 16/18°) for free; but on this actor the trail arm is fully extended
+in every configuration with both hands on the shaft, so straight wrists (26/9°) and hands in the guideline place
+(46/54°) are mutually exclusive — no torso bend in band moves it. Shipped: the straight-wrist bake with the stance at
+zero (verified identical). **`Docs/Specs/Active/golfer_club_grip/FINDINGS_FOR_NEXT_CHARACTER.md`** is the hand-off:
+skeleton/hand rig, mesh and scale, the address-clip numbers to capture against, clubs, the stance rig, acceptance
+rows. Lesson AY. STATUS `STAGE_2_REVIEW`; next is the character switch.
+
 ---
 ## 2026-09-15 (golfer_club_grip stage 1) — **grip pose in hand space: mechanism holds, the §3.12.3 one-k solve does not make a grip**
 

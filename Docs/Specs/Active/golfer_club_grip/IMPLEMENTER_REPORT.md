@@ -973,3 +973,104 @@ authorise a stance edit before stage 3.
 | `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | session entry; Lessons AW, AX |
 
 Not mine, left alone: `Assets/Art/3D/Characters/_Test/Olivia/*` (+ `.meta`), `Library_broken_143700/`.
+
+## Stage 2, stance edit — Cesar: "Stance edit. Hands clearly touch the knees in that pose." / "follow all the guidelines to keep a real golfer pose" (2026-09-15)
+
+**Iteration shape:** `hinge-model:stage2-stance-edit`. Outcome up front: the stance rig is built and measured, the
+posture guidelines are encoded as rows, and on this actor **straight wrists and a guideline hand position cannot both
+be had** — the shipped prefab keeps the verified straight-wrist bake (27.5° / 16.2°) with the stance data at zero, and
+`FINDINGS_FOR_NEXT_CHARACTER.md` carries what the next model must bring. Cesar's model switch is the fix.
+
+### Rejection follow-up
+
+| Defect | Verdict | Evidence |
+|---|---|---|
+| "Hands clearly touch the knees in that pose" | **STILL-PRESENT on the shipped bake, measured** (lowest fingertip 71 mm above the knee joint, 137 mm from it, hands 67 mm off the thigh surface). The stance rig removes it (knees 31° → 16/18°, fingertips 107–139 mm, 172–225 mm from the knee) but only at the wrist cost in the table below. Decision handed to the model switch. | `verify_stance_targetside.png`, `verify_awayside.png`, scan tables in `evidence/stage2/stage2_solve_pitchscan_console_stance*.txt` |
+
+Canonical screenshot: `evidence/stage2/verify_stance_targetside.png`
+
+### 4.1 What was built (data-driven, stays on the prefab, zero = no-op)
+
+- **Posture guidelines** looked up and filed (`reference/WRIST_ANGLES_AT_ADDRESS.md` § posture): torso forward tilt
+  25–45° from vertical, knee flex 15–25°, arms hanging (≤ 20° from vertical), hands 6–8 in off the thighs with a
+  driver, hands under to just in front of the chin. Encoded as `stance.torsoTilt / kneeFlex / armHang /
+  handsFromThighs / handsUnderChin` rows, graded PASS/FAIL, plus `stance.handsHeight`, `club.shaftElevation`,
+  `stance.hipsLift`, `stance.spineBend`.
+- **Stance rig** (`AuthorPrefabStructure`): `Rig_StanceFeet` (MultiParent copies of both feet into targets, first
+  layer) and `Rig_Stance` (`Stance_Hips` OverrideTransform position offset in Pivot space; `Stance_SpineBend`
+  OverrideTransform rotation about the target line in Pivot space; `Stance_LegL/R_IK` two-bone IK to the foot
+  targets), evaluated before `Rig_Grip` and `Rig_Hands`, so the clip's hands, GripTarget and the arm IK all see the
+  adjusted torso. Pivot space post-multiplies in the bone's own frame, so the edit is body-relative through the swing.
+- **Stance sweep** (`RunSolve("stancescan")`): hips lift {0…100 mm} × spine bend {−5…15°} with the clip's hands,
+  rig hands off; prints the posture rows per cell; picks the smallest edit with knee flex and torso tilt in band and
+  room for the scan; writes `stage2_stance.json`; `ApplyStanceToPrefab` writes it into the prefab.
+- **Scan DOFs**: per-row penalties (fewest violated rows win the tie), a **stand-closer** translation of the club
+  toward the golfer (rotations about the head cannot express it; without it the stance left 29 feasible
+  configurations, all reaching 38° forward), the 3D hand-joint-to-knee-joint clearance (≥ 160 mm), and the posture
+  rows as constraints. Knee floor re-derived from the guideline geometry: **100 mm** (the 140 came from a standing
+  wrist height), real ≈ 100–130.
+
+### 4.2 The sweep (clip hands; `stage2_solve_stancescan_console.txt`)
+
+| lift / bend | torso tilt | knee flex | arm hang | hands off thighs (surface) | hands vs chin | fingertips over knee |
+|---|---|---|---|---|---|---|
+| 0 / 0 (the clip) | 31.9° ✔ | **31 / 32°** | 17 / 21° | 146 mm | −31 mm ✔ | 133 mm |
+| 20 mm / 0 | 31.9° ✔ | **16 / 18°** ✔ | 17 / 21° | 161 mm ✔ | −31 ✔ | 149 |
+| 20 mm / +5° | 27.8° ✔ | 16 / 18° ✔ | 20 / 24° | 181 ✔ | +16 ✔ | 175 |
+| 20 mm / −5° | 36.0° ✔ | 16 / 18° ✔ | 15 / 18° ✔ | 139 | −78 | 125 |
+| ≥ 40 mm | — | 0.3° (legs locked, feet leave the ground) | | | | |
+
+A 20 mm hips lift with the feet pinned is the whole knee fix: knees from 31° to 16–18°, kneecaps back, and it costs
+nothing else. The spine bend is a free choice inside the band.
+
+### 4.3 The scans on the lifted stance — the conflict, in numbers (`stage2_solve_pitchscan_console_stance{5,0,-5}_*.txt`)
+
+Each scan: station × yaw × pitch × trail gap × stand-closer (600–1000 configurations + refinement), IK rebuilt per
+candidate. "Least wrist" = the best wrists among configurations meeting every grip row and both knee rows;
+"posture-first" = the best wrists among those also meeting arm hang ≤ 20°, hands ≥ 150 mm off the thighs, hands
+≥ −50 mm from the chin (there were none — these are the fewest-violation picks).
+
+| stance | least wrist: wrists | its hands off thighs / vs chin / arm hang | posture-first: wrists | its arm hang |
+|---|---|---|---|---|
+| lift 20 / +5° | **25.8° / 9.0°** | **39 mm** / −134 mm / 26° | 46.3° / 54.2° | 40° |
+| lift 20 / 0° | 31.7° / 28.3° | 70 mm / −119 mm / 30° | 45.7° / 53.7° | 38° |
+| lift 20 / −5° | 44.9° / 51.0° | 106 mm / −115 mm / 39° | 46.6° / 55.5° | 36° |
+| shipped (no lift, pre-stance bake) | **27.5° / 16.2°** | 67 mm / −116 mm / 26° | — | — |
+
+Reading: with both hands on the shaft (≤ 3 mm) the **trail arm is fully extended in every feasible configuration**;
+for this actor's shoulders and arm length with a 1.06 m club, the hands can be either out in front where the
+guidelines put them (arms reaching, wrists at the clip's 46° / 54°) or pulled in under the chest where the wrists
+straighten (26° / 9°) with the hands 40–70 mm off the thighs. No stance inside the torso band moves that line;
+the trail reach is the property that would have to change — the actor's arm length, shoulder position, or a shorter
+club. That is § 4 of `FINDINGS_FOR_NEXT_CHARACTER.md`.
+
+### 4.4 What ships (verify run, prefab as committed; `stage2_verify_console.txt`)
+
+The pre-stance bake restored with the stance data at zero (`ApplyStanceToPrefab` zeros → `ApplyBakeToPrefab` from
+`stage2_bake_pitchscan_prestance.json` → `ApplyFaceRollFix(−9.15)`), verified identical to the earlier real-size
+run: wrists 27.5° / 16.2°, hands on the shaft 0.00 / 0.02 mm, clearance 8.49 mm, butt cap 16 mm, fingers outside
+the mesh, face 0.000°, head on the ball 0.03 mm. The zero-data stance rig (feet copies + leg IK + zero offsets)
+changed no row — it is safe to leave on. Posture rows on this pose, by the letter: torso 31.9° PASS; knee flex
+31 / 32° FAIL; arm hang 26 / 11° FAIL; hands 67 mm off the thighs FAIL; hands 116 mm behind the chin FAIL;
+fingertips 71 mm over the knee / 137 mm from it FAIL. Those five rows are the measured form of "hands clearly touch
+the knees". Frames re-rendered: `verify_stance_targetside.png` (canonical), `verify_stance_faceon.png`,
+`verify_awayside.png`, `verify_targetside.png`, `verify_golferseye.png`, `verify_downshaft.png`, `verify_gameplay.png`.
+
+### 4.5 Corrections to the previous section
+
+- "The straightening lowered the hands 10 mm relative to the clip" compared a rest-pose-finger clip (81 mm) with a
+  posed bake; with posed fingers the clip's fingertips are 133 mm over the knee and the solve lowered them **62 mm**.
+- The knee floor is 100 mm, not 140 (derivation in the code comment on `KneeClearM`).
+
+### Files modified or created (stance edit)
+
+| File | Change |
+|---|---|
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab` | `Rig_StanceFeet` + `Rig_Stance` (zero data), layers `[Rig_StanceFeet, Rig_Stance, Rig_Grip, Rig_Hands]`; pre-stance bake + face roll restored (saved define ON) |
+| `Assets/Scripts/UI/Editor/HandHingeStage2.cs` | stance rig authoring (`CopyBone`), `stancescan` mode, `ApplyStanceToPrefab`, `Posture` + guideline constants, posture rows, stand-closer DOF, per-row penalties, `HandKneeMinM`, knee floor 100 mm, grid re-centred |
+| `Docs/Specs/Active/golfer_club_grip/FINDINGS_FOR_NEXT_CHARACTER.md` | for the Architect (committed e602105f8) |
+| `Docs/Specs/Active/golfer_club_grip/reference/WRIST_ANGLES_AT_ADDRESS.md` | § posture guidelines with sources |
+| `Docs/Specs/Active/golfer_club_grip/evidence/stage2/` | `stage2_stance*.json`, `stage2_solve_stancescan_console*.txt`, `stage2_solve_pitchscan_console_stance*.txt` + `_prestance`, `stage2_bake_pitchscan_stance0_fullyaw.json`, `stage2_verify_console_prestance_bake.txt`, `solve_pitchscan_*.png` (last scan), `verify_*.png` (restored bake) |
+| `Docs/Specs/Active/golfer_club_grip/{IMPLEMENTER_REPORT,STATUS}.md`, `HEARTBEAT.log`, `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | this section; STATUS; session entry; Lesson AY |
+
+Not mine, left alone: `Assets/Art/3D/Characters/_Test/Olivia/*` (+ `.meta`), `Library_broken_143700/`.

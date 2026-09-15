@@ -1,0 +1,7 @@
+{
+  "stanceBendDeg": 0.00000,
+  "hipsLiftM": 0.02000,
+  "rotationEuler": [0.00000, 0.00000, 0.00000],
+  "hipsOffsetLocal": [0.00065, 0.01951, 0.00434],
+  "why": "hand-set: lift 20 mm (knees 16/18 deg, in band), torso bend left at the clip's 31.9 deg — the +5 deg bend put the shoulders back and the straight-wrist hands into the thighs"
+}

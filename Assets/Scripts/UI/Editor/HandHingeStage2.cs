@@ -71,6 +71,12 @@ namespace Golfin.EditorTools.Golfer
         [MenuItem("GOLFIN/Golfer Test/Hinge/Stage 2 — pitch scan with the IK in the loop (Hole 06)")]
         public static void RunPitchScan() => RunSolve("pitchscan");
 
+        [MenuItem("GOLFIN/Golfer Test/Hinge/Stage 2 — stance sweep: spine bend vs the posture guidelines (Hole 06)")]
+        public static void RunStanceScan() => RunSolve("stancescan");
+
+        [MenuItem("GOLFIN/Golfer Test/Hinge/Stage 2 — apply stage2_stance.json to the prefab (define ON)")]
+        public static void ApplyStanceMenu() => Debug.Log(ApplyStanceToPrefab());
+
         public static void RunSolve(string rollMode = "palm")
         {
             SessionState.SetBool(Stage2Key, true);
@@ -183,9 +189,50 @@ namespace Golfin.EditorTools.Golfer
                 Wire(ikL, anim, HumanBodyBones.LeftUpperArm,  HumanBodyBones.LeftLowerArm,  HumanBodyBones.LeftHand,  wL);
                 Wire(ikR, anim, HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, wR);
 
+                // Rig_Stance — the stance edit (Cesar, 2026-09-15: "hands clearly touch the knees in that pose"):
+                // an additive rotation on the Spine bone in Pivot space (the bone's own frame, so the bend is
+                // body-relative through the swing), evaluated FIRST so the clip's hands, GripTarget and the arm IK all
+                // see the adjusted torso. Data lives on the constraint (rotation Euler); an existing value is kept.
+                Transform rigStanceT = Child(golferRig, "Rig_Stance");
+                var rigStance = rigStanceT.GetComponent<Rig>() ?? rigStanceT.gameObject.AddComponent<Rig>();
+                rigStance.weight = 1f;
+                Transform bendT = Child(rigStanceT, "Stance_SpineBend");
+                var ot = bendT.GetComponent<OverrideTransform>() ?? bendT.gameObject.AddComponent<OverrideTransform>();
+                ot.weight = 1f;
+                var od = ot.data;
+                od.constrainedObject = anim.GetBoneTransform(HumanBodyBones.Spine); od.sourceObject = null;
+                od.space = OverrideTransformData.Space.Pivot; od.position = Vector3.zero;
+                od.positionWeight = 0f; od.rotationWeight = 1f;
+                ot.data = od;
+                sb.AppendLine("Rig_Stance: OverrideTransform on " + od.constrainedObject.name + ", Pivot space, rotation " + od.rotation.ToString("F3") + " (kept)");
+
+                // Knee-flex guideline (15–25°; the clip has 31°): lift the Hips (Pivot-space position offset, kept as
+                // data) while two-bone leg IK pins the feet to where the CLIP puts them each frame — the feet are
+                // copied into targets by a layer that runs BEFORE the lift (Rig_StanceFeet), so the swing's own foot
+                // motion survives and the knees straighten by exactly the lift.
+                Transform rigFeetT = Child(golferRig, "Rig_StanceFeet");
+                var rigFeet = rigFeetT.GetComponent<Rig>() ?? rigFeetT.gameObject.AddComponent<Rig>();
+                rigFeet.weight = 1f;
+                Transform footTL = Child(rigFeetT, "Stance_FootL_Target"), footTR = Child(rigFeetT, "Stance_FootR_Target");
+                CopyBone(Child(rigFeetT, "Stance_FootL_Copy"), footTL, anim.GetBoneTransform(HumanBodyBones.LeftFoot));
+                CopyBone(Child(rigFeetT, "Stance_FootR_Copy"), footTR, anim.GetBoneTransform(HumanBodyBones.RightFoot));
+                Transform hipsT = Child(rigStanceT, "Stance_Hips");
+                var oh = hipsT.GetComponent<OverrideTransform>() ?? hipsT.gameObject.AddComponent<OverrideTransform>();
+                oh.weight = 1f;
+                var hd = oh.data;
+                hd.constrainedObject = anim.GetBoneTransform(HumanBodyBones.Hips); hd.sourceObject = null;
+                hd.space = OverrideTransformData.Space.Pivot; hd.rotation = Vector3.zero;
+                hd.positionWeight = 1f; hd.rotationWeight = 0f;
+                oh.data = hd;
+                Wire(Child(rigStanceT, "Stance_LegL_IK"), anim, HumanBodyBones.LeftUpperLeg,  HumanBodyBones.LeftLowerLeg,  HumanBodyBones.LeftFoot,  footTL);
+                Wire(Child(rigStanceT, "Stance_LegR_IK"), anim, HumanBodyBones.RightUpperLeg, HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot, footTR);
+                sb.AppendLine("Rig_StanceFeet: foot targets copied from the clip's feet; Rig_Stance: Hips lift " + hd.position.ToString("F4") + " (kept, hips-local), leg IK to the foot targets");
+
                 var rb = root.GetComponent<RigBuilder>();
                 var rigGrip = Tf("Rig_Grip")?.GetComponent<Rig>();
                 rb.layers.Clear();
+                rb.layers.Add(new RigLayer(rigFeet, true));
+                rb.layers.Add(new RigLayer(rigStance, true));
                 if (rigGrip != null) rb.layers.Add(new RigLayer(rigGrip, true));
                 rb.layers.Add(new RigLayer(rigHands, true));
                 sb.AppendLine("RigBuilder.layers = [" + string.Join(", ", rb.layers.Select(l => l.rig.name)) + "]");
@@ -202,6 +249,19 @@ namespace Golfin.EditorTools.Golfer
             var t = parent.Find(name);
             if (t == null) { var go = new GameObject(name); t = go.transform; t.SetParent(parent, false); }
             return t;
+        }
+
+        /// <summary>A MultiParentConstraint that copies one bone's world pose into a rig target every frame (no offsets).</summary>
+        static void CopyBone(Transform go, Transform target, Transform bone)
+        {
+            var c = go.GetComponent<MultiParentConstraint>() ?? go.gameObject.AddComponent<MultiParentConstraint>();
+            c.weight = 1f;
+            var d = c.data;
+            d.constrainedObject = target;
+            var arr = new WeightedTransformArray(); arr.Add(new WeightedTransform(bone, 1f));
+            d.sourceObjects = arr;
+            d.maintainPositionOffset = false; d.maintainRotationOffset = false;
+            c.data = d;
         }
 
         static void Wire(Transform ikGo, Animator anim, HumanBodyBones root, HumanBodyBones mid, HumanBodyBones tip, Transform target)
@@ -317,6 +377,53 @@ namespace Golfin.EditorTools.Golfer
             Quaternion clipRotL = handL.rotation, clipRotR = handR.rotation;
             Vector3 clipPosL = handL.position, clipPosR = handR.position;
             L("clip hands (rig OFF" + (verify ? ", verify mode — restored to 1 after this capture" : "") + "): L pos=" + V(clipPosL) + " rot=" + Q(clipRotL) + " | R pos=" + V(clipPosR) + " rot=" + Q(clipRotR));
+
+            if (!verify && rollMode == "stancescan")
+            {
+                // ── the stance edit, measured: sweep the Spine bend and read the posture rows against the
+                //    published address guidelines (reference/WRIST_ANGLES_AT_ADDRESS.md § posture) with the
+                //    CLIP's hands (rig hands off). The chosen bend is written to stage2_stance.json; the pitch
+                //    scan then runs on top of it.
+                var ot = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_SpineBend");
+                var oh = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_Hips");
+                if (ot == null || oh == null) { L("no Stance_SpineBend / Stance_Hips on this prefab — author the structure first"); File.WriteAllText(Path.Combine(OutDir, "stage2_" + tag + "_console.txt"), log.ToString()); rigHands.weight = rigRestore; yield break; }
+                Transform spine = anim.GetBoneTransform(HumanBodyBones.Spine), hipsB = anim.GetBoneTransform(HumanBodyBones.Hips);
+                Vector3 hips0 = oh.data.position;
+                Vector3 upHipsLocal = hipsB.InverseTransformDirection(Vector3.up);   // the hips' frame does not change with the lift
+                Vector3 fwdS = ball != null ? Vector3.ProjectOnPlane(ball.position - golfer.transform.position, Vector3.up).normalized : Vector3.Cross(aimDir, Vector3.up);
+                Vector3 rot0 = ot.data.rotation;
+                var tbl = new StringBuilder("lift mm bend° | torso tilt° | knee flex L/R° | arm hang L/R° | hands↔thighs mm (surface) | hands vs chin mm | hands over knee mm | hand height mm | shoulder height mm\n");
+                float bestBend = 0f, bestLift = 0f, bestScore = float.MaxValue; Vector3 bestEuler = rot0, bestHips = hips0; string bestWhy = "";
+                foreach (float lift in new[] { 0f, 0.02f, 0.04f, 0.06f, 0.08f, 0.10f })
+                foreach (float bend in new[] { 0f, 5f, 10f, -5f, 15f })
+                {
+                    // the bend axis is the target line, expressed in the Spine's own frame AT ADDRESS (Pivot space
+                    // post-multiplies, so the stored Euler is body-relative); the lift is world-up in the hips' frame
+                    { var h = oh.data; h.position = hips0 + upHipsLocal * lift; oh.data = h; }
+                    var d = ot.data; d.rotation = bend == 0f ? rot0 : Quaternion.AngleAxis(bend, spine.InverseTransformDirection(aimDir)).eulerAngles; ot.data = d;
+                    yield return null; yield return null; yield return new WaitForEndOfFrame();
+                    var ps = Posture(anim, golfer.transform, fwdS, out float tilt, out float kL, out float kR, out float aL0, out float aR0, out float thighMm, out float chinMm);
+                    float kc = KneeClear(anim, out _, out float hy, out float ky);
+                    float shY = 0.5f * (anim.GetBoneTransform(HumanBodyBones.LeftUpperArm).position.y + anim.GetBoneTransform(HumanBodyBones.RightUpperArm).position.y) - golfer.transform.position.y;
+                    float handsY = 0.5f * (handL.position.y + handR.position.y) - golfer.transform.position.y;
+                    tbl.Append(Mm(lift).PadLeft(6)).Append(" ").Append(bend.ToString("F0").PadLeft(4)).Append(" | ").Append(F1(tilt)).Append(" | ").Append(F1(kL)).Append("/").Append(F1(kR)).Append(" | ").Append(F1(aL0)).Append("/").Append(F1(aR0))
+                       .Append(" | ").Append(Mm(thighMm)).Append(" (").Append(Mm(thighMm - ThighRadiusM - HandHalfM)).Append(") | ").Append(Mm(chinMm)).Append(" | ").Append(Mm(kc)).Append(" | ").Append(Mm(handsY)).Append(" | ").Append(Mm(shY)).Append("\n");
+                    // pick: knee flex AND torso tilt inside the guideline bands, the CLIP hands ≥ KneeClearM + 60 mm
+                    // over the knee (the pitch scan lowered the hands 62 mm to straighten the wrists last time), then
+                    // the smallest edit (|bend| + lift in cm)
+                    bool inBand = tilt >= TorsoTiltMinDeg && tilt <= TorsoTiltMaxDeg && kL >= KneeFlexMinDeg && kL <= KneeFlexMaxDeg && kR >= KneeFlexMinDeg && kR <= KneeFlexMaxDeg;
+                    bool room = kc >= KneeClearM + 0.060f;
+                    float score = (inBand ? 0f : 1000f) + (room ? 0f : 100f + Mathf.Max(0f, KneeClearM + 0.060f - kc) * 1000f) + Mathf.Abs(bend) + lift * 100f;
+                    if (score < bestScore) { bestScore = score; bestBend = bend; bestLift = lift; bestEuler = d.rotation; bestHips = oh.data.position; bestWhy = (inBand ? "posture in band" : "posture OUT of band") + (room ? ", room for the scan" : ", short of room"); }
+                }
+                L("STANCE SWEEP (Hips lift with the feet pinned by leg IK × Spine bend about the target line; clip hands, rig hands off):\n" + tbl);
+                L("stance pick: lift " + Mm(bestLift) + " mm, bend " + bestBend.ToString("F0") + "° (" + bestWhy + "), Euler " + bestEuler.ToString("F4") + ", hips offset " + bestHips.ToString("F4") + " — guideline: torso tilt " + F1(TorsoTiltMinDeg) + "–" + F1(TorsoTiltMaxDeg) + "°, knee flex " + F1(KneeFlexMinDeg) + "–" + F1(KneeFlexMaxDeg) + "°, clip hands ≥ " + Mm(KneeClearM + 0.060f) + " mm over the knee");
+                File.WriteAllText(Path.Combine(OutDir, "stage2_stance.json"), "{\n  \"stanceBendDeg\": " + F(bestBend) + ",\n  \"hipsLiftM\": " + F(bestLift) + ",\n  \"rotationEuler\": " + J(bestEuler) + ",\n  \"hipsOffsetLocal\": " + J(bestHips) + ",\n  \"why\": \"" + bestWhy + "\"\n}\n");
+                { var d = ot.data; d.rotation = rot0; ot.data = d; var h = oh.data; h.position = hips0; oh.data = h; }
+                rigHands.weight = rigRestore;
+                File.WriteAllText(Path.Combine(OutDir, "stage2_" + tag + "_console.txt"), log.ToString());
+                L("wrote stage2_stance.json"); yield break;
+            }
 
             float[] leadFracs = (rollMode == "wristangle" || rollMode == "pitchscan") ? new[] { 0.2f, 0.4f, 0.6f, 0.8f } : new[] { 0.6f };
             var gLs = new HandGeom[leadFracs.Length];
@@ -479,19 +586,26 @@ namespace Golfin.EditorTools.Golfer
                 scan.Append("station yaw pitch gap | wristL (flex,dev) | wristR (flex,dev) | dispL dispR mm | reachL reachR | elbowL elbowR | headAtBall mm | onShaft L/R mm | joint clearance mm\n");
                 // station × yaw × pitch: the trail arm is the reach limit (elbow straight at −2° pitch), so the
                 // butt-ward station (hands nearer the body) and a yaw toward the trail shoulder buy reach.
-                float[] pitches = { 0f, -2f, -3f, -4f, -5f, -6f, -7f };
-                float[] yaws = { 0f, -4f, -8f, -12f, 4f, 8f };
-                float[] stations = { best.stationL, 0.030f, 0.020f, 0.012f };
+                // stance edit (2026-09-15): the shoulders moved up and back, so the club also needs a translation
+                // toward the golfer ("stand closer" — PlaceAtBall then puts the golfer that much nearer the ball);
+                // rotations about the head cannot express it, and without it every grip-feasible configuration had
+                // the lead arm reaching 38° forward.
+                float[] pitches = { 2f, 0f, -2f, -4f, -6f };
+                float[] yaws = { 0f, -4f, -8f, -12f, -16f };
+                float[] stations = { 0.030f, 0.020f, 0.012f };
+                float[] stands = { 0f, 0.015f, 0.03f, 0.045f };
                 // trail-hand offset down the shaft is a scan dimension too: the trail arm is the reach limit, so
                 // a coordinate-descent sweep after the best station/yaw/pitch pushes the trail hand out of reach
                 // (12 mm cleared the joints but left the trail hand 5.9 mm off the shaft); the constraint set is
                 // both hands on the shaft (≤ 3 mm) AND lead-to-trail joint clearance ≥ 8 mm, objective = wrist sum
-                float[] gaps = { 0f, 0.004f, 0.008f, 0.012f };
+                float[] gaps = { 0.008f, 0.012f };
                 var leadJ = HandHingeModel.LeftJoints.Skip(3).Select(b => anim.GetBoneTransform(b)).ToArray();
                 var trailJ = HandHingeModel.RightJoints.Skip(3).Take(9).Select(b => anim.GetBoneTransform(b)).ToArray();
-                float bestScanCost = float.MaxValue, bestPitch = 0f, bestYaw = 0f, bestSt = best.stationL, bestGap = 0f;
-                var configs = new List<(float st, float yw, float pd, float gp)>();
-                foreach (float stS in stations) foreach (float yw in yaws) foreach (float pd in pitches) foreach (float gp in gaps) configs.Add((stS, yw, pd, gp));
+                float bestScanCost = float.MaxValue, bestPitch = 0f, bestYaw = 0f, bestSt = best.stationL, bestGap = 0f, bestStand = 0f;
+                int nGrip = 0, nKnee = 0, nPosture = 0, nAll = 0;
+                Vector3 fwdScan = ball != null ? Vector3.ProjectOnPlane(ball.position - golfer.transform.position, Vector3.up).normalized : Vector3.Cross(aimDir, Vector3.up);
+                var configs = new List<(float st, float yw, float pd, float gp, float sd)>();
+                foreach (float stS in stations) foreach (float yw in yaws) foreach (float pd in pitches) foreach (float gp in gaps) foreach (float sd in stands) configs.Add((stS, yw, pd, gp, sd));
                 for (int pass = 0; pass < 2; pass++)
                 {
                 if (pass == 1)
@@ -499,17 +613,17 @@ namespace Golfin.EditorTools.Golfer
                     // local refinement around the coarse best (the coarse best left the trail hand 1.9 mm short of the
                     // shaft and its finger chords 1 mm inside the mesh): ±4 mm station, ±2° yaw, ±1° pitch, ±2 mm gap
                     configs.Clear();
-                    foreach (float dSt in new[] { -0.004f, 0f, 0.004f }) foreach (float dYw in new[] { -2f, -1f, 0f, 1f, 2f }) foreach (float dPd in new[] { -1f, -0.5f, 0f, 0.5f, 1f }) foreach (float dGp in new[] { -0.002f, 0f, 0.002f })
-                    { float stR = bestSt + dSt; if (stR < 0.008f) continue; configs.Add((stR, bestYaw + dYw, bestPitch + dPd, Mathf.Max(0f, bestGap + dGp))); }
+                    foreach (float dSt in new[] { -0.004f, 0f, 0.004f }) foreach (float dYw in new[] { -2f, 0f, 2f }) foreach (float dPd in new[] { -1f, -0.5f, 0f, 0.5f, 1f }) foreach (float dGp in new[] { -0.002f, 0f, 0.002f }) foreach (float dSd in new[] { -0.015f, 0f, 0.015f })
+                    { float stR = bestSt + dSt; if (stR < 0.008f) continue; configs.Add((stR, bestYaw + dYw, bestPitch + dPd, Mathf.Max(0f, bestGap + dGp), Mathf.Max(0f, bestStand + dSd))); }
                     scan.Append("--- refinement around the coarse best ---\n");
                 }
                 foreach (var cfg in configs)
                 {
-                    float stS = cfg.st, yw = cfg.yw, pd = cfg.pd, gp = cfg.gp;
+                    float stS = cfg.st, yw = cfg.yw, pd = cfg.pd, gp = cfg.gp, sd = cfg.sd;
                     Quaternion Rp = Quaternion.AngleAxis(yw, up) * Quaternion.AngleAxis(pd, pitchAxisB);
                     clubSlot.localPosition = slot0Pos; clubSlot.localRotation = slot0Rot;
                     yield return null;
-                    Vector3 newPos = Eb + Rp * (clubSlot.position - Eb);
+                    Vector3 newPos = Eb + Rp * (clubSlot.position - Eb) - fwdScan * sd;
                     Quaternion newRot = Rp * clubSlot.rotation;
                     clubSlot.localPosition = gripTarget.InverseTransformPoint(newPos);
                     clubSlot.localRotation = Quaternion.Inverse(gripTarget.rotation) * newRot;
@@ -522,8 +636,12 @@ namespace Golfin.EditorTools.Golfer
                     yield return new WaitForEndOfFrame();
                     float clr = float.MaxValue; foreach (var a in leadJ) foreach (var b in trailJ) clr = Mathf.Min(clr, Vector3.Distance(a.position, b.position));
                     float segL = FingerSegMin(anim, gL, s0p, dirp), segR = FingerSegMin(anim, gR, s0p, dirp);
-                    float knee = KneeClear(anim, out _, out _, out _);
+                    float knee = KneeClear(anim, out float handKnee, out _, out _);
                     float armLeg = ArmLegClear(anim, out _);
+                    Posture(anim, golfer.transform, fwdScan, out _, out _, out _, out float ahLs, out float ahRs, out float thighS, out float chinS);
+                    float thighSurf = thighS - ThighRadiusM - HandHalfM;
+                    bool hangOk = ahLs <= ArmHangMaxDeg && ahRs <= ArmHangMaxDeg, thighOk = thighSurf >= HandsThighMinM && thighSurf <= HandsThighMaxM, chinOk = chinS >= HandsChinMinM && chinS <= HandsChinMaxM;
+                    bool postureOk = hangOk && thighOk && chinOk;
                     float ovl = Vector3.Dot(anim.GetBoneTransform(HumanBodyBones.RightLittleProximal).position - s0p, dirp)
                               - Vector3.Dot(0.5f * (anim.GetBoneTransform(HumanBodyBones.LeftIndexProximal).position + anim.GetBoneTransform(HumanBodyBones.LeftMiddleProximal).position) - s0p, dirp);
                     Vector3 fLp = (handL.position - foreL.position).normalized, fRp = (handR.position - foreR.position).normalized;
@@ -534,10 +652,10 @@ namespace Golfin.EditorTools.Golfer
                     float elL = Vector3.Angle(shL.position - foreL.position, handL.position - foreL.position), elR = Vector3.Angle(shR.position - foreR.position, handR.position - foreR.position);
                     float hb = ball != null ? Vector3.Distance(new Vector3(ep.x, 0, ep.z), new Vector3(ball.position.x, 0, ball.position.z)) : -1f;
                     float onLp = AxisDist(handL.TransformPoint(-wL.localPosition), s0p, dirp), onRp = AxisDist(handR.TransformPoint(-wR.localPosition), s0p, dirp);
-                    scan.Append("st").Append(Mm(stS)).Append(" yaw").Append(yw.ToString("F1")).Append(" pitch").Append(pd.ToString("F1")).Append(" gap").Append(Mm(gp)).Append(" | ").Append(F1(wLp)).Append(" (").Append(F1(flLp)).Append(",").Append(F1(dvLp)).Append(") | ")
+                    scan.Append("st").Append(Mm(stS)).Append(" yaw").Append(yw.ToString("F1")).Append(" pitch").Append(pd.ToString("F1")).Append(" gap").Append(Mm(gp)).Append(" stand").Append(Mm(sd)).Append(" | ").Append(F1(wLp)).Append(" (").Append(F1(flLp)).Append(",").Append(F1(dvLp)).Append(") | ")
                         .Append(F1(wRp)).Append(" (").Append(F1(flRp)).Append(",").Append(F1(dvRp)).Append(") | ").Append(Mm(dL)).Append(" ").Append(Mm(dR))
                         .Append(" | ").Append(rL.ToString("F2")).Append(" ").Append(rR.ToString("F2")).Append(" | ").Append(F1(elL)).Append(" ").Append(F1(elR))
-                        .Append(" | ").Append(Mm(hb)).Append(" | ").Append(Mm(onLp)).Append(" ").Append(Mm(onRp)).Append(" | clr ").Append(Mm(clr)).Append(" | seg ").Append(Mm(segL)).Append(" ").Append(Mm(segR)).Append(" | ovl ").Append(Mm(ovl)).Append(" | knee ").Append(Mm(knee)).Append(" | armleg ").Append(Mm(armLeg)).Append("\n");
+                        .Append(" | ").Append(Mm(hb)).Append(" | ").Append(Mm(onLp)).Append(" ").Append(Mm(onRp)).Append(" | clr ").Append(Mm(clr)).Append(" | seg ").Append(Mm(segL)).Append(" ").Append(Mm(segR)).Append(" | ovl ").Append(Mm(ovl)).Append(" | knee ").Append(Mm(knee)).Append(" hk ").Append(Mm(handKnee)).Append(" | armleg ").Append(Mm(armLeg)).Append(" | hang ").Append(F1(ahLs)).Append("/").Append(F1(ahRs)).Append(" thigh ").Append(Mm(thighSurf)).Append(" chin ").Append(Mm(chinS)).Append(postureOk ? " ok" : " POSTURE").Append("\n");
                     // pick: least wrist bend among the configurations where BOTH hands land on the shaft (the post-IK
                     // truth of reach), the lead joints clear the trail index/middle/ring joints by ≥ 8 mm, and every
                     // finger bone segment stays outside the shaft mesh, and the trail little MCP sits within ±8 mm of
@@ -545,18 +663,19 @@ namespace Golfin.EditorTools.Golfer
                     // 2026-09-15: "as you straighten the grip, move the arms higher so they don't collide with the
                     // knees when swinging") — the same rules the rows below grade
                     float segFloor = HandHingeModel.ShaftRadiusM - 0.0005f;
-                    float c = wLp + wRp + (onLp > 0.003f || onRp > 0.003f ? 1000f : 0f) + (clr < 0.008f ? 1000f : 0f) + (segL < segFloor || segR < segFloor ? 1000f : 0f) + (Mathf.Abs(ovl) > 0.008f ? 1000f : 0f) + (knee < KneeClearM ? 1000f : 0f);
-                    if (c < bestScanCost) { bestScanCost = c; bestPitch = pd; bestYaw = yw; bestSt = stS; bestGap = gp; }
+                    float c = wLp + wRp + (onLp > 0.003f || onRp > 0.003f ? 1000f : 0f) + (clr < 0.008f ? 1000f : 0f) + (segL < segFloor || segR < segFloor ? 1000f : 0f) + (Mathf.Abs(ovl) > 0.008f ? 1000f : 0f) + (knee < KneeClearM || handKnee < HandKneeMinM ? 1000f : 0f) + (hangOk ? 0f : 1000f) + (thighOk ? 0f : 1000f) + (chinOk ? 0f : 1000f);
+                    if (onLp <= 0.003f && onRp <= 0.003f && clr >= 0.008f && segL >= segFloor && segR >= segFloor && Mathf.Abs(ovl) <= 0.008f) { nGrip++; if (knee >= KneeClearM && handKnee >= HandKneeMinM) nKnee++; if (postureOk) nPosture++; if (knee >= KneeClearM && handKnee >= HandKneeMinM && postureOk) nAll++; }
+                    if (c < bestScanCost) { bestScanCost = c; bestPitch = pd; bestYaw = yw; bestSt = stS; bestGap = gp; bestStand = sd; }
                 }
                 }
                 L("PITCH SCAN (about the head, IK in the loop; elbow = interior angle, 180 = straight):\n" + scan);
-                L("scan best (min wrist sum with both hands on the shaft, ≥ 8 mm joint clearance, fingers outside the mesh, overlap in band, hands ≥ " + Mm(KneeClearM) + " mm above the knees): station " + Mm(bestSt) + " mm, yaw " + bestYaw.ToString("F1") + "°, pitch " + bestPitch.ToString("F1") + "°, trail gap offset " + Mm(bestGap) + " mm" + (bestScanCost >= 1000f ? "  — NO configuration met every constraint (the knee floor is stance-level); this is the least wrist bend among the grip-feasible ones" : ""));
+                L("scan best (min wrist sum with both hands on the shaft, ≥ 8 mm joint clearance, fingers outside the mesh, overlap in band, hands ≥ " + Mm(KneeClearM) + " mm above the knees and ≥ " + Mm(HandKneeMinM) + " mm from them, arm hang / hands-off-thighs / hands-under-chin in band): station " + Mm(bestSt) + " mm, yaw " + bestYaw.ToString("F1") + "°, pitch " + bestPitch.ToString("F1") + "°, trail gap offset " + Mm(bestGap) + " mm, stand closer " + Mm(bestStand) + " mm" + (bestScanCost >= 1000f ? "  — NO configuration met every constraint; this violates " + Mathf.FloorToInt(bestScanCost / 1000f) + " row(s), the fewest" : "") + " | grip-feasible " + nGrip + ", of which knee-clear " + nKnee + ", posture-in-band " + nPosture + ", both " + nAll);
                 // leave the best applied for the rows and frames below
                 {
                     Quaternion Rp = Quaternion.AngleAxis(bestYaw, up) * Quaternion.AngleAxis(bestPitch, pitchAxisB);
                     clubSlot.localPosition = slot0Pos; clubSlot.localRotation = slot0Rot;
                     yield return null;
-                    Vector3 newPos = Eb + Rp * (clubSlot.position - Eb);
+                    Vector3 newPos = Eb + Rp * (clubSlot.position - Eb) - fwdScan * bestStand;
                     Quaternion newRot = Rp * clubSlot.rotation;
                     clubSlot.localPosition = gripTarget.InverseTransformPoint(newPos);
                     clubSlot.localRotation = Quaternion.Inverse(gripTarget.rotation) * newRot;
@@ -572,7 +691,7 @@ namespace Golfin.EditorTools.Golfer
                         .Append(",\n  \"leadAnchorLocalPos\": ").Append(J(aL.localPosition)).Append(",\n  \"leadAnchorLocalRot\": ").Append(J(aL.localRotation)).Append(",\n  \"leadWristLocalPos\": ").Append(J(wL.localPosition))
                         .Append(",\n  \"trailAnchorLocalPos\": ").Append(J(aR.localPosition)).Append(",\n  \"trailAnchorLocalRot\": ").Append(J(aR.localRotation)).Append(",\n  \"trailWristLocalPos\": ").Append(J(wR.localPosition))
                         .Append(",\n  \"leadStationM\": ").Append(F(best.stationL)).Append(", \"trailGapOffsetM\": ").Append(F(bestGap)).Append(", \"leadAxisUFrac\": ").Append(F(gL.uFrac)).Append(", \"trailAxisUFrac\": ").Append(F(gR.uFrac)).Append(", \"rollMode\": \"pitchscan\"")
-                        .Append(",\n  \"scanPitchDeg\": ").Append(F(bestPitch)).Append(", \"scanYawDeg\": ").Append(F(bestYaw)).Append("\n}\n");
+                        .Append(",\n  \"scanPitchDeg\": ").Append(F(bestPitch)).Append(", \"scanYawDeg\": ").Append(F(bestYaw)).Append(", \"standCloserM\": ").Append(F(bestStand)).Append("\n}\n");
                     File.WriteAllText(BakePath, bake2.ToString()); File.WriteAllText(Path.Combine(OutDir, "stage2_bake_pitchscan.json"), bake2.ToString());
                 }
             }
@@ -596,11 +715,22 @@ namespace Golfin.EditorTools.Golfer
                 Row("grip.wrist.angle_l", null, "lead forearm→hand " + F1(angL) + "° (flex " + F1(flL) + ", dev " + F1(dvL) + ") vs clip " + F1(clipWL) + "° (flex " + F1(clipFL) + ", dev " + F1(clipDL) + ")");
                 Row("grip.wrist.angle_r", null, "trail forearm→hand " + F1(angR) + "° (flex " + F1(flR) + ", dev " + F1(dvR) + ") vs clip " + F1(clipWR) + "° (flex " + F1(clipFR) + ", dev " + F1(clipDR) + ")");
             }
-            { float kc = KneeClear(anim, out float kd, out float hy, out float ky); Row("grip.hands.aboveKnees", kc >= KneeClearM, "lowest hand joint " + Mm(kc) + " mm above the higher knee (≥ " + Mm(KneeClearM) + "; hand " + Mm(hy) + " / knee " + Mm(ky) + " mm over the root), nearest hand joint to a knee " + Mm(kd) + " mm"); }
+            { float kc = KneeClear(anim, out float kd, out float hy, out float ky); Row("grip.hands.aboveKnees", kc >= KneeClearM && kd >= HandKneeMinM, "lowest hand joint " + Mm(kc) + " mm above the higher knee (≥ " + Mm(KneeClearM) + "; hand " + Mm(hy) + " / knee " + Mm(ky) + " mm over the root), nearest hand joint to a knee joint " + Mm(kd) + " mm (≥ " + Mm(HandKneeMinM) + ")"); }
             {
                 float rootY = golfer.transform.position.y, headTopY = anim.GetBoneTransform(HumanBodyBones.Head).position.y + 0.11f * s;   // crown ≈ head joint + 0.11 m·s
                 float bodyH = headTopY - rootY, handsY = 0.5f * (handL.position.y + handR.position.y) - rootY;
-                Row("stance.handsHeight", null, "hand origins " + Mm(handsY) + " mm over the ground = " + (handsY / bodyH).ToString("F2") + "·H (body " + Mm(bodyH) + " mm; real golfers ≈ 0.46·H with a driver, hands under the shoulders)");
+                Row("stance.handsHeight", null, "hand origins " + Mm(handsY) + " mm over the ground (real golfers ≈ 0.75–0.90 m with a driver, hands hanging under the shoulders)");
+                Vector3 fwdP = ball != null ? Vector3.ProjectOnPlane(ball.position - golfer.transform.position, Vector3.up).normalized : Vector3.Cross(aimDir, Vector3.up);
+                Posture(anim, golfer.transform, fwdP, out float tilt, out float kL, out float kR, out float ahL, out float ahR, out float thighMm, out float chinMm);
+                var otNow = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_SpineBend");
+                var ohNow = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_Hips");
+                Row("stance.hipsLift", null, ohNow == null ? "no Stance_Hips on this prefab" : "Hips OverrideTransform (Pivot) position offset " + ohNow.data.position.ToString("F4") + " = " + Mm(ohNow.data.position.magnitude) + " mm, feet pinned to the clip's by leg IK");
+                Row("stance.spineBend", null, otNow == null ? "no Rig_Stance on this prefab" : "Spine OverrideTransform (Pivot) rotation " + otNow.data.rotation.ToString("F3") + " = " + F1(Quaternion.Angle(Quaternion.identity, Quaternion.Euler(otNow.data.rotation))) + "° off the clip");
+                Row("stance.torsoTilt", tilt >= TorsoTiltMinDeg && tilt <= TorsoTiltMaxDeg, "hips→neck " + F1(tilt) + "° from vertical (guideline " + F1(TorsoTiltMinDeg) + "–" + F1(TorsoTiltMaxDeg) + ")");
+                Row("stance.kneeFlex", kL >= KneeFlexMinDeg && kL <= KneeFlexMaxDeg && kR >= KneeFlexMinDeg && kR <= KneeFlexMaxDeg, "L " + F1(kL) + "° / R " + F1(kR) + "° (guideline " + F1(KneeFlexMinDeg) + "–" + F1(KneeFlexMaxDeg) + "; the clip's, untouched)");
+                Row("stance.armHang", ahL <= ArmHangMaxDeg && ahR <= ArmHangMaxDeg, "shoulder→hand L " + F1(ahL) + "° / R " + F1(ahR) + "° from vertical (guideline: hanging, ≤ " + F1(ArmHangMaxDeg) + ")");
+                Row("stance.handsFromThighs", thighMm - ThighRadiusM - HandHalfM >= HandsThighMinM && thighMm - ThighRadiusM - HandHalfM <= HandsThighMaxM, "hands↔thigh " + Mm(thighMm) + " mm centreline ≈ " + Mm(thighMm - ThighRadiusM - HandHalfM) + " mm surface (guideline 6–8 in = " + Mm(HandsThighMinM) + "–" + Mm(HandsThighMaxM) + " with a driver)");
+                Row("stance.handsUnderChin", chinMm >= HandsChinMinM && chinMm <= HandsChinMaxM, "hands " + Mm(chinMm) + " mm toward the ball from the head (guideline: under to just in front of the chin, " + Mm(HandsChinMinM) + " … " + Mm(HandsChinMaxM) + ")");
                 float elev = Mathf.Asin(Mathf.Clamp(Vector3.Dot((S0 - clubEnd.position).normalized, Vector3.up), -1f, 1f)) * Mathf.Rad2Deg;
                 Row("club.shaftElevation", null, "shaft " + F1(elev) + "° above horizontal, head→butt (driver lie at address ≈ 55–60°)");
             }
@@ -885,13 +1015,16 @@ namespace Golfin.EditorTools.Golfer
         // ── helpers ────────────────────────────────────────────────────────────────────
         /// <summary>
         /// Hands-above-knees floor for the swing (Cesar, 2026-09-15). Measured as the lowest hand/finger joint over
-        /// the higher knee joint. A real 1.75 m golfer at address: wrists ≈ 0.75–0.90 m over the ground with a
-        /// driver, the trail fingertips ≈ 0.16 m further down the shaft line, knee joint ≈ 0.50 m → ≈ 0.14 m.
-        /// The clip's own value is 81 mm and the club-pivot space spans 71–110 mm (each 10 mm costs ≈ 16° of wrist
-        /// sum), so this floor is a stance-level target: when nothing meets it the scan keeps the least wrist bend
-        /// among the grip-feasible configurations and says so.
+        /// the higher knee joint. From the posture guidelines for a 1.75 m golfer: hips ≈ 0.93 m, torso 0.5 m bent
+        /// 30–35° → shoulders ≈ 1.34 m; arms 0.6 m hanging 15–20° forward → wrists ≈ 0.77 m; the trail fingertips
+        /// ≈ 0.14 m further down the shaft line → ≈ 0.63 m; knee joint ≈ 0.50 m → ≈ 100–130 mm. 100 mm is the floor.
+        /// (An earlier 140 mm came from a wrist height taken standing, not at address.) The horizontal separation
+        /// the same guidelines give — hands 150–200 mm off the thighs — is graded by stance.handsFromThighs, and
+        /// HandKneeMinM is the 3D centreline distance from any hand joint to a knee joint that keeps the fingertips
+        /// (≈ 10 mm) off the kneecap (≈ 60 mm) with 90 mm to spare.
         /// </summary>
-        const float KneeClearM = 0.14f;
+        const float KneeClearM = 0.10f;
+        const float HandKneeMinM = 0.16f;
 
         /// <summary>
         /// Arm-bone to leg-bone centreline floor for the swing: an upper arm is ≈ 45 mm in radius and a thigh ≈ 80 mm,
@@ -916,6 +1049,55 @@ namespace Golfin.EditorTools.Golfer
                 if (d < best) { best = d; pair = a.Item1 + " ↔ " + l.Item1; }
             }
             return best;
+        }
+
+        // ── address posture guidelines (reference/WRIST_ANGLES_AT_ADDRESS.md § posture, 2026-09-15) ──
+        const float TorsoTiltMinDeg = 25f, TorsoTiltMaxDeg = 45f;   // forward bend from vertical: "25°" average … "35–45°"
+        const float KneeFlexMinDeg = 15f, KneeFlexMaxDeg = 25f;     // "most golfers 15–25°"
+        const float ArmHangMaxDeg = 20f;                            // arms "hang vertically down from the shoulders"
+        const float HandsThighMinM = 0.15f, HandsThighMaxM = 0.20f; // "6–8 in from the thighs with a driver" (surface)
+        const float HandsChinMinM = -0.05f, HandsChinMaxM = 0.15f;  // "directly under the chin, or just in front"
+        const float ThighRadiusM = 0.08f, HandHalfM = 0.02f;        // mesh allowances to turn centreline into surface
+
+        /// <summary>The address posture numbers the guidelines talk about, from the humanoid bones.</summary>
+        static string Posture(Animator anim, Transform root, Vector3 fwd, out float torsoTilt, out float kneeL, out float kneeR, out float armHangL, out float armHangR, out float handsThigh, out float handsChin)
+        {
+            Transform hips = anim.GetBoneTransform(HumanBodyBones.Hips), neck = anim.GetBoneTransform(HumanBodyBones.Neck) ?? anim.GetBoneTransform(HumanBodyBones.Head);
+            torsoTilt = Vector3.Angle(neck.position - hips.position, Vector3.up);
+            float Knee(HumanBodyBones h, HumanBodyBones k, HumanBodyBones a) { var K = anim.GetBoneTransform(k).position; return 180f - Vector3.Angle(anim.GetBoneTransform(h).position - K, anim.GetBoneTransform(a).position - K); }
+            kneeL = Knee(HumanBodyBones.LeftUpperLeg, HumanBodyBones.LeftLowerLeg, HumanBodyBones.LeftFoot);
+            kneeR = Knee(HumanBodyBones.RightUpperLeg, HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot);
+            Vector3 hL = anim.GetBoneTransform(HumanBodyBones.LeftHand).position, hR = anim.GetBoneTransform(HumanBodyBones.RightHand).position;
+            armHangL = Vector3.Angle(hL - anim.GetBoneTransform(HumanBodyBones.LeftUpperArm).position, Vector3.down);
+            armHangR = Vector3.Angle(hR - anim.GetBoneTransform(HumanBodyBones.RightUpperArm).position, Vector3.down);
+            handsThigh = Mathf.Min(
+                HandHingeModel.SegmentDistance(hL, hR, anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg).position, anim.GetBoneTransform(HumanBodyBones.LeftLowerLeg).position),
+                HandHingeModel.SegmentDistance(hL, hR, anim.GetBoneTransform(HumanBodyBones.RightUpperLeg).position, anim.GetBoneTransform(HumanBodyBones.RightLowerLeg).position));
+            handsChin = Vector3.Dot(0.5f * (hL + hR) - anim.GetBoneTransform(HumanBodyBones.Head).position, fwd);
+            return "";
+        }
+
+        /// <summary>Writes stage2_stance.json (the stance sweep's pick) into the prefab's Stance_SpineBend override rotation.</summary>
+        public static string ApplyStanceToPrefab()
+        {
+            if (!EditorUserBuildSettings.activeScriptCompilationDefines.Contains("GOLFIN_GOLFER_TEST"))
+                throw new InvalidOperationException("define OFF — refusing to save a gated prefab");
+            string path = Path.Combine(OutDir, "stage2_stance.json");
+            if (!File.Exists(path)) throw new FileNotFoundException(path);
+            var kv = ParseFlat(File.ReadAllText(path));
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                var ot = root.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_SpineBend");
+                if (ot == null) throw new InvalidOperationException("Stance_SpineBend not on the prefab — run AuthorPrefabStructure first");
+                var d = ot.data; d.rotation = kv["rotationEuler"].v; ot.data = d;
+                var oh = root.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_Hips");
+                if (oh == null) throw new InvalidOperationException("Stance_Hips not on the prefab — run AuthorPrefabStructure first");
+                var h = oh.data; h.position = kv.ContainsKey("hipsOffsetLocal") ? kv["hipsOffsetLocal"].v : Vector3.zero; oh.data = h;
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+                return "stance written: Spine bend Euler " + d.rotation.ToString("F4") + ", hips offset " + h.position.ToString("F4") + " (" + File.ReadAllText(path).Replace("\n", " ") + ")";
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
         }
 
         /// <summary>Vertical clearance of the lowest hand/finger joint over the higher knee joint (world up), plus the nearest hand-joint-to-knee distance.</summary>

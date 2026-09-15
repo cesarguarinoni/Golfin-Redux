@@ -1,0 +1,7 @@
+{
+  "stanceBendDeg": 5.00000,
+  "hipsLiftM": 0.02000,
+  "rotationEuler": [4.92717, 359.92190, 359.14960],
+  "hipsOffsetLocal": [0.00065, 0.01951, 0.00434],
+  "why": "posture in band, room for the scan"
+}

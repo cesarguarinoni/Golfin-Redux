@@ -1,0 +1,7 @@
+{
+  "stanceBendDeg": 0.00000,
+  "hipsLiftM": 0.00000,
+  "rotationEuler": [0.00000, 0.00000, 0.00000],
+  "hipsOffsetLocal": [0.00000, 0.00000, 0.00000],
+  "why": "zero: the stance rig stays on the prefab as data; the verified pre-stance bake (wrists 27.5/16.2) is what ships until the character switch — see IMPLEMENTER_REPORT stance section"
+}

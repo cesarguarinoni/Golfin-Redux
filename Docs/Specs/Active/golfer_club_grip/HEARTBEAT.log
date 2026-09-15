@@ -190,3 +190,15 @@ DIRTY:
 2026-09-15 11:08 stage-2 real-size: pitchscan bake applied to the prefab (define ON); verify run launched
 2026-09-15 11:09 stage-2 real-size: verify 1 — face 6.47° open; ApplyFaceRollFix(-9.15) applied, verify 2 running
 2026-09-15 11:12 stage-2 real-size: verify 2 face 0.000°, tests 13/13, report/STATUS/AI_CONTEXT/lessons written; committing
+2026-09-15 11:16 stage-2 real-size: Cesar authorised the STANCE EDIT (hands touch the knees) and asks for a real-golfer pose by the guidelines — looking up posture numbers, authoring a spine-bend rig layer before Rig_Grip
+2026-09-15 11:20 stance edit: posture guidelines filed in the reference note; Rig_Stance/OverrideTransform + stancescan mode + posture rows patched; refreshing
+2026-09-15 11:24 stance edit: clip torso 32° (in band), knees 31° (band 15–25), clip hands 133 mm over knee with posed fingers (the scan lowered them 62 mm, not 10 — correcting the record); adding hips lift + leg IK to the clip's feet as the second stance DOF
+2026-09-15 11:27 stance edit: sweep — lift 20 mm → knees 16/18° (band), bend +5° → torso 28° (band); lifts > 35 mm lock the legs (feet leave the ground). Knee floor re-derived from the guideline geometry: 100 mm (+ 160 mm 3D hand↔knee); posture rows made scan constraints; re-running sweep then pitch scan
+2026-09-15 11:28 stance edit: lift 20 mm / bend +5° written to the prefab; pitch scan running on the new stance
+2026-09-15 11:33 stance edit: scan on the new stance — 29/822 grip-feasible, all with the lead arm 38° forward (shoulders up+back, no way to stand closer); adding a club translation toward the golfer as a scan DOF. Cesar: write the findings for the Architect (character switch) — doing that while the scan runs
+2026-09-15 11:35 stance edit: stand-closer scan running; FINDINGS_FOR_NEXT_CHARACTER.md written for the Architect
+2026-09-15 11:37 stance edit: stand-closer scan — straight wrists (25.8/9.0) only with the hands pulled into the thighs (39 mm surface, 134 mm behind the chin); the guideline hand place only with the clip's wrists (46/54). Committing the Architect findings now; next: per-row penalties, bend 0 and −5 at lift 20
+2026-09-15 11:41 stance edit: bend 0/lift 20 scan — one violation (lead arm 38°) but wrists 46/54; trying bend −5 (shoulders forward)
+2026-09-15 11:44 stance edit: bend −5 — same picture (lead arm 36°, wrists 47/56); the yaw grid had lost 0/−4 — widening it and re-running on lift 20 / bend 0, then baking the fewest-violations pick and reporting the conflict
+2026-09-15 11:48 stance edit: full-yaw scan same pick (wrists 46/54, lead arm 38°); the posture rows and straight wrists do not coexist on this actor (trail reach binds) — restoring the verified pre-stance bake with the stance data at zero, verify, report
+2026-09-15 11:50 stance edit: verify on the restored bake identical (27.5/16.2, face 0.000, head 0.03 mm); report/STATUS/AI_CONTEXT/Lesson AY written; committing
