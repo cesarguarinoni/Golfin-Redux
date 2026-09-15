@@ -1,0 +1,7 @@
+{
+  "slotLocalPosition": [-0.0034, 0.0418, 0.0510],
+  "slotLocalRotation": [-0.3786, -0.0556, 0.0504, 0.9225],
+  "rotSplitDeg": 28.7170, "fitResidualMmL": 10.1976, "fitResidualMmR": 10.1912,
+  "afterIkMmL": 93.4947, "afterIkMmR": 67.2963, "faceDotAim": 0.2192,
+  "putterChildRollDeg": -80.5000, "faceDotAimAfter": 1.0000, "putterChildLocalRotation": [0.0000, -0.6461, 0.0000, 0.7632]
+}

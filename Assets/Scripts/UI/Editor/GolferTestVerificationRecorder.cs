@@ -135,6 +135,23 @@ namespace Golfin.EditorTools
 
         internal const string PuttStanceScanKey = "GolferTestVerification.PuttStanceScan";
 
+        /// <summary>The putt-clip grip solve (Cesar 2026-09-15 21:05: "First order of business, do the putt-clip solve").
+        /// The club hangs from GripTarget (MultiParent of the two hand bones) with a ClubSlot pose solved for the
+        /// DRIVE clip's hands; ANIM_Golf_Putt holds them differently, so the same pose flips the shaft the moment the
+        /// putt clip plays. At the putt address, with the hand IK off, the club pose is fitted so the two WristTargets
+        /// land on the clip's wrists; that pose, expressed under GripTarget, is the putt slot pose for BOTH slots.</summary>
+        internal const string PuttGripSolveKey = "GolferTestVerification.PuttGripSolve";
+
+        [MenuItem("GOLFIN/Golfer Test/Putt grip solve + stance scan on Hole 06 (current character)")]
+        public static void PuttGripSolveMenu()
+        {
+            SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
+            SessionState.SetBool(RigOffKey, false);
+            SessionState.SetBool(PuttGripSolveKey, true);
+            SessionState.SetBool(PuttStanceScanKey, true);
+            Launch(6);
+        }
+
         [MenuItem("GOLFIN/Golfer Test/Putt stance scan on Hole 06 (current character)")]
         public static void PuttStanceScanMenu()
         {
@@ -1258,6 +1275,13 @@ namespace Golfin.EditorTools
         /// the golfer's time, never the wall clock.
         /// </summary>
         static IEnumerator HoldSim(float s) { float t0 = Time.time; while (Time.time - t0 < s) yield return null; }
+        /// <summary>HoldSim that marks progress every second of golfer time — a video window at constant 60 fps can be
+        /// minutes of wall with nothing logged, which the stall watchdog would read as a dead run (it did, 20:52).</summary>
+        IEnumerator HoldSimMarked(float s, string what)
+        {
+            float t0 = Time.time; int next = 1;
+            while (Time.time - t0 < s) { if (Time.time - t0 >= next) { Mark(what + ": " + next + " s of golfer time"); next++; } yield return null; }
+        }
 
         /// <summary>
         /// golfer_club_grip §3.6 — perpendicular distance from point p to segment a→b.
@@ -2148,7 +2172,7 @@ namespace Golfin.EditorTools
             if (GolferTestVerificationRecorder.VideoArmed && !GolferTestVerificationRecorder.PuttVideo)
             {
                 GolferTestVerificationRecorder.VideoBeginDeferred();
-                yield return HoldSim(1.5f);     // a beat at address before he moves (golfer time, see HoldSim)
+                yield return HoldSimMarked(1.5f, "video window (address)");     // a beat at address before he moves (golfer time)
             }
 
             var addrSeen = new List<string>();
@@ -2326,7 +2350,7 @@ namespace Golfin.EditorTools
             {
                 // golfer time: impact is 1.167 s after commit, the follow-through ~1.5 s more, then the ball away.
                 // (A realtime hold here is what cut the 2026-09-15 clip at the top of the backswing.)
-                yield return HoldSim(4.0f);
+                yield return HoldSimMarked(4.0f, "video window (after the swing)");
                 GolferTestVerificationRecorder.VideoEnd();
                 Mark("video: clip closed " + F(Time.time - _vidSimAtSwingSnap) + " s of golfer time after the swing snap");
             }
@@ -2461,6 +2485,77 @@ namespace Golfin.EditorTools
         }
 
         /// <summary>
+        /// Fit the club to the putt clip's wrists. With Rig_Hands off (raw clip hands) and the animator always
+        /// animating, read the two IK tips (the wrist bones) and GripTarget; the two WristTargets are fixed poses in
+        /// ClubSlot space (anchor ∘ wristTarget), so the club pose C that puts them on the wrists is a rigid fit of two
+        /// frames: R = slerp of the two per-hand rotations, t = mean position residual. ClubSlot.local = GripTarget⁻¹·C,
+        /// applied to ClubSlot AND PutterSlot (the anchors live under ClubSlot, the putter under PutterSlot). Then the
+        /// hand IK is restored and the residuals are read on the rendered pose.
+        /// </summary>
+        IEnumerator PuttGripSolve(GameObject golfer, Animator anim, Component shot)
+        {
+            var all = golfer.GetComponentsInChildren<Transform>(true);
+            Transform Fb(string n) => all.FirstOrDefault(x => x.name == n);
+            Transform cslot = Fb("ClubSlot"), pslot = Fb("PutterSlot"), grip = Fb("GripTarget");
+            var iks = golfer.GetComponentsInChildren<UnityEngine.Animations.Rigging.TwoBoneIKConstraint>(true);
+            var ikLead = iks.FirstOrDefault(k => k.gameObject.name == "IK_Lead"); var ikTrail = iks.FirstOrDefault(k => k.gameObject.name == "IK_Trail");
+            var rigHands = golfer.GetComponentsInChildren<UnityEngine.Animations.Rigging.Rig>(true).FirstOrDefault(r => r.gameObject.name == "Rig_Hands");
+            if (cslot == null || pslot == null || grip == null || ikLead == null || ikTrail == null || rigHands == null || anim == null)
+            { Mark("putt grip solve SKIPPED: slots/GripTarget/IK_Lead/IK_Trail/Rig_Hands missing"); yield break; }
+            Transform wristL = ikLead.data.tip, wristR = ikTrail.data.tip, wtL = ikLead.data.target, wtR = ikTrail.data.target;
+            if (wristL == null || wristR == null || wtL == null || wtR == null) { Mark("putt grip solve SKIPPED: IK tips/targets unset"); yield break; }
+            // the WristTargets in ClubSlot space (they are children of the anchors, which are children of ClubSlot)
+            Vector3 wtLlocal = cslot.InverseTransformPoint(wtL.position), wtRlocal = cslot.InverseTransformPoint(wtR.position);
+            Quaternion wtLrot = Quaternion.Inverse(cslot.rotation) * wtL.rotation, wtRrot = Quaternion.Inverse(cslot.rotation) * wtR.rotation;
+            var cull0 = anim.cullingMode; anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            float w0 = rigHands.weight; rigHands.weight = 0f;   // the clip's own wrists
+            yield return null; yield return null; yield return new WaitForEndOfFrame();
+            Vector3 hLp = wristL.position, hRp = wristR.position; Quaternion hLr = wristL.rotation, hRr = wristR.rotation;
+            Quaternion RL = hLr * Quaternion.Inverse(wtLrot), RR = hRr * Quaternion.Inverse(wtRrot);
+            Quaternion R = Quaternion.Slerp(RL, RR, 0.5f);
+            Vector3 t = 0.5f * ((hLp - R * wtLlocal) + (hRp - R * wtRlocal));
+            float fitL = Vector3.Distance(t + R * wtLlocal, hLp), fitR = Vector3.Distance(t + R * wtRlocal, hRp), rotSplit = Quaternion.Angle(RL, RR);
+            Quaternion localRot = Quaternion.Inverse(grip.rotation) * R; Vector3 localPos = grip.InverseTransformPoint(t);
+            Vector3 clubSlot0p = cslot.localPosition, putt0p = pslot.localPosition; Quaternion clubSlot0r = cslot.localRotation, putt0r = pslot.localRotation;
+            cslot.localPosition = localPos; cslot.localRotation = localRot; pslot.localPosition = localPos; pslot.localRotation = localRot;
+            rigHands.weight = w0;
+            yield return null; yield return null; yield return new WaitForEndOfFrame();
+            float resL = Vector3.Distance(wristL.position, wtL.position), resR = Vector3.Distance(wristR.position, wtR.position);
+            float h = Heading(shot); Vector3 aim = new Vector3(Mathf.Cos(h), 0f, Mathf.Sin(h));
+            var head = pslot.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == "Clubhead");
+            float faceAim = head != null ? Vector3.Dot(Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized, aim) : float.NaN;
+            // the face: the putt clip's wrists hold the shaft rolled differently from the drive's, so square the face
+            // by rolling the PUTTER CHILD about the shaft (GOLFIN_Putter under PutterSlot) — never the slot, whose
+            // anchors the hands are on. Scanned like the 3.11.3 solver, applied, and baked as the child's rotation.
+            var putterChild = pslot.childCount > 0 ? pslot.GetChild(0) : null; float rollDeg = 0f, faceAimAfter = faceAim;
+            if (putterChild != null && head != null)
+            {
+                Quaternion child0 = putterChild.localRotation; float bestErr = float.MaxValue;
+                for (int i = 0; i < 720; i++)
+                {
+                    float th = -180f + i * 0.5f; putterChild.localRotation = child0 * Quaternion.AngleAxis(th, Vector3.up);
+                    Vector3 fp = Vector3.ProjectOnPlane(head.forward, Vector3.up); if (fp.sqrMagnitude < 1e-8f) continue;
+                    float e = Vector3.Angle(fp.normalized, aim); if (e < bestErr) { bestErr = e; rollDeg = th; }
+                }
+                putterChild.localRotation = child0 * Quaternion.AngleAxis(rollDeg, Vector3.up);
+                faceAimAfter = Vector3.Dot(Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized, aim);
+            }
+            anim.cullingMode = cull0;
+            Mark("PUTT GRIP SOLVE: clip wrists L " + V(hLp) + " R " + V(hRp) + " | per-hand rotation split " + F(rotSplit) + " deg, fit residual L " + (fitL * 1000f).ToString("F0") + " mm R " + (fitR * 1000f).ToString("F0") + " mm" +
+                 " | slot local pos " + V(localPos) + " rot " + localRot.ToString("F5") + " (was ClubSlot " + V(clubSlot0p) + " " + clubSlot0r.ToString("F5") + ", PutterSlot " + putt0r.ToString("F5") + ")" +
+                 " | after IK: wrist->WristTarget L " + (resL * 1000f).ToString("F0") + " mm R " + (resR * 1000f).ToString("F0") + " mm | face·aim " + F(faceAim) +
+                 " -> putter child rolled " + F(rollDeg) + " deg about the shaft, face·aim " + F(faceAimAfter) + (putterChild != null ? " (child '" + putterChild.name + "' localRotation " + putterChild.localRotation.ToString("F5") + ")" : ""));
+            string dir = Golfer.GolferTestCharacter.EvidenceRoot + "/putt"; System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "putt_grip_solve.json"),
+                "{\n  \"slotLocalPosition\": [" + F(localPos.x) + ", " + F(localPos.y) + ", " + F(localPos.z) + "],\n" +
+                "  \"slotLocalRotation\": [" + F(localRot.x) + ", " + F(localRot.y) + ", " + F(localRot.z) + ", " + F(localRot.w) + "],\n" +
+                "  \"rotSplitDeg\": " + F(rotSplit) + ", \"fitResidualMmL\": " + F(fitL * 1000f) + ", \"fitResidualMmR\": " + F(fitR * 1000f) + ",\n" +
+                "  \"afterIkMmL\": " + F(resL * 1000f) + ", \"afterIkMmR\": " + F(resR * 1000f) + ", \"faceDotAim\": " + F(faceAim) + ",\n" +
+                "  \"putterChildRollDeg\": " + F(rollDeg) + ", \"faceDotAimAfter\": " + F(faceAimAfter) +
+                (putterChild != null ? ", \"putterChildLocalRotation\": [" + F(putterChild.localRotation.x) + ", " + F(putterChild.localRotation.y) + ", " + F(putterChild.localRotation.z) + ", " + F(putterChild.localRotation.w) + "]" : "") + "\n}\n");
+        }
+
+        /// <summary>
         /// The putt posture, swept the way the drive stance was (HandHingeStage2 stance sweep): Stance_Hips drop
         /// (hips-local) x Stance_SpineBend about the target line, measured on the RENDERED pose (end of frame).
         /// Objective: the putter's sole on the ground at the address point with the smallest edit; torso tilt and
@@ -2492,6 +2587,7 @@ namespace Golfin.EditorTools
             // keeps the face square and brings the head down and in without moving the hands (Cesar 20:40: the
             // deep bend put the fingers through the leg and the shaft into the skirt)
             var pslotT = golfer.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "PutterSlot");
+            var cslotT = golfer.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "ClubSlot");
             Quaternion slotLocal0 = pslotT != null ? pslotT.localRotation : Quaternion.identity;
             const float ThighR = 0.08f, HandHalf = 0.02f, ShaftR = 0.012f;
             float SegDist(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
@@ -2509,9 +2605,11 @@ namespace Golfin.EditorTools
                 { var hd = oh.data; hd.position = hips0 - upHipsLocal * drop; oh.data = hd; }
                 { var d = ot.data; d.rotation = bend == 0f ? rot0 : Quaternion.AngleAxis(bend, spine.InverseTransformDirection(aim)).eulerAngles; ot.data = d; }
                 if (pslotT != null)
-                {   // roll the slot about the WORLD aim line through its origin: world = R(lie, aim) * parent * local0
+                {   // roll BOTH slots about the WORLD aim line through the origin (the hand anchors live under ClubSlot,
+                    // the putter under PutterSlot — they must stay one pose): world = R(lie, aim) * parent * local0
                     Quaternion parentRot = pslotT.parent.rotation;
-                    pslotT.localRotation = lie == 0f ? slotLocal0 : Quaternion.Inverse(parentRot) * Quaternion.AngleAxis(lie, aim) * parentRot * slotLocal0;
+                    Quaternion lr = lie == 0f ? slotLocal0 : Quaternion.Inverse(parentRot) * Quaternion.AngleAxis(lie, aim) * parentRot * slotLocal0;
+                    pslotT.localRotation = lr; if (cslotT != null) cslotT.localRotation = lr;
                 }
                 yield return null; yield return null; yield return new WaitForEndOfFrame();
                 Vector3 ap = (Vector3)apProp.GetValue(presC);
@@ -2542,7 +2640,7 @@ namespace Golfin.EditorTools
                             + drop * 300f + Mathf.Abs(bend) + Mathf.Abs(lie) * 0.2f;
                 if (score < bestScore) { bestScore = score; bestDrop = drop; bestBend = bend; bestLie = lie; bestEuler = ot.data.rotation; bestHips = oh.data.position; bestSlot = pslotT != null ? pslotT.localRotation : Quaternion.identity; bestRow = row; }
             }
-            { var d = ot.data; d.rotation = rot0; ot.data = d; var hd = oh.data; hd.position = hips0; oh.data = hd; if (pslotT != null) pslotT.localRotation = slotLocal0; }
+            { var d = ot.data; d.rotation = rot0; ot.data = d; var hd = oh.data; hd.position = hips0; oh.data = hd; if (pslotT != null) pslotT.localRotation = slotLocal0; if (cslotT != null) cslotT.localRotation = slotLocal0; }
             anim.cullingMode = cull0;
             Mark("PUTT STANCE SCAN (Stance_Hips drop x Stance_SpineBend about the target line; sole = lowest head vertex over the address-point ground):" + "\n" + tbl);
             Mark("putt stance pick: drop " + (bestDrop * 1000f).ToString("F0") + " mm, bend " + bestBend.ToString("F0") + " deg, lie " + bestLie.ToString("F0") + " deg -> " + bestRow + " | Euler " + V(bestEuler) + " hips " + V(bestHips) + " slotLocal " + bestSlot.ToString("F5") + (bestScore >= 1000f ? "  (NO sample put the sole on the ground)" : bestScore >= 500f ? "  (NO sample cleared the thighs)" : ""));
@@ -2946,6 +3044,12 @@ namespace Golfin.EditorTools
             var cullRows = anim != null ? anim.cullingMode : AnimatorCullingMode.AlwaysAnimate;
             if (anim != null) { anim.cullingMode = AnimatorCullingMode.AlwaysAnimate; yield return null; yield return null; }
             yield return new WaitForEndOfFrame();
+            if (pslot != null && st == "Address_Putt" && SessionState.GetBool(GolferTestVerificationRecorder.PuttGripSolveKey, false))
+            {
+                SessionState.SetBool(GolferTestVerificationRecorder.PuttGripSolveKey, false);
+                yield return PuttGripSolve(golfer, anim, shot);
+                yield return new WaitForEndOfFrame();
+            }
             if (pslot != null && st == "Address_Putt" && SessionState.GetBool(GolferTestVerificationRecorder.PuttStanceScanKey, false))
             {
                 SessionState.SetBool(GolferTestVerificationRecorder.PuttStanceScanKey, false);
@@ -2980,11 +3084,12 @@ namespace Golfin.EditorTools
                 // the Swing trigger takes the putt edge), all in golfer time; the animator stays AlwaysAnimate
                 SessionState.SetBool(GolferTestVerificationRecorder.PuttVideoKey, false);
                 GolferTestVerificationRecorder.VideoBeginDeferred();
-                yield return HoldSim(1.2f);
+                yield return HoldSimMarked(1.2f, "putt video (address)");
                 anim.ResetTrigger("Cancel"); anim.ResetTrigger("Reset"); anim.SetTrigger("Swing");
                 Mark("putt video: Swing trigger fired at the putt address (state before: " + CurrentState(anim) + ")");
                 float tSw = Time.time; string seen = "";
-                while (Time.time - tSw < 4.5f) { string cs = CurrentState(anim); if (!seen.EndsWith(cs + ";")) seen += cs + ";"; yield return null; }
+                int nextMark = 1;
+                while (Time.time - tSw < 4.5f) { string cs = CurrentState(anim); if (!seen.EndsWith(cs + ";")) seen += cs + ";"; if (Time.time - tSw >= nextMark) { Mark("putt video (swing): " + nextMark + " s of golfer time, state " + cs); nextMark++; } yield return null; }
                 GolferTestVerificationRecorder.VideoEnd();
                 Mark("putt video: clip closed 4.5 s of golfer time after the trigger; states seen: " + seen);
             }

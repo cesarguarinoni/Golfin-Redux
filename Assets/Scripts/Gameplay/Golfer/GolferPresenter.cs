@@ -843,6 +843,11 @@ namespace Golfin.Gameplay.Golfer
         [SerializeField] Vector3 puttHipsOffset = Vector3.zero;
         [Tooltip("Stance_SpineBend override rotation (Euler, Pivot space) for the putt address.")]
         [SerializeField] Vector3 puttSpineBendEuler = Vector3.zero;
+        [Tooltip("The putt-clip grip solve: ClubSlot/PutterSlot local pose under GripTarget that puts the WristTargets on ANIM_Golf_Putt's wrists (harness putt grip solve). Applied to BOTH slots in putt mode; the drive pose is restored otherwise.")]
+        [SerializeField] bool puttSlotSolved = false;
+        [SerializeField] Vector3 puttSlotLocalPosition = Vector3.zero;
+        [SerializeField] Quaternion puttSlotLocalRotation = Quaternion.identity;
+        Transform _clubSlotT, _putterSlotT; bool _slotsCached; Vector3 _driveSlotPos; Quaternion _driveSlotRot;
         Component _stanceHips, _stanceSpine; bool _stanceCached; Vector3 _driveHips, _driveSpine;
 
         // RigConstraint<T>.data is a by-ref property ("ref T data") which reflection cannot invoke
@@ -886,6 +891,17 @@ namespace Golfin.Gameplay.Golfer
                 }
                 SetV(_stanceHips, "position", putt ? puttHipsOffset : _driveHips);
                 SetV(_stanceSpine, "rotation", putt ? puttSpineBendEuler : _driveSpine);
+                if (puttSlotSolved)
+                {
+                    if (!_slotsCached)
+                    {
+                        foreach (var tr in GetComponentsInChildren<Transform>(true)) { if (tr.name == "ClubSlot") _clubSlotT = tr; else if (tr.name == "PutterSlot") _putterSlotT = tr; }
+                        if (_clubSlotT == null || _putterSlotT == null) return;
+                        _driveSlotPos = _clubSlotT.localPosition; _driveSlotRot = _clubSlotT.localRotation; _slotsCached = true;
+                    }
+                    Vector3 sp = putt ? puttSlotLocalPosition : _driveSlotPos; Quaternion sr = putt ? puttSlotLocalRotation : _driveSlotRot;
+                    _clubSlotT.localPosition = sp; _clubSlotT.localRotation = sr; _putterSlotT.localPosition = sp; _putterSlotT.localRotation = sr;
+                }
             }
             catch (System.Exception e) { Debug.LogWarning("[GolferPresenter] putt stance not applied: " + e.Message); }
         }
