@@ -1,0 +1,13 @@
+{
+  "clubSlotLocalPos": [0.01798, 0.02707, 0.03868],
+  "clubSlotLocalRot": [-0.01322, 0.96267, -0.20750, 0.17331],
+  "leadAnchorLocalPos": [0.00001, -0.02110, 0.00000],
+  "leadAnchorLocalRot": [0.38010, -0.75818, 0.24671, -0.46886],
+  "leadWristLocalPos": [-0.03883, -0.05253, 0.02289],
+  "trailAnchorLocalPos": [0.00000, 0.04536, 0.00000],
+  "trailAnchorLocalRot": [-0.31813, -0.58022, 0.38468, 0.64355],
+  "trailWristLocalPos": [0.03442, -0.05765, 0.02247],
+  "leadStationM": 0.02000, "trailGapOffsetM": 0.01800, "leadAxisUFrac": 0.80000, "trailAxisUFrac": 0.60000, "rollMode": "pitchscan",
+  "scanPitchDeg": 2.00000, "scanYawDeg": -2.00000, "standCloserM": 0.00000,
+  "addressHeadLocal": [0.37654, 0.07094, -0.03007]
+}

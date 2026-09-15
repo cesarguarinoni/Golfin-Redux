@@ -847,7 +847,18 @@ namespace Golfin.Gameplay.Golfer
         [SerializeField] bool puttSlotSolved = false;
         [SerializeField] Vector3 puttSlotLocalPosition = Vector3.zero;
         [SerializeField] Quaternion puttSlotLocalRotation = Quaternion.identity;
+        [Tooltip("Stage 2 on the putt address (HandHingeStage2 putt mode): the hand anchors and wrist offsets under ClubSlot for the putter, applied in putt mode; the drive values are restored otherwise. The rig is rebuilt after each switch so the IK binds the moved targets.")]
+        [SerializeField] bool puttAnchorsSolved = false;
+        [SerializeField] Vector3 puttAnchorLeadLocalPosition = Vector3.zero;
+        [SerializeField] Quaternion puttAnchorLeadLocalRotation = Quaternion.identity;
+        [SerializeField] Vector3 puttWristLeadLocalPosition = Vector3.zero;
+        [SerializeField] Vector3 puttAnchorTrailLocalPosition = Vector3.zero;
+        [SerializeField] Quaternion puttAnchorTrailLocalRotation = Quaternion.identity;
+        [SerializeField] Vector3 puttWristTrailLocalPosition = Vector3.zero;
+        [SerializeField] float puttClubEndY = 0f;   // ClubEnd down the shaft for the putter (0 = leave the driver's)
         Transform _clubSlotT, _putterSlotT; bool _slotsCached; Vector3 _driveSlotPos; Quaternion _driveSlotRot;
+        Transform _anchorL, _anchorR, _wristL, _wristR, _clubEndT; bool _anchorsCached;
+        Vector3 _driveAL, _driveAR, _driveWL, _driveWR, _driveClubEnd; Quaternion _driveALr, _driveARr;
         Component _stanceHips, _stanceSpine; bool _stanceCached; Vector3 _driveHips, _driveSpine;
 
         // RigConstraint<T>.data is a by-ref property ("ref T data") which reflection cannot invoke
@@ -901,6 +912,28 @@ namespace Golfin.Gameplay.Golfer
                     }
                     Vector3 sp = putt ? puttSlotLocalPosition : _driveSlotPos; Quaternion sr = putt ? puttSlotLocalRotation : _driveSlotRot;
                     _clubSlotT.localPosition = sp; _clubSlotT.localRotation = sr; _putterSlotT.localPosition = sp; _putterSlotT.localRotation = sr;
+                }
+                if (puttAnchorsSolved)
+                {
+                    if (!_anchorsCached)
+                    {
+                        foreach (var tr in GetComponentsInChildren<Transform>(true))
+                        {
+                            if (tr.name == "GripAnchor_Lead") _anchorL = tr; else if (tr.name == "GripAnchor_Trail") _anchorR = tr; else if (tr.name == "ClubEnd") _clubEndT = tr;
+                        }
+                        _wristL = _anchorL != null ? _anchorL.Find("WristTarget") : null; _wristR = _anchorR != null ? _anchorR.Find("WristTarget") : null;
+                        if (_anchorL == null || _anchorR == null || _wristL == null || _wristR == null) return;
+                        _driveAL = _anchorL.localPosition; _driveALr = _anchorL.localRotation; _driveWL = _wristL.localPosition;
+                        _driveAR = _anchorR.localPosition; _driveARr = _anchorR.localRotation; _driveWR = _wristR.localPosition;
+                        _driveClubEnd = _clubEndT != null ? _clubEndT.localPosition : Vector3.zero;
+                        _anchorsCached = true;
+                    }
+                    _anchorL.localPosition = putt ? puttAnchorLeadLocalPosition : _driveAL; _anchorL.localRotation = putt ? puttAnchorLeadLocalRotation : _driveALr; _wristL.localPosition = putt ? puttWristLeadLocalPosition : _driveWL;
+                    _anchorR.localPosition = putt ? puttAnchorTrailLocalPosition : _driveAR; _anchorR.localRotation = putt ? puttAnchorTrailLocalRotation : _driveARr; _wristR.localPosition = putt ? puttWristTrailLocalPosition : _driveWR;
+                    if (_clubEndT != null && puttClubEndY > 0f) _clubEndT.localPosition = putt ? new Vector3(0f, puttClubEndY, 0f) : _driveClubEnd;
+                    // Animation Rigging binds its targets at build; rebuild so the IK follows the moved anchors (reflection: no rigging reference here)
+                    foreach (var c in GetComponentsInChildren<Component>(true))
+                        if (c != null && c.GetType().Name == "RigBuilder") { c.GetType().GetMethod("Build", System.Type.EmptyTypes)?.Invoke(c, null); break; }
                 }
             }
             catch (System.Exception e) { Debug.LogWarning("[GolferPresenter] putt stance not applied: " + e.Message); }

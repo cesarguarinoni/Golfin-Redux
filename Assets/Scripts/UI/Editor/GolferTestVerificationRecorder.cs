@@ -142,6 +142,27 @@ namespace Golfin.EditorTools
         /// land on the clip's wrists; that pose, expressed under GripTarget, is the putt slot pose for BOTH slots.</summary>
         internal const string PuttGripSolveKey = "GolferTestVerification.PuttGripSolve";
 
+        [MenuItem("GOLFIN/Golfer Test/Stage 2 PUTT solve (pitch scan) on Hole 06")]
+        public static void Stage2PuttSolveMenu()
+        {
+            SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
+            SessionState.SetBool(RigOffKey, false);
+            SessionState.SetBool("GolferTestVerification.Stage2", true); SessionState.SetBool("Golfin.GolferTest.Stage2Verify", false);
+            SessionState.SetString("Golfin.GolferTest.Stage2RollMode", "pitchscan");
+            SessionState.SetBool("Golfin.GolferTest.Stage2Putt", true);
+            Launch(6);
+        }
+
+        [MenuItem("GOLFIN/Golfer Test/Stage 2 PUTT verify on Hole 06")]
+        public static void Stage2PuttVerifyMenu()
+        {
+            SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
+            SessionState.SetBool(RigOffKey, false);
+            SessionState.SetBool("GolferTestVerification.Stage2", true); SessionState.SetBool("Golfin.GolferTest.Stage2Verify", true);
+            SessionState.SetBool("Golfin.GolferTest.Stage2Putt", true);
+            Launch(6);
+        }
+
         [MenuItem("GOLFIN/Golfer Test/Putt grip solve + stance scan on Hole 06 (current character)")]
         public static void PuttGripSolveMenu()
         {
@@ -1394,7 +1415,7 @@ namespace Golfin.EditorTools
 
             // golfer_club_grip §3.12.6 stage 2: hand the run to the hinge-model stage at address
             // (by reflection — the stage class is #if-gated; this file stays define-agnostic).
-            if (SessionState.GetBool("GolferTestVerification.Stage2", false))
+            if (SessionState.GetBool("GolferTestVerification.Stage2", false) && !SessionState.GetBool("Golfin.GolferTest.Stage2Putt", false))
             {
                 var st2 = FindType("Golfin.EditorTools.Golfer.HandHingeStage2");
                 var run = st2?.GetMethod("Run", BindingFlags.Public | BindingFlags.Static);
@@ -3044,6 +3065,17 @@ namespace Golfin.EditorTools
             var cullRows = anim != null ? anim.cullingMode : AnimatorCullingMode.AlwaysAnimate;
             if (anim != null) { anim.cullingMode = AnimatorCullingMode.AlwaysAnimate; yield return null; yield return null; }
             yield return new WaitForEndOfFrame();
+            if (pslot != null && st == "Address_Putt" && SessionState.GetBool("GolferTestVerification.Stage2", false) && SessionState.GetBool("Golfin.GolferTest.Stage2Putt", false))
+            {
+                // stage 2 on the putt address (HandHingeStage2 putt mode) — the same solver that fixed the driver, then Finish
+                var st2p = FindType("Golfin.EditorTools.Golfer.HandHingeStage2");
+                var runP = st2p?.GetMethod("Run", BindingFlags.Public | BindingFlags.Static);
+                if (runP != null) yield return (IEnumerator)runP.Invoke(null, new object[] { this, golfer, anim, shot, BallTransform() });
+                else Mark("stage 2 (putt) requested but HandHingeStage2.Run was not found (define off?)");
+                SessionState.SetBool("Golfin.GolferTest.Stage2Putt", false);
+                yield return Finish();
+                yield break;
+            }
             if (pslot != null && st == "Address_Putt" && SessionState.GetBool(GolferTestVerificationRecorder.PuttGripSolveKey, false))
             {
                 SessionState.SetBool(GolferTestVerificationRecorder.PuttGripSolveKey, false);

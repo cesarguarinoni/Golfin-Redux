@@ -42,7 +42,15 @@ namespace Golfin.EditorTools.Golfer
     {
         public static string PrefabPath => HandHingeStage0Tool.PrefabPath;
         public static string AssetPath  => HandHingeStage0Tool.AssetPath;
-        public static string OutDir     => GolferTestCharacter.EvidenceRoot + "/stage2";
+        /// <summary>Stage 2 on the PUTT address with the putter (Cesar 2026-09-15 21:40: "do the same thing you did to fix
+        /// the driver"). The putter is mounted under ClubSlot for the solve (the anchors, ClubStart/ClubEnd and the IK
+        /// targets live there), with its head axes mapped onto the driver's convention and ClubEnd at its own tip; the bake
+        /// goes to the presenter's putt fields (applied to both slots and the anchors in putt mode) instead of ClubSlot.</summary>
+        public const string PuttKey = "Golfin.GolferTest.Stage2Putt";
+        public static bool Putt => SessionState.GetBool(PuttKey, false);
+        public const float PutterClubEndY = 0.7316f;   // ClubTipPosition 0.755 minus the driver's tip->ClubEnd offset (1.0458 - 1.0224)
+        public static readonly Quaternion PutterChildRotation = Quaternion.AngleAxis(-90f, Vector3.up);   // toe -X -> -Z, face +Z -> -X (the driver's head convention)
+        public static string OutDir     => GolferTestCharacter.EvidenceRoot + (Putt ? "/stage2_putt" : "/stage2");
         public static string BakePath   => OutDir + "/stage2_bake.json";
         public const string Stage2Key       = "GolferTestVerification.Stage2";
         public const string Stage2VerifyKey = "GolferTestVerification.Stage2Verify";
@@ -379,6 +387,18 @@ namespace Golfin.EditorTools.Golfer
             if (gripTarget == null || clubSlot == null || clubStart == null || clubEnd == null || aL == null || aR == null || wL == null || wR == null || rigHands == null || hm == null || hm.Data == null)
             { L("MISSING: gripTarget=" + (gripTarget != null) + " clubSlot=" + (clubSlot != null) + " clubStart=" + (clubStart != null) + " clubEnd=" + (clubEnd != null) + " anchors=" + (aL != null && aR != null) + " wrists=" + (wL != null && wR != null) + " Rig_Hands=" + (rigHands != null) + " HandHingeModel=" + (hm != null) + " — stage 2 cannot run"); File.WriteAllText(Path.Combine(OutDir, "stage2_" + tag + "_console.txt"), log.ToString()); yield break; }
 
+            bool putt = Putt;
+            if (putt)
+            {
+                var putter = Tf("GOLFIN_Putter"); var driver = Tf("GOLFIN_Driver");
+                if (putter == null) { L("MISSING: GOLFIN_Putter"); yield break; }
+                if (driver != null) driver.gameObject.SetActive(false);
+                putter.SetParent(clubSlot, false); putter.localPosition = Vector3.zero; putter.localRotation = PutterChildRotation; putter.gameObject.SetActive(true);
+                clubEnd.localPosition = new Vector3(0f, PutterClubEndY, 0f);
+                L("PUTT MODE: GOLFIN_Putter mounted under ClubSlot (child rotation " + Q(PutterChildRotation) + ", the driver's head convention), ClubEnd at y " + F(PutterClubEndY) + "; animator " + anim.GetCurrentAnimatorStateInfo(0).IsName("Address_Putt") + " Address_Putt");
+                anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                yield return null; yield return null; yield return new WaitForEndOfFrame();
+            }
             HandHingeModel.UseData(hm.Data);
             L("character " + GolferTestCharacter.Name + ": contact radius " + Mm(HandHingeModel.ContactM) + " mm (finger half-thickness " + Mm(HandHingeModel.FingerHalfThicknessM) + " mm)");
             Transform handL = anim.GetBoneTransform(HumanBodyBones.LeftHand), handR = anim.GetBoneTransform(HumanBodyBones.RightHand);
@@ -789,7 +809,7 @@ namespace Golfin.EditorTools.Golfer
                 Row("grip.palmSide_r", psR > 0.5f, "trail palm · (+aim) = " + F(psR) + " (> 0.5: the palm faces the target, over the lead thumb)");
                 Vector3 upLocal = clubSlot.InverseTransformDirection(Vector3.up);
                 float crown = Vector3.Dot(upLocal, ClubCrownUpSlotLocal);
-                Row("club.crownUp", crown > 0.7f, "world up in ClubSlot-local = " + V(upLocal) + " · Remy's accepted (-0.0905, -0.7323, -0.6749) = " + F(crown) + " (> 0.7: the club is soled crown-up, not rolled 180° about the shaft — the face-square row cannot tell the two apart)");
+                Row("club.crownUp", putt ? (bool?)null : crown > 0.7f, (putt ? "(putter: driver constant, informational) " : "") + "world up in ClubSlot-local = " + V(upLocal) + " · Remy's accepted (-0.0905, -0.7323, -0.6749) = " + F(crown) + " (> 0.7: the club is soled crown-up, not rolled 180° about the shaft — the face-square row cannot tell the two apart)");
             }
             float onL = AxisDist(handL.TransformPoint(-wL.localPosition), S0, sdir), onR = AxisDist(handR.TransformPoint(-wR.localPosition), S0, sdir);
             Row("grip.hand.onShaft_l", onL < 0.003f, "lead tunnel point " + Mm(onL) + " mm off the shaft axis (< 3)");
@@ -1017,6 +1037,7 @@ namespace Golfin.EditorTools.Golfer
             if (!File.Exists(BakePath)) throw new FileNotFoundException(BakePath);
             string bakeText = File.ReadAllText(BakePath);
             var kv = ParseFlat(bakeText);
+            if (Putt) return ApplyPuttBakeToPrefab(kv);
             string axesLog = "";
             var mL = System.Text.RegularExpressions.Regex.Match(bakeText, "\"leadAxisUFrac\": ([-0-9.]+)");
             var mR = System.Text.RegularExpressions.Regex.Match(bakeText, "\"trailAxisUFrac\": ([-0-9.]+)");
@@ -1039,6 +1060,42 @@ namespace Golfin.EditorTools.Golfer
                 }
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 return axesLog + "baked into " + PrefabPath + ": ClubSlot " + V(clubSlot.localPosition) + " " + Q(clubSlot.localRotation) + "; lead " + V(aL.localPosition) + " " + Q(aL.localRotation) + "; trail " + V(aR.localPosition) + " " + Q(aR.localRotation) + headNote;
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+
+        /// <summary>The putt bake: the solved ClubSlot pose, anchors and wrist offsets go to the presenter's putt fields
+        /// (applied to ClubSlot AND PutterSlot and the anchors in putt mode, drive values restored otherwise); the putter
+        /// child under PutterSlot gets the driver-convention rotation; ClubEnd's putt length is recorded.</summary>
+        static string ApplyPuttBakeToPrefab(Dictionary<string, VQ> kv)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                Transform Tf(string n) => root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == n);
+                var pres = root.GetComponent<GolferPresenter>();
+                var so = new SerializedObject(pres);
+                void SetV(string f, Vector3 v) { var pr = so.FindProperty(f); if (pr == null) throw new InvalidOperationException("presenter field missing: " + f); pr.vector3Value = v; }
+                void SetQ(string f, Quaternion q) { var pr = so.FindProperty(f); if (pr == null) throw new InvalidOperationException("presenter field missing: " + f); pr.quaternionValue = q; }
+                so.FindProperty("puttSlotSolved").boolValue = true;
+                SetV("puttSlotLocalPosition", kv["clubSlotLocalPos"].v); SetQ("puttSlotLocalRotation", kv["clubSlotLocalRot"].q);
+                so.FindProperty("puttAnchorsSolved").boolValue = true;
+                SetV("puttAnchorLeadLocalPosition", kv["leadAnchorLocalPos"].v); SetQ("puttAnchorLeadLocalRotation", kv["leadAnchorLocalRot"].q); SetV("puttWristLeadLocalPosition", kv["leadWristLocalPos"].v);
+                SetV("puttAnchorTrailLocalPosition", kv["trailAnchorLocalPos"].v); SetQ("puttAnchorTrailLocalRotation", kv["trailAnchorLocalRot"].q); SetV("puttWristTrailLocalPosition", kv["trailWristLocalPos"].v);
+                so.FindProperty("puttClubEndY").floatValue = PutterClubEndY;
+                string headNote = "";
+                if (kv.ContainsKey("addressHeadLocal"))
+                {
+                    // the putt address point = addressHeadLocal + addressFaceOffsetLocalPutt; the bake gives ClubEnd in golfer-local
+                    var ahl = so.FindProperty("addressHeadLocal").vector3Value;
+                    SetV("addressFaceOffsetLocalPutt", kv["addressHeadLocal"].v - ahl);
+                    headNote = "; addressFaceOffsetLocalPutt " + V(kv["addressHeadLocal"].v - ahl) + " (ClubEnd " + V(kv["addressHeadLocal"].v) + " minus the drive tip " + V(ahl) + ")";
+                }
+                so.ApplyModifiedPropertiesWithoutUndo();
+                var pslot = Tf("PutterSlot"); var child = pslot != null && pslot.childCount > 0 ? pslot.GetChild(0) : null;
+                if (child != null) { child.localPosition = Vector3.zero; child.localRotation = PutterChildRotation; }
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+                return "PUTT bake into " + PrefabPath + ": slot " + V(kv["clubSlotLocalPos"].v) + " " + Q(kv["clubSlotLocalRot"].q) + "; lead " + V(kv["leadAnchorLocalPos"].v) + " " + Q(kv["leadAnchorLocalRot"].q) + "; trail " + V(kv["trailAnchorLocalPos"].v) + " " + Q(kv["trailAnchorLocalRot"].q) + "; putter child " + Q(PutterChildRotation) + headNote;
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
         }
