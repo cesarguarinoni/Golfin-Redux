@@ -1330,3 +1330,27 @@ grass beside the head; the putter orientation verdict stays on the recorder's `c
 92.1° vs aim) and Cesar's eye ("blade points the wrong way"), scoped with the club-orientation task above.
 
 Cesar's verdict on this clip: "I saw the capture, good enough (but not perfect). We fix it another day. Give me this one."
+
+### Video, takes 2 and 3 — the window was the cut (Cesar: "You cut the swinging part, that video is unusable")
+
+Take 1 (17:40) was cut at the top of the backswing, and the recorder was not the reason: the harness's video window
+was wall-clock (`Hold` = `WaitForSecondsRealtime`, 2 s at address + 4 s after the swing snap) while the simulation
+steps 1/60 per rendered frame — under constant playback the editor renders 1.5–2.4 frames per wall second (the
+Recorder encoding 1170×2532 at 60 fps), so 4 s of wall was 0.67 s of swing. Fix in `GolferTestVerificationRecorder`:
+`HoldSim` (golfer time: `Time.time`), 1.5 s at address, 4.0 s after the swing snap; the recorder's wall-clock watchdog
+raised through its existing `MaxRecordSecondsSessionOverride` (90 → 240 → 420 s, a runaway backstop only; the
+window ends by `VideoEnd`). No further edit under `Assets/Scripts/Physics/`.
+
+- Take 2, `videos/olivia_swing_h06_2026-09-15_17-48-45.mp4`: 224 frames, 3.73 s, uniform 16.7 ms — address, full
+  swing, follow-through, cut to the ball; the 90 s watchdog force-stopped it 0.2 s after the cut.
+- **Take 3, `videos/olivia_swing_h06_2026-09-15_17-53-56.mp4` — the deliverable:** 369 frames, 6.15 s, every gap
+  16.7 ms (min = median = max), 0 gaps > 20 ms, written == rendered (log "rendered 369 frames over 243.92 s wall /
+  6.13 s sim"). Address → backswing → impact → follow-through → cut → ball at rest in the rough with her re-placed.
+  The 240 s watchdog closed it 0.2 s of golfer time before `VideoEnd` would have; nothing of the swing or the
+  flight is missing. Stills every ~0.9 s in `evidence/olivia/swing60/`.
+
+Known: the recorder's encode throughput drops clip over clip inside one editor session (10 → 2.4 → 1.5 rendered
+fps); its own guard text says to relaunch Unity between clips. The run is force-exited from play mode when the
+watchdog fires, so the putt block after the swing did not run on takes 2–3 (putt frames unchanged). The harness rows
+`shot.swingPlays` / `§9.2 t=0.6 s` sample in wall time and read one frame after commit at this frame rate — probe
+artefacts of the recording run, not the video; the verify run (no video) is the gate for those.

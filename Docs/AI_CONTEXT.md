@@ -9,9 +9,12 @@
 **Evening 2026-09-15, video:** the Hole 06 swing clip dropped 3 of 4 rendered frames (Recorder `Variable` playback
 under the harness's fixed 1/60 step, measured). Cesar authorized the ONE edit under `Assets/Scripts/Physics/`:
 `BotVideoRecorder.ConstantPlayback` (opt-in, SessionState, 60 or 30 fps); the golfer harness opts in. The new clip
-is drop-free (146 frames, uniform 16.7 ms) but 2.43 s long — the harness window closes early under constant
-playback; Cesar: "good enough, fix another day". Still open: that window length, the putt head close-up framing, the
-club head-orientation conform task (every club to copy the driver — scoped in `IMPLEMENTER_REPORT.md`).
+is drop-free. The first take was cut at the top of the backswing because the harness's video window was wall-clock
+while the sim steps 1/60 per rendered frame at 1.5–2.4 fps under the encoder; the window is now golfer time
+(`HoldSim`) with the recorder's watchdog override at 420 s. Take 3 (`videos/olivia_swing_h06_2026-09-15_17-53-56.mp4`,
+6.15 s, 369 frames, uniform 16.7 ms) is the full swing through the ball at rest — delivered. Still open: the putt
+head close-up framing, the club head-orientation conform task (every club to copy the driver — scoped in
+`IMPLEMENTER_REPORT.md`), and the encoder's falling throughput across clips in one editor session.
 
 STATUS `STAGE_2_REVIEW`, stage 3 NOT started. Cesar passed stage 1 on the inscribed wrap the same day. Built:
 `HandHingeModel` on the prefab as data (inscribed poses, thumb aims), `GripAnchor_*` + `WristTarget` under `ClubSlot`,

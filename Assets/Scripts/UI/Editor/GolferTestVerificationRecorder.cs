@@ -189,9 +189,14 @@ namespace Golfin.EditorTools
             // simulation at an editor 12 fps is ~50 s of wall — 90 s is the recorder's documented ceiling
             t.GetProperty("ConstantPlayback")?.SetValue(null, true);
             t.GetProperty("ConstantFps")?.SetValue(null, 60);
-            t.GetProperty("MaxRecordSecondsSessionOverride")?.SetValue(null, 90);
+            // The watchdog is WALL clock and the window is GOLFER time (HoldSim): the Recorder's constant mode
+            // encodes 1170x2532 at 60 fps at ~2.4 rendered frames per wall second on this machine (measured
+            // 2026-09-15: 224 frames in 94 s), so a 6 s window is ~150 s of wall. 90 s force-stopped the clip 0.2 s
+            // after the cut to the ball, and 240 s fired 0.2 s before VideoEnd (throughput fell to 1.5 fps on the
+            // third clip of the session). 420 s is a runaway backstop only — the window itself ends by VideoEnd.
+            t.GetProperty("MaxRecordSecondsSessionOverride")?.SetValue(null, 420);
             t.GetMethod("ArmDeferred")?.Invoke(null, null);
-            Debug.Log("[GolferVerify] deferred video armed (constant 60 fps, watchdog 90 s) -> " + outDir);
+            Debug.Log("[GolferVerify] deferred video armed (constant 60 fps, watchdog 420 s) -> " + outDir);
         }
 
         static int _vidFrame0; static float _vidReal0, _vidSim0;
@@ -1182,7 +1187,16 @@ namespace Golfin.EditorTools
         static string F(float v) => v.ToString("F4", CultureInfo.InvariantCulture);
         static string V(Vector3 v) => "(" + F(v.x) + ", " + F(v.y) + ", " + F(v.z) + ")";
         static string FNull(float v) => float.IsNaN(v) ? "null" : F(v);
+        static float _vidSimAtSwingSnap;
         static IEnumerator Hold(float s) { yield return new WaitForSecondsRealtime(s); }
+        /// <summary>
+        /// SIMULATION-time hold. The harness steps the simulation at a fixed 1/60 per rendered frame, so under
+        /// the Recorder's constant playback (2026-09-15) an editor at 10 fps advances the golfer 1/6 as fast as the
+        /// wall clock: a 4 s realtime hold after commit covered 0.67 s of swing and the clip ended at the top of the
+        /// backswing (Cesar: "you cut the swinging part, that video is unusable"). The video window is measured in
+        /// the golfer's time, never the wall clock.
+        /// </summary>
+        static IEnumerator HoldSim(float s) { float t0 = Time.time; while (Time.time - t0 < s) yield return null; }
 
         /// <summary>
         /// golfer_club_grip §3.6 — perpendicular distance from point p to segment a→b.
@@ -2065,7 +2079,7 @@ namespace Golfin.EditorTools
             if (GolferTestVerificationRecorder.VideoArmed)
             {
                 GolferTestVerificationRecorder.VideoBeginDeferred();
-                yield return Hold(2.0f);        // a beat at address before he moves
+                yield return HoldSim(1.5f);     // a beat at address before he moves (golfer time, see HoldSim)
             }
 
             var addrSeen = new List<string>();
@@ -2234,15 +2248,18 @@ namespace Golfin.EditorTools
             Assert("shot.swingPlays", stateAtSwing.StartsWith("Swing"),
                    "animator state right after OnShotResolved = '" + stateAtSwing + "' (was '" + stateBefore + "')");
             yield return Snap("golfer_h" + _hole.ToString("00") + "_swing");
+            _vidSimAtSwingSnap = Time.time;
 
             // Close the clip once the ball is clearly away. Ending here rather than at
             // ball-at-rest keeps it inside the recorder's 30 s watchdog — a 247 m drive can
             // outlast it — and the follow-through plus the launch is the whole point.
             if (GolferTestVerificationRecorder.VideoArmed)
             {
-                yield return Hold(4.0f);
+                // golfer time: impact is 1.167 s after commit, the follow-through ~1.5 s more, then the ball away.
+                // (A realtime hold here is what cut the 2026-09-15 clip at the top of the backswing.)
+                yield return HoldSim(4.0f);
                 GolferTestVerificationRecorder.VideoEnd();
-                Mark("video: clip closed after the swing + 4 s of ball flight");
+                Mark("video: clip closed " + F(Time.time - _vidSimAtSwingSnap) + " s of golfer time after the swing snap");
             }
 
             // Wait for the BALL to settle, not for a stopwatch: a 247 m drive on Hole 08 takes

@@ -3882,4 +3882,9 @@ ffprobe) — not a retime, not a re-record; (2) a sanctioned tool has a **mode**
 instrument — fixed-step harness ⇒ constant playback, real-time bot ⇒ variable; (3) when the fix lives in a banned
 tree, say so in one line and ask, don't work around it with post-processing; (4) after changing the capture mode,
 re-check the **window** too — constant mode hands `Time.captureFramerate` to the Recorder, and the harness's own
-start/stop budget meant something else afterwards (the clip came back drop-free and 2.43 s long).
+start/stop budget meant something else afterwards (the clip came back drop-free and 2.43 s long — cut at the top
+of the backswing; Cesar: "you cut the swinging part, that video is unusable"). The window was WALL clock
+(`WaitForSecondsRealtime`) around a simulation that advances 1/60 per rendered frame at 1.5–2.4 frames per wall
+second under the encoder: 4 s of wall was 0.67 s of swing. **A capture window around a fixed-step simulation is
+measured in simulation time, never wall time** (`HoldSim`), and the wall-clock watchdog is a runaway backstop sized
+from measured throughput, not the thing that ends the clip.

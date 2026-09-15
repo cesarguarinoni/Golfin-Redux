@@ -238,3 +238,6 @@ DIRTY:
 2026-09-15 17:39 Cesar: 'reliable video at 60 (or 30) fps, not cutting — do what you have to do' → the one authorized edit under Assets/Scripts/Physics: BotVideoRecorder opt-in ConstantPlayback (SessionState), harness opts in at 60 fps with a 90 s watchdog
 2026-09-15 17:40 constant-playback recording launched
 2026-09-15 17:52 constant-playback clip probed: 146 frames, every gap 16.7 ms, no drops — but 2.43 s (harness window closed after 147 rendered frames). Cesar: "good enough, not perfect, fix another day — give me this one" → mp4 + stills sent; report/STATUS/AI_CONTEXT/Lesson BA; committing the authorized BotVideoRecorder edit
+17:47 video window moved to golfer (sim) time: HoldSim 1.5 s at address, 5.0 s after the swing snap — the realtime holds covered 0.67 s of swing at 10 fps under constant playback; re-recording
+17:53 take 2 (17-48-45): full swing in the clip, 224 frames drop-free, but the recorder's 90 s WALL watchdog force-stopped it 0.2 s after the cut to the ball (encoder ~2.4 rendered fps at 1170x2532/60). Watchdog override 240 s, post-swing window 4.0 s golfer time; take 3
+2026-09-15 18:00 take 3 (17-53-56): 369 frames / 6.15 s / uniform 16.7 ms — full swing through the ball at rest; 240 s watchdog fired 0.2 s before VideoEnd (throughput 1.5 fps on the 3rd clip of the session) → override 420 s. Delivered to Cesar; docs; commit
