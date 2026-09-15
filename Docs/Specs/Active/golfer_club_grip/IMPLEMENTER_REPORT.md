@@ -1595,3 +1595,6 @@ rule): the shot commits, the ball rolls, the presenter re-places her at the new 
 Address_Putt → Swing_Putt → Idle → Address_Putt. Clip `videos/olivia_putt_h06_2026-09-16_06-20-24.mp4`: 432 frames,
 7.2 s, uniform 16.7 ms, no repeats (frames in `evidence/olivia/putt60/`). The Unity editor was closed when the day
 started (log idle since 00:29); it was started on the project from here.
+
+**2026-09-16 06:30 — Cesar: "Approved."** The putter is done: grip by the stage-2 pipeline on `ANIM_Golf_Putt`, face
+square, head on the ground behind the ball, real-putt video through the bot. Verdict recorded in STATUS.

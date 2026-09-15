@@ -13,7 +13,16 @@ is drop-free. The first take was cut at the top of the backswing because the har
 while the sim steps 1/60 per rendered frame at 1.5–2.4 fps under the encoder; the window is now golfer time
 (`HoldSim`) with the recorder's watchdog override at 420 s. Take 3 (`videos/olivia_swing_h06_2026-09-15_17-53-56.mp4`,
 6.15 s, 369 frames, uniform 16.7 ms) is the full swing through the ball at rest — delivered.
-**Clubs (evening):** the club Cesar sees at the ball is the on-course handle SPRITE (`S_Controls_*`), not a 3D club;
+**2026-09-16 morning — putter APPROVED.** The putter went through the same stage-2 pipeline as the driver
+(`HandHingeStage2` putt mode: putter under ClubSlot in the driver's head convention, own tip, solve on
+`ANIM_Golf_Putt`'s address at the green, bake into the presenter's putt fields applied in putt mode with a rig
+rebuild, face roll folded in); verify: face 89.98°, head 0.0 mm, palms 0.997/0.961, hands on shaft ≤ 0.14 mm; hips
+drop 40 mm + placement put the head on the ground 26 mm behind the ball; the putt video is a real shot through
+`BotSwing`. Animator: `Address_Drive ⇄ Address_Putt` on `IsPutt` (Olivia only). Open: toe 16 mm lower than heel
+at the putt address, overlap Δ17 mm, heel pad / trail palm (also open on the driver). Rule for every next club:
+memory `feedback_new_club_stage2_pipeline` / Lesson BE. Safeguards: `Docs/Scripts/watch_golfer_run.sh` and the
+harness stall watchdog (Lesson BB/BD).
+**Clubs (evening 09-15):** the club Cesar sees at the ball is the on-course handle SPRITE (`S_Controls_*`), not a 3D club;
 only the driver template has the golfer's-eye view (Gemini pipeline; Cesar: do nothing for now). Fixed in
 `GolferPresenter.PlaceAtBall`: (1) the root is grounded at the BALL's lie, not under the feet (the head was 111 mm
 under the rough); (2) the FACE centre lands just behind the ball instead of the shaft tip (the ball was inside the
