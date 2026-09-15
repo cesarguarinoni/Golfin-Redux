@@ -14,7 +14,11 @@ now match Hub's lower-case `-projectpath` — the case-sensitive grep had report
 process" while pid 88994 held the lock, Lesson CN), `691559a29` (build-2942 guard + catalog-art
 residue); **playlife `44e82f9`** pushed (API arm + migration + 24 tests). Spec folder →
 `Docs/Specs/Completed/iap_plumbing/` (STATUS `DONE`). Then the GAME lane (`./Tools/testflight.sh`,
-iOS-Full) for the build that carries this commit — result in the section below this one.
+iOS-Full) for the build that carries this commit — **shipped: TestFlight build 1.5.7 (2947), `state=VALID`
+at Apple 11:21:40 JST** (lane 11:04:58→11:17:10 — preflight 5 s, Unity 2 m 28 s, archive + export
+7 m 52 s, upload 1 m 44 s; Apple processing 4 m 30 s). Editor quit by pid after the scene read clean over
+MCP; nothing swept — the tree was clean from the close-out commits. Guard 2942→2947 committed as
+`267e05e5e`. Base commit of the binary: `c2d259ba2`.
 **Still open, gated on Cesar:** (1) the sandbox purchase on that TestFlight build with a sandbox
 Apple ID (STORE → GOLD TICKET ×10 → ¥ → StoreKit ¥100 → +10 Gold Tickets → Store History row;
 granted-path proof = the `iap_purchases status='granted'` row + `ticket_ledger` +10 + a replay that
