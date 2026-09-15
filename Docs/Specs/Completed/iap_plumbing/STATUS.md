@@ -7,6 +7,11 @@ The remaining acceptance rows are the on-device sandbox pass — a TestFlight bu
 commit is being punched right after this move (see AI_CONTEXT) — and the window close
 (iap_enabled back to false + test SKU off sale) on Cesar's word.
 
+Post-DONE fix 2026-09-16: the first device purchase was refused `empty_receipt` — a StoreKit 2 device
+sends the signed transaction (JWS) and no app receipt. playlife `4cc2538` (API v76) verifies the JWS
+offline (Apple Root CA G3 pin, WWDR/receipt-signing OIDs, ES256) and grants from it; the pending order
+replays on relaunch and promotes the failed row. See AI_CONTEXT 2026-09-16 and Lesson CO.
+
 ---- previous state ----
 
 ARCHITECT_REVIEW_PASS

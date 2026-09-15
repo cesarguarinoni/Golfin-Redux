@@ -4688,3 +4688,22 @@ confirm with the primary source — `pgrep -fil 'MacOS/Unity -projectpath'` AND 
 never the script's exit code alone; and when a process-matching pattern is hand-typed, match
 case-insensitively unless case is the point. Sister rules: Lesson CL,
 `feedback_quit_unity_by_pid_not_app_name`, `feedback_derive_dont_confirm_evidence`.
+
+## Lesson CO — an Editor refusal with the SAME error the device would produce is not "the FakeStore's fault"; read the SDK's device contract before handing a money path to the device pass (2026-09-16, `iap_plumbing`)
+
+The day before, the live Editor run ended in `POST /iap/golfin/verify` → **402 `empty_receipt`**, and I
+wrote it up as expected ("the FakeStore has no receipt; the device pass will carry a real one"). The
+first real purchase then failed with the identical 402: Unity IAP 5 on a StoreKit 2 device hands the
+client `order.Info.Apple.AppReceipt = null` and the proof is `jwsRepresentation` — which the client
+already sent and the server stored **unverified** ("for the day this moves to App Store Server API").
+Apple charged; nothing was granted; Cesar found it in Store History. The acceptance list had one row
+the Editor could not prove and I let the whole receipt path ride on it, although the package's own
+notes (`AiAssistantSkills/in-app-purchases`) name the JWS as the StoreKit 2 proof and every 402 I saw
+was the receipt path with nothing to verify. **Rule:** when the only remaining check is on another
+surface, enumerate what that surface will send (read the SDK contract for the real store, not the
+fake), and make sure the server path for THAT input exists and is tested before the device pass —
+a device pass proves the wiring, it must not be the first time the real input shape is seen. And an
+error that is byte-identical between the harness and the target is a defect until proven otherwise,
+never "a harness limitation". Fix landed as playlife `4cc2538` (offline JWS verification, Apple root
+pinned, genuine device token kept as a test fixture). Sister rules: Lesson CM,
+`feedback_acceptance_must_be_checkable_on_the_target_surface`, `feedback_derive_dont_confirm_evidence`.

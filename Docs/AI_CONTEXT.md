@@ -44,6 +44,24 @@ and `test.tickets.x10` off sale (`iap_products.active=false` + ASC "Remove from 
 anyone on that TestFlight build with a sandbox account can buy the test SKU; production Apple IDs
 pay real ¥100 for 10 Gold Tickets, which the grant honours.
 
+**2026-09-16 07:xx JST — first device purchase FAILED server-side, fixed, API v76.** Cesar: *"Purchase done
+and successful. However, ticket does not appear in Order history."* Primary source first: `iap_purchases`
+held the device transaction `2000001236844044` as `failed / empty_receipt` — Apple had charged, the client
+had sent the StoreKit 2 signed transaction (`jws`, genuine: Apple Root CA G3 chain, bundle
+`com.nextinnovation.golfingame`, product `test.tickets.x10`, `environment Sandbox`) and an EMPTY
+`receipt_data`, because Unity IAP 5 on a StoreKit 2 device hands `order.Info.Apple.AppReceipt` = null. The
+endpoint only knew the legacy `/verifyReceipt` path. The Editor's own 402 `empty_receipt` the day before
+was the SAME symptom, misread as "the FakeStore has no receipt" (Lesson CO). Fix (playlife `4cc2538`,
+deployed **VERSION 76**): `_verify_apple_jws` verifies the JWS offline the way Apple's
+app-store-server-library does (three-cert x5c chain, root pinned to Apple Root CA - G3 SHA-256
+`63343abf…9179` fetched from apple.com, WWDR + receipt-signing marker OIDs, validity at `signedDate`,
+ES256 with the leaf key), `_golfin_jws_carries` cross-checks bundle / environment / product / transaction /
+Consumable / not revoked; JWS first, receipt fallback, neither ⇒ `empty_receipt`. 14 new tests incl. the
+genuine device token as a fixture (suite 357/357). Recovery needs NO re-purchase and no client change: the
+order is still pending on the phone; Unity IAP replays it on the next launch (`FetchPurchases` after
+`Connect`) → the same JWS verifies → `golfin_iap_grant` promotes the failed row → +10 Gold Tickets +
+Store History row → the client confirms the StoreKit transaction.
+
 ---- kickoff-day record (what was built, kept for the follow-on) ----
 
 Cesar's kickoff, implemented by the main thread (the session's `ai-game-developer` MCP tools failed to
