@@ -144,6 +144,21 @@ namespace Golfin.EditorTools
             Launch(6);
         }
 
+        /// <summary>Cesar 2026-09-15: "Make a video of the putt motion as well." The putting camera has no character,
+        /// so the putt swing is recorded at the tee-side putt block, where the Game view shows her with the putter:
+        /// the address, then the Swing_Putt clip, through the sanctioned recorder at constant 60 fps.</summary>
+        internal const string PuttVideoKey = "GolferTestVerification.PuttVideo";
+        internal static bool PuttVideo => SessionState.GetBool(PuttVideoKey, false);
+
+        [MenuItem("GOLFIN/Golfer Test/Record PUTT motion video on Hole 06 (current character)")]
+        public static void RecordPuttHole06()
+        {
+            SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
+            SessionState.SetBool(VideoKey, true);
+            SessionState.SetBool(PuttVideoKey, true);
+            Launch(6);
+        }
+
         [MenuItem("GOLFIN/Golfer Test/Record video on Hole 06 (current character)")]
         public static void RecordHole06()
         {
@@ -194,7 +209,7 @@ namespace Golfin.EditorTools
             Directory.CreateDirectory(outDir);
             // Path WITHOUT extension — the recorder appends .mp4.
             t.GetProperty("CustomOutputPath")?.SetValue(null,
-                outDir + "/" + Golfer.GolferTestCharacter.Name.ToLowerInvariant() + "_swing_h06_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+                outDir + "/" + Golfer.GolferTestCharacter.Name.ToLowerInvariant() + (PuttVideo ? "_putt_h06_" : "_swing_h06_") + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
             // constant playback at 60 fps: the harness steps the simulation at 1/60, and a variable-rate recording
             // discarded 3 of 4 rendered frames (2026-09-15, measured); the watchdog is wall-clock, and 10 s of
             // simulation at an editor 12 fps is ~50 s of wall — 90 s is the recorder's documented ceiling
@@ -2130,7 +2145,7 @@ namespace Golfin.EditorTools
             // the start gate, the scene loads and the settle holds, and the recorder's 30 s
             // runaway watchdog would spend the whole clip on the NOW LOADING screen (it did).
             // A few seconds of address, then the swing, then the ball leaving at impact.
-            if (GolferTestVerificationRecorder.VideoArmed)
+            if (GolferTestVerificationRecorder.VideoArmed && !GolferTestVerificationRecorder.PuttVideo)
             {
                 GolferTestVerificationRecorder.VideoBeginDeferred();
                 yield return HoldSim(1.5f);     // a beat at address before he moves (golfer time, see HoldSim)
@@ -2307,7 +2322,7 @@ namespace Golfin.EditorTools
             // Close the clip once the ball is clearly away. Ending here rather than at
             // ball-at-rest keeps it inside the recorder's 30 s watchdog — a 247 m drive can
             // outlast it — and the follow-through plus the launch is the whole point.
-            if (GolferTestVerificationRecorder.VideoArmed)
+            if (GolferTestVerificationRecorder.VideoArmed && !GolferTestVerificationRecorder.PuttVideo)
             {
                 // golfer time: impact is 1.167 s after commit, the follow-through ~1.5 s more, then the ball away.
                 // (A realtime hold here is what cut the 2026-09-15 clip at the top of the backswing.)
@@ -2958,6 +2973,20 @@ namespace Golfin.EditorTools
                     if (m != null) Mark("putt frames: " + (string)m.Invoke(null, new object[] { golfer, shot }));
                 }
                 catch (Exception e) { Mark("putt frames FAILED: " + e.Message); }
+            }
+            if (pslot != null && st == "Address_Putt" && GolferTestVerificationRecorder.VideoArmed && GolferTestVerificationRecorder.PuttVideo)
+            {
+                // the putt motion on video: a beat at the putt address, then the Swing_Putt clip (IsPutt is true, so
+                // the Swing trigger takes the putt edge), all in golfer time; the animator stays AlwaysAnimate
+                SessionState.SetBool(GolferTestVerificationRecorder.PuttVideoKey, false);
+                GolferTestVerificationRecorder.VideoBeginDeferred();
+                yield return HoldSim(1.2f);
+                anim.ResetTrigger("Cancel"); anim.ResetTrigger("Reset"); anim.SetTrigger("Swing");
+                Mark("putt video: Swing trigger fired at the putt address (state before: " + CurrentState(anim) + ")");
+                float tSw = Time.time; string seen = "";
+                while (Time.time - tSw < 4.5f) { string cs = CurrentState(anim); if (!seen.EndsWith(cs + ";")) seen += cs + ";"; yield return null; }
+                GolferTestVerificationRecorder.VideoEnd();
+                Mark("putt video: clip closed 4.5 s of golfer time after the trigger; states seen: " + seen);
             }
             if (anim != null) anim.cullingMode = cullRows;
             if (!(pslot != null && st == "Address_Putt"))

@@ -257,3 +257,4 @@ DIRTY:
 20:30 confirmation frame sent (20-29-32); report/STATUS/Lesson BD; committing
 20:43 Cesar: fingers through the leg, shaft into the skirt → scan gets hands-thigh (>=100 mm) and shaft-thigh (>=50 mm) clearance constraints + a third lever, the putter's lie (PutterSlot rolled about the aim line); then a putt-motion video
 20:48 clearance scan pick baked: hips -58.6 mm, bend -5 deg, lie -8 deg, stand 380 mm closer; Game view 20-46-59 sent (hands 108 / shaft 109 mm off the thighs, sole +6 mm). Cesar asked: ANIM_Golf_Putt? — swing yes, address no (drive address frame; offered the switch)
+20:53 Cesar: stop the video (stutter + broken hand). Parked: putt motion needs the stage-2 solve on the putt clip's hands. Stall watchdog fired inside the video window (follow-up)

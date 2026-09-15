@@ -1494,3 +1494,23 @@ for every run since; (2) the harness stall watchdog: every `Mark` stamps the clo
 logs `[GolferVerify] STALLED after '<last step>'` and exits play mode after 180 s of silence; (3) the presenter's
 stance application is fenced so an event handler can never kill the harness again. Second finding on the way: 36
 identical scan samples — `CullUpdateTransforms` again; the scan and the putt rows now measure under `AlwaysAnimate`.
+
+### Putter posture, clearance pass (20:40–21:00) and the putt motion — PARKED
+
+Cesar on the first posture bake: "Fingers go through the leg and shaft seems to go into the skirt." The scan gained
+two constraints (hands ≥ 100 mm and shaft ≥ 50 mm off the thigh surface, the drive rows' 80 mm thigh + 20 mm hand
+allowances) and a third lever, the putter's lie (PutterSlot rolled about the aim line — a putter stands more upright
+than a driver, and it brings the head down without moving the hands). Pick: hips −59 mm, bend −5°, lie −8°, stand
+380 mm closer → sole +6 mm, hands 108 mm, shaft 109 mm, torso 34.3°. Game view
+`golfer_h06_putter_2026-09-15_20-46-59.png` sent; awaiting Cesar's read.
+
+**Putt motion (Cesar: "Make a video of the putt motion as well").** A putt-video window was added
+(`GOLFIN/Golfer Test/Record PUTT motion video on Hole 06`: a beat at the putt address, the Swing trigger, 4.5 s of
+golfer time at constant 60 fps). Cesar's screenshot of it: "Hands and club flip as soon as the shot starts." Cause:
+the club hangs from a grip point whose offset was solved (stage 2) for the DRIVE clip's hands; `ANIM_Golf_Putt`
+holds the club differently, so the same offset puts the shaft sideways the moment the putt clip plays — and it is
+also why the putt clip's own address read 44 cm up / 1.3 m short. Cesar: "Stop the video ... useless with the broken
+hand." Stopped. The proper fix is the stage-2 solve run on the putt clip's hands with the putter (address → swing),
+then the posture scan on top; scheduled by Cesar, not started. Also on the way the stall watchdog (180 s) fired
+inside the legitimately silent video window; the window must mark progress or the watchdog must yield while a
+clip is armed — follow-up.
