@@ -1,0 +1,56 @@
+stage1: contact=21.78 mm (r 13.58 + finger 8.20), tol ±1.50 mm; thumb clock 30° station 60.00 mm
+LEAD (left) [one-k, §3.12.3] axis o=(0.0238, 0.0635, -0.0233) d=(-0.8464, 0.5322, -0.0165) (Hand-local)
+  index  k=0.600 closestWrapped=5.17 mm (-16.60) seg prox/mid/dist=7.82/5.17/19.80 joints mcp/pip/dip/tip=25.55/7.82/19.80/40.10 minAll=5.17 boneInsideMesh=True inside(contact-tol)=True inside contact even at k=0.6 (most open)
+  middle k=0.600 closestWrapped=17.42 mm (-4.35) seg prox/mid/dist=17.45/17.42/26.87 joints mcp/pip/dip/tip=26.42/19.00/26.87/45.81 minAll=17.42 boneInsideMesh=False inside(contact-tol)=True inside contact even at k=0.6 (most open)
+  ring   k=0.600 closestWrapped=19.02 mm (-2.75) seg prox/mid/dist=18.14/19.02/27.02 joints mcp/pip/dip/tip=24.58/20.35/27.02/44.94 minAll=18.14 boneInsideMesh=False inside(contact-tol)=True inside contact even at k=0.6 (most open)
+  little k=0.600 closestWrapped=15.20 mm (-6.58) seg prox/mid/dist=14.92/15.20/19.66 joints mcp/pip/dip/tip=21.78/16.96/19.66/31.12 minAll=14.92 boneInsideMesh=False inside(contact-tol)=True inside contact even at k=0.6 (most open)
+  thumb  Thumb2 40.51  Thumb3 24.88  tip 33.45 mm from the axis; proximal vs shaft 38.8°
+  wrist  wrist→+30mm segment to axis 48.09 mm (heel-pad proxy, informational)
+  [pre-render] index pip=7.82 tip=40.10 mm; index MCP localRot=(-0.293, -0.026, 0.081, 0.952)
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\lead_left_downshaft.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\lead_left_palm.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\lead_left_back.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\lead_left_top.png
+  [post-render] index pip=7.82 tip=40.10 mm
+TRAIL (right) [one-k, §3.12.3] axis o=(-0.0241, 0.0636, -0.0230) d=(0.9662, 0.2557, -0.0326) (Hand-local)
+  index  k=0.743 closestWrapped=21.79 mm (+0.01) seg prox/mid/dist=17.76/21.79/30.29 joints mcp/pip/dip/tip=21.78/22.50/30.29/45.50 minAll=17.76 boneInsideMesh=False inside(contact-tol)=True on surface
+  middle k=0.782 closestWrapped=21.78 mm (0.00) seg prox/mid/dist=21.21/21.78/26.18 joints mcp/pip/dip/tip=26.25/25.96/26.18/39.81 minAll=21.21 boneInsideMesh=False inside(contact-tol)=False on surface
+  ring   k=0.748 closestWrapped=21.78 mm (0.00) seg prox/mid/dist=22.07/21.78/24.39 joints mcp/pip/dip/tip=25.71/25.65/24.39/33.38 minAll=21.78 boneInsideMesh=False inside(contact-tol)=False on surface
+  little k=1.000 closestWrapped=16.34 mm (-5.44) seg prox/mid/dist=15.82/16.34/20.45 joints mcp/pip/dip/tip=21.78/18.20/20.45/30.80 minAll=15.82 boneInsideMesh=False inside(contact-tol)=True fixed 40/60/30 — not solved against the club (§3.12.3)
+  thumb  Thumb2 33.49  Thumb3 22.03  tip 30.29 mm from the axis; proximal vs shaft 34.0°
+  wrist  wrist→+30mm segment to axis 45.60 mm (heel-pad proxy, informational)
+  [pre-render] index pip=22.50 tip=45.50 mm; index MCP localRot=(-0.293, 0.030, -0.094, 0.951)
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\trail_right_downshaft.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\trail_right_palm.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\trail_right_back.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\trail_right_top.png
+  [post-render] index pip=22.50 tip=45.50 mm
+
+===== SUPPLEMENTARY: inscribed per-joint wrap (NOT the §3.12.3 one-k solve) =====
+LEAD (left) [INSCRIBED, supplementary] axis o=(0.0238, 0.0635, -0.0233) d=(-0.8464, 0.5322, -0.0165) (Hand-local)
+  index  k=NaN closestWrapped=18.83 mm (-2.95) seg prox/mid/dist=20.92/18.83/18.87 joints mcp/pip/dip/tip=25.55/21.78/21.78/21.78 minAll=18.83 boneInsideMesh=False inside(contact-tol)=True inscribed: mcp 2.8° pip 40.2° dip 67.0°
+  middle k=NaN closestWrapped=16.72 mm (-5.06) seg prox/mid/dist=19.68/16.72/18.70 joints mcp/pip/dip/tip=26.42/21.76/21.79/21.78 minAll=16.72 boneInsideMesh=False inside(contact-tol)=True inscribed: mcp 32.5° pip 70.8° dip 74.7°
+  ring   k=NaN closestWrapped=17.36 mm (-4.42) seg prox/mid/dist=19.18/17.36/18.88 joints mcp/pip/dip/tip=24.58/21.80/21.78/22.60 minAll=17.36 boneInsideMesh=False inside(contact-tol)=True inscribed: mcp 38.3° pip 72.4° dip 80.0° (a joint could not bring its child to contact)
+  little k=NaN closestWrapped=19.34 mm (-2.44) seg prox/mid/dist=18.20/19.34/19.81 joints mcp/pip/dip/tip=21.78/21.78/21.77/21.78 minAll=18.20 boneInsideMesh=False inside(contact-tol)=True inscribed: mcp 31.5° pip 62.8° dip 63.4°
+  thumb  Thumb2 40.51  Thumb3 24.88  tip 33.45 mm from the axis; proximal vs shaft 38.8°
+  wrist  wrist→+30mm segment to axis 48.09 mm (heel-pad proxy, informational)
+  [pre-render] index pip=21.78 tip=21.78 mm; index MCP localRot=(-0.035, -0.003, 0.085, 0.996)
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\supplementary_inscribed\lead_left_inscribed_downshaft.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\supplementary_inscribed\lead_left_inscribed_palm.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\supplementary_inscribed\lead_left_inscribed_back.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\supplementary_inscribed\lead_left_inscribed_top.png
+  [post-render] index pip=21.78 tip=21.78 mm
+TRAIL (right) [INSCRIBED, supplementary] axis o=(-0.0241, 0.0636, -0.0230) d=(0.9662, 0.2557, -0.0326) (Hand-local)
+  index  k=NaN closestWrapped=17.41 mm (-4.36) seg prox/mid/dist=17.29/17.41/19.06 joints mcp/pip/dip/tip=21.78/21.80/21.77/21.78 minAll=17.29 boneInsideMesh=False inside(contact-tol)=True inscribed: mcp 39.1° pip 76.9° dip 65.2°
+  middle k=NaN closestWrapped=16.46 mm (-5.31) seg prox/mid/dist=18.33/16.46/17.97 joints mcp/pip/dip/tip=26.25/21.78/21.78/22.79 minAll=16.46 boneInsideMesh=False inside(contact-tol)=True inscribed: mcp 60.5° pip 72.0° dip 80.0° (a joint could not bring its child to contact)
+  ring   k=NaN closestWrapped=17.98 mm (-3.79) seg prox/mid/dist=19.55/17.98/19.15 joints mcp/pip/dip/tip=25.71/21.77/21.78/21.78 minAll=17.98 boneInsideMesh=False inside(contact-tol)=True inscribed: mcp 62.0° pip 65.2° dip 74.5°
+  little k=1.000 closestWrapped=16.34 mm (-5.44) seg prox/mid/dist=15.82/16.34/20.45 joints mcp/pip/dip/tip=21.78/18.20/20.45/30.80 minAll=15.82 boneInsideMesh=False inside(contact-tol)=True fixed 40/60/30 — not solved against the club (§3.12.3)
+  thumb  Thumb2 33.49  Thumb3 22.03  tip 30.29 mm from the axis; proximal vs shaft 34.0°
+  wrist  wrist→+30mm segment to axis 45.60 mm (heel-pad proxy, informational)
+  [pre-render] index pip=21.80 tip=21.78 mm; index MCP localRot=(-0.309, 0.032, -0.093, 0.946)
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\supplementary_inscribed\trail_right_inscribed_downshaft.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\supplementary_inscribed\trail_right_inscribed_palm.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\supplementary_inscribed\trail_right_inscribed_back.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\supplementary_inscribed\trail_right_inscribed_top.png
+  [post-render] index pip=21.80 tip=21.78 mm
+json: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage1\stage1_numbers.json

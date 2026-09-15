@@ -1,0 +1,24 @@
+stage0 fist_65_85_40: mcp/pip/dip=65/85/40 thumb=30/20 spread=0
+LEFT palmNormalWorld=(0.3446, -0.0066, 0.9387)
+  index  tip->palmPlane 34.04 mm  (pip 27.01, dip 40.30)
+  middle tip->palmPlane 37.20 mm  (pip 24.06, dip 38.90)
+  ring   tip->palmPlane 41.06 mm  (pip 23.14, dip 37.93)
+  little tip->palmPlane 34.52 mm  (pip 23.83, dip 33.95)
+  thumb  tip->palmPlane 79.28 mm
+  index-middle  tipSpacing 14.79 mm  minSegment 13.91 mm  crossing=False
+  middle-ring   tipSpacing 9.99 mm  minSegment 9.85 mm  crossing=False
+  ring-little   tipSpacing 13.46 mm  minSegment 12.56 mm  crossing=False
+RIGHT palmNormalWorld=(-0.3784, -0.0116, 0.9256)
+  index  tip->palmPlane 37.65 mm  (pip 26.39, dip 40.42)
+  middle tip->palmPlane 38.85 mm  (pip 24.02, dip 39.57)
+  ring   tip->palmPlane 40.03 mm  (pip 22.89, dip 37.26)
+  little tip->palmPlane 35.56 mm  (pip 24.04, dip 34.40)
+  thumb  tip->palmPlane 72.85 mm
+  index-middle  tipSpacing 13.99 mm  minSegment 13.54 mm  crossing=False
+  middle-ring   tipSpacing 17.35 mm  minSegment 15.76 mm  crossing=False
+  ring-little   tipSpacing 10.23 mm  minSegment 9.71 mm  crossing=False
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage0\fist_65_85_40_left_palm.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage0\fist_65_85_40_left_back.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage0\fist_65_85_40_right_palm.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage0\fist_65_85_40_right_back.png
+json: Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/stage0\fist_65_85_40_numbers.json

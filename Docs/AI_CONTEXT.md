@@ -4,6 +4,29 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-16 (golfer_club_grip, Olivia v2 mesh) — **the approved prefab with the mesh swapped; two of the three faults gone, the fingers are the rig's**
+
+OLIVIA_RIG_HANDOFF.md §4: the Architect's v2 (same 65-bone Mixamo rig, welded / winding-fixed mesh, 269-island 2K atlas)
+is in as `PfGolfer_Olivia_v2` — a COPY of the approved v1 prefab with only the nested FBX instance swapped
+(`GolferTestCharacterBuilder.BuildOliviaV2`: 18 references re-bound by bone name, every driver + putter bake carried;
+`BuildOlivia()` from scratch would have discarded them). `Olivia_v2` is the default test character
+(`GolferTestCharacter.Default`); `Use Olivia` (v1) and Remy stay selectable, v1 + `evidence/olivia/` untouched.
+Rows 1–4 re-run on v2 against a SAME-DAY v1 re-run (`evidence/olivia/{stage2,stage2_putt}/rerun_2026-09-16/`):
+capture 8.20 mm / ContactM 21.78, tests 39/39, inscribed wrap on the circle, driver and putt verify row-for-row
+identical (pass 11 / fail 0; the same open letters). Faults, measured: **skirt flecks at gameplay distance FIXED**
+(speckle px 1.14 % → 0.52 % of the fabric, strong 0.34 % → 0.07 %), **arm/sleeve shading FIXED** (continuous; skin
+tone unchanged ±2 RGB), **fingers through the fist NOT FIXED** — the same 38 skinning-inverted palmar triangles on
+v1 and v2 (0 at rest, 37–39 at the grip poses): the auto-rig smears each finger joint's weight over the whole
+neighbouring phalanx on a ~5-ring tube; rig-side fix (tighter falloff / more rings), noted in
+`Tools/character_pipeline/README.md`. Findings: (1) **clips cannot Copy-From v2's avatar** — the Blender export
+wraps the skeleton in an `Armature` node the Mixamo clip files lack (`Rig Error: Copied Avatar Rig Configuration
+mis-match … 'ANIM_Golf_Drive' was found instead of 'Armature'`; clips import with zero takes, controller states go
+null) → clips stay on v1's avatar, retarget measured as the identity (`ClipParityV1V2`, 0.005 mm / 0°); (2) the
+stage-2 `club.headAtBall` row (ClubEnd vs ball) reads 57.75 mm FAIL on BOTH since the 09-15 face-placement fix —
+stale row, `club.faceBehindBall.address` is the truth; follow-up. Report: `IMPLEMENTER_REPORT.md` § "Olivia — v2 mesh
+swap"; frames for Cesar: `evidence/olivia_v2/stage2/verify_gameplay.png`, `compare/faceon_sleeves_v1_v2_x2.png`,
+`stage0/fist_75_95_50_right_palm.png`. Awaiting Cesar's read; stage 3 not started.
+
 ## 2026-09-15 (golfer_club_grip stage 2) — **two hands on one club at address: hands on the shaft, wrists bent 14° / 36°**
 
 **Evening 2026-09-15, video:** the Hole 06 swing clip dropped 3 of 4 rendered frames (Recorder `Variable` playback

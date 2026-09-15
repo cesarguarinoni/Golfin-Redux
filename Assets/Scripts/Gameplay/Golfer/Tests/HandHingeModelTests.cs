@@ -14,6 +14,7 @@ namespace Golfin.Gameplay.Golfer.Tests
 #if GOLFIN_GOLFER_TEST
     [TestFixture("MixamoNative")]
     [TestFixture("Olivia")]
+    [TestFixture("Olivia_v2")]
     public class HandHingeModelTests
     {
         readonly string PrefabPath, AssetPath;

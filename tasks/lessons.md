@@ -3958,3 +3958,26 @@ with the side-by-side, the Game view, the video and the paths; (2) measure befor
 thing Cesar approved to fix the thing he did not; (3) a number never overrides a picture, and a picture is looked at
 before it is sent; (4) safeguards stay on — the run watcher, the stall watchdog, the fenced hooks; (5) when Cesar
 says "use X as the example", diff against X mechanically (transforms, rows, frames) before theorising.
+
+## Lesson BG — a mesh swap is a copy of the approved prefab, not a rebuild; "same skeleton" is a number, and the clip avatar can refuse a wrapper node (2026-09-16, `golfer_club_grip`, Olivia v2)
+
+The Architect delivered a v2 mesh on the same Mixamo rig. Three things kept this to one sitting: (1) the v2 prefab is
+`AssetDatabase.CopyAsset` of the APPROVED v1 prefab with only the nested FBX instance swapped and every object
+reference into the old instance re-bound by bone name (`SwapModelInstance` — logged per reference, throws on an
+unmappable one) — running the character builder from scratch would have discarded the driver + putter bakes Cesar
+approved; (2) "same skeleton" was measured before anything was built (65 bones, rest pose Δ 0.003 mm / 0°) and the
+retarget of the v1-avatar clips onto the v2 avatar was measured afterwards (`ClipParityV1V2`, a PlayableGraph sample
+of every clip at ¼ / ½ / ¾, worst 0.005 mm / 0°) instead of being assumed from the handoff's "identical within 4e-6";
+(3) every acceptance row was compared against a SAME-DAY re-run of v1, so the one row that turned red
+(`club.headAtBall` 57.75 mm) was recognised as a stale row from the 09-15 placement fix, not a v2 regression.
+
+Traps, so they are not rediscovered: **Unity's "Copy From Other Avatar" needs the same transform hierarchy** — a
+Blender export that wraps the bones in an `Armature` node cannot lend its avatar to Mixamo clip files
+(`Rig Error: Copied Avatar Rig Configuration mis-match … was found instead of 'Armature'`), and the failure mode is
+silent from the API: the clips import with ZERO takes and every controller state goes null; read the console after
+`SaveAndReimport`, never the importer object (it still reports the settings you just set). **Never write a
+Transform through `SerializedObject` in a reference-rebinding walk** — `m_Children` is serialized and Unity
+"removes extraneous links" behind you; skip `Transform` components, hierarchy is `SetParent`'s. And a winding
+fix does not close a skinned joint: the fist test tears on the palmar side with the same 38 inverted triangles on
+both meshes — count inverted triangles per pose (face normal against the skinned vertex normals) before attributing
+holes to culling, and read the per-joint weight profile before attributing them to the mesh.

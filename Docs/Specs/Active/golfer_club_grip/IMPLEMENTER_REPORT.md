@@ -1598,3 +1598,173 @@ started (log idle since 00:29); it was started on the project from here.
 
 **2026-09-16 06:30 — Cesar: "Approved."** The putter is done: grip by the stage-2 pipeline on `ANIM_Golf_Putt`, face
 square, head on the ground behind the ball, real-putt video through the bot. Verdict recorded in STATUS.
+
+## Olivia — v2 mesh swap (2026-09-16, OLIVIA_RIG_HANDOFF.md §4)
+
+**Iteration shape:** `character:olivia-v2-mesh-swap`. The handoff's §4 in order: swap the prefab's mesh FBX for
+`Olivia_TPose_v2.fbx`, material from the four maps, re-run `AuthorPrefabStructure` + the stage-0 capture, then the §3
+acceptance rows 1–4 again. Nothing re-solved: the approved driver + putter bakes ride over unchanged, and every row is
+compared against a **same-day re-run of v1** (not the 09-15 consoles), so the only variable is the mesh.
+
+Canonical screenshot: `evidence/olivia_v2/stage2/verify_gameplay.png`
+
+### 6.1 What was built (one switch, one builder; v1 untouched for the A/B)
+
+- **`GolferTestCharacter`**: third character `Olivia_v2` (menu `GOLFIN/Golfer Test/Character/Use Olivia_v2`) →
+  `PfGolfer_Olivia_v2.prefab`, `HandHinge_Olivia_v2.asset`, `GolferTest/PfGolfer_Olivia_v2`, `evidence/olivia_v2/`.
+  `Default` is now `Olivia_v2`; `Use Olivia` (the v1 mesh) and `Use MixamoNative` (Remy) stay selectable. The v1
+  prefab, asset, material, textures and `evidence/olivia/` are byte-identical to HEAD.
+- **`GolferTestCharacterBuilder.BuildOliviaV2()`** (menu `Build PfGolfer_Olivia_v2 (v2 mesh swap …)`), idempotent:
+  1. `Olivia_TPose_v2.fbx` through the same `ConfigureModel` as v1 (Humanoid / Create From This Model, `useFileScale`
+     ON × global 1, axis conversion baked, no materials, no blend shapes; Unity had auto-imported it Generic with
+     materials on 09-15 18:28). Rest pose vs v1: 65 bones, same names, **max Δ 0.003 mm / 0.0000°**; `lossyScale = 1`;
+     bounds identical. The one prefab override on a v1 bone (`mixamorig:RightShoulder` local rotation) equals the FBX
+     rest to 0.000° — a no-op, dropped.
+  2. **The four clips STAY on v1's avatar.** The handoff asks for Copy-From v2; Unity refuses it:
+     `Rig Error: Copied Avatar Rig Configuration mis-match. Transform hierarchy does not match: Parent for
+     'mixamorig:Hips' differs from one found in HumanDescription. 'ANIM_Golf_Drive' was found instead of 'Armature'.`
+     The Blender export wraps the skeleton in an `Armature` node (`Olivia_TPose_v2/Armature/mixamorig:Hips`); the
+     Mixamo clip files have `Hips` under the root. I tried it twice (the first build, before reading the console):
+     the clips imported with **zero takes and every controller state went null** — restored from HEAD, and the
+     builder now asserts the clips are Humanoid on v1's avatar with their take present. Whether the retarget
+     v1-avatar-clip → v2-avatar is the identity is **measured**, not assumed: `ClipParityV1V2()` (menu `Check clip
+     retarget parity PfGolfer_Olivia vs _v2`) evaluates every clip at ¼ / ½ / ¾ of its length through a
+     `PlayableGraph` on each prefab's root Animator and compares all 65 bones root-relative — 12 samples, **worst
+     Δpos 0.005 mm (toe ends), worst Δrot 0.0000°**; the sampler moves the hands up to 1.0 m from rest, so it is
+     not reading the bind pose. Pipeline note added to `Tools/character_pipeline/README.md`: export without the
+     `Armature` wrapper next time.
+  3. **`M_Olivia_v2.mat`** (URP Lit): `_BaseMap` T_Olivia_BaseColor 2048², `_BumpMap` T_Olivia_Normal 2048² (importer
+     NormalMap, sRGB off, **green NOT flipped** — the bake is OpenGL +Y, Unity's own convention; the placket, collar
+     folds and skirt pleats in `verify_stance_faceon.png` shade as raised detail under the key light; the importer's
+     `flipGreenChannel` is the one-click knob if an eye disagrees), `_MetallicGlossMap` = **`T_Olivia_MetallicSmoothness.png`**
+     (new, 1024², linear, alpha from input): R = T_Olivia_Metallic's R, A = 1 − T_Olivia_Roughness's R — URP Lit
+     reads metallic from R and smoothness from A of one texture ("Metallic Alpha"), the handoff's first option;
+     `_Smoothness` 1 (a multiplier over the map). Mean metallic 0.002, mean smoothness 0.477.
+  4. **The prefab is a COPY of v1 with the nested FBX instance swapped** — `AssetDatabase.CopyAsset` then
+     `SwapModelInstance`: the v2 model instantiated into the prefab's own scene (never the open scene) at the v1
+     instance's pose (yaw 180°, the Remy convention), `ClubRoot` (20 transforms) and `GolferRig` (16) moved over as
+     added objects, **18 object references re-bound by bone name** — `GripTarget_Constraint` sources, `IK_Lead` /
+     `IK_Trail` root/mid/tip, `Stance_SpineBend` / `Stance_Hips` constrained objects, both leg IKs, both foot copies
+     (each logged `old → new`) — root Animator avatar → v2, the skin → `M_Olivia_v2`, the v1 instance destroyed; an
+     unmappable reference throws instead of saving a half-bound prefab (none). Every bake is carried: ClubSlot /
+     anchors / wrist targets / face roll, `addressFaceOffsetLocal` (0.0344, 0, 0.0464), the putt fields
+     (`puttHipsOffset` (−0.0009, −0.0391, −0.0087), slot, anchors, `addressFaceOffsetLocalPutt`), stance rig at zero.
+     A rebuild through `BuildOlivia()` would have thrown all of that away. The first build's reference walk also wrote
+     the root Transform's `m_Children` (Unity: "Transform child is linked multiple times to parent; removed extraneous
+     links") — Transforms are now skipped, hierarchy is `SetParent`'s only; the shipped prefab is from the clean pass.
+  5. Then exactly as v1: `HandHingeStage0Tool.CaptureAsset` → `HandHinge_Olivia_v2.asset` (finger half-thickness
+     **8.20 mm** vs v1 8.14 — the welded mesh, same skin; ContactM **21.78** vs 21.71; L_prox 52.9 / 52.7 unchanged),
+     `HandHingeStage2.AuthorPrefabStructureForAxes(0.8, 0.6)` — the axes of the approved v1 bake
+     (`evidence/olivia/stage2/stage2_bake.json`) — re-solves the HandHingeModel poses on v2's hands, re-wires the IK
+     onto v2's bones, keeps the stance values (spine 0°, hips 0), `HandHingeModel.data` → the v2 asset.
+
+Mesh as imported: 47,077 verts (Unity re-splits the 30,214 welded ones along UV/normal seams; v1 77,775), 61,056
+tris, 65 bones on the skin (v1 listed 52), one material slot. Closedness measured on both (welded by position):
+25 boundary edges in the whole mesh, none within 12 cm of the right hand, 5 near the left; 53 non-manifold edges; 0
+degenerate triangles — identical v1 / v2.
+
+### 6.2 Handoff §3 rows 1–4, on v2
+
+| Row | Result | Evidence |
+|---|---|---|
+| 1. capture + the 13 tests | **GREEN** — `HandHingeModelTests` 39/39 (13 × MixamoNative / Olivia / Olivia_v2; fixture added). Fist 75/95/50: tips 17.5 / 17.5 / 21.7 / 20.2 mm L, 19.8 / 18.7 / 23.3 / 21.6 R (band 8–20: ring/little 0.2–3.3 over, as v1), spacing 7.2–16.5, no crossing. Fist 65/85/40 also run. | `evidence/olivia_v2/stage0/fist_{75_95_50,65_85_40}_{left,right}_{palm,back}.png` + `_numbers.json` + `_console.txt` |
+| 2. inscribed wrap | **GREEN** — every wrapped tip on the 21.78 mm circle: lead index / middle / little 21.78, ring 22.60; trail index / ring 21.78, middle 22.79 (gate ≤ 5); bones ≥ 16.46 mm from the axis (mesh 13.58). Lead ring and trail middle at the 80° DIP cap, as v1. | `evidence/olivia_v2/stage1/supplementary_inscribed/*` (+ the one-k pass in `stage1/`) |
+| 3. stage 2 verify, Hole 06, rig at zero | **same verdicts as v1, row for row** (table below) | `evidence/olivia_v2/stage2/stage2_verify_{console.txt,numbers.json}` vs `evidence/olivia/stage2/rerun_2026-09-16/` |
+| 4. full-res frames | 6 scene-cam 1600² + the 1170×2532 gameplay frame, all opened | `evidence/olivia_v2/stage2/verify_*.png` |
+
+Stage 2, driver, v2 vs **v1 re-run today** (`evidence/olivia/stage2/rerun_2026-09-16/stage2_verify_console.txt`;
+the approved 09-15 files were restored byte-identical afterwards):
+
+| Row | v1 (today) | v2 | verdict |
+|---|---|---|---|
+| contact radius | 21.71 mm | 21.78 mm | — |
+| `grip.wrist.residual_l` / `_r` | 7.4° / 32.5° | 7.4° / 32.5° | PASS / PASS (stop line 40) |
+| `grip.wrist.angle_l` / `_r` | 17.3° / 13.1° | 17.3° / 13.1° | INFO (lead under the 20–30 band, as approved) |
+| `grip.hands.aboveKnees` | 186.45 mm | 186.38 mm | PASS |
+| `stance.torsoTilt` · `armHang` · `handsFromThighs` · `handsUnderChin` | 30.3° · 15.4 / 7.2° · 156 mm · −13.6 mm | same | PASS ×4 |
+| `stance.kneeFlex` | L 24.1 / R 27.6° | same | FAIL — the clip's, as approved |
+| `grip.palmSide_l` / `_r` | 0.99830 / 0.99628 | same | PASS |
+| `club.crownUp` | 0.99829 | same | PASS |
+| `grip.hand.onShaft_l` / `_r` | 0.02 / 2.01 mm | 0.02 / 2.01 mm | PASS |
+| `grip.hands.overlap` | Δ 3.94 mm | Δ 3.95 mm | PASS (±8) |
+| `grip.heelPad.onTop` | −0.00227 | −0.00227 | FAIL — open by the letter since Remy |
+| `grip.trailPalm.onThumb` | 30.42 mm | 30.39 mm | FAIL — open by the letter since Remy |
+| `grip.hands.noInterpenetration` | 8.77 mm | 8.84 mm | PASS (≥ 8) |
+| `grip.buttCap.pastHeel` | 19.99 mm | 19.98 mm | PASS |
+| `grip.fingers.onShaft_l` / `_r` min | 16.56 / 14.35 mm | 16.64 / 14.44 mm | PASS |
+| `club.faceSquare` | 0.000°, edge 90.009° | 0.000°, edge 90.009° | PASS |
+| `club.headAtBall` | 57.75 mm | 57.75 mm | FAIL on BOTH — a stale row, not a v2 regression: it measures ClubEnd (the shaft tip) against the ball, and since the 09-15 evening placement fix `PlaceAtBall` puts the FACE behind the ball; the norm of `addressFaceOffsetLocal` = √(0.0344² + 0.0464²) = 57.75 mm exactly. The harness's own `club.faceBehindBall.address` −25.5 mm PASS is the current truth. Left as is (a stage-2 tooling row; follow-up). |
+| harness summary | pass 11 fail 0 | pass 11 fail 0 | — |
+
+**Supplementary — the putter** (not in the §4 ask; the prefab carries the approved putt bake, one run proves it):
+`Stage 2 PUTT verify` on v2 (`evidence/olivia_v2/stage2_putt/`) vs v1 re-run today (`evidence/olivia/stage2_putt/rerun_2026-09-16/`):
+identical PASS/FAIL verdicts; face 89.98°, `club.headAtBall` 32.5 mm, palms 0.997 / 0.961, hands on the shaft 0.01 /
+0.13 mm, hips drop 40.07 mm applied, wrist residuals 14.0° / 32.0°; open by the letter as approved: overlap Δ 17.3,
+heel pad, trail palm, knee flex 46.6° (the clip's), and `stance.handsFromThighs` 127 mm — which is the approved
+hips-dropped putt (the 09-15 22:33 v1 console pre-dates the 06:19 hips bake; the same-day v1 re-run reads 127 mm too).
+Frame: `evidence/olivia_v2/stage2_putt/verify_stance_targetside.png` — head on the ground behind the ball, hands stacked.
+
+### 6.3 The three faults, measured (v1 → v2, same day, same code, same camera)
+
+1. **Skirt flecks at gameplay distance — FIXED.** Skirt crop of the Hole 06 gameplay frame (125 × 140 px of the
+   1170 × 2532 capture; fabric = 5×5 median luma < 60): speckle pixels brighter than the local median by > 25 luma
+   **1.14 % of the fabric → 0.52 %**, by > 40 **0.34 % → 0.07 %**, by > 60 **7 px → 0**; summed excess 4743 → 1934.
+   What remains at 6× are the pleat highlight lines of the base colour, not the mip-bleed sparkle; the ponytail and
+   shirt speckles are gone with it. Frames: `evidence/olivia_v2/stage2/verify_gameplay.png` (v2) vs
+   `evidence/olivia/stage2/verify_gameplay.png` (v1); crops `evidence/olivia_v2/compare/gameplay_golfer_v{1,2}_x3.png`,
+   `gameplay_skirt_v{1,2}_x6.png`.
+2. **Arm / sleeve shading — FIXED.** `evidence/olivia_v2/compare/faceon_sleeves_v1_v2_x2.png` (left v1, right v2,
+   2× crop of `verify_stance_faceon.png`): v1 steps at the sleeve-hem/arm junction and flat facets down both upper
+   arms and forearms (78k split verts); v2 continuous shading through the sleeve into the arm. Tone unchanged —
+   forearm mean RGB (115, 106, 115) → (114, 106, 115), back of the trail hand (121, 107, 114) → (119, 106, 112), thigh
+   (120, 107, 115) → (118, 106, 114) on the same trail-side crop — so the smoother look is shading, not a colour shift
+   from the re-baked albedo or the roughness map. Also `compare/awayside_v1_v2_x1.png` (forearms at the grip).
+3. **Fingers through the fist test — NOT FIXED.** Same pose (75/95/50, thumb 30/20), same camera:
+   `evidence/olivia_v2/stage0/fist_75_95_50_right_palm.png` still tears on the palmar side at the PIP/DIP joints, and
+   the openings now read as dark holes where v1 showed light slivers; the back of the fist
+   (`fist_75_95_50_right_back.png`) is a closed smooth shell — the winding fix is real, it just is not what opens the
+   palm. Measured: skinning-inverted finger triangles (posed face normal against the skinned vertex normals, within
+   12 mm of a finger bone) — **rest 0 / 0; fist 65/85/40 32 / 33; fist 75/95/50 38 / 38; the prefab's stage-2 grip
+   poses 37 / 39** (v1 / v2). The skin weights are identical on both (the Architect's finding stands) and they are
+   the cause: each finger joint's influence is spread over the whole neighbouring phalanx — right index child-bone
+   weight 0.08 at 10 % of the proximal phalanx, 0.39 at 80 %, 0.68 at 100 %, 0.87 at 120 % (same profile on every
+   finger, both meshes) — on a tube of ~5 rings, so at 75–95° the palmar rings cross and the triangles between them
+   invert (linear-blend "collapsing elbow"), which URP back-face-culls. Not a texture, atlas or winding matter; the
+   fix is rig-side (tighter falloff at the finger joints, ±3–4 mm, and/or 2–3 more rings per phalanx), recorded in
+   `Tools/character_pipeline/README.md`. Side by side: `evidence/olivia_v2/compare/fist_right_palm_v1_v2_x1.png`.
+
+### 6.4 Frames (all opened at full resolution)
+
+`evidence/olivia_v2/stage2/verify_gameplay.png` (canonical, 1170 × 2532), `verify_stance_faceon.png`,
+`verify_stance_targetside.png`, `verify_awayside.png` (trail hand's back to the camera, fingers wrapped, as v1's
+approved frame), `verify_targetside.png`, `verify_downshaft.png`, `verify_golferseye.png` (filled by the shirt, as v1 —
+tooling gap); `stage2_putt/verify_*.png`; `stage0/fist_*.png`; `stage1/**`; `compare/*` (the A/B crops). v1's same-day
+re-runs: `evidence/olivia/stage2/rerun_2026-09-16/`, `evidence/olivia/stage2_putt/rerun_2026-09-16/` (their
+`verify_gameplay.png` is today's v1 gameplay frame).
+
+**For Cesar's eye at full res:** `verify_gameplay.png` (the skirt at gameplay distance), `compare/faceon_sleeves_v1_v2_x2.png`
+(the sleeves), `stage0/fist_75_95_50_right_palm.png` (the fingers — still torn), `stage2/verify_awayside.png` (the grip).
+
+### 6.5 Housekeeping
+
+- Unity was closed when the session started (clean shutdown 06:47); launched on the project from here, MCP connected.
+  Profile `iOS-Full-Golfer` (define ON) throughout, left active per Cesar's 2026-09-10 rule.
+- ShellScene picked up an in-memory dirty flag during the builds (disk = HEAD); reopened from disk, nothing saved.
+- Character switch left on `Olivia_v2` (also the new `Default`).
+- `Docs/Diagnostics/_capture/hinge_stage2_verify_gameplay_2026-09-16_*.png` are the raw gameplay snaps of the four
+  verify runs (copied into the evidence folders as `verify_gameplay.png`).
+
+### Files modified or created (Olivia v2)
+
+| File | Change |
+|---|---|
+| `Assets/Art/3D/Characters/_Test/Olivia/MixamoNative/v2/**` (+ `.meta`, `v2.meta`) | the Architect's v2 FBX + four maps, committed as delivered; `Olivia_TPose_v2.fbx.meta` re-configured Humanoid like v1 (was Unity's Generic default); `T_Olivia_Normal.png.meta` NormalMap; **new** `T_Olivia_MetallicSmoothness.png` (packed by the builder, linear) |
+| `Assets/Art/3D/Characters/_Test/Olivia/Materials/M_Olivia_v2.mat` | new — URP Lit, the four maps |
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_Olivia_v2.prefab`, `HandHinge_Olivia_v2.asset` | new — copy of v1 with the mesh swapped (§6.1.4), stage-0 capture + `AuthorPrefabStructureForAxes(0.8, 0.6)` |
+| `Assets/Scripts/UI/Editor/GolferTestCharacter.cs` | `Olivia_v2` entry; `Default` → `Olivia_v2` |
+| `Assets/Scripts/UI/Editor/GolferTestCharacterBuilder.cs` | `BuildOliviaV2` (imports, packed map, material, prefab copy + `SwapModelInstance`), `ClipParityV1V2` + `SampleBones`, `PackMetallicSmoothness` |
+| `Assets/Scripts/Gameplay/Golfer/Tests/HandHingeModelTests.cs` | `[TestFixture("Olivia_v2")]` |
+| `Tools/character_pipeline/**` | the Architect's cloud pipeline, committed as delivered; README + two Unity-side findings (Armature wrapper, finger weights) |
+| `Docs/Specs/Active/golfer_club_grip/evidence/olivia_v2/**` | stage 0 / 1 / 2 / 2_putt consoles, numbers, frames; `compare/` A/B crops |
+| `Docs/Specs/Active/golfer_club_grip/evidence/olivia/{stage2,stage2_putt}/rerun_2026-09-16/**` | the same-day v1 re-verifies (the approved files untouched) |
+| `Docs/Specs/Active/golfer_club_grip/{IMPLEMENTER_REPORT,STATUS}.md`, `HEARTBEAT.log`, `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | this section |
