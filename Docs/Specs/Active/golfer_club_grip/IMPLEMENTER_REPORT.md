@@ -1192,3 +1192,65 @@ finger mesh under a fist), `lead_left_inscribed_palm.png` (the wrap on the 21.7 
 | `Docs/Specs/Active/golfer_club_grip/{OLIVIA_RIG_HANDOFF,MESHY_OLIVIA_RUN_LOG}.md` | the Architect's, committed with this report |
 | `Docs/Specs/Active/golfer_club_grip/evidence/olivia/**` | stage 0 / 1 / 2 consoles, numbers, frames, five bake passes |
 | `Docs/Specs/Active/golfer_club_grip/{IMPLEMENTER_REPORT,STATUS}.md`, `HEARTBEAT.log`, `Docs/AI_CONTEXT.md`, `tasks/lessons.md` (AZ), `Docs/TellCode.md` (the Architect's kickoff entry, uncommitted in the tree) | this section |
+
+## Olivia — Cesar's rejection at sight: "her hands are backwards, so is the club" / "she is backwards" (2026-09-15, same day)
+
+### Rejection follow-up
+
+| Defect | Verdict | Same-angle evidence |
+|---|---|---|
+| She is backwards (back to the ball) | **GONE.** Cause: my builder placed her FBX instance at identity; Remy's sits at a 180° yaw inside his prefab (the presenter aims the root, the Mixamo model faces −Z). Fixed on the prefab and in `GolferTestCharacterBuilder` (copies Remy's instance pose, never assumes it). | `evidence/olivia/stage2/verify_stance_faceon.png` (she faces the camera like Remy's `evidence/stage2/verify_stance_faceon.png`), `verify_stance_targetside.png` |
+| Hands backwards | **GONE.** They followed the body. New rows grade it: `grip.palmSide_l` 0.998 / `_r` 0.996 (Remy 0.9997 / 0.9993); the trail-side frame shows the back of the trail hand, knuckles to the camera, as Remy's does. | `verify_awayside.png` vs `evidence/stage2/verify_awayside.png` |
+| Club backwards | **GONE.** Face 0.000° after `ApplyFaceRollFix(138.8)` and the new `club.crownUp` row 0.998 (the face-square row alone cannot tell a club rolled 180° about the shaft from a square one; the crown-up direction in ClubSlot-local is taken from Remy's accepted bake). | `verify_stance_targetside.png` (head soled at the ball) |
+
+Canonical screenshot: `evidence/olivia/stage2/verify_stance_faceon.png`
+
+### What I got wrong, in order
+
+The previous section's §5.4 diagnosis — "her clips play the hands twisted 180° about the forearm, a Mixamo auto-rig
+defect" — was **false**. Every symptom (mirrored club, "twisted" palms, 47° trail residual, five scan passes) was one
+missing transform in my own builder. I explained the symptom with a rig theory before diffing the two prefabs; the
+diff that found it took one call. The `Rig_HandTwist` layer built on that theory is **removed** from the code and
+from both prefabs (Remy's re-authored and re-verified). Then, chasing it, I edited a `.cs` file while the harness
+was in play mode and wedged the session (Cesar: "you launched the game wrong, text labels are not resolving") — the
+standing lesson, broken. Lesson AZ is rewritten accordingly.
+
+### Verify run, prefab as committed (`evidence/olivia/stage2/stage2_verify_console.txt`; bake `stage2_bake.json`: station 20 mm, yaw −2°, pitch −3°, trail gap 6 mm, stand closer 45 mm, axes 0.2 / 0, face roll +138.8°)
+
+| Handoff §3.4.3 row | value | verdict |
+|---|---|---|
+| `stance.*` on the raw clip | torso 30.3° ✔ · arm hang 15.4 / 7.2° ✔ · hands 156 mm off the thighs ✔ · 12 mm behind the chin ✔ · **knee flex R 27.6°** (band 15–25) | **RED (knee R, the clip's)** |
+| `grip.wrist.angle_l` 20–30° | **17.3°** (flex 14.7, dev −8.8); trail 13.1° | RED by 2.7° under the band (straighter than the reference) |
+| both hands on the shaft ≤ 3 mm | 0.02 / 2.01 mm | PASS |
+| IK residual ≤ 10° | lead 7.4°, **trail 32.5°** (Remy's accepted bake: 7.9 / 28.8) | RED on the trail, as Remy |
+| `grip.hands.aboveKnees` ≥ 100 mm | 211 mm, 298 mm from the knee joint | PASS |
+| `club.faceSquare` ±5° | 0.000°; `club.crownUp` 0.998 | PASS |
+| `club.headAtBall` ≤ 50 mm | 0.01 mm | PASS |
+| other grip rows | overlap Δ 3.9 ✔ · clearance 8.8 ✔ · butt cap 20.0 ✔ · fingers outside the mesh both hands ✔ · palm side ✔✔ · heel pad dot −0.002 ✗ (never solved) · trail palm on thumb 30.7 vs 25 ✗ (Remy fails it too) | two pre-existing letters |
+| shaft elevation | 46.0° | — |
+
+Step 3 is still red by the letter on the knee, the lead wrist (under) and the trail residual — all properties of
+her clip, none of the rejected defects. The earlier "overlap vs clearance" red is gone with the correct facing.
+
+### Frames (all opened at full resolution this time, crops at 1:1 on the hands and the club head)
+
+`verify_stance_faceon.png` (canonical), `verify_stance_targetside.png`, `verify_awayside.png`, `verify_targetside.png`,
+`verify_downshaft.png`, `verify_gameplay.png`; `verify_golferseye.png` is filled by her shirt (the camera sits
+inside her torso for this head/torso geometry — a tooling gap, not a pose fault). The rejected frames are kept in
+`rejected_hands_backwards/`; the consoles of the wrong-diagnosis passes stay as history (`*_twist_prev`, `*_pass1…5`,
+`*_palmside_backwards`).
+
+### Still for Cesar's eye at full res
+
+`verify_awayside.png` (the trail hand's roll), `verify_stance_targetside.png` (the model at address, knee flex),
+`verify_stance_faceon.png`.
+
+### Files (this fix)
+
+| File | Change |
+|---|---|
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_Olivia.prefab` | FBX instance at Remy's pose (yaw 180°); `Rig_HandTwist` removed; bake + face roll re-applied |
+| `PfGolfer_MixamoNative.prefab` | `Rig_HandTwist` removed; re-verified unchanged |
+| `Assets/Scripts/UI/Editor/GolferTestCharacterBuilder.cs` | copies Remy's model-instance pose |
+| `Assets/Scripts/UI/Editor/HandHingeStage2.cs` | hand-twist authoring/measure/bake removed (a stale rig is cleaned at author time); palm-side roll rule (opt-in, off) + `grip.palmSide_l/_r` rows; `club.crownUp` row against Remy's up-local |
+| `Docs/Specs/Active/golfer_club_grip/{IMPLEMENTER_REPORT,STATUS}.md`, `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | this section; STATUS; context; Lesson AZ rewritten |

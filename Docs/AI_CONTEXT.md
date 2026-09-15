@@ -55,15 +55,14 @@ rows. Lesson AY. STATUS `STAGE_2_REVIEW`; next is the character switch.
 **Olivia (same day, Architect handoff `OLIVIA_RIG_HANDOFF.md`) — the first roster-likeness model through the same
 pipeline.** `GolferTestCharacter` (EditorPrefs switch; every tool/recorder/test path derives from it; menu
 `GOLFIN/Golfer Test/Character/…`), `GolferTestCharacterBuilder.BuildOlivia` (Humanoid imports, `M_Olivia`, her own
-controller/clips, `PfGolfer_Olivia` at scale 1), then the unchanged tool chain. The contact radius is now measured on
-the character's mesh at capture (Olivia 8.14 mm → `ContactM` 21.71; Remy keeps 7.18). Step 1 and 2 green (26/26
-tests, wrap tips within 1.2 mm). Step 3 red: her Mixamo clips play the hands twisted ~180° about the forearm
-(auto-rig from a palms-forward A-pose) — corrected as prefab data (`Rig_HandTwist`), after which the posture rows
-pass and the head/face/hands rows pass, but knee flex R 27.6°, lead wrist 31.2°, trail IK residual 47.6° and
-overlap Δ 16 mm (her 53 mm knuckle row vs Remy-tuned bands) stay red. Five scan passes to get Remy's values out of
-her prefab (ClubSlot pose → re-aim-to-ball with the head on the ground; `addressHeadLocal` → pass-1 bake; Lesson
-AZ). Evidence `evidence/olivia/`. Next: re-rig Olivia from a palms-down T-pose (FINDINGS §2) before a stance scan.
-
+controller/clips, `PfGolfer_Olivia` at scale 1 with the FBX instance at Remy's 180° yaw), then the unchanged tool
+chain. The contact radius is measured on the character's mesh at capture (Olivia 8.14 mm → `ContactM` 21.71; Remy
+keeps 7.18). Steps 1–2 green (26/26 tests, wrap tips within 1.2 mm). Step 3: Cesar rejected the first pass at sight
+(she faced away from the ball — my builder had left the instance at identity; a false "hand twist" rig diagnosis
+followed and is removed). Fixed: faces the ball, palms on the correct side, hands on the shaft, fingers on her
+circle, face 0.000°, crown up, head on the ball, wrists 17.3°/13.1°, posture rows pass except knee R 27.6° (clip);
+trail IK residual 32.5° and two pre-existing §3.9.6 letters remain. Evidence `evidence/olivia/`. Lesson AZ (diff
+the reference prefab first; never edit .cs in play mode). STATUS `STAGE_2_REVIEW`.
 ---
 ## 2026-09-15 (golfer_club_grip stage 1) — **grip pose in hand space: mechanism holds, the §3.12.3 one-k solve does not make a grip**
 

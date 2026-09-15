@@ -89,7 +89,12 @@ namespace Golfin.EditorTools.Golfer
                 var model = AssetDatabase.LoadAssetAtPath<GameObject>(tpose);
                 var inst = (GameObject)PrefabUtility.InstantiatePrefab(model);
                 inst.transform.SetParent(root.transform, false);
-                inst.transform.localPosition = Vector3.zero; inst.transform.localRotation = Quaternion.identity; inst.transform.localScale = Vector3.one;
+                // the model instance sits at Remy's instance pose — his is a 180° yaw (Mixamo FBXs face −Z after the
+                // axis bake; the presenter aims the ROOT). Identity here turned Olivia around: back to the ball, club
+                // between her legs, "hands backwards" (Cesar, 2026-09-15). Copied, never assumed.
+                var remyInst = remy.transform.Cast<Transform>().First(t => PrefabUtility.IsPartOfPrefabInstance(t.gameObject));
+                inst.transform.localPosition = remyInst.localPosition; inst.transform.localRotation = remyInst.localRotation; inst.transform.localScale = Vector3.one;
+                sb.AppendLine("model instance pose copied from Remy's: rot " + remyInst.localRotation.eulerAngles.ToString("F1"));
 
                 var remyAnim = remy.GetComponent<Animator>();
                 var an = root.AddComponent<Animator>();
