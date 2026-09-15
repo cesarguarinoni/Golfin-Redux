@@ -1074,3 +1074,121 @@ the knees". Frames re-rendered: `verify_stance_targetside.png` (canonical), `ver
 | `Docs/Specs/Active/golfer_club_grip/{IMPLEMENTER_REPORT,STATUS}.md`, `HEARTBEAT.log`, `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | this section; STATUS; session entry; Lesson AY |
 
 Not mine, left alone: `Assets/Art/3D/Characters/_Test/Olivia/*` (+ `.meta`), `Library_broken_143700/`.
+
+## Olivia — first roster-likeness model through the same pipeline (2026-09-15, OLIVIA_RIG_HANDOFF.md §3)
+
+**Iteration shape:** `character:olivia-first-pass`. Handoff §3 steps 1–5 done; FINDINGS §8 run in order.
+**Stopped at step 3 (stage 2), red on four rows** — listed with their causes below; steps 1–2 are green.
+
+Canonical screenshot: `evidence/olivia/stage2/verify_stance_targetside.png`
+
+### 5.1 What was built (nothing hand-authored; one switch selects the character)
+
+- `GolferTestCharacter` (Editor, ungated): `Name` in EditorPrefs (`MixamoNative` default / `Olivia`), every path
+  derived (`PfGolfer_<n>.prefab`, `HandHinge_<n>.asset`, `GolferTest/PfGolfer_<n>` for the harness, `evidence/<n>/stageN`).
+  Menu `GOLFIN/Golfer Test/Character/…`. The stage-0/1/2 tools, the verification recorder and the tests read it;
+  `HandHingeModelTests` runs one fixture per character (**26/26**, 13 each).
+- `GolferTestCharacterBuilder.BuildOlivia()` (Editor, gated): imports (`Olivia_TPose.fbx` Humanoid / Create From This
+  Model, `useFileScale` on, global scale 1, axis conversion baked, no materials; the four clips Humanoid / Copy From
+  Other Avatar = Olivia's, root orientation/height/XZ kept, no loop — the §5.1 settings read off Remy's `.meta`),
+  `M_Olivia.mat` (URP Lit, base + normal; the Meshy `_metallic_roughness.png` is glTF-packed — G roughness / B
+  metallic — and URP Lit wants metallic in R / smoothness in A, so it is left out: metallic 0, smoothness 0.35;
+  texture cleanup is out of scope), `AnimatorController_Golfer_Olivia.controller` (Remy's copied, every state's
+  motion swapped for her clip of the same name — clip avatar = character avatar, §9.8), `PfGolfer_Olivia.prefab`
+  (root scale **1**, `lossyScale = 1`; Animator with her avatar and controller; `GolferPresenter` with Remy's values;
+  `RigBuilder`; the FBX as a nested instance; Remy's `ClubRoot` subtree copied with the slot chain ×1.05156 and the
+  clubs at scale 1 so the driver stays 1.0635 m; `GolferRig/Rig_Grip/GripTarget_Constraint` on her hands).
+- Then the tool chain as for Remy: `HandHingeStage0Tool.CaptureAsset` → `HandHinge_Olivia.asset`;
+  `HandHingeStage2.AuthorPrefabStructureForAxes(0.6, 0)` → `HandHingeModel`, anchors, `Rig_Hands`, `Rig_StanceFeet`,
+  `Rig_Stance`, `Rig_HandTwist`; `RunSolve("pitchscan")` → bake → `ApplyFaceRollFix` → `RunVerify`.
+
+### 5.2 Step 1 — capture + tests: GREEN
+
+| Measured on Olivia (stage-0 capture) | value |
+|---|---|
+| finger half-thickness, palmar side of the proximal phalanx, mean of index/middle/ring both hands | **8.14 mm** (L 8.3 / 8.7 / 8.4, R 7.7 / 8.4 / 7.5; little 8.0 / 7.8) |
+| `ContactM` = 13.58 + 8.14 | **21.71 mm** (Remy 20.41) |
+| `L_prox`, little MCP → index MCP | **52.9 mm L / 52.7 mm R** (Remy 69.7 / 66.7 — her hands are ¾ of his) |
+| fist 75/95/50 (contact sheets `evidence/olivia/stage0/fist_75_95_50_*.png`) | tips 17–23 mm from the palm plane (band 8–20: index/middle in, ring/little 1.7–3.3 mm over — Remy's accepted run had one finger over too), spacing 7–17 mm, no crossing, thumb 73–79 mm |
+
+The contact radius is now the character's: `HandHingeData.fingerHalfThicknessM` is written at capture and
+`HandHingeModel.UseData` sets the static `FingerHalfThicknessM` (a `const` before) in every tool and test; an asset
+without a measurement (Remy's) restores the 7.18 mm his accepted stages were solved with. Method check on Remy:
+the same palmar measure reads 9.39 mm and an all-round radial mean 10.35 mm, so the number is method-dependent by
+±2 mm on a low-poly hand; Olivia's per-finger spread is 7.5–8.7.
+
+### 5.3 Step 2 — inscribed wrap: GREEN
+
+`evidence/olivia/stage1/supplementary_inscribed/` (the accepted stage-1 model): every wrapped tip on the 21.71 mm
+circle — lead index/middle/little 21.71, ring 22.61; trail index/ring 21.71, middle 22.83 (tolerance 1.5, gate ≤ 5) —
+bones ≥ 16.4 mm from the axis (mesh 13.58). Two joints hit the 80° DIP cap (lead ring, trail middle) at +0.9 / +1.1 mm.
+
+### 5.4 Step 3 — stage 2 at address on Hole 06, stance rig at zero: RED (four rows)
+
+Five solve passes were needed before the prefab was hers rather than Remy's (each one a Remy value that had gone
+unnoticed; Lesson AZ): the club hung mirrored under her hand frames (head 1.6 m from the ball) → a re-aim-to-ball
+pre-step; the re-aim put the head 215 mm in the air → elevation from hand height and shaft length; she stood at
+Remy's `addressHeadLocal` (0.5 m too far, 0 grip-feasible configurations) → pass-1 bake + re-scan; her clip plays the
+**hands twisted about the forearm** (palm·aim +0.998 / −0.871 where Remy reads −0.9997 / +0.999, length axes equal)
+→ `Rig_HandTwist` (a Pivot-space OverrideTransform per hand bone, first layer, 176.6° / 157.6° measured and stored
+in the bake); her 53 mm knuckle row → trail gap grid to 8–20 mm. Consoles: `stage2_solve_pitchscan_console_{mirrored_prev,twist_prev,pass1_farball,pass2_headinair,pass3,pass4,pass5}.txt`.
+
+Verify run, prefab as committed (`evidence/olivia/stage2/stage2_verify_console.txt`), bake `stage2_bake.json`
+(station 16 mm, yaw −2°, pitch 1°, trail gap 16 mm, axes 0.2 / 0, face roll −176.4°):
+
+| Handoff §3.4.3 row | value | verdict |
+|---|---|---|
+| `stance.*` on the raw clip | torso 30.3° ✔ · arm hang 18.2 / 19.4° ✔ · hands 193 mm off the thighs ✔ · hands 24 mm behind the chin ✔ · **knee flex L 24.1 / R 27.6°** (band 15–25) | **RED (knee R, the clip's)** |
+| `grip.wrist.angle_l` 20–30° | **31.2°** (flex −26.6, dev 15.0); trail 12.7° | **RED by 1.2°** |
+| both hands on the shaft ≤ 3 mm | 0.01 / 0.01 mm | PASS |
+| IK residual ≤ 10° | lead 27.1°, **trail 47.6°** (over the 40° stop line) | **RED** — the twist correction leaves the trail hand where a 47° rotation is needed to reach a grip frame |
+| `grip.hands.aboveKnees` ≥ 100 mm | 241 mm, 337 mm from the knee joint | PASS |
+| `club.faceSquare` ±5° | 0.000° after `ApplyFaceRollFix(−176.4)` (the recorder solved it; 150° open before) | PASS |
+| `club.headAtBall` ≤ 50 mm | 0.02 mm | PASS |
+| other grip rows | overlap **Δ 16 mm** (±8) vs clearance 8.99 (≥ 8) — her 53 mm knuckle row cannot give both; butt cap 16 mm ✔; fingers outside the mesh ✔; trail palm on thumb ✔ (17.7 vs 23.3 — Remy never passed this); heel pad dot 0.04 ✗ (never solved) | **RED (overlap)** |
+| shaft elevation | 51.3° (driver at address ≈ 50) | — |
+
+What the reds are: (1) the **hand twist is Mixamo's**, not ours — the auto-rig built from a palms-forward A-pose
+plays every clip with the hands rotated about the forearm; the correction is data on the prefab and a re-rig from a
+palms-down T-pose reference (FINDINGS §2) removes it; the 47.6° trail residual and part of the 31° lead wrist follow
+from it. (2) The **knee flex** is the clip's own 27.6° (the stance rig can lift 5 mm; not run — "stance rig at zero
+first"). (3) **Overlap vs clearance** is the hand size against two Remy-tuned constants.
+
+### 5.5 Step 4 — frames (all opened; full-res, none compressed)
+
+`evidence/olivia/stage2/verify_stance_targetside.png` (canonical: address down the target line — head on the ball,
+shaft 51°, arms hanging, torso 30°), `verify_stance_faceon.png`, `verify_awayside.png` (the grip from the trail
+side — **Cesar's eye at full res**: the trail hand's palm and the lead thumb), `verify_targetside.png`,
+`verify_golferseye.png`, `verify_downshaft.png`, `verify_gameplay.png` (Hole 06 camera). Stage-0 fist
+sheets `evidence/olivia/stage0/fist_75_95_50_{left,right}_{palm,back}.png` and stage-1 wrap sheets
+`evidence/olivia/stage1/supplementary_inscribed/*.png` (variance 3781–6957; a first-render cull on her single
+body-sized SkinnedMeshRenderer returned one blank frame until `updateWhenOffscreen` + a warm-up render).
+`mirrored_prev/` keeps the two frames of the club hanging behind her.
+
+**For Cesar's eye at full res:** `verify_awayside.png` (is the trail hand's roll acceptable given the twist
+correction?), `verify_stance_targetside.png` (the model at address), `fist_75_95_50_right_palm.png` (the Meshy
+finger mesh under a fist), `lead_left_inscribed_palm.png` (the wrap on the 21.7 mm circle).
+
+### 5.6 Housekeeping
+
+- `Olivia_30k_rigtest.obj/.fbx` and `Olivia_meshy_60k_clean.obj` are **not in the folder** (nothing to delete; the
+  handoff's file table lists the OBJ — it never reached the repo).
+- `ShellScene` had an in-memory dirty flag (disk = HEAD) that blocked the test runner; reopened from disk, nothing saved.
+- Remy's prefab was re-authored so both prefabs carry the same structure (`Rig_HandTwist` at zero); his verify run
+  after it is in `evidence/stage2/stage2_verify_console.txt` (identical rows expected — see the console).
+- The character switch is left on `MixamoNative`; `GOLFIN/Golfer Test/Character/Use Olivia` selects her.
+
+### Files modified or created (Olivia)
+
+| File | Change |
+|---|---|
+| `Assets/Art/3D/Characters/_Test/Olivia/**` (+ `.meta`) | the Architect's rig, clips, Meshy source and textures, refs — committed as delivered; `.meta` files carry the Humanoid import settings; `Materials/M_Olivia.mat` new |
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_Olivia.prefab`, `HandHinge_Olivia.asset` | tool-built (§5.1), pass-5 bake + face roll, hand twist 176.6° / 157.6° |
+| `Assets/Animations/Golfer/AnimatorController_Golfer_Olivia.controller` | Remy's controller with her clips |
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab` | structure re-authored (`Rig_HandTwist` at zero) |
+| `Assets/Scripts/UI/Editor/GolferTestCharacter.cs`, `GolferTestCharacterBuilder.cs` | new |
+| `Assets/Scripts/UI/Editor/HandHingeStage0Tool.cs`, `HandHingeStage1Tool.cs`, `HandHingeStage2.cs`, `GolferTestVerificationRecorder.cs` | character-derived paths; finger half-thickness measure at capture; `updateWhenOffscreen` + warm-up render; re-aim-to-ball (head on the ground); `Rig_HandTwist` authoring + measurement + bake/apply; butt cap in the pick rule; trail gap grid 8–20 |
+| `Assets/Scripts/Gameplay/Golfer/HandHingeModel.cs`, `HandHingeData.cs`, `Tests/HandHingeModelTests.cs` | `FingerHalfThicknessM` per character via `UseData` (default restores Remy's); measured fields on the asset; one fixture per character |
+| `Docs/Specs/Active/golfer_club_grip/{OLIVIA_RIG_HANDOFF,MESHY_OLIVIA_RUN_LOG}.md` | the Architect's, committed with this report |
+| `Docs/Specs/Active/golfer_club_grip/evidence/olivia/**` | stage 0 / 1 / 2 consoles, numbers, frames, five bake passes |
+| `Docs/Specs/Active/golfer_club_grip/{IMPLEMENTER_REPORT,STATUS}.md`, `HEARTBEAT.log`, `Docs/AI_CONTEXT.md`, `tasks/lessons.md` (AZ), `Docs/TellCode.md` (the Architect's kickoff entry, uncommitted in the tree) | this section |

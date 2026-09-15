@@ -24,11 +24,11 @@ namespace Golfin.EditorTools.Golfer
 {
     public static class HandHingeStage0Tool
     {
-        public const string PrefabPath = "Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab";
-        public const string AssetPath  = "Assets/Art/3D/Characters/_Test/Resources/GolferTest/HandHinge_MixamoNative.asset";
-        const string DefaultOutDir = "Docs/Specs/Active/golfer_club_grip/evidence/stage0";
+        public static string PrefabPath => GolferTestCharacter.PrefabPath;
+        public static string AssetPath  => GolferTestCharacter.AssetPath;
+        static string DefaultOutDir => GolferTestCharacter.EvidenceRoot + "/stage0";
 
-        [MenuItem("GOLFIN/Golfer Test/Hinge/Capture HandHinge_MixamoNative.asset")]
+        [MenuItem("GOLFIN/Golfer Test/Hinge/Capture HandHinge_<character>.asset")]
         public static void CaptureAssetMenu() => Debug.Log(CaptureAsset());
 
         [MenuItem("GOLFIN/Golfer Test/Hinge/Stage 0 fist test (65-85-40, thumb 30-20)")]
@@ -50,12 +50,78 @@ namespace Golfin.EditorTools.Golfer
                 data.sourcePrefab = PrefabPath;
                 data.left = left;
                 data.right = right;
+                // the character's own contact radius: finger half-thickness from the mesh, knuckle rows from the bones
+                data.fingerHalfThicknessM = MeasureFingerHalfThickness(root, anim, out string note, out float lpL, out float lpR);
+                data.lProxLeftM = lpL; data.lProxRightM = lpR; data.measureNote = note;
+                HandHingeModel.UseData(data);
                 if (created) AssetDatabase.CreateAsset(data, AssetPath);
                 else EditorUtility.SetDirty(data);
                 AssetDatabase.SaveAssets();
-                return (created ? "created " : "updated ") + AssetPath + "\n" + Describe(left) + Describe(right);
+                return (created ? "created " : "updated ") + AssetPath + "\n" + note + "\n" + Describe(left) + Describe(right);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+
+        /// <summary>
+        /// Finger half-thickness from the skin — the bone-to-PALMAR-skin distance, which is what the contact circle
+        /// (bone axis at shaftRadius + this) needs. The prefab contents sit in the bind pose, so every
+        /// SkinnedMeshRenderer's sharedMesh vertices pass through its own transform. For each hand × index/middle/ring/
+        /// little, take the vertices in the middle 60 % of the proximal phalanx (MCP→PIP), within 55 % of the spacing
+        /// to the neighbouring knuckle (so the neighbour's skin is excluded) AND on the palmar side of the bone (radial
+        /// direction within 60° of the palm normal), and average their radial distance from the bone. The stored value
+        /// is the mean over index/middle/ring of both hands (the little finger is thinner and reported only). An
+        /// all-round radial mean over-reads by ~3 mm on a low-poly hand whose bone sits off-centre (Remy: 10.4 all-round
+        /// vs 7.18 iter-9b), so the palmar-side measure is the one kept.
+        /// </summary>
+        public static float MeasureFingerHalfThickness(GameObject root, Animator anim, out string note, out float lProxLeft, out float lProxRight)
+        {
+            var palmL = HandHingeModel.Capture(anim, false); var palmR = HandHingeModel.Capture(anim, true);
+            Vector3 palmNL = anim.GetBoneTransform(HumanBodyBones.LeftHand).TransformDirection(palmL.palmNormalHandLocal).normalized;
+            Vector3 palmNR = anim.GetBoneTransform(HumanBodyBones.RightHand).TransformDirection(palmR.palmNormalHandLocal).normalized;
+            var pts = new System.Collections.Generic.List<Vector3>();
+            foreach (var smr in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                var m = smr.sharedMesh; if (m == null) continue;
+                var tr = smr.transform; foreach (var v in m.vertices) pts.Add(tr.TransformPoint(v));
+            }
+            var sb = new StringBuilder("finger half-thickness, palmar side (mesh, bind pose; " + pts.Count + " verts): ");
+            var fingers = new (string n, HumanBodyBones l0, HumanBodyBones l1, HumanBodyBones r0, HumanBodyBones r1)[] {
+                ("index",  HumanBodyBones.LeftIndexProximal,  HumanBodyBones.LeftIndexIntermediate,  HumanBodyBones.RightIndexProximal,  HumanBodyBones.RightIndexIntermediate),
+                ("middle", HumanBodyBones.LeftMiddleProximal, HumanBodyBones.LeftMiddleIntermediate, HumanBodyBones.RightMiddleProximal, HumanBodyBones.RightMiddleIntermediate),
+                ("ring",   HumanBodyBones.LeftRingProximal,   HumanBodyBones.LeftRingIntermediate,   HumanBodyBones.RightRingProximal,   HumanBodyBones.RightRingIntermediate),
+                ("little", HumanBodyBones.LeftLittleProximal, HumanBodyBones.LeftLittleIntermediate, HumanBodyBones.RightLittleProximal, HumanBodyBones.RightLittleIntermediate) };
+            float sum = 0f; int nSum = 0;
+            for (int side = 0; side < 2; side++)
+            {
+                bool right = side == 1;
+                for (int f = 0; f < fingers.Length; f++)
+                {
+                    Transform p = anim.GetBoneTransform(right ? fingers[f].r0 : fingers[f].l0), c = anim.GetBoneTransform(right ? fingers[f].r1 : fingers[f].l1);
+                    if (p == null || c == null) { sb.Append(right ? "R " : "L ").Append(fingers[f].n).Append(" missing; "); continue; }
+                    int nb = f == 0 ? 1 : f - 1;   // the neighbouring knuckle: index→middle, others→the one toward the index
+                    Transform q = anim.GetBoneTransform(right ? fingers[nb].r0 : fingers[nb].l0);
+                    float cut = q != null ? 0.55f * Vector3.Distance(p.position, q.position) : 0.012f;
+                    Vector3 a = (c.position - p.position); float L = a.magnitude; a /= L;
+                    Vector3 palmN = Vector3.ProjectOnPlane(right ? palmNR : palmNL, a).normalized;
+                    float acc = 0f, mn = float.MaxValue, mx = 0f; int n = 0;
+                    foreach (var v in pts)
+                    {
+                        Vector3 d = v - p.position; float t = Vector3.Dot(d, a) / L; if (t < 0.2f || t > 0.8f) continue;
+                        Vector3 rad = d - a * (t * L); float r = rad.magnitude; if (r > cut || r < 1e-4f) continue;
+                        if (Vector3.Dot(rad / r, palmN) < 0.5f) continue;   // palmar side only (±60°)
+                        acc += r; n++; mn = Mathf.Min(mn, r); mx = Mathf.Max(mx, r);
+                    }
+                    float mean = n > 0 ? acc / n : 0f;
+                    sb.Append(right ? "R " : "L ").Append(fingers[f].n).Append(' ').Append((mean * 1000f).ToString("F2")).Append(" mm (n=").Append(n).Append(", ").Append((mn * 1000f).ToString("F1")).Append('–').Append((mx * 1000f).ToString("F1")).Append(", cut ").Append((cut * 1000f).ToString("F1")).Append("); ");
+                    if (f < 3 && n >= 4) { sum += mean; nSum++; }
+                }
+            }
+            float result = nSum > 0 ? sum / nSum : 0f;
+            lProxLeft = Vector3.Distance(anim.GetBoneTransform(HumanBodyBones.LeftLittleProximal).position, anim.GetBoneTransform(HumanBodyBones.LeftIndexProximal).position);
+            lProxRight = Vector3.Distance(anim.GetBoneTransform(HumanBodyBones.RightLittleProximal).position, anim.GetBoneTransform(HumanBodyBones.RightIndexProximal).position);
+            sb.Append("→ fingerHalfThicknessM = ").Append((result * 1000f).ToString("F2")).Append(" mm (mean of index/middle/ring, both hands); L_prox L ").Append((lProxLeft * 1000f).ToString("F1")).Append(" / R ").Append((lProxRight * 1000f).ToString("F1")).Append(" mm; ContactM = ").Append(((HandHingeModel.ShaftRadiusM + result) * 1000f).ToString("F2")).Append(" mm");
+            note = sb.ToString();
+            return result;
         }
 
         static string Describe(in HandHingeHand h)
@@ -83,6 +149,7 @@ namespace Golfin.EditorTools.Golfer
         {
             var data = AssetDatabase.LoadAssetAtPath<HandHingeData>(AssetPath);
             if (data == null) throw new System.InvalidOperationException("Capture the asset first: " + AssetPath);
+            HandHingeModel.UseData(data);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
 
             Scene prevActive = SceneManager.GetActiveScene();
@@ -105,7 +172,7 @@ namespace Golfin.EditorTools.Golfer
                     // A SkinnedMeshRenderer is skinned ONCE per editor frame; every Camera.Render in the same
                     // frame reuses it. Without this, frames taken after the pose changed (the second hand,
                     // the supplementary pass) silently show the FIRST render's pose with the new bones.
-                    s.forceMatrixRecalculationPerRender = true;
+                    s.forceMatrixRecalculationPerRender = true; s.updateWhenOffscreen = true;   // Olivia (one body-sized SMR): the first render culled the hand before the bounds followed the bones
                 }
 
                 var anim = inst.GetComponentInChildren<Animator>(true);
@@ -177,7 +244,7 @@ namespace Golfin.EditorTools.Golfer
             {
                 rt = new RenderTexture(res, res, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
                 cam.targetTexture = rt;
-                cam.Render();
+                cam.Render(); cam.Render();   // twice: the first render of a fresh temp scene came back empty on Olivia's single body-sized SMR
                 RenderTexture.active = rt;
                 tex = new Texture2D(res, res, TextureFormat.RGB24, false);
                 tex.ReadPixels(new Rect(0, 0, res, res), 0, 0);

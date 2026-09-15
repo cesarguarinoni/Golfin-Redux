@@ -108,7 +108,7 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Golfer Test/Verify Mixamo-native on Hole 06 (§9.8)")]
         public static void VerifyMixamoNative()
         {
-            SessionState.SetString(VariantKey, "GolferTest/PfGolfer_MixamoNative");
+            SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
             SessionState.SetBool(RigOffKey, false);
             Launch(6);
         }
@@ -128,7 +128,7 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Golfer Test/Measure rig-off foot-slide baseline (Hole 06)")]
         public static void MeasureRigOffBaseline()
         {
-            SessionState.SetString(VariantKey, "GolferTest/PfGolfer_MixamoNative");
+            SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
             SessionState.SetBool(RigOffKey, true);
             Launch(6);
         }

@@ -3849,3 +3849,27 @@ clip and the bake with the SAME finger pose (a rest-pose clip reads 81 mm over t
 stance rig itself (hips lift with the feet pinned by leg IK + spine bend, Pivot-space OverrideTransforms as data) is
 right and cheap: 20 mm of lift takes the knees from 31° to 16–18° and costs nothing else. Keep it at zero until a clip
 needs it.
+
+## Lesson AZ — a second character is a second set of hand frames: nothing that was authored under one rig's bones is data for another (2026-09-15, `golfer_club_grip`, Olivia)
+
+Building `PfGolfer_Olivia` from Remy's prefab structure looked like a copy job and cost five stage-2 passes, each
+one a different thing that had silently been Remy's:
+1. **The contact radius.** `ContactM` was a `const` with Remy's 7.18 mm finger half-thickness; it is now measured on
+   the character's mesh at the stage-0 capture (palmar-side skin distance from the proximal phalanx bone), stored in
+   `HandHingeData`, and applied by `HandHingeModel.UseData` in every tool and test. The all-round radial mean over-reads
+   on a low-poly hand whose bone sits off-centre (Remy 10.4 mm vs 7.18); the palmar-side measure is the one kept.
+2. **The ClubSlot pose.** It lives under `GripTarget` = the average of the two hand-bone frames, which are rig-specific.
+   Under Olivia's hands Remy's pose hung the club mirrored, head 1.6 m from the ball. The solve now re-aims the shaft
+   from the hands at the ball with the head ON THE GROUND (elevation from hand height and shaft length) before scanning.
+3. **The stance distance.** `addressHeadLocal` is where the head sits in golfer-local at the bake; with Remy's value
+   Olivia stood 0.5 m too far and no scan configuration was grip-feasible. A pass-1 bake of `addressHeadLocal` and a
+   re-scan closes it (PlaceAtBall uses the plan components; the head's height must come from the re-aim).
+4. **The hand twist.** Mixamo auto-rigged Olivia from a palms-forward A-pose; its clips play her hands rotated
+   ~180° about the forearm (palms facing away from each other, knuckle rows up the shaft: lead palm·aim +0.998 vs
+   Remy's −0.9997 with matching length axes). `Rig_HandTwist` (a Pivot-space OverrideTransform per hand bone,
+   evaluated first) carries the measured correction as data; zero on a clean rig.
+5. **The band constants.** Overlap ±8 mm and joint clearance ≥ 8 mm were tuned on a 70 mm knuckle row; on Olivia's
+   53 mm row the two cannot both hold (Δ 16 vs 9 mm). Rules that encode a hand size need the hand size in them.
+Also: a `SkinnedMeshRenderer` that covers the whole body culls the hand on the first render of a fresh temp scene —
+`updateWhenOffscreen` plus a warm-up render; and the accepted stage-0 fist band (tips 8–20 mm from the palm plane)
+was already out of band on one of Remy's fingers — it is an indicator, not the stage-0 gate (capture + tests are).

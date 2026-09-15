@@ -25,9 +25,9 @@ namespace Golfin.EditorTools.Golfer
 {
     public static class HandHingeStage1Tool
     {
-        public const string PrefabPath = HandHingeStage0Tool.PrefabPath;
-        public const string AssetPath  = HandHingeStage0Tool.AssetPath;
-        const string DefaultOutDir = "Docs/Specs/Active/golfer_club_grip/evidence/stage1";
+        public static string PrefabPath => HandHingeStage0Tool.PrefabPath;
+        public static string AssetPath  => HandHingeStage0Tool.AssetPath;
+        static string DefaultOutDir => GolferTestCharacter.EvidenceRoot + "/stage1";
 
         /// <summary>Thumb: "1 o'clock viewed from the butt" = 30° from top (−u) toward +n; station down-shaft of the thumb base.</summary>
         public const float ThumbClockDeg = 30f;
@@ -59,6 +59,7 @@ namespace Golfin.EditorTools.Golfer
         {
             var data = AssetDatabase.LoadAssetAtPath<HandHingeData>(AssetPath);
             if (data == null) throw new InvalidOperationException("Capture the asset first: " + AssetPath);
+            HandHingeModel.UseData(data);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             if (prefab == null) throw new InvalidOperationException("Prefab not found: " + PrefabPath);
             Directory.CreateDirectory(outDir);
@@ -84,7 +85,7 @@ namespace Golfin.EditorTools.Golfer
                     // A SkinnedMeshRenderer is skinned ONCE per editor frame; every Camera.Render in the same
                     // frame reuses it. Without this, frames taken after the pose changed (the second hand,
                     // the supplementary pass) silently show the FIRST render's pose with the new bones.
-                    s.forceMatrixRecalculationPerRender = true;
+                    s.forceMatrixRecalculationPerRender = true; s.updateWhenOffscreen = true;   // Olivia (one body-sized SMR): the first render culled the hand before the bounds followed the bones
                 }
                 var anim = inst.GetComponentInChildren<Animator>(true);
 
@@ -267,7 +268,7 @@ namespace Golfin.EditorTools.Golfer
             {
                 rt = new RenderTexture(res, res, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
                 cam.targetTexture = rt;
-                cam.Render();
+                cam.Render(); cam.Render();   // twice: the first render of a fresh temp scene came back empty on Olivia's single body-sized SMR
                 RenderTexture.active = rt;
                 tex = new Texture2D(res, res, TextureFormat.RGB24, false);
                 tex.ReadPixels(new Rect(0, 0, res, res), 0, 0);

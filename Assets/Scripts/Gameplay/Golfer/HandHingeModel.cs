@@ -423,8 +423,15 @@ namespace Golfin.Gameplay.Golfer
         // thumb), so one convention serves both.
 
         public const float ShaftRadiusM          = 0.013575f;                 // Grip mesh radius (iter-9b)
-        public const float FingerHalfThicknessM  = 0.00718f;                  // iter-9b 6.83 mm × the 1.0516 real-size rescale (2026-09-15)
-        public const float ContactM              = ShaftRadiusM + FingerHalfThicknessM;   // 0.020405
+        /// <summary>
+        /// Per character: Remy's 7.18 mm by default (iter-9b 6.83 mm × the 1.0516 real-size rescale, 2026-09-15);
+        /// the stage-0 capture measures it on the mesh and stores it in HandHingeData; <see cref="UseData"/> sets it.
+        /// </summary>
+        public const float DefaultFingerHalfThicknessM = 0.00718f;   // Remy (iter-9b), the value his accepted stages were solved with
+        public static float FingerHalfThicknessM = DefaultFingerHalfThicknessM;
+        public static float ContactM             => ShaftRadiusM + FingerHalfThicknessM;   // Remy: 0.020405
+        /// <summary>Make the contact circle the character's: every tool and test calls this after loading the hinge asset. An asset without a measurement (Remy's) restores the default.</summary>
+        public static void UseData(HandHingeData d) { FingerHalfThicknessM = d != null && d.fingerHalfThicknessM > 0.002f ? d.fingerHalfThicknessM : DefaultFingerHalfThicknessM; }
         public const float ContactToleranceM     = 0.0015f;
 
         /// <summary>§3.12.3 start values, lead (left) hand.</summary>
@@ -531,8 +538,9 @@ namespace Golfin.Gameplay.Golfer
         /// reports rather than hides.
         /// </summary>
         public static FingerAxisMetrics SolveFingerK(Animator anim, in HandHingeHand hand, int finger, in FingerFlex f,
-                                                     Vector3 o, Vector3 d, float contact = ContactM, int iterations = 24)
+                                                     Vector3 o, Vector3 d, float contact = -1f, int iterations = 24)
         {
+            if (contact < 0f) contact = ContactM;   // the character's contact circle (not a compile-time constant any more)
             HandHingeHand hh = hand;   // `in` parameters cannot be captured by a local function (CS1628)
             FingerFlex ff = f;
             FingerAxisMetrics At(float k)
@@ -632,8 +640,9 @@ namespace Golfin.Gameplay.Golfer
         }
 
         public static InscribedSolve SolveFingerInscribed(Animator anim, in HandHingeHand hand, int finger, float spreadDeg,
-                                                          Vector3 o, Vector3 d, float contact = ContactM)
+                                                          Vector3 o, Vector3 d, float contact = -1f)
         {
+            if (contact < 0f) contact = ContactM;
             var r = new InscribedSolve();
             Finger(anim, hand, finger, new FingerFlex(0f, 0f, 0f, spreadDeg));        // start from rest, spread kept
             r.mcp = SolveJointToContact(anim, hand, finger, 0, spreadDeg, o, d, contact, 0f, 90f,  out r.mcpReached, out _);

@@ -17,6 +17,11 @@ namespace Golfin.Gameplay.Golfer
         public string sourcePrefab;
         public HandHingeHand left;
         public HandHingeHand right;
+        /// <summary>Finger half-thickness measured on THIS character's mesh at the proximal phalanges (m); 0 = not measured (Remy's default applies).</summary>
+        public float fingerHalfThicknessM;
+        /// <summary>Knuckle row, little MCP → index MCP (m), per hand.</summary>
+        public float lProxLeftM, lProxRightM;
+        public string measureNote;
     }
 #else
     /// <summary>GOLFIN_GOLFER_TEST is absent: an inert shell so the .asset still deserializes.</summary>

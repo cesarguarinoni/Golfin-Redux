@@ -40,10 +40,10 @@ namespace Golfin.EditorTools.Golfer
 {
     public static class HandHingeStage2
     {
-        public const string PrefabPath = HandHingeStage0Tool.PrefabPath;
-        public const string AssetPath  = HandHingeStage0Tool.AssetPath;
-        public const string OutDir     = "Docs/Specs/Active/golfer_club_grip/evidence/stage2";
-        public const string BakePath   = OutDir + "/stage2_bake.json";
+        public static string PrefabPath => HandHingeStage0Tool.PrefabPath;
+        public static string AssetPath  => HandHingeStage0Tool.AssetPath;
+        public static string OutDir     => GolferTestCharacter.EvidenceRoot + "/stage2";
+        public static string BakePath   => OutDir + "/stage2_bake.json";
         public const string Stage2Key       = "GolferTestVerification.Stage2";
         public const string Stage2VerifyKey = "GolferTestVerification.Stage2Verify";
 
@@ -116,6 +116,7 @@ namespace Golfin.EditorTools.Golfer
             {
                 var anim = root.GetComponentInChildren<Animator>(true);
                 var data = AssetDatabase.LoadAssetAtPath<HandHingeData>(AssetPath);
+                HandHingeModel.UseData(data);
                 lead = InscribedFor(anim, data.left, leadFrac, true, out string l1);
                 trail = InscribedFor(anim, data.right, trailFrac, false, out string l2);
                 log = l1 + l2;
@@ -155,6 +156,7 @@ namespace Golfin.EditorTools.Golfer
             {
                 var anim = root.GetComponentInChildren<Animator>(true);
                 var data = AssetDatabase.LoadAssetAtPath<HandHingeData>(AssetPath);
+                HandHingeModel.UseData(data);
                 Transform Tf(string n) => root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == n);
                 Transform clubSlot = Tf("ClubSlot"), golferRig = Tf("GolferRig");
                 if (clubSlot == null || golferRig == null) throw new InvalidOperationException("ClubSlot / GolferRig not found");
@@ -228,9 +230,31 @@ namespace Golfin.EditorTools.Golfer
                 Wire(Child(rigStanceT, "Stance_LegR_IK"), anim, HumanBodyBones.RightUpperLeg, HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot, footTR);
                 sb.AppendLine("Rig_StanceFeet: foot targets copied from the clip's feet; Rig_Stance: Hips lift " + hd.position.ToString("F4") + " (kept, hips-local), leg IK to the foot targets");
 
+                // Rig_HandTwist — a per-character correction for a rig whose clips play the hands twisted about the
+                // forearm (Olivia, Mixamo auto-rig on a palms-forward A-pose: at address her palms face away from each
+                // other, knuckle rows up the shaft — 180° about the hand's length axis vs Remy). Pivot-space rotation
+                // about the hand bone's own length axis, evaluated FIRST so GripTarget, the arm IK and every grip row
+                // see corrected hands. Measured by the stage-2 solve from the clip, stored in the bake; zero = no-op.
+                Transform rigTwistT = Child(golferRig, "Rig_HandTwist");
+                var rigTwist = rigTwistT.GetComponent<Rig>() ?? rigTwistT.gameObject.AddComponent<Rig>();
+                rigTwist.weight = 1f;
+                foreach (var (twName, twBone) in new[] { ("Twist_LeftHand", HumanBodyBones.LeftHand), ("Twist_RightHand", HumanBodyBones.RightHand) })
+                {
+                    Transform twT = Child(rigTwistT, twName);
+                    var tw = twT.GetComponent<OverrideTransform>() ?? twT.gameObject.AddComponent<OverrideTransform>();
+                    tw.weight = 1f;
+                    var td = tw.data;
+                    td.constrainedObject = anim.GetBoneTransform(twBone); td.sourceObject = null;
+                    td.space = OverrideTransformData.Space.Pivot; td.position = Vector3.zero;
+                    td.positionWeight = 0f; td.rotationWeight = 1f;
+                    tw.data = td;
+                    sb.AppendLine("Rig_HandTwist: " + twName + " on " + td.constrainedObject.name + ", Pivot space, rotation " + td.rotation.ToString("F3") + " (kept)");
+                }
+
                 var rb = root.GetComponent<RigBuilder>();
                 var rigGrip = Tf("Rig_Grip")?.GetComponent<Rig>();
                 rb.layers.Clear();
+                rb.layers.Add(new RigLayer(rigTwist, true));
                 rb.layers.Add(new RigLayer(rigFeet, true));
                 rb.layers.Add(new RigLayer(rigStance, true));
                 if (rigGrip != null) rb.layers.Add(new RigLayer(rigGrip, true));
@@ -366,6 +390,8 @@ namespace Golfin.EditorTools.Golfer
             if (gripTarget == null || clubSlot == null || clubStart == null || clubEnd == null || aL == null || aR == null || wL == null || wR == null || rigHands == null || hm == null || hm.Data == null)
             { L("MISSING: gripTarget=" + (gripTarget != null) + " clubSlot=" + (clubSlot != null) + " clubStart=" + (clubStart != null) + " clubEnd=" + (clubEnd != null) + " anchors=" + (aL != null && aR != null) + " wrists=" + (wL != null && wR != null) + " Rig_Hands=" + (rigHands != null) + " HandHingeModel=" + (hm != null) + " — stage 2 cannot run"); File.WriteAllText(Path.Combine(OutDir, "stage2_" + tag + "_console.txt"), log.ToString()); yield break; }
 
+            HandHingeModel.UseData(hm.Data);
+            L("character " + GolferTestCharacter.Name + ": contact radius " + Mm(HandHingeModel.ContactM) + " mm (finger half-thickness " + Mm(HandHingeModel.FingerHalfThicknessM) + " mm)");
             Transform handL = anim.GetBoneTransform(HumanBodyBones.LeftHand), handR = anim.GetBoneTransform(HumanBodyBones.RightHand);
             Transform head = anim.GetBoneTransform(HumanBodyBones.Head);
             float hAim = Heading(shot);
@@ -374,6 +400,43 @@ namespace Golfin.EditorTools.Golfer
             // 1. rig off → the clip's hands
             float rigRestore = rigHands.weight;
             rigHands.weight = 0f; yield return null; yield return null; yield return new WaitForEndOfFrame();
+            // 1a. hand twist (solve mode): a rig whose clip plays the hands with the palms on the wrong side of the
+            //     forearm gets a 180° Pivot-space correction on each hand bone (Rig_HandTwist), measured here from the
+            //     raw clip: lead palm normal should point along −aim (toward the target), trail along +aim (Remy:
+            //     −0.9997 / +0.9993). The correction is stored in the bake and written to the prefab.
+            Vector3 twistEulerL = Vector3.zero, twistEulerR = Vector3.zero;
+            {
+                var twL = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Twist_LeftHand");
+                var twR = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Twist_RightHand");
+                if (twL != null && twR != null)
+                {
+                    if (verify) { twistEulerL = twL.data.rotation; twistEulerR = twR.data.rotation; L("hand twist (prefab as committed): L " + twistEulerL.ToString("F2") + " R " + twistEulerR.ToString("F2")); }
+                    else
+                    {
+                        bool changed = false;
+                        foreach (var (tw, hnd, hh, want, lbl) in new[] { (twL, handL, hm.Data.left, -aimDir, "lead"), (twR, handR, hm.Data.right, aimDir, "trail") })
+                        {
+                            var d0 = tw.data; d0.rotation = Vector3.zero; tw.data = d0;
+                        }
+                        yield return null; yield return null; yield return new WaitForEndOfFrame();
+                        foreach (var (tw, hnd, hh, want, lbl) in new[] { (twL, handL, hm.Data.left, -aimDir, "lead"), (twR, handR, hm.Data.right, aimDir, "trail") })
+                        {
+                            Vector3 nW = hnd.TransformDirection(hh.palmNormalHandLocal).normalized, uW = hnd.TransformDirection(hh.lengthAxisHandLocal).normalized;
+                            float along = Vector3.Dot(nW, want);
+                            Vector3 nPerp = Vector3.ProjectOnPlane(nW, uW).normalized, wPerp = Vector3.ProjectOnPlane(want, uW).normalized;
+                            float ang = Vector3.SignedAngle(nPerp, wPerp, uW);
+                            var d = tw.data;
+                            // the measured angle about the length axis (Olivia: 176.6° lead / 157.6° trail — a flat 180°
+                            // left the trail hand 41.6° from the clip after the IK, over the 40° stop line)
+                            if (along < 0f) { d.rotation = Quaternion.AngleAxis(ang, hh.lengthAxisHandLocal.normalized).eulerAngles; changed = true; }
+                            tw.data = d;
+                            if (lbl == "lead") twistEulerL = d.rotation; else twistEulerR = d.rotation;
+                            L("hand twist " + lbl + ": raw clip palm·want = " + F(along) + " (angle about the length axis to the convention " + F1(ang) + "°) → " + (along < 0f ? F1(ang) + "° about the hand's length axis applied" : "kept as the clip") + ", Euler " + d.rotation.ToString("F2"));
+                        }
+                        if (changed) { yield return null; yield return null; yield return new WaitForEndOfFrame(); }
+                    }
+                }
+            }
             Quaternion clipRotL = handL.rotation, clipRotR = handR.rotation;
             Vector3 clipPosL = handL.position, clipPosR = handR.position;
             L("clip hands (rig OFF" + (verify ? ", verify mode — restored to 1 after this capture" : "") + "): L pos=" + V(clipPosL) + " rot=" + Q(clipRotL) + " | R pos=" + V(clipPosR) + " rot=" + Q(clipRotR));
@@ -456,6 +519,31 @@ namespace Golfin.EditorTools.Golfer
             L("hand-local lead: o=" + V(gL.o) + " d=" + V(gL.d) + " fHand=" + V(gL.fHand) + " gap=" + V(gL.gapLocal) + " thumbInter=" + V(gL.thumbInterLocal));
             L("hand-local trail: o=" + V(gR.o) + " d=" + V(gR.d) + " fHand=" + V(gR.fHand) + " fLittle=" + V(gR.fLittle));
 
+            if (!verify && ball != null)
+            {
+                // ClubSlot's local pose lives under GripTarget = the average of the two hand-bone frames, which are
+                // rig-specific: another character's bake hangs the club wherever ITS hand frames point (Olivia with
+                // Remy's pose: mirrored, head 1.6 m from the ball). Before solving, aim the shaft from the hands at
+                // the ball and put the butt 30 mm behind the hand centre; roll is kept (the face-square fix owns it).
+                Vector3 s0c = clubStart.position, ec = clubEnd.position, sc = (ec - s0c).normalized;
+                // the head must land ON THE GROUND: azimuth toward the ball, elevation from the hand height and
+                // the shaft length (butt 30 mm behind the hand centre) — the ball's plan distance is then whatever the
+                // bake's addressHeadLocal makes PlaceAtBall stand the golfer at, so a pass-1 bake + re-scan closes it
+                Vector3 planToBall = Vector3.ProjectOnPlane(ball.position - gripTarget.position, Vector3.up).normalized;
+                float shaftL = Vector3.Distance(s0c, ec), drop = gripTarget.position.y - ball.position.y;
+                float sinE = Mathf.Clamp(drop / (shaftL - 0.03f), 0f, 0.99f);
+                Vector3 want = (planToBall * Mathf.Sqrt(1f - sinE * sinE) - Vector3.up * sinE).normalized;
+                float headOff = Vector3.Distance(new Vector3(ec.x, 0f, ec.z), new Vector3(ball.position.x, 0f, ball.position.z));
+                float headUp = ec.y - ball.position.y;
+                if (headOff > 0.30f || Vector3.Dot(sc, want) < 0.8f || Mathf.Abs(headUp) > 0.10f)
+                {
+                    clubSlot.rotation = Quaternion.FromToRotation(sc, want) * clubSlot.rotation;
+                    yield return null;
+                    clubSlot.position += (gripTarget.position - want * 0.03f) - clubStart.position;
+                    yield return null; yield return new WaitForEndOfFrame();
+                    L("RE-AIM: the club head was " + Mm(headOff) + " mm from the ball in plan and " + Mm(headUp) + " mm above it (shaft·want " + F(Vector3.Dot(sc, want)) + ") — ClubSlot re-aimed from the hands toward the ball with the head on the ground (elevation " + F1(Mathf.Asin(sinE) * Mathf.Rad2Deg) + "°), butt 30 mm behind the hand centre; now head " + Mm(Vector3.Distance(new Vector3(clubEnd.position.x, 0f, clubEnd.position.z), new Vector3(ball.position.x, 0f, ball.position.z))) + " mm off, ClubSlot local " + V(clubSlot.localPosition) + " " + Q(clubSlot.localRotation));
+                }
+            }
             Vector3 E = clubEnd.position, S0 = clubStart.position, sdir = (E - S0).normalized;
             // the CLIP's hands against the §3.12.4 rules, before anything is solved
             foreach (var (whichHand, g, h) in new[] { ("lead", gL, handL), ("trail", gR, handR) })
@@ -598,7 +686,7 @@ namespace Golfin.EditorTools.Golfer
                 // a coordinate-descent sweep after the best station/yaw/pitch pushes the trail hand out of reach
                 // (12 mm cleared the joints but left the trail hand 5.9 mm off the shaft); the constraint set is
                 // both hands on the shaft (≤ 3 mm) AND lead-to-trail joint clearance ≥ 8 mm, objective = wrist sum
-                float[] gaps = { 0.008f, 0.012f };
+                float[] gaps = { 0.008f, 0.012f, 0.016f, 0.020f };   // Olivia's smaller hands (L_prox 53 mm vs Remy's 70) stack tighter: 8/12 left the joints 2.9 mm apart
                 var leadJ = HandHingeModel.LeftJoints.Skip(3).Select(b => anim.GetBoneTransform(b)).ToArray();
                 var trailJ = HandHingeModel.RightJoints.Skip(3).Take(9).Select(b => anim.GetBoneTransform(b)).ToArray();
                 float bestScanCost = float.MaxValue, bestPitch = 0f, bestYaw = 0f, bestSt = best.stationL, bestGap = 0f, bestStand = 0f;
@@ -638,6 +726,8 @@ namespace Golfin.EditorTools.Golfer
                     float segL = FingerSegMin(anim, gL, s0p, dirp), segR = FingerSegMin(anim, gR, s0p, dirp);
                     float knee = KneeClear(anim, out float handKnee, out _, out _);
                     float armLeg = ArmLegClear(anim, out _);
+                    float buttS = Vector3.Dot(handL.position - s0p, dirp);
+                    bool buttOk = buttS >= 0.008f * CharScale && buttS <= 0.020f * CharScale;
                     Posture(anim, golfer.transform, fwdScan, out _, out _, out _, out float ahLs, out float ahRs, out float thighS, out float chinS);
                     float thighSurf = thighS - ThighRadiusM - HandHalfM;
                     bool hangOk = ahLs <= ArmHangMaxDeg && ahRs <= ArmHangMaxDeg, thighOk = thighSurf >= HandsThighMinM && thighSurf <= HandsThighMaxM, chinOk = chinS >= HandsChinMinM && chinS <= HandsChinMaxM;
@@ -655,7 +745,7 @@ namespace Golfin.EditorTools.Golfer
                     scan.Append("st").Append(Mm(stS)).Append(" yaw").Append(yw.ToString("F1")).Append(" pitch").Append(pd.ToString("F1")).Append(" gap").Append(Mm(gp)).Append(" stand").Append(Mm(sd)).Append(" | ").Append(F1(wLp)).Append(" (").Append(F1(flLp)).Append(",").Append(F1(dvLp)).Append(") | ")
                         .Append(F1(wRp)).Append(" (").Append(F1(flRp)).Append(",").Append(F1(dvRp)).Append(") | ").Append(Mm(dL)).Append(" ").Append(Mm(dR))
                         .Append(" | ").Append(rL.ToString("F2")).Append(" ").Append(rR.ToString("F2")).Append(" | ").Append(F1(elL)).Append(" ").Append(F1(elR))
-                        .Append(" | ").Append(Mm(hb)).Append(" | ").Append(Mm(onLp)).Append(" ").Append(Mm(onRp)).Append(" | clr ").Append(Mm(clr)).Append(" | seg ").Append(Mm(segL)).Append(" ").Append(Mm(segR)).Append(" | ovl ").Append(Mm(ovl)).Append(" | knee ").Append(Mm(knee)).Append(" hk ").Append(Mm(handKnee)).Append(" | armleg ").Append(Mm(armLeg)).Append(" | hang ").Append(F1(ahLs)).Append("/").Append(F1(ahRs)).Append(" thigh ").Append(Mm(thighSurf)).Append(" chin ").Append(Mm(chinS)).Append(postureOk ? " ok" : " POSTURE").Append("\n");
+                        .Append(" | ").Append(Mm(hb)).Append(" | ").Append(Mm(onLp)).Append(" ").Append(Mm(onRp)).Append(" | clr ").Append(Mm(clr)).Append(" | seg ").Append(Mm(segL)).Append(" ").Append(Mm(segR)).Append(" | ovl ").Append(Mm(ovl)).Append(" | knee ").Append(Mm(knee)).Append(" hk ").Append(Mm(handKnee)).Append(" | armleg ").Append(Mm(armLeg)).Append(" | hang ").Append(F1(ahLs)).Append("/").Append(F1(ahRs)).Append(" thigh ").Append(Mm(thighSurf)).Append(" chin ").Append(Mm(chinS)).Append(postureOk ? " ok" : " POSTURE").Append(" | butt ").Append(Mm(buttS)).Append(buttOk ? "" : " OUT").Append("\n");
                     // pick: least wrist bend among the configurations where BOTH hands land on the shaft (the post-IK
                     // truth of reach), the lead joints clear the trail index/middle/ring joints by ≥ 8 mm, and every
                     // finger bone segment stays outside the shaft mesh, and the trail little MCP sits within ±8 mm of
@@ -663,7 +753,7 @@ namespace Golfin.EditorTools.Golfer
                     // 2026-09-15: "as you straighten the grip, move the arms higher so they don't collide with the
                     // knees when swinging") — the same rules the rows below grade
                     float segFloor = HandHingeModel.ShaftRadiusM - 0.0005f;
-                    float c = wLp + wRp + (onLp > 0.003f || onRp > 0.003f ? 1000f : 0f) + (clr < 0.008f ? 1000f : 0f) + (segL < segFloor || segR < segFloor ? 1000f : 0f) + (Mathf.Abs(ovl) > 0.008f ? 1000f : 0f) + (knee < KneeClearM || handKnee < HandKneeMinM ? 1000f : 0f) + (hangOk ? 0f : 1000f) + (thighOk ? 0f : 1000f) + (chinOk ? 0f : 1000f);
+                    float c = wLp + wRp + (onLp > 0.003f || onRp > 0.003f ? 1000f : 0f) + (clr < 0.008f ? 1000f : 0f) + (segL < segFloor || segR < segFloor ? 1000f : 0f) + (Mathf.Abs(ovl) > 0.008f ? 1000f : 0f) + (knee < KneeClearM || handKnee < HandKneeMinM ? 1000f : 0f) + (hangOk ? 0f : 1000f) + (thighOk ? 0f : 1000f) + (chinOk ? 0f : 1000f) + (buttOk ? 0f : 1000f);
                     if (onLp <= 0.003f && onRp <= 0.003f && clr >= 0.008f && segL >= segFloor && segR >= segFloor && Mathf.Abs(ovl) <= 0.008f) { nGrip++; if (knee >= KneeClearM && handKnee >= HandKneeMinM) nKnee++; if (postureOk) nPosture++; if (knee >= KneeClearM && handKnee >= HandKneeMinM && postureOk) nAll++; }
                     if (c < bestScanCost) { bestScanCost = c; bestPitch = pd; bestYaw = yw; bestSt = stS; bestGap = gp; bestStand = sd; }
                 }
@@ -691,7 +781,8 @@ namespace Golfin.EditorTools.Golfer
                         .Append(",\n  \"leadAnchorLocalPos\": ").Append(J(aL.localPosition)).Append(",\n  \"leadAnchorLocalRot\": ").Append(J(aL.localRotation)).Append(",\n  \"leadWristLocalPos\": ").Append(J(wL.localPosition))
                         .Append(",\n  \"trailAnchorLocalPos\": ").Append(J(aR.localPosition)).Append(",\n  \"trailAnchorLocalRot\": ").Append(J(aR.localRotation)).Append(",\n  \"trailWristLocalPos\": ").Append(J(wR.localPosition))
                         .Append(",\n  \"leadStationM\": ").Append(F(best.stationL)).Append(", \"trailGapOffsetM\": ").Append(F(bestGap)).Append(", \"leadAxisUFrac\": ").Append(F(gL.uFrac)).Append(", \"trailAxisUFrac\": ").Append(F(gR.uFrac)).Append(", \"rollMode\": \"pitchscan\"")
-                        .Append(",\n  \"scanPitchDeg\": ").Append(F(bestPitch)).Append(", \"scanYawDeg\": ").Append(F(bestYaw)).Append(", \"standCloserM\": ").Append(F(bestStand)).Append("\n}\n");
+                        .Append(",\n  \"scanPitchDeg\": ").Append(F(bestPitch)).Append(", \"scanYawDeg\": ").Append(F(bestYaw)).Append(", \"standCloserM\": ").Append(F(bestStand))
+                        .Append(",\n  \"leadHandTwistEuler\": ").Append(J(twistEulerL)).Append(", \"trailHandTwistEuler\": ").Append(J(twistEulerR)).Append("\n}\n");
                     File.WriteAllText(BakePath, bake2.ToString()); File.WriteAllText(Path.Combine(OutDir, "stage2_bake_pitchscan.json"), bake2.ToString());
                 }
             }
@@ -725,6 +816,9 @@ namespace Golfin.EditorTools.Golfer
                 var otNow = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_SpineBend");
                 var ohNow = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_Hips");
                 Row("stance.hipsLift", null, ohNow == null ? "no Stance_Hips on this prefab" : "Hips OverrideTransform (Pivot) position offset " + ohNow.data.position.ToString("F4") + " = " + Mm(ohNow.data.position.magnitude) + " mm, feet pinned to the clip's by leg IK");
+                var twLNow = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Twist_LeftHand");
+                var twRNow = golfer.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Twist_RightHand");
+                Row("rig.handTwist", null, twLNow == null ? "no Rig_HandTwist on this prefab" : "hand-bone Pivot rotation L " + F1(Quaternion.Angle(Quaternion.identity, Quaternion.Euler(twLNow.data.rotation))) + "° / R " + F1(Quaternion.Angle(Quaternion.identity, Quaternion.Euler(twRNow.data.rotation))) + "° about the hand's length axis (a rig/clip correction; 0 on a clean rig)");
                 Row("stance.spineBend", null, otNow == null ? "no Rig_Stance on this prefab" : "Spine OverrideTransform (Pivot) rotation " + otNow.data.rotation.ToString("F3") + " = " + F1(Quaternion.Angle(Quaternion.identity, Quaternion.Euler(otNow.data.rotation))) + "° off the clip");
                 Row("stance.torsoTilt", tilt >= TorsoTiltMinDeg && tilt <= TorsoTiltMaxDeg, "hips→neck " + F1(tilt) + "° from vertical (guideline " + F1(TorsoTiltMinDeg) + "–" + F1(TorsoTiltMaxDeg) + ")");
                 Row("stance.kneeFlex", kL >= KneeFlexMinDeg && kL <= KneeFlexMaxDeg && kR >= KneeFlexMinDeg && kR <= KneeFlexMaxDeg, "L " + F1(kL) + "° / R " + F1(kR) + "° (guideline " + F1(KneeFlexMinDeg) + "–" + F1(KneeFlexMaxDeg) + "; the clip's, untouched)");
@@ -962,6 +1056,11 @@ namespace Golfin.EditorTools.Golfer
                 clubSlot.localPosition = kv["clubSlotLocalPos"].v; clubSlot.localRotation = kv["clubSlotLocalRot"].q;
                 aL.localPosition = kv["leadAnchorLocalPos"].v; aL.localRotation = kv["leadAnchorLocalRot"].q; aL.Find("WristTarget").localPosition = kv["leadWristLocalPos"].v;
                 aR.localPosition = kv["trailAnchorLocalPos"].v; aR.localRotation = kv["trailAnchorLocalRot"].q; aR.Find("WristTarget").localPosition = kv["trailWristLocalPos"].v;
+                foreach (var (twName, key) in new[] { ("Twist_LeftHand", "leadHandTwistEuler"), ("Twist_RightHand", "trailHandTwistEuler") })
+                {
+                    var tw = root.GetComponentsInChildren<OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == twName);
+                    if (tw != null && kv.ContainsKey(key)) { var td = tw.data; td.rotation = kv[key].v; tw.data = td; }
+                }
                 string headNote = "";
                 if (kv.ContainsKey("addressHeadLocal"))
                 {

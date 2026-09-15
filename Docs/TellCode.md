@@ -1,4 +1,4 @@
-﻿# TellCode.md — handoff channel (POINTER + KICKOFF FILE)
+# TellCode.md — handoff channel (POINTER + KICKOFF FILE)
 
 > **Spec-sized tasks live in `Docs/Specs/Active/<slug>/SPEC.md` — this file only points at them.**
 > **Kickoff-sized tasks (no spec folder) live HERE in full**, in the PENDING KICKOFFS section, so they survive the chat session that produced them. (Rule updated 2026-08-04 by Cesar: chat-only kickoffs die with the session; every kickoff the Architect produces is written here at the time it is produced.)
@@ -250,6 +250,24 @@ checklist in the spec (write the bottom-card vs DriverButton y numbers and the
 Profiler alloc reading in the report), flag which items need manual on-device
 verification (the feel constants), update STATUS.md + IMPLEMENTER_REPORT.md in
 the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+- **`golfer_club_grip` / Olivia rig â€” HANDOFF READY (2026-09-15), pasteable NOW.** `Docs/Specs/Active/golfer_club_grip/OLIVIA_RIG_HANDOFF.md`. First roster-likeness test model (Meshy run 2, Pose control OFF â†’ five separated fingers; remesh 61,468 tris; Mixamo Standard Skeleton 65 with finger tips; 170 cm) + Golf Drive / Drive Setup / Putt / Idle downloaded on the model, all in `Assets/Art/3D/Characters/_Test/Olivia/MixamoNative/`. Kickoff:
+
+```
+Read Docs/Specs/Active/golfer_club_grip/OLIVIA_RIG_HANDOFF.md and do Â§3.
+
+Context:
+- The Olivia rig (Assets/Art/3D/Characters/_Test/Olivia/MixamoNative/Olivia_TPose.fbx + 4 clips) is Mixamo-native like PfGolfer_MixamoNative: same import settings as _Test/MixamoNative/MixamoChar_TPose.fbx and its clips (golfer_3d_test SPEC Â§5.1 root settings, Â§9.8 scale rule: useFileScale ON, lossyScale = 1 on the prefab root â€” the FBX is 170 cm real size). Material from meshy_run2_60k/*_texture.png / _normal / _metallic_roughness.
+- Build PfGolfer_Olivia with AuthorPrefabStructure (FINDINGS_FOR_NEXT_CHARACTER.md Â§7 names) + HandHingeModel / HandHinge_Olivia.asset. Nothing hand-authored that the tool gives PfGolfer_MixamoNative.
+- Run FINDINGS Â§8 in order and stop at the first red: (1) HandHingeStage0Tool capture + the 13 HandHingeModelTests â€” record finger half-thickness and L_prox from the capture, never Remy's 7.18 mm; (2) HandHingeStage1Tool wrap, tips â‰¤ 5 mm from the contact circle; (3) HandHingeStage2.RunVerify at address on Hole 06 with the stance rig at zero first; (4) full-res verify_stance_targetside.png / verify_awayside.png + stage-0/1 contact sheets into evidence/olivia/.
+- Delete the leftovers meshy_run2_60k/Olivia_30k_rigtest.obj and .fbx. Commit the Olivia folder + Docs/Specs/Active/golfer_club_grip/{MESHY_OLIVIA_RUN_LOG,OLIVIA_RIG_HANDOFF}.md with the report.
+- Out of scope: hair system, cloth, roster/game prefab wiring, texture cleanup, LOD.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+rows above, flag which need Cesar's eye at full res, add an "Olivia" section to
+IMPLEMENTER_REPORT.md + update STATUS.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
 ```
 
 - **`golfer_club_grip` — SPEC_READY (2026-09-07), pasteable NOW.** `Docs/Specs/Active/golfer_club_grip/SPEC.md`. The club on `PfGolfer_MixamoNative` follows the right wrist's roll; fix = club parented to a `GripTarget` driven by a `MultiParentConstraint` on both hands, two `TwoBoneIKConstraint`s pulling the hands onto anchors on the shaft (Animation Rigging package added), grip offset authored once by measurement, four new harness assertions. `PfGolfer_Test` untouched. Also closes `golfer_3d_test` (Architect review PASS 2026-09-07 — see its STATUS.md). Kickoff:

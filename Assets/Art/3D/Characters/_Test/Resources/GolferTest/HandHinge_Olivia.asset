@@ -1,0 +1,224 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e50a92dfe102154a91946cf27451c14, type: 3}
+  m_Name: HandHinge_Olivia
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Gameplay.Golfer.HandHingeData
+  sourcePrefab: Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_Olivia.prefab
+  left:
+    right: 0
+    handBoneName: mixamorig:LeftHand
+    palmNormalHandLocal: {x: 0.0037527382, y: -0.024966765, z: -0.99968123}
+    lengthAxisHandLocal: {x: -0.083222926, y: 0.9962124, z: -0.025192501}
+    acrossAxisHandLocal: {x: 0.95344764, y: -0.30135387, z: 0.011105537}
+    thumbRestDirJointLocal: {x: -0.04994443, y: 0.99875206, z: 0.0000007003546}
+    thumbRestDirHandLocal: {x: -0.6141043, y: 0.7064912, z: -0.35177588}
+    joints:
+    - bone: 24
+      boneName: mixamorig:LeftHandThumb1
+      restLocalRotation: {x: -0.1692775, y: -0.05818738, z: 0.3198208, w: 0.93041605}
+      hingeAxisLocal: {x: -0.9987421, y: -0.049944, z: -0.004433155}
+      abductAxisLocal: {x: -0.012390764, y: 0.3315159, z: -0.94336826}
+      segmentLength: 0.028390804
+    - bone: 25
+      boneName: mixamorig:LeftHandThumb2
+      restLocalRotation: {x: -0.030933123, y: 2.1464166e-19, z: -6.9355736e-18, w: 0.9995215}
+      hingeAxisLocal: {x: -0.9998241, y: 0.008145284, z: 0.016892279}
+      abductAxisLocal: {x: -0.012390764, y: 0.3892162, z: -0.92106307}
+      segmentLength: 0.0330652
+    - bone: 26
+      boneName: mixamorig:LeftHandThumb3
+      restLocalRotation: {x: 0.0052550556, y: -3.524096e-18, z: -1.0389966e-17, w: 0.99998623}
+      hingeAxisLocal: {x: -0.9989284, y: 0.036556747, z: 0.028376495}
+      abductAxisLocal: {x: -0.012390764, y: 0.37951437, z: -0.92510283}
+      segmentLength: 0.03140791
+    - bone: 27
+      boneName: mixamorig:LeftHandIndex1
+      restLocalRotation: {x: -0.0105673345, y: -0.00090112037, z: 0.0849604, w: 0.99632794}
+      hingeAxisLocal: {x: -0.9999978, y: -0.0019302908, z: 0.00053646206}
+      abductAxisLocal: {x: -0.00052872696, y: -0.0040325914, z: -0.9999917}
+      segmentLength: 0.027865453
+    - bone: 28
+      boneName: mixamorig:LeftHandIndex2
+      restLocalRotation: {x: 0.012734985, y: -1.7673342e-19, z: -1.3876663e-17, w: 0.99991894}
+      hingeAxisLocal: {x: -0.9999978, y: -0.0019842102, z: 0.0005874079}
+      abductAxisLocal: {x: -0.00052872696, y: -0.02949898, z: -0.99956465}
+      segmentLength: 0.025294943
+    - bone: 29
+      boneName: mixamorig:LeftHandIndex3
+      restLocalRotation: {x: -0.06683815, y: -1.4310537e-17, z: 5.9958116e-18, w: 0.9977638}
+      hingeAxisLocal: {x: -0.9999891, y: 0.0045699077, z: 0.0010098512}
+      abductAxisLocal: {x: -0.00052872696, y: 0.10408388, z: -0.99456835}
+      segmentLength: 0.022767013
+    - bone: 30
+      boneName: mixamorig:LeftHandMiddle1
+      restLocalRotation: {x: 0.001310535, y: -0.000021720527, z: -0.01656702, w: 0.9998619}
+      hingeAxisLocal: {x: -0.9999887, y: 0.0011094905, z: -0.0046100533}
+      abductAxisLocal: {x: 0.0045778034, y: -0.02744924, z: -0.9996127}
+      segmentLength: 0.029835764
+    - bone: 31
+      boneName: mixamorig:LeftHandMiddle2
+      restLocalRotation: {x: 0.0033316251, y: -3.467669e-20, z: -1.0408283e-17, w: 0.99999446}
+      hingeAxisLocal: {x: -0.99998915, y: 0.00077368965, z: -0.0046068816}
+      abductAxisLocal: {x: 0.0045778034, y: -0.034109265, z: -0.9994076}
+      segmentLength: 0.028040472
+    - bone: 32
+      boneName: mixamorig:LeftHandMiddle3
+      restLocalRotation: {x: 0.037212495, y: 7.7464063e-19, z: 2.0802264e-17, w: 0.9993074}
+      hingeAxisLocal: {x: -0.99998814, y: -0.0021375716, z: -0.0043719774}
+      abductAxisLocal: {x: 0.0045778034, y: -0.108344175, z: -0.9941029}
+      segmentLength: 0.025700657
+    - bone: 33
+      boneName: mixamorig:LeftHandRing1
+      restLocalRotation: {x: -0.01809993, y: 0.0022949425, z: -0.12576553, w: 0.9918922}
+      hingeAxisLocal: {x: -0.9999476, y: 0.0028552078, z: -0.009828074}
+      abductAxisLocal: {x: 0.009865036, y: 0.013247335, z: -0.9998636}
+      segmentLength: 0.026458062
+    - bone: 34
+      boneName: mixamorig:LeftHandRing2
+      restLocalRotation: {x: 0.04176394, y: -2.7586462e-17, z: 4.6256023e-18, w: 0.9991275}
+      hingeAxisLocal: {x: -0.9999499, y: 0.0009857715, z: -0.0099589}
+      abductAxisLocal: {x: 0.009865036, y: -0.0702425, z: -0.9974812}
+      segmentLength: 0.02642404
+    - bone: 35
+      boneName: mixamorig:LeftHandRing3
+      restLocalRotation: {x: 0.11620566, y: 3.4269398e-18, z: 2.9290512e-17, w: 0.9932252}
+      hingeAxisLocal: {x: -0.99995035, y: -0.0041650906, z: -0.009033477}
+      abductAxisLocal: {x: 0.009865036, y: -0.2986008, z: -0.95432717}
+      segmentLength: 0.024387464
+    - bone: 36
+      boneName: mixamorig:LeftHandPinky1
+      restLocalRotation: {x: -0.023541078, y: 0.0054787677, z: -0.22660783, w: 0.97368616}
+      hingeAxisLocal: {x: -0.9998962, y: 0.00061714277, z: -0.014379604}
+      abductAxisLocal: {x: 0.014391134, y: 0.02759103, z: -0.9995157}
+      segmentLength: 0.02400387
+    - bone: 37
+      boneName: mixamorig:LeftHandPinky2
+      restLocalRotation: {x: 0.017177165, y: 2.7572694e-17, z: -1.0883568e-17, w: 0.9998525}
+      hingeAxisLocal: {x: -0.9998963, y: 0.0001231216, z: -0.014392434}
+      abductAxisLocal: {x: 0.014391134, y: -0.0067578834, z: -0.99987364}
+      segmentLength: 0.02001042
+    - bone: 38
+      boneName: mixamorig:LeftHandPinky3
+      restLocalRotation: {x: 0.099416494, y: -2.537609e-17, z: 2.5199045e-17, w: 0.9950459}
+      hingeAxisLocal: {x: -0.9998945, y: -0.0009510673, z: -0.01450307}
+      abductAxisLocal: {x: 0.014391134, y: -0.20444724, z: -0.9787718}
+      segmentLength: 0.01814293
+  right:
+    right: 1
+    handBoneName: mixamorig:RightHand
+    palmNormalHandLocal: {x: -0.02620086, y: -0.028459357, z: -0.9992514}
+    lengthAxisHandLocal: {x: 0.09868902, y: 0.9946383, z: -0.030915558}
+    acrossAxisHandLocal: {x: -0.96619946, y: -0.2557239, z: 0.03261757}
+    thumbRestDirJointLocal: {x: 0.081443906, y: 0.99667805, z: 0.0000016838312}
+    thumbRestDirHandLocal: {x: 0.6273587, y: 0.70169693, z: -0.3377024}
+    joints:
+    - bone: 39
+      boneName: mixamorig:RightHandThumb1
+      restLocalRotation: {x: -0.16316843, y: 0.05433388, z: -0.3112297, w: 0.9346443}
+      hingeAxisLocal: {x: -0.9962321, y: 0.08140734, z: 0.029909313}
+      abductAxisLocal: {x: -0.0039087012, y: 0.30236676, z: -0.9531836}
+      segmentLength: 0.029974021
+    - bone: 40
+      boneName: mixamorig:RightHandThumb2
+      restLocalRotation: {x: -0.029670142, y: -6.935839e-18, z: -2.0587796e-19, w: 0.99955976}
+      hingeAxisLocal: {x: -0.9999379, y: -0.011146, z: -0.0000918443}
+      abductAxisLocal: {x: -0.0039087012, y: 0.35837168, z: -0.93357074}
+      segmentLength: 0.031782277
+    - bone: 41
+      boneName: mixamorig:RightHandThumb3
+      restLocalRotation: {x: 0.07112615, y: -6.92132e-18, z: 4.935368e-19, w: 0.99746734}
+      hingeAxisLocal: {x: -0.997427, y: -0.07065857, z: -0.012110311}
+      abductAxisLocal: {x: -0.0039087012, y: 0.22227947, z: -0.9749751}
+      segmentLength: 0.029534342
+    - bone: 42
+      boneName: mixamorig:RightHandIndex1
+      restLocalRotation: {x: 0.026128616, y: -0.0018491304, z: -0.07056902, w: 0.99716294}
+      hingeAxisLocal: {x: -0.99975955, y: 0.00154466, z: 0.021879494}
+      abductAxisLocal: {x: -0.021931697, y: -0.08415271, z: -0.9962114}
+      segmentLength: 0.028576046
+    - bone: 43
+      boneName: mixamorig:RightHandIndex2
+      restLocalRotation: {x: -0.026553087, y: -1.3504398e-17, z: -1.4241395e-17, w: 0.99964744}
+      hingeAxisLocal: {x: -0.9997582, y: -0.00094612036, z: 0.02197189}
+      abductAxisLocal: {x: -0.021931697, y: -0.031147726, z: -0.9992741}
+      segmentLength: 0.026641255
+    - bone: 44
+      boneName: mixamorig:RightHandIndex3
+      restLocalRotation: {x: 0.012943293, y: 4.041546e-19, z: 3.1222405e-17, w: 0.99991626}
+      hingeAxisLocal: {x: -0.9997576, y: -0.0007991366, z: 0.02201312}
+      abductAxisLocal: {x: -0.021931697, y: -0.057002917, z: -0.998133}
+      segmentLength: 0.02362086
+    - bone: 45
+      boneName: mixamorig:RightHandMiddle1
+      restLocalRotation: {x: 0.034112107, y: 0.0009263698, z: 0.027131204, w: 0.99904925}
+      hingeAxisLocal: {x: -0.9996128, y: 0.00005157781, z: 0.027828144}
+      abductAxisLocal: {x: -0.027706873, y: -0.095091075, z: -0.9950828}
+      segmentLength: 0.030750223
+    - bone: 46
+      boneName: mixamorig:RightHandMiddle2
+      restLocalRotation: {x: -0.02382353, y: -2.7334427e-17, z: -1.8003548e-17, w: 0.9997162}
+      hingeAxisLocal: {x: -0.9996139, y: -0.00075872766, z: 0.027774557}
+      abductAxisLocal: {x: -0.027706873, y: -0.047583822, z: -0.99848276}
+      segmentLength: 0.028754923
+    - bone: 47
+      boneName: mixamorig:RightHandMiddle3
+      restLocalRotation: {x: 0.05010647, y: 2.858992e-17, z: 1.5934711e-17, w: 0.9987439}
+      hingeAxisLocal: {x: -0.99961054, y: 0.00075857155, z: 0.02789961}
+      abductAxisLocal: {x: -0.027706873, y: -0.1472801, z: -0.9887065}
+      segmentLength: 0.02677877
+    - bone: 48
+      boneName: mixamorig:RightHandRing1
+      restLocalRotation: {x: -0.0017034324, y: -0.00015553714, z: 0.090923406, w: 0.99585646}
+      hingeAxisLocal: {x: -0.9995214, y: -0.00038511935, z: 0.030935364}
+      abductAxisLocal: {x: -0.030921487, y: -0.019825384, z: -0.9993251}
+      segmentLength: 0.026290357
+    - bone: 49
+      boneName: mixamorig:RightHandRing2
+      restLocalRotation: {x: 0.04085924, y: 0, z: 0, w: 0.99916494}
+      hingeAxisLocal: {x: -0.99951655, y: -0.00011958741, z: 0.031093866}
+      abductAxisLocal: {x: -0.030921487, y: -0.10135432, z: -0.9943696}
+      segmentLength: 0.024561353
+    - bone: 50
+      boneName: mixamorig:RightHandRing3
+      restLocalRotation: {x: 0.10300853, y: -3.189652e-17, z: -3.8552834e-17, w: 0.99468046}
+      hingeAxisLocal: {x: -0.9994798, y: 0.0006254688, z: 0.03224797}
+      abductAxisLocal: {x: -0.030921487, y: -0.3029708, z: -0.95249796}
+      segmentLength: 0.020809477
+    - bone: 51
+      boneName: mixamorig:RightHandPinky1
+      restLocalRotation: {x: -0.031143846, y: -0.0072504994, z: 0.22662696, w: 0.9734566}
+      hingeAxisLocal: {x: -0.9993405, y: 0.0023553222, z: 0.0362393}
+      abductAxisLocal: {x: -0.036076564, y: 0.04994061, z: -0.99810034}
+      segmentLength: 0.02422693
+    - bone: 52
+      boneName: mixamorig:RightHandPinky2
+      restLocalRotation: {x: 0.03055812, y: 2.7742614e-17, z: -8.481582e-19, w: 0.999533}
+      hingeAxisLocal: {x: -0.9993489, y: 0.0010802951, z: 0.03606685}
+      abductAxisLocal: {x: -0.036076564, y: -0.011124313, z: -0.99928707}
+      segmentLength: 0.020325229
+    - bone: 53
+      boneName: mixamorig:RightHandPinky3
+      restLocalRotation: {x: 0.11578134, y: -2.8118803e-18, z: -2.4122799e-17, w: 0.99327475}
+      hingeAxisLocal: {x: -0.999255, y: -0.00464225, z: 0.038319044}
+      abductAxisLocal: {x: -0.036076564, y: -0.24066745, z: -0.9699369}
+      segmentLength: 0.017022219
+  fingerHalfThicknessM: 0.008139324
+  lProxLeftM: 0.052889258
+  lProxRightM: 0.052681264
+  measureNote: "finger half-thickness, palmar side (mesh, bind pose; 77775 verts):
+    L index 8.33 mm (n=13, 7.5\u201310.2, cut 11.3); L middle 8.68 mm (n=23, 7.5\u201311.1,
+    cut 11.3); L ring 8.35 mm (n=14, 6.5\u20139.0, cut 9.4); L little 8.04 mm (n=14,
+    7.1\u20139.2, cut 9.6); R index 7.65 mm (n=10, 7.1\u20139.7, cut 11.1); R middle
+    8.35 mm (n=21, 7.2\u20139.3, cut 11.1); R ring 7.48 mm (n=13, 6.3\u20138.5, cut
+    10.7); R little 7.79 mm (n=20, 6.8\u20139.0, cut 9.6); \u2192 fingerHalfThicknessM
+    = 8.14 mm (mean of index/middle/ring, both hands); L_prox L 52.9 / R 52.7 mm;
+    ContactM = 21.71 mm"

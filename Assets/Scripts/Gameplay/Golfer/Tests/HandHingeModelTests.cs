@@ -12,10 +12,16 @@ using UnityEngine;
 namespace Golfin.Gameplay.Golfer.Tests
 {
 #if GOLFIN_GOLFER_TEST
-    [TestFixture]
+    [TestFixture("MixamoNative")]
+    [TestFixture("Olivia")]
     public class HandHingeModelTests
     {
-        const string PrefabPath = "Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab";
+        readonly string PrefabPath, AssetPath;
+        public HandHingeModelTests(string character)
+        {
+            PrefabPath = "Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_" + character + ".prefab";
+            AssetPath  = "Assets/Art/3D/Characters/_Test/Resources/GolferTest/HandHinge_" + character + ".asset";
+        }
 
         GameObject _root;
         Animator _anim;
@@ -23,6 +29,9 @@ namespace Golfin.Gameplay.Golfer.Tests
         [SetUp]
         public void Load()
         {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null) Assert.Ignore("not built: " + PrefabPath);
+            // the contact circle is the character's (finger half-thickness measured at the stage-0 capture)
+            HandHingeModel.UseData(AssetDatabase.LoadAssetAtPath<HandHingeData>(AssetPath));
             _root = PrefabUtility.LoadPrefabContents(PrefabPath);
             Assert.That(_root, Is.Not.Null, PrefabPath);
             _anim = _root.GetComponentInChildren<Animator>(true);
