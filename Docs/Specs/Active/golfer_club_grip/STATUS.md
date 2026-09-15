@@ -9,3 +9,5 @@ Clubs addendum (19:10): head under the terrain at the rough lie FIXED (root grou
 Putter moment (20:30): blade direction and hands approved by Cesar in the Game view; posture baked (drive-address frame + hips 30 mm / bend −15°, standing 45 cm closer; sole −2 mm) — confirmation frame sent, awaiting his read. Safeguards: fail-loud run watcher + harness stall watchdog.
 
 21:00: putt posture clearance pass baked and sent (frame 20-46-59) — awaiting Cesar. Putt MOTION parked: the club attachment is solved for the drive clip's hands only, the putt clip flips it; needs the stage-2 solve on ANIM_Golf_Putt (Cesar to schedule). Video window + stall watchdog conflict noted.
+
+21:15: putt-clip grip solve done (club fitted to ANIM_Golf_Putt's wrists, face squared on the putter child, address transitions added); tee-side frame 21-14-15 sent, awaiting Cesar. Video: encoding identical to the approved drive clip, uniform frames, no repeats — the stutter was the broken motion; re-take of the putt motion next.

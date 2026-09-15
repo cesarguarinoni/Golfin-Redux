@@ -1514,3 +1514,30 @@ hand." Stopped. The proper fix is the stage-2 solve run on the putt clip's hands
 then the posture scan on top; scheduled by Cesar, not started. Also on the way the stall watchdog (180 s) fired
 inside the legitimately silent video window; the window must mark progress or the watchdog must yield while a
 clip is armed — follow-up.
+
+### The putt-clip grip solve (Cesar 21:05: "First order of business, do the putt-clip solve") — DONE, awaiting his read
+
+The club hangs from `GripTarget` (MultiParent of the two hand bones, 0.5/0.5) with a slot pose solved for the drive
+clip's hands; `Rig_Hands` then IKs the wrists onto `WristTarget_Lead/Trail` under `ClubSlot`. `ANIM_Golf_Putt` holds
+the wrists differently, so the drive pose flipped the shaft the moment the putt clip played.
+`PuttGripSolve` (`GOLFIN/Golfer Test/Putt grip solve + stance scan on Hole 06`): at the putt address, hand IK off,
+animator always animating, fit the club pose so the two WristTargets land on the clip's wrists (rotation = slerp of
+the two per-hand rotations, translation = mean residual; per-hand split 28.7°, fit residual 10 mm each); the pose
+under GripTarget is applied to BOTH slots in putt mode (`puttSlotSolved/puttSlotLocalPosition/Rotation` on the
+presenter, drive pose restored otherwise). The face is squared by rolling the PUTTER CHILD about the shaft
+(−80.5°, `GOLFIN_Putter.localRotation`), never the slot the anchors hang from: face·aim 0.22 → 1.000. The posture
+scan re-ran on it (lie now moves both slots): hips −88 mm, bend −5°, sole −1 mm, hands 110 / shaft 78 mm off the
+thighs, torso 34.3°; placement offset (−0.377, 0, 0.163). `Address_Putt` is back on `ANIM_Golf_Putt` at 8.9 %, and
+Olivia's animator gained `Address_Drive ⇄ Address_Putt` transitions on `IsPutt`, so a club switch at address
+re-addresses with the putt clip (before, she held the putter in the drive pose — the backward-pointing club of the
+21:07 frame). Rows at the green putt address: face·aim 0.997, face plane −25 mm, centre +1 mm, 7.5 mm above the ball.
+Game view at the tee-side moment: `golfer_h06_putter_2026-09-15_21-14-15.png` (the 21:10 take was covered by a
+daily-mission popup — the harness should dismiss modals before its snaps; follow-up).
+
+### The video stutter (second order of business) — what is known
+
+The 20:49 putt clip and the approved 17:53 drive clip are encoded identically (H.264 Constrained Baseline, level
+5.2, ~12 Mbps, 60 fps, yuv420p), both have every frame 16.7 ms apart, and the putt clip has no repeated frames and
+no motion jumps (frame-to-frame change never below 0.4× or above 2.5× its local median). The stutter Cesar saw is
+the broken motion, not the recorder. Re-judged on a re-take of the putt motion with the solved club. Also fixed on the
+way: the video windows now mark progress each second of golfer time so the stall watchdog stays quiet during a clip.
