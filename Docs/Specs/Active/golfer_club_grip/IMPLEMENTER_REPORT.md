@@ -846,3 +846,7 @@ actor's. The wrists still bend ~50° because the actor's do and because the club
 in order of how much they change: (a) accept this bake and take the wrist question to the club scale / stance in
 stage 3's set-up; (b) keep the min-wrist bake (cleaner butt cap, 11.9 mm clearance) and the same question; (c) a
 different clip or a shorter club before stage 3. Tests 13/13; nothing above the anchor level was touched.
+
+### Real-golfer reference (2026-09-15, Cesar asked)
+
+See `reference/WRIST_ANGLES_AT_ADDRESS.md`. Published address values: lead wrist ulnar deviation ~17–20°, extension 0–20° (15–20 typical), total ≈ 20–30°; trail wrist a slight cup. Ours: clip 46.2 / 41.8, committed bake 55.0 / 47.7 — the excess is deviation (45° vs 17–20°), set by hand height over the ball and club length, not by the anchors.
