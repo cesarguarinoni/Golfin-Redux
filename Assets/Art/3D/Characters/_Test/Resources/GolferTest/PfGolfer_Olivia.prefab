@@ -1181,7 +1181,7 @@ MonoBehaviour:
   shaftRadius: 0.0135751
   fingerRadius: 0.0068297
   maxJointBend: 80
-  puttHipsOffset: {x: 0, y: 0, z: 0}
+  puttHipsOffset: {x: -0.0009, y: -0.0391, z: -0.0087}
   puttSpineBendEuler: {x: 0, y: 0, z: 0}
   puttSlotSolved: 1
   puttSlotLocalPosition: {x: 0.01798, y: 0.02707, z: 0.03868}
@@ -1196,7 +1196,7 @@ MonoBehaviour:
   puttClubEndY: 0.7316
   addressHeadLocal: {x: 0.91972, y: 0, z: -0.08107}
   addressFaceOffsetLocal: {x: 0.0344, y: 0, z: 0.0464}
-  addressFaceOffsetLocalPutt: {x: -0.54318, y: 0.07094, z: 0.051}
+  addressFaceOffsetLocalPutt: {x: -0.55417997, y: 0, z: 0.0815}
 --- !u!114 &6970612969742791015
 MonoBehaviour:
   m_ObjectHideFlags: 0

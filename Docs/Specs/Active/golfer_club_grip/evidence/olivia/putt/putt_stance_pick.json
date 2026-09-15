@@ -1,10 +1,10 @@
 {
-  "dropM": 0.0300,
+  "dropM": 0.0000,
   "bendDeg": 0.0000,
-  "hipsOffset": [-0.0018, -0.0877, -0.0203],
-  "spineEuler": [355.0737, 359.9162, 0.8551],
-  "lieDeg": 0.0000,
-  "putterSlotLocalRotation": [-0.3786, -0.0556, 0.0504, 0.9225],
+  "hipsOffset": [0.0000, 0.0000, 0.0000],
+  "spineEuler": [0.0000, 0.0000, 0.0000],
+  "lieDeg": -12.0000,
+  "putterSlotLocalRotation": [-0.1027, 0.0182, -0.0297, 0.9941],
   "onGround": true,
   "clear": true
 }
