@@ -491,6 +491,11 @@ SHOP_HISTORY_ACQUIRED,ACQUIRED {0},入手日 {0},true
 SHOP_HISTORY_SOURCE,SOURCE: {0},入手元: {0},true
 SHOP_HISTORY_SOURCE_STORE,STORE,ストア,true
 SHOP_HISTORY_PRICE,PRICE: {0} RP,価格: {0} RP,true
+SHOP_HISTORY_PRICE_MONEY,PRICE: {0},価格: {0},true
+STORE_CHOOSE_PAYMENT,CHOOSE HOW TO PAY.,支払い方法を選択してください。,true
+STORE_IAP_FAILED,PURCHASE FAILED,購入に失敗しました,true
+STORE_IAP_UNAVAILABLE,STORE UNAVAILABLE,ストアを利用できません,true
+STORE_IAP_PROCESSING,PROCESSING…,処理中…,true
 TICKET_INFO_STANDARD,Spend one for a single pull on any banner that takes a standard ticket.,スタンダードチケット対応バナーでガチャを1回引けます。,true
 TICKET_INFO_GOLD,A premium pull ticket — for the banners that call for one.,対応バナーで使えるプレミアムガチャチケットです。,true
 STAMINA_BUY,BUY,購入,true

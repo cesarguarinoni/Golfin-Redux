@@ -551,8 +551,51 @@ namespace GolfinRedux.UI.Shop
         }
 
         // ── Price ───────────────────────────────────────────────────────────────
+        //
+        // iap_plumbing (2026-09-15): a row may carry an RP price, an App Store product, or both,
+        // and the plate draws whichever the store can honour RIGHT NOW. Reconciled against the
+        // Figma Store page (`14287:32861`, cards 1-3) rather than the spec's prose:
+        //
+        //   RP-only   (`14287:32988`)  navy plate, coin 36 + number, gap 8 — today's plate.
+        //   ¥-only    (`14287:32962`)  navy plate 180×76 (shorter), the localized price alone, the
+        //                              plate + BUY re-centred as a group.
+        //   dual      (`14287:33012`)  WHITE plate: coin + RP number in navy on top, navy band with
+        //                              the localized ¥ price below; a discount is the red corner
+        //                              badge (`14287:33138`) ONLY — no struck original.
+        //
+        // WITHHOLD RULE. A product id the store cannot sell right now (flag off, not connected,
+        // product missing) draws as RP-only when there is an RP price; ¥-only rows and sandbox rows
+        // never reach a card in that state — GeneralShopCatalog.ListedNow drops them first.
 
         private static readonly Color PriceNavy = new Color32(0x00, 0x1E, 0x39, 0xFF);
+
+        private enum PriceMode { RpOnly, MoneyOnly, Dual }
+
+        /// <summary>The mode the last <see cref="BindPrice"/> chose — read by the controller to route
+        /// BUY, and by the tests.</summary>
+        public bool ShowsMoneyPrice { get; private set; }
+        public bool ShowsRpPrice { get; private set; } = true;
+
+        // Authored geometry, captured on the first bind of this instance so every later bind can put
+        // the ¥-only shift back (Bind is idempotent; a card is re-bound after a purchase).
+        private bool _priceGeometryCaptured;
+        private Vector2 _boxAuthoredPos, _boxAuthoredSize, _borderAuthoredPos, _borderAuthoredSize, _ctaAuthoredPos;
+        private Color _origNumAuthoredColor = Color.white;
+        private float _origNumAuthoredSize = 30f;
+        private Color _origIconAuthoredColor = Color.white;   // authored 85 % alpha — the struck row's dimmed coin
+
+        /// <summary>The ¥-only plate: node `14287:32962` is 180×76 against the RP plate's 142; the
+        /// Unity plate is 160 (approved), so the same +2 keeps the pair's ratio.</summary>
+        private const float MoneyOnlyPlateHeight = 78f;
+
+        /// <summary>
+        /// The price number, all three plates: node 30 px Rubik Medium (`14287:32991` / `33014` /
+        /// `33017` / `32967`), whose digits render 21 px tall in the node render. The prefab shipped
+        /// 34, which renders 26 px (+24 %) — measured on iap_frames/01_store_all.png vs
+        /// reference/iap_pricing_screen.png, 2026-09-15. 28 renders 21–22. SemiBold stands in for
+        /// Medium project-wide (there is no Rubik-Medium SDF asset); flagged in the fidelity table.
+        /// </summary>
+        private const float PriceNumberFontSize = 28f;
 
         private void BindPrice(ShopCatalogEntry entry)
         {
@@ -560,50 +603,210 @@ namespace GolfinRedux.UI.Shop
             // here — rather than trusting whatever the previous bind left — is what makes `Bind`
             // idempotent: the SHOP path shows a price, always, whatever this instance was last.
             SetActive("PriceBox", true);
+            CaptureAuthoredPriceGeometry();
+
+            bool hasRp    = entry.HasRpPrice;
+            string moneyPrice = string.Empty;
+            bool hasMoney = entry.HasStoreProduct &&
+                            Golfin.Economy.IapService.TryGetLocalizedPrice(entry.StoreProductId, out moneyPrice);
+            if (!hasMoney) moneyPrice = string.Empty;
+
+            PriceMode mode = hasMoney ? (hasRp ? PriceMode.Dual : PriceMode.MoneyOnly) : PriceMode.RpOnly;
+            ShowsMoneyPrice = hasMoney;
+            ShowsRpPrice    = mode != PriceMode.MoneyOnly;
+
+            ApplyPriceGeometry(mode);
 
             var box     = Find("PriceBox")?.GetComponent<Image>();
             var orig    = Find("PriceBox/Orig");
+            var origNum = Find("PriceBox/Orig/Num")?.GetComponent<TextMeshProUGUI>();
             var saleBg  = Find("PriceBox/SaleBG");
             var saleImg = saleBg != null ? saleBg.GetComponent<Image>() : null;
             var saleNum = Find("PriceBox/SaleBG/Sale/Num")?.GetComponent<TextMeshProUGUI>();
+            var saleRt  = saleBg as RectTransform;
+            var origRt  = orig as RectTransform;
 
-            var saleRt = saleBg as RectTransform;
+            // The struck-original row is the legacy sale treatment; put its authored look back
+            // before any mode decides otherwise. The pay row's number is the node's size in every mode.
+            if (origNum != null) { origNum.color = _origNumAuthoredColor; origNum.fontSize = _origNumAuthoredSize; }
+            var origIcon = Find("PriceBox/Orig/RpIcon")?.GetComponent<Image>();
+            if (origIcon != null) origIcon.color = _origIconAuthoredColor;
+            if (saleNum != null) saleNum.fontSize = PriceNumberFontSize;
+            SetActive("PriceBox/Orig/Strike", false);
+            SetDiscountBadge(null);
 
-            if (entry.HasSale)
+            switch (mode)
             {
-                // white box: struck original (dark) on top, navy "pay" price (white) in the bottom band.
-                if (box != null)  box.color = Color.white;
-                if (orig != null) orig.gameObject.SetActive(true);
-                var origNum = Find("PriceBox/Orig/Num")?.GetComponent<TextMeshProUGUI>();
-                if (origNum != null) { origNum.text = Rp(entry.RpCost); origNum.fontStyle = FontStyles.Normal; }
-                if (saleBg != null)  saleBg.gameObject.SetActive(true);
-                if (saleImg != null) saleImg.color = PriceNavy;
-                if (saleNum != null) saleNum.text = Rp(entry.SaleRpCost);
-                CenterPriceRow("PriceBox/Orig");
-                CenterPriceRow("PriceBox/SaleBG/Sale");
-                StrikeOriginal(origNum);                  // after centring — it reads the coin/number x
-                if (saleRt != null)   // restore the template's bottom band
-                {
-                    saleRt.anchorMin = new Vector2(0, 0); saleRt.anchorMax = new Vector2(1, 0);
-                    saleRt.sizeDelta = new Vector2(-6, 84); saleRt.anchoredPosition = new Vector2(0, 3);
-                }
+                case PriceMode.RpOnly when entry.HasSale:
+                    // white box: struck original (dark) on top, navy "pay" price (white) in the bottom band.
+                    if (box != null)  box.color = Color.white;
+                    if (orig != null) orig.gameObject.SetActive(true);
+                    if (origNum != null) { origNum.text = Rp(entry.RpCost); origNum.fontStyle = FontStyles.Normal; }
+                    if (saleBg != null)  saleBg.gameObject.SetActive(true);
+                    if (saleImg != null) saleImg.color = PriceNavy;
+                    if (saleNum != null) saleNum.text = Rp(entry.SaleRpCost);
+                    SetActive("PriceBox/SaleBG/Sale/RpIcon", true);
+                    if (origRt != null) origRt.anchoredPosition = new Vector2(0f, -16f);
+                    CenterPriceRow("PriceBox/Orig", StruckIconPx, StruckIconGap);
+                    CenterPriceRow("PriceBox/SaleBG/Sale", PriceIconPx, PriceIconGap);
+                    StrikeOriginal(origNum);                  // after centring — it reads the coin/number x
+                    if (saleRt != null)   // restore the template's bottom band
+                    {
+                        saleRt.anchorMin = new Vector2(0, 0); saleRt.anchorMax = new Vector2(1, 0);
+                        saleRt.sizeDelta = new Vector2(-6, 84); saleRt.anchoredPosition = new Vector2(0, 3);
+                    }
+                    break;
+
+                case PriceMode.RpOnly:
+                    // no discount: the whole box is the navy "pay" chip, price CENTERED in the square.
+                    if (box != null)  box.color = PriceNavy;
+                    if (orig != null) orig.gameObject.SetActive(false);
+                    if (saleBg != null)  saleBg.gameObject.SetActive(true);
+                    if (saleImg != null) saleImg.color = new Color(0, 0, 0, 0); // transparent — box already navy
+                    if (saleNum != null) saleNum.text = Rp(entry.RpCost);
+                    SetActive("PriceBox/SaleBG/Sale/RpIcon", true);
+                    CenterPriceRow("PriceBox/SaleBG/Sale", PriceIconPx, PriceIconGap);
+                    FillBoxWithBand(saleRt);
+                    break;
+
+                case PriceMode.MoneyOnly:
+                    // node 14287:32962 — the same navy chip, shorter, the localized price alone. No
+                    // coin: money is not RP, and the plate never says "RP" or "¥" in words either.
+                    if (box != null)  box.color = PriceNavy;
+                    if (orig != null) orig.gameObject.SetActive(false);
+                    if (saleBg != null)  saleBg.gameObject.SetActive(true);
+                    if (saleImg != null) saleImg.color = new Color(0, 0, 0, 0);
+                    if (saleNum != null) saleNum.text = moneyPrice;
+                    SetActive("PriceBox/SaleBG/Sale/RpIcon", false);
+                    CenterPriceText("PriceBox/SaleBG/Sale");
+                    FillBoxWithBand(saleRt);
+                    break;
+
+                case PriceMode.Dual:
+                    // node 14287:33012 — white plate, coin + RP price in NAVY on top (no strike), the
+                    // navy band below carries the ¥ price in white. The plate splits 80/80 the way the
+                    // node's splits 76/76.
+                    if (box != null)  box.color = Color.white;
+                    if (orig != null) orig.gameObject.SetActive(true);
+                    if (origNum != null)
+                    {
+                        origNum.text = Rp(entry.EffectiveRpCost);
+                        origNum.fontStyle = FontStyles.Normal;
+                        origNum.color = PriceNavy;
+                        origNum.fontSize = PriceNumberFontSize;
+                    }
+                    if (origIcon != null) origIcon.color = Color.white;   // a live price, not a struck one
+                    if (saleBg != null)  saleBg.gameObject.SetActive(true);
+                    if (saleImg != null) saleImg.color = PriceNavy;
+                    if (saleNum != null) saleNum.text = moneyPrice;
+                    SetActive("PriceBox/SaleBG/Sale/RpIcon", false);
+                    // Top row centred in the upper half (box 160 → 80; the row is 54 tall).
+                    if (origRt != null) origRt.anchoredPosition = new Vector2(0f, -13f);
+                    CenterPriceRow("PriceBox/Orig", PriceIconPx, PriceIconGap);
+                    CenterPriceText("PriceBox/SaleBG/Sale");
+                    if (saleRt != null)
+                    {
+                        saleRt.anchorMin = new Vector2(0, 0); saleRt.anchorMax = new Vector2(1, 0);
+                        saleRt.sizeDelta = new Vector2(-6, 77); saleRt.anchoredPosition = new Vector2(0, 3);
+                    }
+                    // Discount = the corner badge ONLY (Cesar 2026-09-14): no room for a struck
+                    // original on a plate that already holds two prices.
+                    if (entry.HasSale) SetDiscountBadge(DiscountLabel(entry.RpCost, entry.SaleRpCost));
+                    break;
             }
-            else
+        }
+
+        /// <summary>"-25%" for list 600 / sale 450. Rounded to the nearest whole percent, never "-0%".</summary>
+        public static string DiscountLabel(int listRp, int saleRp)
+        {
+            if (listRp <= 0 || saleRp >= listRp) return string.Empty;
+            int pct = Mathf.Max(1, Mathf.RoundToInt(100f * (listRp - saleRp) / listRp));
+            return "-" + pct.ToString(System.Globalization.CultureInfo.InvariantCulture) + "%";
+        }
+
+        /// <summary>The bottom band stretched over the whole box, so a centre-anchored price sits in
+        /// the middle of the square (the no-sale and ¥-only plates).</summary>
+        private static void FillBoxWithBand(RectTransform saleRt)
+        {
+            if (saleRt == null) return;
+            saleRt.anchorMin = new Vector2(0, 0); saleRt.anchorMax = new Vector2(1, 1);
+            saleRt.offsetMin = Vector2.zero; saleRt.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>
+        /// The red `-N%` pill at the plate's top-right corner (node `14287:33138`: 109×47, sits 8 px
+        /// past the plate's right edge and 18 px above its top). AUTHORED on both card prefabs as
+        /// <c>PriceBox/DiscountBadge</c> (sprite `S_DiscountBadge`, baked from the node's tokens by
+        /// Docs/Scripts/make_discount_badge.py) and only shown/labelled here. Null/empty hides it.
+        /// </summary>
+        private void SetDiscountBadge(string label)
+        {
+            var badge = Find("PriceBox/DiscountBadge");
+            if (badge == null) return;
+            bool show = !string.IsNullOrEmpty(label);
+            var tmp = badge.Find("Label")?.GetComponent<TextMeshProUGUI>();
+            if (tmp != null) tmp.text = show ? label : string.Empty;
+            badge.gameObject.SetActive(show);
+        }
+
+        private void CaptureAuthoredPriceGeometry()
+        {
+            if (_priceGeometryCaptured) return;
+            var box    = Find("PriceBox") as RectTransform;
+            var border = Find("PriceBorder") as RectTransform;
+            var cta    = Find("CtaGoldButton") as RectTransform;
+            if (box == null) return;
+            _boxAuthoredPos  = box.anchoredPosition;  _boxAuthoredSize  = box.sizeDelta;
+            if (border != null) { _borderAuthoredPos = border.anchoredPosition; _borderAuthoredSize = border.sizeDelta; }
+            if (cta != null) _ctaAuthoredPos = cta.anchoredPosition;
+            var origNum = Find("PriceBox/Orig/Num")?.GetComponent<TextMeshProUGUI>();
+            if (origNum != null) { _origNumAuthoredColor = origNum.color; _origNumAuthoredSize = origNum.fontSize; }
+            var origIcon = Find("PriceBox/Orig/RpIcon")?.GetComponent<Image>();
+            if (origIcon != null) _origIconAuthoredColor = origIcon.color;
+            _priceGeometryCaptured = true;
+        }
+
+        /// <summary>
+        /// The ¥-only plate is SHORTER (node: 76 against the RP plate's 142) and the node keeps the
+        /// plate + BUY group vertically centred, so both move: the plate shrinks to
+        /// <see cref="MoneyOnlyPlateHeight"/> and the pair is re-centred on the authored group's own
+        /// centre. Every other mode puts the authored geometry back.
+        /// </summary>
+        private void ApplyPriceGeometry(PriceMode mode)
+        {
+            var box    = Find("PriceBox") as RectTransform;
+            var border = Find("PriceBorder") as RectTransform;
+            var cta    = Find("CtaGoldButton") as RectTransform;
+            if (box == null || !_priceGeometryCaptured) return;
+
+            if (mode != PriceMode.MoneyOnly)
             {
-                // no discount: the whole box is the navy "pay" chip, price CENTERED in the square.
-                if (box != null)  box.color = PriceNavy;
-                if (orig != null) orig.gameObject.SetActive(false);
-                SetActive("PriceBox/Orig/Strike", false);
-                if (saleBg != null)  saleBg.gameObject.SetActive(true);
-                if (saleImg != null) saleImg.color = new Color(0, 0, 0, 0); // transparent — box already navy
-                if (saleNum != null) saleNum.text = Rp(entry.RpCost);
-                CenterPriceRow("PriceBox/SaleBG/Sale");
-                if (saleRt != null)  // fill the box so the center-anchored price sits in the middle
-                {
-                    saleRt.anchorMin = new Vector2(0, 0); saleRt.anchorMax = new Vector2(1, 1);
-                    saleRt.offsetMin = Vector2.zero; saleRt.offsetMax = Vector2.zero;
-                }
+                box.anchoredPosition = _boxAuthoredPos;  box.sizeDelta = _boxAuthoredSize;
+                if (border != null) { border.anchoredPosition = _borderAuthoredPos; border.sizeDelta = _borderAuthoredSize; }
+                if (cta != null) cta.anchoredPosition = _ctaAuthoredPos;
+                return;
             }
+
+            // Authored group (top-left anchored, y grows downward as -y): plate top → BUY bottom.
+            float boxTop     = -_boxAuthoredPos.y;
+            float boxBottom  = boxTop + _boxAuthoredSize.y;
+            float ctaTop     = cta != null ? -_ctaAuthoredPos.y : boxBottom;
+            float ctaHeight  = cta != null ? cta.sizeDelta.y : 0f;
+            float gap        = ctaTop - boxBottom;
+            float centre     = (boxTop + ctaTop + ctaHeight) * 0.5f;
+            float group      = MoneyOnlyPlateHeight + gap + ctaHeight;
+            float newBoxTop  = centre - group * 0.5f;
+
+            box.anchoredPosition = new Vector2(_boxAuthoredPos.x, -newBoxTop);
+            box.sizeDelta        = new Vector2(_boxAuthoredSize.x, MoneyOnlyPlateHeight);
+            if (border != null)
+            {
+                float inset = _borderAuthoredPos.y - _boxAuthoredPos.y;            // +3 authored
+                float grow  = _borderAuthoredSize.y - _boxAuthoredSize.y;          // +6 authored
+                border.anchoredPosition = new Vector2(_borderAuthoredPos.x, -newBoxTop + inset);
+                border.sizeDelta        = new Vector2(_borderAuthoredSize.x, MoneyOnlyPlateHeight + grow);
+            }
+            if (cta != null) cta.anchoredPosition = new Vector2(_ctaAuthoredPos.x, -(newBoxTop + MoneyOnlyPlateHeight + gap));
         }
 
         /// <summary>
@@ -617,9 +820,15 @@ namespace GolfinRedux.UI.Shop
         /// </summary>
         private static string Rp(int amount) => amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        /// <summary>Gap between the coin and the number, as authored in the prefab
-        /// (Num.x − (RpIcon.x + RpIcon.width) = 6 on both rows).</summary>
-        private const float PriceIconGap = 6f;
+        /// <summary>The coin on a price row — node `14292:33345/33346/33347`: 36 px, 8 px before the
+        /// number (the prefab shipped 30/6 and 26/6; the spec's fidelity table pins the node).</summary>
+        private const float PriceIconPx  = 36f;
+        private const float PriceIconGap = 8f;
+
+        /// <summary>The struck original on a legacy RP sale keeps its authored 26 px coin and 6 px gap —
+        /// that row is not in the IAP node and "single-priced rows keep today's struck-orig treatment".</summary>
+        private const float StruckIconPx  = 26f;
+        private const float StruckIconGap = 6f;
 
         /// <summary>
         /// Centre the coin AND the number as one group in a price row.
@@ -631,21 +840,34 @@ namespace GolfinRedux.UI.Shop
         /// the gap plus the RENDERED number width, and its left edge is half that to the left of
         /// centre — for every price length, on both the struck row and the pay row.</para>
         /// </summary>
-        private void CenterPriceRow(string rowPath)
+        private void CenterPriceRow(string rowPath, float iconPx, float gap)
         {
             var icon = Find(rowPath + "/RpIcon") as RectTransform;
             var num  = Find(rowPath + "/Num")?.GetComponent<TextMeshProUGUI>();
             if (icon == null || num == null) return;
 
+            icon.sizeDelta = new Vector2(iconPx, iconPx);
+
             var numRt = (RectTransform)num.transform;
             float textW  = num.preferredWidth;
-            float groupW = icon.sizeDelta.x + PriceIconGap + textW;
+            float groupW = icon.sizeDelta.x + gap + textW;
             float left   = -groupW * 0.5f;
 
             icon.anchoredPosition  = new Vector2(left, icon.anchoredPosition.y);
-            numRt.anchoredPosition = new Vector2(left + icon.sizeDelta.x + PriceIconGap, numRt.anchoredPosition.y);
+            numRt.anchoredPosition = new Vector2(left + icon.sizeDelta.x + gap, numRt.anchoredPosition.y);
             // The number's rect is sized to its text so nothing to its right is a phantom
             // margin the centring would otherwise have to include.
+            numRt.sizeDelta = new Vector2(textW, numRt.sizeDelta.y);
+        }
+
+        /// <summary>The number alone, centred — the ¥ rows have no coin.</summary>
+        private void CenterPriceText(string rowPath)
+        {
+            var num = Find(rowPath + "/Num")?.GetComponent<TextMeshProUGUI>();
+            if (num == null) return;
+            var numRt = (RectTransform)num.transform;
+            float textW = num.preferredWidth;
+            numRt.anchoredPosition = new Vector2(-textW * 0.5f, numRt.anchoredPosition.y);
             numRt.sizeDelta = new Vector2(textW, numRt.sizeDelta.y);
         }
 
@@ -695,6 +917,28 @@ namespace GolfinRedux.UI.Shop
 
         /// <summary>The BUY label, for the same reason. See <see cref="BuyButton"/>.</summary>
         public TextMeshProUGUI BuyLabel => Find("CtaGoldButton/PlayLable")?.GetComponent<TextMeshProUGUI>();
+
+        // ── What the payment modal binds from (iap_plumbing) ──────────────────
+        //
+        // Read back off the bound card rather than re-resolved from the databases, so the modal can
+        // never name or picture a row differently from the card the player just tapped.
+
+        /// <summary>The card's rendered name ("GOLD TICKET", "IRON 9 KLYRO").</summary>
+        public string DisplayName => Find("NameLabel")?.GetComponent<TextMeshProUGUI>()?.text ?? string.Empty;
+
+        /// <summary>The card's tile art — the ticket icon, the club portrait.</summary>
+        public Sprite TileSprite => Find("tournament_image/Portrait")?.GetComponent<Image>()?.sprite;
+
+        /// <summary>The card's description block, empty for kinds that have none (clubs, balls).</summary>
+        public string Description
+        {
+            get
+            {
+                var d = Find("Desc");
+                var tmp = d != null && d.gameObject.activeSelf ? d.GetComponent<TextMeshProUGUI>() : null;
+                return tmp != null ? tmp.text : string.Empty;
+            }
+        }
 
         private void WireBuy(ShopCatalogEntry entry)
         {

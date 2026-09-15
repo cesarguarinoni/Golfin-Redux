@@ -1669,6 +1669,21 @@ MonoBehaviour:
   - key: SHOP_HISTORY_PRICE
     english: 'PRICE: {0} RP'
     japanese: "\u4FA1\u683C: {0} RP"
+  - key: SHOP_HISTORY_PRICE_MONEY
+    english: 'PRICE: {0}'
+    japanese: "\u4FA1\u683C: {0}"
+  - key: STORE_CHOOSE_PAYMENT
+    english: CHOOSE HOW TO PAY.
+    japanese: "\u652F\u6255\u3044\u65B9\u6CD5\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
+  - key: STORE_IAP_FAILED
+    english: PURCHASE FAILED
+    japanese: "\u8CFC\u5165\u306B\u5931\u6557\u3057\u307E\u3057\u305F"
+  - key: STORE_IAP_UNAVAILABLE
+    english: STORE UNAVAILABLE
+    japanese: "\u30B9\u30C8\u30A2\u3092\u5229\u7528\u3067\u304D\u307E\u305B\u3093"
+  - key: STORE_IAP_PROCESSING
+    english: "PROCESSING\u2026"
+    japanese: "\u51E6\u7406\u4E2D\u2026"
   - key: TICKET_INFO_STANDARD
     english: Spend one for a single pull on any banner that takes a standard ticket.
     japanese: "\u30B9\u30BF\u30F3\u30C0\u30FC\u30C9\u30C1\u30B1\u30C3\u30C8\u5BFE\u5FDC\u30D0\u30CA\u30FC\u3067\u30AC\u30C1\u30E3\u30921\u56DE\u5F15\u3051\u307E\u3059\u3002"

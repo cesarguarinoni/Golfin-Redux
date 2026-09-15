@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  IAP_SANDBOX_TEST_SKU,
   hasErrors,
   isValidNewRowId,
   validateCatalog,
@@ -525,5 +526,52 @@ describe("gacha_pools — leaves a DEACTIVATED pool row alone", () => {
     const problems = poolErrors([poolRow({ rarity: "Platinum" }, false)]);
     expect(problems.map((p) => p.column)).toContain("rarity");
     expect(poolErrors([poolRow({ weight: "0" }, false)]).map((p) => p.column)).toContain("weight");
+  });
+});
+
+/**
+ * shop_catalog — G4-IAP, money never sits next to a stat item (iap_plumbing).
+ *
+ * `storeProductId` is the additive column that lets a row carry an App Store
+ * price beside its RP one. MONETIZATION_PLAN §1.3 says money never sits next to
+ * a stat-carrying item or a gacha pull, so the validator BLOCKS any value on a
+ * club / ball / character / item row and any value but the sandbox test SKU on
+ * a ticket row. Blank is always fine — it is what every shipped row has.
+ */
+describe("shop_catalog — G4-IAP, storeProductId is blank everywhere but the sandbox ticket", () => {
+  it("accepts a blank storeProductId on every category", () => {
+    const problems = shopErrors([
+      shopRow("shop_ball_x", { category: "ball", refId: "ball_golfin", rpCost: "50", storeProductId: "" }),
+      shopRow("shop_club_x", { category: "club", refId: "club_driver_gf", rpCost: "100" }),
+    ]);
+    expect(problems.map((p) => p.column)).not.toContain("storeProductId");
+  });
+
+  it("refuses a product id on a club row — a stat item with a money price", () => {
+    const problems = shopErrors([
+      shopRow("shop_club_x", { category: "club", refId: "club_driver_gf", rpCost: "100", storeProductId: "golfin.driver.gf" }),
+    ]);
+    expect(problems.map((p) => p.column)).toContain("storeProductId");
+  });
+
+  it("refuses a product id on a ball row", () => {
+    const problems = shopErrors([
+      shopRow("shop_ball_x", { category: "ball", refId: "ball_golfin", rpCost: "50", storeProductId: "test.tickets.x10" }),
+    ]);
+    expect(problems.map((p) => p.column)).toContain("storeProductId");
+  });
+
+  it("refuses any product id but the sandbox SKU on a ticket row", () => {
+    const problems = shopErrors([
+      shopRow("shop_ticket_x", { category: "ticket", refId: "0", rpCost: "100", quantity: "10", storeProductId: "golfin.tickets.x10" }),
+    ]);
+    expect(problems.map((p) => p.column)).toContain("storeProductId");
+  });
+
+  it("accepts the sandbox SKU test.tickets.x10 on a ticket row (the one sanctioned exception)", () => {
+    const problems = shopErrors([
+      shopRow("shop_ticket_gold_10_iap", { category: "ticket", refId: "0", rpCost: "600", saleRpCost: "450", quantity: "10", storeProductId: IAP_SANDBOX_TEST_SKU }),
+    ]);
+    expect(problems.map((p) => p.column)).not.toContain("storeProductId");
   });
 });

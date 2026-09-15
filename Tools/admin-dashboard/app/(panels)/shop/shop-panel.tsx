@@ -187,6 +187,18 @@ export function ShopPanel() {
               />
               <span className="mt-1 block text-[10px] leading-relaxed text-zinc-600">{translate("sh.rotation.help")}</span>
             </label>
+            {/* iap_plumbing — explicit for the same reason: every shipped row predates the
+                column. Blank on every row but the sandbox ticket (validator rule G4-IAP). */}
+            <label className="block">
+              <span className="font-mono text-[10px] text-zinc-500">storeProductId</span>
+              <input
+                value={draft.storeProductId ?? ""}
+                onChange={(e) => set("storeProductId", e.target.value.trim())}
+                placeholder=""
+                className="mt-0.5 w-full rounded-md border border-surface-700 bg-surface-950 px-2 py-1 font-mono text-[11px] text-zinc-200 placeholder:text-zinc-700 focus:border-accent-500 focus:outline-none"
+              />
+              <span className="mt-1 block text-[10px] leading-relaxed text-zinc-600">{translate("sh.storeProduct.help")}</span>
+            </label>
           </div>
         </div>
       )}

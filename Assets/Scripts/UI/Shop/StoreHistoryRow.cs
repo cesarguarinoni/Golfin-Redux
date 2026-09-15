@@ -50,8 +50,13 @@ namespace GolfinRedux.UI.Shop
             SetLine(3, string.Format(LocalizationManager.Get("SHOP_HISTORY_SOURCE"),
                                      LocalizationManager.Get("SHOP_HISTORY_SOURCE_STORE")));
             // The number the player PAID (charged_rp), never the list price — so a sale price
-            // stays a sale price in the log forever.
-            SetLine(4, string.Format(LocalizationManager.Get("SHOP_HISTORY_PRICE"), record.ChargedRp));
+            // stays a sale price in the log forever. A MONEY purchase (iap_plumbing) shows what was
+            // paid in its currency instead — the RP line would read "0 RP", which is not what
+            // happened.
+            SetLine(4, record.PaidWithMoney
+                ? string.Format(LocalizationManager.Get("SHOP_HISTORY_PRICE_MONEY"),
+                                FormatMoney(record.PaidAmount, record.PaidCurrency))
+                : string.Format(LocalizationManager.Get("SHOP_HISTORY_PRICE"), record.ChargedRp));
 
             // Line 6 of the cloned row has nothing to say about a purchase. HIDDEN, not blanked:
             // the lines sit in a vertical layout group, so an empty one still takes its height and
@@ -152,6 +157,19 @@ namespace GolfinRedux.UI.Shop
                 default:
                     return record.RefId;
             }
+        }
+
+        /// <summary>
+        /// "¥1,500" for JPY (the only currency the golfin arm sells in), "12 USD" otherwise. The
+        /// live card's ¥ string is StoreKit's; the LOG has only the server's catalog price and
+        /// currency, so this is the one place a money price is composed client-side.
+        /// </summary>
+        public static string FormatMoney(int amount, string currency)
+        {
+            string digits = amount.ToString("N0", CultureInfo.InvariantCulture);
+            return string.Equals(currency, "JPY", System.StringComparison.OrdinalIgnoreCase)
+                ? "¥" + digits
+                : digits + " " + (currency ?? string.Empty);
         }
 
         /// <summary><c>yyyy/MM/dd</c> from an ISO-8601 UTC string, or empty when it will not parse.

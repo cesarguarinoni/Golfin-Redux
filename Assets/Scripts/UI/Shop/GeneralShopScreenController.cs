@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Economy;
 using Golfin.UI.Polish;
 using Golfin.UI.Toast;
 using Golfin.Roster;
@@ -75,13 +76,24 @@ namespace GolfinRedux.UI.Shop
             StartCoroutine(RebuildNextFrame());
             if (RewardPointsManager.Instance != null)
                 RewardPointsManager.Instance.OnPointsChanged += OnRpChanged;
+            // iap_plumbing: the store connects asynchronously after boot. When it does (or drops),
+            // the ¥ plates and the sandbox row's listing change, so the grid re-binds.
+            IapService.AvailabilityChanged += OnIapAvailabilityChanged;
         }
 
         private void OnDisable()
         {
             if (RewardPointsManager.Instance != null)
                 RewardPointsManager.Instance.OnPointsChanged -= OnRpChanged;
+            IapService.AvailabilityChanged -= OnIapAvailabilityChanged;
             ClearCards();
+        }
+
+        private void OnIapAvailabilityChanged()
+        {
+            if (!isActiveAndEnabled || _purchaseInFlight) return;
+            Debug.Log($"[GeneralShop] IAP availability changed → {IapService.State}; re-binding the grid.");
+            Rebuild();
         }
 
         private IEnumerator RebuildNextFrame()
@@ -185,7 +197,115 @@ namespace GolfinRedux.UI.Shop
 
         // ── Purchase ────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// iap_plumbing — BUY routes by what the CARD is showing, which is what the store can honour
+        /// right now: RP-only → today's <see cref="ShopTransaction.TryPurchaseCatalogEntry"/> path,
+        /// untouched; ¥-only → <see cref="IapService.Purchase"/>; both → the payment-choice modal. A
+        /// dual row whose money side is unavailable never reaches the modal — the card already draws
+        /// it RP-only, so the tap IS the RP purchase (a one-option chooser is a button row with a
+        /// button that has nothing to choose).
+        /// </summary>
         private void HandleBuy(GeneralShopCard card)
+        {
+            if (card == null || card.Entry == null) return;
+            if (_purchaseInFlight) return;
+
+            var entry = card.Entry;
+            bool money = card.ShowsMoneyPrice;          // StoreKit can sell it right now
+            bool rp    = card.ShowsRpPrice && entry.HasRpPrice;
+
+            if (money && rp)  { OpenPaymentModal(card); return; }
+            if (money)        { BuyWithMoney(card);     return; }
+            BuyWithRp(card);
+        }
+
+        // ── The payment-choice modal (Figma 14289:33223) ─────────────────────
+
+        private StorePaymentModalController _paymentModal;
+
+        private StorePaymentModalController PaymentModal
+        {
+            get
+            {
+                if (_paymentModal != null) return _paymentModal;
+                var prefab = Resources.Load<StorePaymentModalController>("Prefabs/Shop/StorePaymentModal");
+                if (prefab == null)
+                {
+                    Debug.LogError("[GeneralShop] Resources/Prefabs/Shop/StorePaymentModal.prefab is missing — " +
+                                   "run GOLFIN ▸ Store ▸ Build Store Payment Modal prefab.");
+                    return null;
+                }
+                // Under the ROOT canvas, as the last sibling, where every other full-screen modal lives
+                // (UI_HIERARCHY § SchemeConfirmModal): ScaleWithScreenSize 1170×2532, above the screens.
+                var canvas = GetComponentInParent<Canvas>();
+                Transform parent = canvas != null ? canvas.rootCanvas.transform : transform.root;
+                _paymentModal = Instantiate(prefab, parent);
+                _paymentModal.name = "StorePaymentModal";
+                _paymentModal.transform.SetAsLastSibling();
+                return _paymentModal;
+            }
+        }
+
+        private void OpenPaymentModal(GeneralShopCard card)
+        {
+            var modal = PaymentModal;
+            if (modal == null) { BuyWithRp(card); return; }   // no modal asset: the RP path still works
+
+            var entry = card.Entry;
+            IapService.TryGetLocalizedPrice(entry.StoreProductId, out string moneyPrice);
+            string title = card.DisplayName + (entry.Quantity > 1 ? " ×" + entry.Quantity : string.Empty);
+
+            modal.Open(title, card.TileSprite, card.Description,
+                       entry.EffectiveRpCost, moneyPrice,
+                       onRp:    () => BuyWithRp(card),
+                       onMoney: () => BuyWithMoney(card));
+        }
+
+        // ── ¥ — StoreKit → server verify → ledger, under PendingSpend the whole way ──
+
+        private void BuyWithMoney(GeneralShopCard card)
+        {
+            if (_purchaseInFlight || card == null || card.Entry == null) return;
+            var entry = card.Entry;
+            _purchaseInFlight = true;
+
+            // The button shows the ENTIRE round trip — StoreKit sheet, server verify, grant ack —
+            // exactly as the RP path shows its server call (transaction_feedback §3.1).
+            var pending = PendingSpend.Begin(card.BuyButton, card.BuyLabel);
+
+            IapService.Purchase(entry.StoreProductId, entry.EntryId, outcome =>
+            {
+                pending.Dispose();
+                _purchaseInFlight = false;
+                var toast = ToastController.Instance;
+
+                switch (outcome)
+                {
+                    case IapPurchaseOutcome.Granted:
+                    case IapPurchaseOutcome.AlreadyGranted:
+                        toast?.Show("Purchased!");          // the RP path's own success copy
+                        break;
+                    case IapPurchaseOutcome.Cancelled:
+                        break;                              // the player closed the sheet; nothing to say
+                    case IapPurchaseOutcome.Deferred:
+                        toast?.Show(LocalizationManager.Get("STORE_IAP_PROCESSING"));
+                        break;
+                    case IapPurchaseOutcome.Failed:
+                    case IapPurchaseOutcome.VerifyRefused:
+                        toast?.Show(LocalizationManager.Get("STORE_IAP_FAILED"));
+                        break;
+                    default:                                // KillSwitchOff / Offline / Unavailable
+                        toast?.Show(LocalizationManager.Get("STORE_IAP_UNAVAILABLE"));
+                        break;
+                }
+
+                if (card != null && card.Entry != null) card.Bind(card.Entry);
+            });
+        }
+
+        // ── RP — today's path, byte-for-byte ─────────────────────────────────
+
+        private void BuyWithRp(GeneralShopCard card)
         {
             if (card == null || card.Entry == null) return;
 

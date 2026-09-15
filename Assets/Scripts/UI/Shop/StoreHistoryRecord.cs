@@ -47,5 +47,13 @@ namespace GolfinRedux.UI.Shop
         /// <see cref="System.Globalization.DateTimeStyles.RoundtripKind"/> at the row, never
         /// rewritten in transit.</summary>
         public string PurchasedUtc = "";
+
+        /// <summary>iap_plumbing — a MONEY purchase: the catalog price in <see cref="PaidCurrency"/>'s
+        /// major unit (yen). 0 with an empty currency means "paid in RP" and the PRICE line renders
+        /// <see cref="ChargedRp"/> as before.</summary>
+        public int PaidAmount;
+        public string PaidCurrency = "";
+
+        public bool PaidWithMoney => !string.IsNullOrEmpty(PaidCurrency);
     }
 }

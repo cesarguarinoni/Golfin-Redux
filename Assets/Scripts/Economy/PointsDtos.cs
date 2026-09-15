@@ -594,6 +594,12 @@ namespace Golfin.Economy
         [JsonProperty("on_sale")]    public bool   OnSale;
         [JsonProperty("build")]      public int    Build;
         [JsonProperty("created_at")] public string CreatedAt = "";
+
+        /// <summary>iap_plumbing — set on a MONEY purchase (the catalog price in the currency's major
+        /// unit, yen) and null on an RP one, where <see cref="ChargedRp"/> is the price. Absent from
+        /// an older server: null, which reads as RP.</summary>
+        [JsonProperty("paid_amount")]   public int?   PaidAmount;
+        [JsonProperty("paid_currency")] public string PaidCurrency;
     }
 
     /// <summary><c>GET /api/v1/gacha/history</c> → <c>{data:{pulls:[…], next_before}}</c>.</summary>

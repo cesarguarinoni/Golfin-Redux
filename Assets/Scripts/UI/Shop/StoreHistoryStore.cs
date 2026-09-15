@@ -147,6 +147,8 @@ namespace GolfinRedux.UI.Shop
                     ListRp       = row.ListRp,
                     OnSale       = row.OnSale,
                     PurchasedUtc = row.CreatedAt ?? string.Empty,
+                    PaidAmount   = row.PaidAmount ?? 0,
+                    PaidCurrency = row.PaidCurrency ?? string.Empty,
                 });
             }
             return records;

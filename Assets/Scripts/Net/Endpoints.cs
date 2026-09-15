@@ -782,6 +782,27 @@ namespace Golfin.Net
                        + "&limit=" + limit
                        + (forLoans ? "&for_loans=1" : "");
 
+        // ── IAP, the GOLFIN arm (iap_plumbing, 2026-09-15) ───────────────────
+        //
+        // TWO ROUTES UNDER /iap, AND NEITHER IS THE PARTNER APP'S. `/iap/verify-purchase`
+        // (never called from the game) credits PLAYLIFE pts; these two reach only
+        // `iap_products.app = 'golfin'` rows and deliver through the ticket ledger.
+
+        /// <summary>GET → <c>{data:{enabled, platform, products:[{product_id, kind, grant_ref,
+        /// grant_qty, price_jpy, currency}]}}</c>. NO AUTH, same posture as <see cref="Content"/>:
+        /// read at boot before any token work. <c>enabled</c> is <c>content_settings.iap_enabled</c>
+        /// read FAIL-CLOSED by the server, and a false answer carries an EMPTY product list — the
+        /// client must not initialise Unity IAP, nor draw a ¥ plate, on a false.</summary>
+        public static string IapGolfinConfig => BaseUrl + "/iap/golfin/config?platform=apple";
+
+        /// <summary>POST <c>{platform, product_id, transaction_id, receipt_data, jws, entry_id,
+        /// build, sandbox}</c> — AUTH REQUIRED. Verifies the Apple receipt server-side and grants
+        /// through <c>golfin_iap_grant()</c>. 200 ⇒ <c>{data:{verified, already_processed,
+        /// status: ok|already_processed, granted:{kind, ref_id, amount}, balance}}</c> — the ONLY
+        /// answer after which the client may confirm the StoreKit transaction. 409 = the kill
+        /// switch is off; 402 = Apple refused or the receipt does not carry this transaction.</summary>
+        public static string IapGolfinVerify => BaseUrl + "/iap/golfin/verify";
+
         /// <summary>Restore the shipping host (used by tests that retarget <see cref="RootUrl"/>).</summary>
         public static void ResetToDefault() => RootUrl = DefaultRootUrl;
 

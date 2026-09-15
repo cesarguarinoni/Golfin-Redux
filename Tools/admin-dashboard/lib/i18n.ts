@@ -1678,6 +1678,10 @@ export const DICT = {
     en: "Set by the Rotations workbench when a week is materialized. Leave blank on a permanent listing. A tagged row must sit inside its rotation's window (R2), and a ref the last few rotations already listed warns (R4).",
     ja: "週替わりの作業台でラインナップを生成すると自動的に設定されます。常設の出品では空欄のままにしてください。タグ付きの行はそのローテーションの期間内に収まる必要があり（R2）、直近のローテーションで既に出品された ref は警告になります（R4）。",
   },
+  "sh.storeProduct.help": {
+    en: "App Store product id this row can ALSO be bought with (a real-money price next to the RP one). Leave BLANK: money never sits next to a stat item or a gacha pull (MONETIZATION_PLAN §1.3). The only value the validator accepts is the sandbox pipeline test SKU test.tickets.x10 on a ticket row; that row never ships.",
+    ja: "この行を実際の通貨でも購入できるようにする App Store のプロダクト ID（RP 価格の隣に金額が並びます）。原則として空欄のままにしてください。ステータス付きアイテムやガチャ引きの隣にお金を置くことはできません（MONETIZATION_PLAN §1.3）。バリデータが受け付けるのはチケット行の sandbox テスト SKU test.tickets.x10 だけで、その行は出荷されません。",
+  },
 
   // ---- gacha catalogs (gacha_admin_catalogs §5) --------------------------
   //

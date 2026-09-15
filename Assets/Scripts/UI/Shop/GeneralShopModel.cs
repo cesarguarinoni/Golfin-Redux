@@ -123,6 +123,30 @@ namespace GolfinRedux.UI.Shop
 
         /// <summary>The price actually charged: sale price when on sale, else the list price.</summary>
         public int EffectiveRpCost => HasSale ? SaleRpCost : RpCost;
+
+        // ── Money (iap_plumbing, 2026-09-15) ────────────────────────────────────
+
+        /// <summary>
+        /// The App Store product id this row can ALSO be bought with, or empty. Additive column
+        /// <c>storeProductId</c>; blank on every row but the sandbox test row. A row may carry an
+        /// RP price, a product id, or both — the card draws the plate(s) for whichever the store
+        /// can honour right now (<c>GeneralShopCard.BindPrice</c>), and the ¥ string itself is
+        /// StoreKit's, never this file's.
+        /// </summary>
+        public string StoreProductId { get; set; } = string.Empty;
+
+        public bool HasStoreProduct => !string.IsNullOrEmpty(StoreProductId);
+
+        /// <summary>True when the row has a spendable RP price. A row with 0 and a product id is ¥-only.</summary>
+        public bool HasRpPrice => RpCost > 0;
+
+        /// <summary>
+        /// A SANDBOX row: its product id lives in the <c>test.</c> namespace, which exists so the real
+        /// App Store namespace stays clean (ASC ids are unreusable once deleted) and whose products can
+        /// only ever be bought with a sandbox Apple ID. Such a row is listed ONLY while the store can
+        /// actually sell it — see <see cref="GeneralShopCatalog.ListedNow"/>.
+        /// </summary>
+        public bool IsSandboxOnly => StoreProductId.StartsWith("test.", StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -174,17 +198,51 @@ namespace GolfinRedux.UI.Shop
             get { EnsureLoaded(); return _entries!; }
         }
 
-        /// <summary>Entries for a category (null = ALL), sorted by SortOrder.</summary>
+        /// <summary>Entries for a category (null = ALL), sorted by SortOrder — the STORE's read.
+        /// Rows the store cannot sell right now are left out here (see <see cref="ListedNow"/>);
+        /// <see cref="Entries"/> stays the whole admitted catalog.</summary>
         public static List<ShopCatalogEntry> GetByCategory(ShopCategory? category)
         {
             EnsureLoaded();
             var result = new List<ShopCatalogEntry>();
             foreach (var e in _entries!)
-                if (category == null || e.Category == category.Value)
+                if ((category == null || e.Category == category.Value) && ListedNow(e))
                     result.Add(e);
             result.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
             return result;
         }
+
+        /// <summary>
+        /// Whether the store can honour a purchase of <paramref name="entry"/> RIGHT NOW — evaluated
+        /// per read rather than at load, because the store connection lands asynchronously after the
+        /// catalog has already been parsed (iap_plumbing).
+        ///
+        /// <para>Three answers:</para>
+        /// <list type="bullet">
+        /// <item>No product id ⇒ listed, as always.</item>
+        /// <item>A SANDBOX product id (<c>test.</c>) ⇒ listed only while that product is buyable on
+        /// this device (server flag on, store connected, product fetched). It is BUNDLED in the CSV,
+        /// so without this rule every player on this build would see a test listing whose RP path the
+        /// server refuses (the row is never published) — withheld entirely, never rendered RP-only.</item>
+        /// <item>A real product id ⇒ ¥-only rows are listed only while buyable (a BUY that cannot work
+        /// is not shown); dual rows stay listed and fall back to RP-only on the card.</item>
+        /// </list>
+        /// </summary>
+        public static bool ListedNow(ShopCatalogEntry entry)
+        {
+            if (!entry.HasStoreProduct) return true;
+            bool buyable = _storeProductAvailable(entry.StoreProductId);
+            if (entry.IsSandboxOnly) return buyable;
+            return entry.HasRpPrice || buyable;
+        }
+
+        /// <summary>The store's answer to "can this product be bought on this device now". Points at
+        /// <c>IapService.IsProductAvailable</c>; the EditMode suite substitutes a table.</summary>
+        private static Func<string, bool> _storeProductAvailable = Golfin.Economy.IapService.IsProductAvailable;
+
+        /// <summary>Test seam — null restores the shipping <c>IapService</c> lookup.</summary>
+        public static void OverrideStoreAvailabilityForTest(Func<string, bool>? lookup)
+            => _storeProductAvailable = lookup ?? Golfin.Economy.IapService.IsProductAvailable;
 
         private static void EnsureLoaded()
         {
@@ -493,6 +551,8 @@ namespace GolfinRedux.UI.Shop
                 SaleStartAt = f.Get("saleStartAt"),
                 SaleEndAt   = f.Get("saleEndAt"),
                 IsActive    = f.IsActive,
+                // iap_plumbing: blank on every row but the sandbox test row (see ShopCatalogEntry).
+                StoreProductId = (f.Get("storeProductId") ?? string.Empty).Trim(),
             };
         }
 

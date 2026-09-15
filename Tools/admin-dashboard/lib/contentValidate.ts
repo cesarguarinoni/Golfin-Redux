@@ -78,6 +78,14 @@ export interface ValidationContext {
 }
 
 /**
+ * iap_plumbing — the ONE App Store product id a shop row may carry, and only on a
+ * ticket row. Mirrors `iap_products` (`app='golfin'`, seeded by
+ * playlife/backend/migrations/2026_09_15_golfin_iap.sql). The `test.` namespace
+ * keeps the real product namespace clean; the row never ships.
+ */
+export const IAP_SANDBOX_TEST_SKU = "test.tickets.x10";
+
+/**
  * Mirrored from Assets/Scripts/UI/Roster/Data/RarityStatCaps.cs
  * (`RarityStatCaps.GetStatCaps`) — read from that file on 2026-08-25, NOT
  * re-derived from the economy workbook. If the C# changes, change this and say
@@ -678,6 +686,31 @@ export function validateCatalog(
             );
           } else if (quantity < 1) {
             err(row.rowId, "quantity", `quantity ${quantity} must be at least 1.`);
+          }
+        }
+
+        // G4-IAP — MONEY NEVER SITS NEXT TO A STAT ITEM (iap_plumbing;
+        // MONETIZATION_PLAN §1.3, revised 2026-09-14).
+        //
+        // `storeProductId` names an App Store product the row can ALSO be bought
+        // with. A club, ball, character or item is stat-carrying, and a ticket is
+        // a gacha pull; both are the no-P2W line, so the column must be EMPTY on
+        // every such row. The one sanctioned, temporary exception is the
+        // sandbox pipeline test SKU `test.tickets.x10` on a ticket row — it never
+        // ships (the client withholds `test.` rows unless the store can sell
+        // them, and `iap_enabled` is off in production). Blocking, because a
+        // published product id is a card with a real-money BUY on it.
+        const storeProductId = text(row.data.storeProductId).trim();
+        if (storeProductId !== "") {
+          const sandboxTicket = category === "ticket" && storeProductId === IAP_SANDBOX_TEST_SKU;
+          if (!sandboxTicket) {
+            err(
+              row.rowId,
+              "storeProductId",
+              `storeProductId "${storeProductId}" is not allowed on a "${category}" row — money never sits ` +
+                `next to a stat item or a gacha pull (MONETIZATION_PLAN §1.3). The only permitted value is ` +
+                `"${IAP_SANDBOX_TEST_SKU}" on a ticket row, and only for the sandbox pipeline test. Leave it blank.`
+            );
           }
         }
 
