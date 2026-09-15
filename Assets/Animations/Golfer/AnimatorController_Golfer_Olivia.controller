@@ -9,7 +9,7 @@ AnimatorState:
   m_PrefabAsset: {fileID: 0}
   m_Name: Address_Putt
   m_Speed: 0
-  m_CycleOffset: 0.089108914
+  m_CycleOffset: 0.04090909
   m_Transitions:
   - {fileID: -780154117368847178}
   - {fileID: -3447991801212748199}
@@ -22,7 +22,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: -203655887218126122, guid: b7729c401c0286947be7141f6e20368a, type: 3}
+  m_Motion: {fileID: -203655887218126122, guid: 8365dd7eaa9480f4a832803cefeda6cb, type: 3}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 

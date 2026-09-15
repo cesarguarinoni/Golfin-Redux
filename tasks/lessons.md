@@ -3915,3 +3915,18 @@ the ball, the head against the surface under the head — not the nearest conven
 are measured off the head MESH at address and baked per prefab (`addressFaceOffsetLocal`), never eyeballed; (3) a
 constant that another tool bakes (`addressHeadLocal`, written by the stage-2 bake as the tip) must not be
 redefined — add the correction beside it so the bake keeps its meaning.
+
+## Lesson BD — a frozen animator can be the pose the user approved; measure what renders, and never let a run go silent (2026-09-15, `golfer_club_grip`, putter posture)
+
+Three traps in one evening. (1) `GolferPresenter` runs the animator in `CullUpdateTransforms` off the swing, so a
+club switch at address left the transforms FROZEN on the drive pose while `Address_Putt` played into nothing — and
+that frozen pose was the one Cesar approved from the Game view; scene cameras "un-froze" it and showed the real
+putt clip (broken hands), which he called unusable. Rows and scans read the frozen pose: 36 identical samples.
+(2) An exception thrown from an event handler I had just written killed the harness coroutine and the editor sat in
+play mode for 40 minutes behind a watcher that only knew the success line. (3) My reflection reached for
+`RigConstraint.data`, a by-ref property reflection cannot invoke; the serialized `m_Data` field is the way in.
+Rules: the Game view is the evidence, and any harness measurement of a rigged pose runs under `AlwaysAnimate` +
+end-of-frame (then restores); a pose the user approved is the spec, even if it is an accident — make it
+deterministic (Address_Putt now plays the drive address frame) rather than "correcting" it; every run is watched
+by `Docs/Scripts/watch_golfer_run.sh` (exception / silence / timeout) and the harness carries its own stall watchdog;
+event handlers on presenters are fenced with try/catch so the harness never dies inside them.

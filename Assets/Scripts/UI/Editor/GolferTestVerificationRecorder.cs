@@ -133,6 +133,17 @@ namespace Golfin.EditorTools
             Launch(6);
         }
 
+        internal const string PuttStanceScanKey = "GolferTestVerification.PuttStanceScan";
+
+        [MenuItem("GOLFIN/Golfer Test/Putt stance scan on Hole 06 (current character)")]
+        public static void PuttStanceScanMenu()
+        {
+            SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
+            SessionState.SetBool(RigOffKey, false);
+            SessionState.SetBool(PuttStanceScanKey, true);
+            Launch(6);
+        }
+
         [MenuItem("GOLFIN/Golfer Test/Record video on Hole 06 (current character)")]
         public static void RecordHole06()
         {
@@ -218,8 +229,26 @@ namespace Golfin.EditorTools
 
         internal static bool VideoArmed => SessionState.GetBool(VideoKey, false);
 
+        static void StallWatchdog()
+        {
+            if (!EditorApplication.isPlaying) { EditorApplication.update -= StallWatchdog; return; }
+            if (GolferTestVerificationRunner.LastMarkEditorTime < 0) return;
+            if (EditorApplication.timeSinceStartup - GolferTestVerificationRunner.LastMarkEditorTime < GolferTestVerificationRunner.StallSeconds) return;
+            string last = GolferTestVerificationRunner.LastMarkText ?? "";
+            if (last.Length > 160) last = last.Substring(0, 160);
+            Debug.LogError("[GolferVerify] STALLED: no harness step for " + GolferTestVerificationRunner.StallSeconds + " s after '" + last + "' -- exiting play mode (stall watchdog)");
+            EditorApplication.update -= StallWatchdog;
+            EditorApplication.isPlaying = false;
+        }
+
         static void OnPlayModeChanged(PlayModeStateChange state)
         {
+            if (state == PlayModeStateChange.EnteredPlayMode)
+            {
+                GolferTestVerificationRunner.LastMarkEditorTime = EditorApplication.timeSinceStartup;   // the clock starts at play, before the first Mark
+                GolferTestVerificationRunner.LastMarkText = "(play mode entered)";
+                EditorApplication.update -= StallWatchdog; EditorApplication.update += StallWatchdog;
+            }
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 // Belt and braces: the runner ends the clip itself, but if it threw or the
@@ -1146,7 +1175,20 @@ namespace Golfin.EditorTools
             StartCoroutine(Sequence());
         }
 
-        void Mark(string m) { _log.AppendLine(m); Debug.Log("[GolferVerify] " + m); }
+        // ── stall watchdog (2026-09-15, Cesar: "put safeguards so you check instead of me having to do it") ──
+        // A harness coroutine that dies on an exception thrown from an event handler leaves the editor sitting in
+        // play mode with nothing happening. Every Mark() stamps the clock; an editor-side update watchdog
+        // (GolferTestVerificationRecorder.StallWatchdog) logs STALLED with the last step and exits play mode
+        // after StallSeconds of silence.
+        internal static double LastMarkEditorTime = -1;
+        internal static string LastMarkText = "";
+        internal const double StallSeconds = 180;
+
+        void Mark(string m)
+        {
+            LastMarkEditorTime = EditorApplication.timeSinceStartup; LastMarkText = m;
+            _log.AppendLine(m); Debug.Log("[GolferVerify] " + m);
+        }
 
         static readonly HashSet<string> _infoOnlyRows = new HashSet<string>();
 
@@ -2403,6 +2445,71 @@ namespace Golfin.EditorTools
             finally { RenderTexture.active = prev; UnityEngine.Object.DestroyImmediate(go); if (rt != null) { rt.Release(); UnityEngine.Object.DestroyImmediate(rt); } if (tex != null) UnityEngine.Object.DestroyImmediate(tex); }
         }
 
+        /// <summary>
+        /// The putt posture, swept the way the drive stance was (HandHingeStage2 stance sweep): Stance_Hips drop
+        /// (hips-local) x Stance_SpineBend about the target line, measured on the RENDERED pose (end of frame).
+        /// Objective: the putter's sole on the ground at the address point with the smallest edit; torso tilt and
+        /// the face offsets are reported for the bake. Pick written to evidence/[char]/putt/putt_stance_pick.json.
+        /// </summary>
+        IEnumerator PuttStanceScan(GameObject golfer, Animator anim, Component shot)
+        {
+            var ot = golfer.GetComponentsInChildren<UnityEngine.Animations.Rigging.OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_SpineBend");
+            var oh = golfer.GetComponentsInChildren<UnityEngine.Animations.Rigging.OverrideTransform>(true).FirstOrDefault(o => o.gameObject.name == "Stance_Hips");
+            var mf = golfer.GetComponentsInChildren<MeshFilter>(true).FirstOrDefault(m => m.name == "Clubhead" && m.gameObject.activeInHierarchy && m.sharedMesh != null);
+            var presT = FindType("Golfin.Gameplay.Golfer.GolferPresenter"); var presC = presT != null ? golfer.GetComponent(presT) : null;
+            var apProp = presT?.GetProperty("AddressClubHeadWorld");
+            if (ot == null || oh == null || mf == null || apProp == null || presC == null) { Mark("putt stance scan SKIPPED: rig/head/presenter missing"); yield break; }
+            Transform spine = anim.GetBoneTransform(HumanBodyBones.Spine), hipsB = anim.GetBoneTransform(HumanBodyBones.Hips);
+            Transform neck = anim.GetBoneTransform(HumanBodyBones.Neck) ?? anim.GetBoneTransform(HumanBodyBones.Head);
+            float h = Heading(shot); Vector3 aim = new Vector3(Mathf.Cos(h), 0f, Mathf.Sin(h));
+            // GolferPresenter.ApplyCulling leaves the animator in CullUpdateTransforms off the swing: no transform
+            // writes while the skinned mesh is judged off-screen, so every sample read the same frozen pose
+            // (2026-09-15, 36 identical rows). Measure with the animator always animating; restore after.
+            var cull0 = anim.cullingMode; anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            Mark("putt stance scan: animator culling " + cull0 + " -> AlwaysAnimate for the sweep");
+            yield return null; yield return null; yield return new WaitForEndOfFrame();
+            Vector3 hips0 = oh.data.position, rot0 = ot.data.rotation;
+            Vector3 upHipsLocal = hipsB.InverseTransformDirection(Vector3.up);
+            var verts = mf.sharedMesh.vertices;
+            var tbl = new StringBuilder("drop mm bend deg | sole above ground mm | face ahead mm | face lateral mm | torso tilt deg | hands height mm" + "\n");
+            float bestScore = float.MaxValue; float bestDrop = 0f, bestBend = 0f; Vector3 bestEuler = rot0, bestHips = hips0; string bestRow = "";
+            // positive bend about the target line STRAIGHTENED her on the first sweep (torso 30 -> 10 deg, hands up
+            // 140 mm), so the forward bend is negative here; the hips drop is a squat and costs more than a bend
+            foreach (float drop in new[] { 0f, 0.03f, 0.06f, 0.09f, 0.12f })
+            foreach (float bend in new[] { 0f, -5f, -10f, -15f, -20f, -25f, -30f, 5f })
+            {
+                { var hd = oh.data; hd.position = hips0 - upHipsLocal * drop; oh.data = hd; }
+                { var d = ot.data; d.rotation = bend == 0f ? rot0 : Quaternion.AngleAxis(bend, spine.InverseTransformDirection(aim)).eulerAngles; ot.data = d; }
+                yield return null; yield return null; yield return new WaitForEndOfFrame();
+                Vector3 ap = (Vector3)apProp.GetValue(presC);
+                var l2w = mf.transform.localToWorldMatrix;
+                float minY = float.MaxValue, maxAhead = float.MinValue; Vector3 sum = Vector3.zero; int n = 0;
+                var world = new Vector3[verts.Length];
+                for (int i = 0; i < verts.Length; i++) { world[i] = l2w.MultiplyPoint3x4(verts[i]); minY = Mathf.Min(minY, world[i].y); maxAhead = Mathf.Max(maxAhead, Vector3.Dot(world[i] - ap, aim)); }
+                for (int i = 0; i < verts.Length; i++) if (Vector3.Dot(world[i] - ap, aim) > maxAhead - 0.008f) { sum += world[i]; n++; }
+                Vector3 faceC = n > 0 ? sum / n : ap;
+                Vector3 toBall = Vector3.ProjectOnPlane(ap - golfer.transform.position, Vector3.up).normalized;
+                float sole = minY - ap.y, lateral = Vector3.Dot(faceC - ap, toBall);
+                float tilt = Vector3.Angle(Vector3.up, (neck.position - hipsB.position).normalized);
+                float handsY = 0.5f * (anim.GetBoneTransform(HumanBodyBones.LeftHand).position.y + anim.GetBoneTransform(HumanBodyBones.RightHand).position.y) - golfer.transform.position.y;
+                string row = (drop * 1000f).ToString("F0").PadLeft(6) + " " + bend.ToString("F0").PadLeft(4) + " | " + (sole * 1000f).ToString("F0").PadLeft(6) + " | " + (maxAhead * 1000f).ToString("F0").PadLeft(6) + " | " + (lateral * 1000f).ToString("F0").PadLeft(6) + " | " + tilt.ToString("F1").PadLeft(6) + " | " + (handsY * 1000f).ToString("F0").PadLeft(6);
+                tbl.Append(row).Append("\n");
+                // objective: sole within -5..+15 mm of the ground; then a bend is cheaper than a squat (3 deg ~ 1 cm of drop)
+                float score = (sole < -0.005f || sole > 0.015f ? 1000f + Mathf.Abs(sole - 0.005f) * 1000f : 0f) + drop * 300f + Mathf.Abs(bend);
+                if (score < bestScore) { bestScore = score; bestDrop = drop; bestBend = bend; bestEuler = ot.data.rotation; bestHips = oh.data.position; bestRow = row; }
+            }
+            { var d = ot.data; d.rotation = rot0; ot.data = d; var hd = oh.data; hd.position = hips0; oh.data = hd; }
+            anim.cullingMode = cull0;
+            Mark("PUTT STANCE SCAN (Stance_Hips drop x Stance_SpineBend about the target line; sole = lowest head vertex over the address-point ground):" + "\n" + tbl);
+            Mark("putt stance pick: drop " + (bestDrop * 1000f).ToString("F0") + " mm, bend " + bestBend.ToString("F0") + " deg -> " + bestRow + " | Euler " + V(bestEuler) + " hips " + V(bestHips) + (bestScore >= 1000f ? "  (NO sample put the sole on the ground)" : ""));
+            string dir = Golfer.GolferTestCharacter.EvidenceRoot + "/putt"; System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "putt_stance_pick.json"),
+                "{" + "\n" + "  \"dropM\": " + F(bestDrop) + "," + "\n" + "  \"bendDeg\": " + F(bestBend) + "," + "\n" +
+                "  \"hipsOffset\": [" + F(bestHips.x) + ", " + F(bestHips.y) + ", " + F(bestHips.z) + "]," + "\n" +
+                "  \"spineEuler\": [" + F(bestEuler.x) + ", " + F(bestEuler.y) + ", " + F(bestEuler.z) + "]," + "\n" +
+                "  \"onGround\": " + (bestScore < 1000f ? "true" : "false") + "\n" + "}" + "\n");
+        }
+
         void LogStance(string tag, GameObject golfer, Transform ball, Component shot)
         {
             if (ball == null) { Assert("stance." + tag + ".ball", false, "no ball transform"); return; }
@@ -2790,7 +2897,15 @@ namespace Golfin.EditorTools
             // (0.974, 0.217, -0.063) here and (-0.859, 0.261, 0.439) a few calls later in the same frame, after a
             // scene camera had rendered — a 100°+ difference, and the row had been passing on the stale one.
             // End-of-frame is the state the player sees.
+            var cullRows = anim != null ? anim.cullingMode : AnimatorCullingMode.AlwaysAnimate;
+            if (anim != null) { anim.cullingMode = AnimatorCullingMode.AlwaysAnimate; yield return null; yield return null; }
             yield return new WaitForEndOfFrame();
+            if (pslot != null && st == "Address_Putt" && SessionState.GetBool(GolferTestVerificationRecorder.PuttStanceScanKey, false))
+            {
+                SessionState.SetBool(GolferTestVerificationRecorder.PuttStanceScanKey, false);
+                yield return PuttStanceScan(golfer, anim, shot);
+                yield return new WaitForEndOfFrame();
+            }
             if (pslot != null && st == "Address_Putt")
             {
                 // INFORMATIONAL since 2026-09-15 (Cesar: "there is no character whatsoever during the putting camera").
@@ -2813,7 +2928,8 @@ namespace Golfin.EditorTools
                 }
                 catch (Exception e) { Mark("putt frames FAILED: " + e.Message); }
             }
-            else
+            if (anim != null) anim.cullingMode = cullRows;
+            if (!(pslot != null && st == "Address_Putt"))
                 Skip("club.faceSquare.putt", "putt address not reached (animator='" + st +
                      "', PutterSlot=" + (pslot != null) + ") -- PutterSlot's roll is not measured " +
                      "against the driver pose.");

@@ -249,3 +249,9 @@ DIRTY:
 19:04 putter: live markers show head +Z (face insert) pointing AWAY from the target with the 180° roll → roll reverted to the original; the face-square row disagrees with the render (fN·aim sign) → instance-id probe added to both; putt head hangs 28 cm short / 23 cm high of the address point (pose, not roll)
 19:10 AI_CONTEXT + Lessons BB/BC; confirmation run in progress; commit 4ad3f98b4 local
 19:12 confirmation run: face rows and lie rows green at tee and rough; putt rows made INFO (transform vs render disagreement unresolved, not player-visible); committing + pushing
+19:30 putter: PutterSlot on the driver's ClubSlot axis (hands wrap the grip) — Cesar OK. Address_Putt had NO clip (missing guid in all three controllers) → Olivia's now plays ANIM_Golf_Putt at speed 0 like Address_Drive
+20:18 putt stance scan run died: RigConstraint.data is a by-ref property (reflection NotSupported) — moved to the m_Data field, fenced with try/catch; rerunning the scan
+20:22 scan read 36 identical samples: the animator sits in CullUpdateTransforms off the swing (no transform writes when the SMR is judged off-screen) → the scan and the putt rows now measure under AlwaysAnimate; harness stall watchdog (180 s without a Mark → STALLED + exit play mode); Docs/Scripts/watch_golfer_run.sh fails loud
+20:25 under AlwaysAnimate the putt clip's real pose read 439 mm up / 1.29 m short (the 'unusable' pose); the approved putter moment is the DRIVE address frame frozen by CullUpdateTransforms → Address_Putt now plays the drive address frame deterministically; scan bends negated (positive straightened her)
+20:28 putt stance scan on the drive-address base: pick drop 30 mm + bend -15 deg (sole -2 mm, torso 42.5 deg); baked puttHipsOffset/puttSpineBendEuler and addressFaceOffsetLocalPutt (-0.446, 0, 0.0495); club switch re-places the golfer; confirmation run next
+20:30 confirmation frame sent (20-29-32); report/STATUS/Lesson BD; committing

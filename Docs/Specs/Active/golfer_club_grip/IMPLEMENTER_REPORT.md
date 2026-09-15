@@ -1449,3 +1449,48 @@ scene camera renders even after `WaitForEndOfFrame`; they are now INFO rows with
 player-visible; unresolved). Red rows in the run: `budget.tris` only (Olivia 61k tris vs the 15k limit — the
 pre-existing red since her kickoff, report line 206). Not mine, left untouched in the working tree:
 `Assets/Art/3D/Characters/_Test/Olivia/MixamoNative/v2/`, `Tools/character_pipeline/`.
+
+### Putter moment, the sequence with Cesar (19:20–20:30) — Game view only
+
+Cesar's rule from 19:30 on: the scene-camera frames are unusable (they render before the rig evaluates: broken
+hands, club wrong); the Game view is the only evidence, the driver is the example, the sprites are untouched.
+
+1. **Blade direction.** PutterSlot rolled 180° about the shaft → Cesar: "Now it's pointing the right way."
+   (`golfer_h06_putter_2026-09-15_19-24-22.png`)
+2. **Hands on the shaft.** The putter hung on its own slot axis while the hands wrap ClubSlot's. PutterSlot now sits
+   at ClubSlot's local pose with a −90° roll that maps the putter's (toe −X, face +Z) onto the driver's (toe −Z,
+   face −X): toe·toe 1.000, face·face 0.978, 19° from the roll he had approved → Cesar: "Finally. Now it's ok."
+   (`golfer_h06_putter_2026-09-15_19-27-03.png`)
+3. **Posture.** Finding first: the pose Cesar approved at that moment is the DRIVE address frame — the presenter's
+   `CullUpdateTransforms` off the swing had frozen the transforms across the club switch, so `Address_Putt` (which
+   does play `ANIM_Golf_Putt` at 9 %) was never applied to the render; under `AlwaysAnimate` the putt clip's real
+   pose reads 439 mm up / 1.29 m short (the pose Cesar called unusable). So `Address_Putt` now plays the drive
+   address frame deterministically (same motion and cycle offset as `Address_Drive`, Olivia's controller only).
+   Then the putt stance scan (`GOLFIN/Golfer Test/Putt stance scan on Hole 06`, `PuttStanceScan`): Stance_Hips
+   drop × Stance_SpineBend about the target line on the rendered pose, objective sole on the ground:
+
+   | drop mm | bend ° | sole above ground mm | face lateral mm | torso ° | hands mm |
+   |---|---|---|---|---|---|
+   | 0 | 0 | 175 | −238 | 30.3 | 779 |
+   | 0 | −15 | 28 | −446 | 42.5 | 722 |
+   | **30** | **−15** | **−2** | **−446** | **42.5** | **692** |
+   | 60 | −10 | 11 | −372 | 38.4 | 679 |
+   | 120 | −5 | 0 | −303 | 34.3 | 638 |
+
+   Pick 30 mm / −15° (torso 42.5°, inside the 25–45° band). Baked on Olivia's presenter: `puttHipsOffset`
+   (−0.0007, −0.0293, −0.0065), `puttSpineBendEuler` (345.23, 359.52, 2.63), applied by `ApplyPuttStance` on the
+   club switch (reflection on the constraints' `m_Data`, fenced); `addressFaceOffsetLocalPutt` (−0.446, 0, 0.0495)
+   so she stands 45 cm closer for the putt; the club switch now re-places her (`HandlePutterMode → PlaceAtBall`).
+   Confirmation Game view `golfer_h06_putter_2026-09-15_20-29-32.png`: head on the ground behind the ball. Face
+   row at that pose: face normal·aim +0.99, azimuth 7.3° open (informational; a −7° roll would square it).
+   Awaiting Cesar's read.
+
+### Safeguards (Cesar: "put safeguards so you check instead of me having to do it for you")
+
+A scan died on a `NotSupportedException` from `ApplyPuttStance` (the rigging `data` property is by-ref) and the
+editor sat in play mode for 40 minutes behind a success-only watcher. Now: (1) `Docs/Scripts/watch_golfer_run.sh`
+exits on success, any exception line, 150 s of harness silence, or timeout, printing the last harness step — used
+for every run since; (2) the harness stall watchdog: every `Mark` stamps the clock, and an editor update callback
+logs `[GolferVerify] STALLED after '<last step>'` and exits play mode after 180 s of silence; (3) the presenter's
+stance application is fenced so an event handler can never kill the harness again. Second finding on the way: 36
+identical scan samples — `CullUpdateTransforms` again; the scan and the putt rows now measure under `AlwaysAnimate`.

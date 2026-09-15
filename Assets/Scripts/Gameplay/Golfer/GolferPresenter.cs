@@ -827,6 +827,67 @@ namespace Golfin.Gameplay.Golfer
             if (driverSocketRoot != null) driverSocketRoot.gameObject.SetActive(!putt);
             if (putterSocketRoot != null) putterSocketRoot.gameObject.SetActive(putt);
             if (anim != null) anim.SetBool(PIsPutt, putt);
+            ApplyPuttStance(putt);
+            // the putter stands closer to the ball than the driver (addressFaceOffsetLocalPutt): re-place him at
+            // the current ball for the club in hand, unless a swing is running
+            if (!_swinging) PlaceAtBall();
+        }
+
+        // ── the putt stance (2026-09-15, Cesar: "then fix the posture ... use the driver as the example") ─────────
+        // The putt clip's hands were animated for a longer putter than the 0.89 m one she carries, so at the putt
+        // address the head hangs in the air. The drive stance is prefab data on the stance rig (Stance_Hips
+        // OverrideTransform position, hips-local; Stance_SpineBend OverrideTransform rotation, Pivot space); the
+        // putt gets its own pair, swept by the verification harness (putt stance scan) and baked here. Zero = the
+        // drive values. Reached by reflection: this assembly does not reference Animation Rigging.
+        [Tooltip("Stance_Hips override position for the putt address, hips-local (the harness's putt stance scan pick).")]
+        [SerializeField] Vector3 puttHipsOffset = Vector3.zero;
+        [Tooltip("Stance_SpineBend override rotation (Euler, Pivot space) for the putt address.")]
+        [SerializeField] Vector3 puttSpineBendEuler = Vector3.zero;
+        Component _stanceHips, _stanceSpine; bool _stanceCached; Vector3 _driveHips, _driveSpine;
+
+        // RigConstraint<T>.data is a by-ref property ("ref T data") which reflection cannot invoke
+        // (NotSupportedException, 2026-09-15 — it killed the harness once); the serialized field m_Data is the way in.
+        static System.Reflection.FieldInfo DataField(Component c)
+        {
+            for (var t = c.GetType(); t != null; t = t.BaseType)
+            {
+                var f = t.GetField("m_Data", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                if (f != null) return f;
+            }
+            return null;
+        }
+        static Vector3 GetV(Component c, string prop)
+        {
+            var f = DataField(c); object d = f?.GetValue(c);
+            var pi = d?.GetType().GetProperty(prop);
+            return pi != null ? (Vector3)pi.GetValue(d) : Vector3.zero;
+        }
+        static void SetV(Component c, string prop, Vector3 v)
+        {
+            var f = DataField(c); if (f == null) return;
+            object d = f.GetValue(c); d.GetType().GetProperty(prop)?.SetValue(d, v); f.SetValue(c, d);
+        }
+
+        void ApplyPuttStance(bool putt)
+        {
+            try
+            {
+                if (!_stanceCached)
+                {
+                    foreach (var c in GetComponentsInChildren<Component>(true))
+                    {
+                        if (c == null || c.GetType().Name != "OverrideTransform") continue;
+                        if (c.gameObject.name == "Stance_Hips") _stanceHips = c;
+                        else if (c.gameObject.name == "Stance_SpineBend") _stanceSpine = c;
+                    }
+                    if (_stanceHips == null || _stanceSpine == null) return;
+                    _driveHips = GetV(_stanceHips, "position"); _driveSpine = GetV(_stanceSpine, "rotation");
+                    _stanceCached = true;
+                }
+                SetV(_stanceHips, "position", putt ? puttHipsOffset : _driveHips);
+                SetV(_stanceSpine, "rotation", putt ? puttSpineBendEuler : _driveSpine);
+            }
+            catch (System.Exception e) { Debug.LogWarning("[GolferPresenter] putt stance not applied: " + e.Message); }
         }
 
         QualityTier _tier = QualityTier.Mid;
