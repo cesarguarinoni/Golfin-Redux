@@ -1440,3 +1440,12 @@ Two different putters, and only one of them is ever on screen:
    the wordmark), so this is the same art question as the other types: the 19 putter sprites need re-authoring
    (Gemini W2 from a corrected GOLFIN putter template, about 30 minutes) — the pipeline Cesar said to leave alone.
    Open, awaiting his call.
+
+**Confirmation run 19:12 (full Hole 06 sequence):** `club.faceBehindBall.address` −25.5 mm / +2.7 mm PASS,
+`club.faceBehindBall.atRest` −25.5 mm / +2.7 mm PASS, `stance.address.headOnLie` 0.0000 m (Tee_1) PASS,
+`stance.atRest.headOnLie` 0.0000 m (TerrainRoot) PASS, `club.faceSquare` (drive) 0.000° PASS. The two putt rows
+(`club.faceSquare.putt` 177.9°, `club.faceBehindBall.putt`) still read the transform the other way from what the
+scene camera renders even after `WaitForEndOfFrame`; they are now INFO rows with the reason in code (never
+player-visible; unresolved). Red rows in the run: `budget.tris` only (Olivia 61k tris vs the 15k limit — the
+pre-existing red since her kickoff, report line 206). Not mine, left untouched in the working tree:
+`Assets/Art/3D/Characters/_Test/Olivia/MixamoNative/v2/`, `Tools/character_pipeline/`.

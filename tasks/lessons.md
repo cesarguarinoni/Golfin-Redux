@@ -3888,3 +3888,30 @@ of the backswing; Cesar: "you cut the swinging part, that video is unusable"). T
 second under the encoder: 4 s of wall was 0.67 s of swing. **A capture window around a fixed-step simulation is
 measured in simulation time, never wall time** (`HoldSim`), and the wall-clock watchdog is a runaway backstop sized
 from measured throughput, not the thing that ends the clip.
+
+## Lesson BB — a row that reads a transform in Update can pass on a pose nobody sees; measure at end of frame, and put a marker in the render before trusting a number (2026-09-15, `golfer_club_grip`, putter)
+
+`club.faceSquare.putt` passed for days with the face constant pointing at the BACK of the putter. The row read the
+Clubhead transform right after a realtime hold — in Update, before that frame's animation/rig evaluation — and the
+same transform read `head.forward` (0.974, 0.217, −0.063) in the row and (−0.859, 0.261, 0.439) later in the same
+frame after a scene camera had rendered. Chasing it, I rolled the prefab's PutterSlot 180° on the wrong constant and
+had to revert it once live markers (red on +Z, blue on −Z, yellow toward the aim, spheres parented to nothing,
+rendered from the target side) showed the face turned away. Rules: (1) any row that reads a rigged/animated
+transform measures after `WaitForEndOfFrame`, the state the player sees; (2) before editing a prefab on the strength
+of a number, render the thing with markers on the axes the number is about — the picture with markers settled in one
+run what four runs of numbers could not; (3) a row whose value does not change when you flip the thing it measures
+is measuring something else (the azimuth stayed 2.1166° across a 180° roll + a constant flip); (4) ask what the
+player sees before fixing what the harness sees — there is no character in the putting camera, so the 3D putter's
+face was never the bug Cesar meant.
+
+## Lesson BC — "the club at the ball" is the FACE at the ball, and "on the ground" is the ground at the LIE (2026-09-15, `golfer_club_grip`, placement)
+
+Two placement constants were defined on the wrong thing. `addressHeadLocal` put the shaft TIP (heel) on the ball,
+so the driver's face plane sat 21 mm past the ball and the face centre 34 mm beyond it — the ball inside the head
+("the ball comes before the club"). `PlaceAtBall` grounded the root under the FEET, so on a 12° rough the head sat
+111 mm under the lie ("the head of the club is under the terrain"). Both were rows-green: `club.headAtBall` measured
+the tip, `stance.*.onGround` measured the feet. Rules: (1) the row measures what the eye judges — the face against
+the ball, the head against the surface under the head — not the nearest convenient transform; (2) placement offsets
+are measured off the head MESH at address and baked per prefab (`addressFaceOffsetLocal`), never eyeballed; (3) a
+constant that another tool bakes (`addressHeadLocal`, written by the stage-2 bake as the tip) must not be
+redefined — add the correction beside it so the bake keeps its meaning.

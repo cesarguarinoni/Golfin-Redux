@@ -12,9 +12,17 @@ under the harness's fixed 1/60 step, measured). Cesar authorized the ONE edit un
 is drop-free. The first take was cut at the top of the backswing because the harness's video window was wall-clock
 while the sim steps 1/60 per rendered frame at 1.5–2.4 fps under the encoder; the window is now golfer time
 (`HoldSim`) with the recorder's watchdog override at 420 s. Take 3 (`videos/olivia_swing_h06_2026-09-15_17-53-56.mp4`,
-6.15 s, 369 frames, uniform 16.7 ms) is the full swing through the ball at rest — delivered. Still open: the putt
-head close-up framing, the club head-orientation conform task (every club to copy the driver — scoped in
-`IMPLEMENTER_REPORT.md`), and the encoder's falling throughput across clips in one editor session.
+6.15 s, 369 frames, uniform 16.7 ms) is the full swing through the ball at rest — delivered.
+**Clubs (evening):** the club Cesar sees at the ball is the on-course handle SPRITE (`S_Controls_*`), not a 3D club;
+only the driver template has the golfer's-eye view (Gemini pipeline; Cesar: do nothing for now). Fixed in
+`GolferPresenter.PlaceAtBall`: (1) the root is grounded at the BALL's lie, not under the feet (the head was 111 mm
+under the rough); (2) the FACE centre lands just behind the ball instead of the shaft tip (the ball was inside the
+head: face plane +21 mm past it) via `addressFaceOffsetLocal`/`Putt`, baked on Olivia; harness rows
+`stance.<tag>.headOnLie` and `club.faceBehindBall.<tag>`. The 3D putter's face was right; the recorder's
+`PutterFaceLocal` is now +Z and the putt rows read at end of frame (the transform read in Update was a stale pose).
+The player never sees the 3D putter (top-down putting camera, no character); the putter sprite there has its shaft
+pointing up into the ball — art re-authoring, Cesar's call. Not mine, left untouched in the tree:
+`Assets/Art/3D/Characters/_Test/Olivia/MixamoNative/v2/`, `Tools/character_pipeline/`.
 
 STATUS `STAGE_2_REVIEW`, stage 3 NOT started. Cesar passed stage 1 on the inscribed wrap the same day. Built:
 `HandHingeModel` on the prefab as data (inscribed poses, thumb aims), `GripAnchor_*` + `WristTarget` under `ClubSlot`,

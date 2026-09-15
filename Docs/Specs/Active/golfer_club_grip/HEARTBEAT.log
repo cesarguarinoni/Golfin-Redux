@@ -247,3 +247,5 @@ DIRTY:
 18:50 face vs ball measured at the tee: face plane +20.9 mm PAST the ball centre, face centre 34.4 mm beyond it across the line (ball inside the head — Cesar: 'the ball comes before the club'). Presenter: addressFaceOffsetLocal(+Putt) added to addressHeadLocal; bake next. Putter head close-ups still miss the head (marker lands on grass; transforms vs render disagree) → ball-relative frames from the harness
 19:01 report: terrain-lie fix + face-vs-ball finding written; putter face side under live-marker test (run in progress)
 19:04 putter: live markers show head +Z (face insert) pointing AWAY from the target with the 180° roll → roll reverted to the original; the face-square row disagrees with the render (fN·aim sign) → instance-id probe added to both; putt head hangs 28 cm short / 23 cm high of the address point (pose, not roll)
+19:10 AI_CONTEXT + Lessons BB/BC; confirmation run in progress; commit 4ad3f98b4 local
+19:12 confirmation run: face rows and lie rows green at tee and rough; putt rows made INFO (transform vs render disagreement unresolved, not player-visible); committing + pushing
