@@ -39,3 +39,20 @@ to or a little less than the lead).
   the arms extended is what moves this number, not the grip anchors.
 - Target for a "real" look, to hand to whoever changes the club/stance: lead deviation ≤ 25°, extension
   10–20°; trail extension ≤ 20°.
+
+## Address posture (2026-09-15, Cesar: "keep a real golfer pose" for the stance edit)
+
+| Quantity | Guideline | Source |
+|---|---|---|
+| Forward bend (spine from vertical) | "perfect spine angle will typically be somewhere between **35 and 45 degrees**"; "a recommended amount of forward bend is **25 degrees from vertical** … a decent average" | https://golftipsmag.com/instruction/full-swing/4-critical-angles/ , http://www.golfloopy.com/full-swing-103-setup-perfect-spine-angle/ , https://swingtrainer.com/blogs/instruction/spine-angle-tilt-golf (search snippets; the pages themselves gate or refuse fetches) |
+| Knee flex | "most golfers should aim for **15 to 25 degrees**"; < 5–10° too upright, > 30–35° excessive | https://golfswingdrills.com/posts/2026/02/golf-swing-knee-bend-how-much-is-too/ , https://collegeofgolf.keiseruniversity.edu/how-much-knee-flex/ (qualitative) |
+| Arm hang | "the hands hang vertically down from the shoulders in a relaxed manner"; "arms … perpendicular to the ground, … plenty of room between your knees and your hands" | https://www.perfectgolfswingreview.net/AddressSetup.htm , https://www.golfdistillery.com/swing-tips/setup-address/knee-flex/ |
+| Hands vs chin | "hands are directly under the chin, or just in front of the chin" (driver) | https://www.perfectgolfswingreview.net/AddressSetup.htm |
+| Hands from the thighs | "approximately **6–8 in** from the thighs when using a driver" (4–6 in short irons) | https://www.perfectgolfswingreview.net/AddressSetup.htm |
+| Weight | 55:45 trail:lead with a driver | same |
+
+Encoded in `HandHingeStage2` as the `stance.*` rows: torso tilt (hips→neck from vertical) 25–45°, knee flex 15–25°,
+shoulder→hand ≤ 20° from vertical, hands 150–200 mm (surface) from the nearest thigh, hand midpoint −50 … +150 mm
+toward the ball from the head. The stance edit itself is one number: an additive rotation of the Spine bone about the
+target line (Animation Rigging `OverrideTransform`, Pivot space, first rig layer), chosen by the stance sweep as the
+smallest bend that puts the torso inside the band with the clip's hands clear of the knees.
