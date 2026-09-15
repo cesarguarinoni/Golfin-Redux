@@ -58,3 +58,29 @@ Not committed by Cowork. `Olivia_30k_rigtest.obj/.fbx` in `meshy_run2_60k/` are 
 5. Report in `IMPLEMENTER_REPORT.md` (new section "Olivia") + `STATUS.md`; commit the Olivia files with the report.
 
 Out of scope: hair system, cloth on skirt/ponytail, the game prefab/roster wiring, any texture cleanup, LOD.
+
+## 4. v2 — texture/mesh fix (2026-09-15, after Code's first Unity frames)
+
+Cesar's frames showed three faults: white flecks on the skirt, the arm/shirt junction breaking, and finger patches vanishing
+when the hinge model flexes them. Diagnosis (measured, not guessed):
+
+- Meshy's atlas has **11,938 UV islands, median 2 faces** — texels of neighbouring charts bleed under mipmapping (the flecks).
+  A Blender render of the same textures at native resolution shows a clean skirt, so the texture content is fine; the atlas is not.
+- The OBJ that Mixamo would accept had **78,082 split vertices** (every chart border) → Unity shaded it faceted with visible seams.
+- **2,086 faces (3.4 %) had flipped winding** — back-face culled in URP, they read as holes; on the fingers they open when bent.
+  Skin weights were NOT the cause: coincident duplicates carried identical weights.
+
+Fix, all headless in the cloud (`Tools/character_pipeline/`, README there): 6-axis projection charts on smoothed normals with
+depth peeling → **269 islands** packed with padding → Cycles bake of Meshy's colour/normal/roughness/metallic onto the new
+atlas → weld the v1 rigged mesh to 30,214 verts, transfer the packed UVs by face match (0 misses), recalc winding → export
+with the **same Mixamo armature** (65 bones; world rest matrices identical to v1 within 4e-6, so the clips and
+`HandHinge_Olivia.asset` stay valid).
+
+`Assets/Art/3D/Characters/_Test/Olivia/MixamoNative/v2/`: `Olivia_TPose_v2.fbx` (rig + welded mesh, 170 cm), `T_Olivia_BaseColor.png`
+(2K), `T_Olivia_Normal.png` (2K, tangent, OpenGL +Y — flip green in Unity's importer if it reads inverted), `T_Olivia_Roughness.png`
+(1K), `T_Olivia_Metallic.png` (1K). Clips unchanged (`../ANIM_*.fbx`).
+
+Code: swap the prefab's mesh FBX for `Olivia_TPose_v2.fbx` (same import settings; Humanoid avatar from v2, clips Copy-From v2's
+avatar), material URP Lit with the four maps (Smoothness = 1 − roughness via the importer's "Metallic Alpha"/roughness-as-smoothness
+path, or leave smoothness 0.4 for the test), re-run `AuthorPrefabStructure` + `HandHingeStage0Tool` capture, then the same §3
+acceptance. Expect: skirt clean at gameplay distance, smooth arm shading through the sleeve, fingers stay whole through the fist test.
