@@ -12,3 +12,5 @@ Putter moment (20:30): blade direction and hands approved by Cesar in the Game v
 
 21:15: putt-clip grip solve done (club fitted to ANIM_Golf_Putt's wrists, face squared on the putter child, address transitions added); tee-side frame 21-14-15 sent, awaiting Cesar. Video: encoding identical to the approved drive clip, uniform frames, no repeats — the stutter was the broken motion; re-take of the putt motion next.
 22:40: stage 2 run on the PUTT (HandHingeStage2 putt mode, the driver's pipeline): verify on the baked prefab face 89.98°, head 0.0 mm, palms 0.997/0.961, hands on shaft ≤ 0.14 mm; side-by-side with the driver's verify frames sent with the tee-moment Game view and the putt video (22-36-58). Open rows: overlap Δ17 mm, heel pad, trail palm (last two open on the driver too). Awaiting Cesar.
+
+2026-09-16 06:25: putt head on the ground behind the ball (hips 40 mm, placement corrected; face −25.9 mm / −1 mm); the after-shot turn was the video window's raw trigger — the putt video is now a real shot through BotSwing; clip 06-20-24 sent with the tee-moment Game view. Open: toe 16 mm lower than heel at the putt address. Awaiting Cesar.

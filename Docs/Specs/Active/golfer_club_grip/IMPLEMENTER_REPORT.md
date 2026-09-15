@@ -1578,3 +1578,20 @@ their targets; Cesar caught it from the frames. Retracted. The fix is `HandHinge
   the ground behind the ball.
 - The earlier "wrist fit" solver (`PuttGripSolve`) and its bake are superseded; the putt stance scan's pick was reset
   to zero so the solve started from the clip like the driver's did.
+
+### 2026-09-16 morning — "club above the ball / ball before the club", "she turns left after the shot"
+
+Both measured before anything moved. (1) `club.faceBehindBall.putt` at the green: face plane +5 mm PAST the ball
+centre, and the lie-only scan read the sole 40 mm over the ROOT ground with the blade's toe 16 mm lower than its
+heel; the putt bake had also carried a 71 mm y into the address point, which the rows used as their reference.
+Fix, grip untouched: the putt offset's y zeroed; hips drop 40 mm (sole → 0, hands 128 / shaft 63 mm off the thighs);
+placement corrected 30.5 mm back and 11 mm across. Rolling about the line (the lie lever) was measured and rejected:
+it swings the head 15 cm sideways per 12° and does not level the blade. Now: face plane −25.9 mm, centre −1 mm
+across; Game view `golfer_h06_putter_2026-09-16_06-20-47.png` shows the head on the ground behind the ball. Open:
+the toe 16 mm lower than the heel at address.
+(2) The "turn": the video window fired the animator's Swing trigger with no shot, so `Swing_Putt` ran out into
+Idle, whose root faces the flag. The window now putts for real through `BotSwing.PlayPerfect(isPutt: true)` (the bot
+rule): the shot commits, the ball rolls, the presenter re-places her at the new lie and re-addresses — states seen
+Address_Putt → Swing_Putt → Idle → Address_Putt. Clip `videos/olivia_putt_h06_2026-09-16_06-20-24.mp4`: 432 frames,
+7.2 s, uniform 16.7 ms, no repeats (frames in `evidence/olivia/putt60/`). The Unity editor was closed when the day
+started (log idle since 00:29); it was started on the project from here.
