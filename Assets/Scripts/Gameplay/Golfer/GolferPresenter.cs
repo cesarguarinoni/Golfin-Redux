@@ -929,9 +929,33 @@ namespace Golfin.Gameplay.Golfer
             if (!rightHanded) head.x = -head.x;
 
             Vector3 p = ball - rot * head + d * stanceForwardOffset;
-            p.y = GroundY(p, ball.y);
+            // Ground at the BALL's lie, not under his feet. addressHeadLocal.y is 0, so the club head
+            // sits at root height: grounding the root under the feet put the head 111 mm under the
+            // ball on Hole 06's rough (feet 0.92 m downhill of the ball; Cesar 2026-09-15: "the head
+            // of the club is under the terrain"). The ball rests on the top physical surface at ITS
+            // xz, so that is where the head belongs; the feet follow the slope by a few centimetres.
+            p.y = GroundYAt(ball, ball.y - BallRadiusM, Ball);
 
             transform.SetPositionAndRotation(p, rot);
+        }
+
+        const float BallRadiusM = 0.0215f;   // BallAnimator's roll radius
+
+        /// <summary>
+        /// Top physical surface under <paramref name="at"/>'s xz, skipping <paramref name="ignore"/>'s
+        /// own colliders (the ball, when sampling its lie); <paramref name="fallback"/> when nothing is hit.
+        /// </summary>
+        float GroundYAt(Vector3 at, float fallback, Transform ignore)
+        {
+            var origin = new Vector3(at.x, at.y + 2f, at.z);
+            var hits = UnityEngine.Physics.RaycastAll(origin, Vector3.down, 4f, groundMask, QueryTriggerInteraction.Ignore);
+            float best = float.NaN;
+            foreach (var h in hits)
+            {
+                if (ignore != null && h.collider.transform.IsChildOf(ignore)) continue;
+                if (float.IsNaN(best) || h.point.y > best) best = h.point.y;
+            }
+            return float.IsNaN(best) ? fallback : best;
         }
 
         /// <summary>Where the club head lands at address, for the harness to assert against.</summary>

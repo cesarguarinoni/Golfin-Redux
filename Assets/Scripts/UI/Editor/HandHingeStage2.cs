@@ -1239,8 +1239,30 @@ namespace Golfin.EditorTools.Golfer
             Shoot(mid, mid + aimDir * 4.0f + Vector3.up * 0.2f, Vector3.up, 1600, Path.Combine(dir, "putt_targetside.png"), log);
             Shoot(mid, mid + fwd * 4.0f + Vector3.up * 0.2f, Vector3.up, 1600, Path.Combine(dir, "putt_faceon.png"), log);
             Shoot(handsMid, handsMid - aimDir * 0.85f, Vector3.up, 1600, Path.Combine(dir, "putt_awayside.png"), log);
-            Shoot(headPos, headPos + (aimDir * 0.35f + Vector3.up * 0.45f - fwd * 0.15f), Vector3.up, 1600, Path.Combine(dir, "putt_head.png"), log);
-            Shoot(headPos, headPos + Vector3.up * 0.6f, aimDir, 1600, Path.Combine(dir, "putt_head_top.png"), log);   // straight down, target line = image up
+            // wider than the first cut (0.35/0.45 m framed grass): a metre off, from the target side and above, and
+            // a metre straight above — the blade is 12 cm long, FOV 30 at 1 m is a 54 cm field
+            Shoot(headPos, headPos + (aimDir * 0.75f + Vector3.up * 0.65f - fwd * 0.25f), Vector3.up, 1600, Path.Combine(dir, "putt_head.png"), log);
+            Shoot(headPos, headPos + Vector3.up * 1.0f + aimDir * 0.02f, aimDir, 1600, Path.Combine(dir, "putt_head_top.png"), log);   // straight down, target line = image up
+            Shoot(headPos, handsMid + (handsMid - headPos).normalized * 0.4f + Vector3.up * 0.1f, Vector3.up, 1600, Path.Combine(dir, "putt_head_downshaft.png"), log);   // from behind the hands, down the shaft
+            // ground truth for the face side, independent of the heading convention: the face must point from the
+            // head toward the CUP. Any transform whose name says cup/hole-flag is a candidate; all are logged.
+            var ballTf = golfer.scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "Ball" || t.name.StartsWith("Ball_") || t.name == "GolfBall");
+            foreach (var cand in golfer.scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Where(t => t.name.IndexOf("cup", StringComparison.OrdinalIgnoreCase) >= 0 || t.name.IndexOf("flag", StringComparison.OrdinalIgnoreCase) >= 0 || t.name.IndexOf("pin", StringComparison.OrdinalIgnoreCase) >= 0).Take(8))
+            {
+                Vector3 toCup = Vector3.ProjectOnPlane(cand.position - headPos, Vector3.up).normalized;
+                log.AppendLine("cup candidate '" + cand.name + "' at " + V(cand.position) + " dist " + F(Vector3.Distance(cand.position, headPos)) + " m; head.forward(+Z)·toCup " + F(Vector3.Dot(head.forward, toCup)) + "; aimDir·toCup " + F(Vector3.Dot(aimDir, toCup)));
+            }
+            // a marker at where this code believes the head is, so the close-ups can be read even when they miss
+            var marker = GameObject.CreatePrimitive(PrimitiveType.Sphere); marker.name = "[PuttHeadMarker]"; marker.transform.position = headPos; marker.transform.localScale = Vector3.one * 0.03f;
+            var mrend = marker.GetComponent<Renderer>(); mrend.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color")); mrend.sharedMaterial.color = Color.red;
+            try
+            {
+                Shoot(headPos, headPos + Vector3.up * 2.0f + aimDir * 0.02f, aimDir, 1600, Path.Combine(dir, "putt_head_top2m.png"), log);
+                Shoot(headPos, headPos + (aimDir * 1.4f + Vector3.up * 1.0f), Vector3.up, 1600, Path.Combine(dir, "putt_head_fromtarget.png"), log);
+                Shoot(headPos, headPos + (-aimDir * 1.4f + Vector3.up * 1.0f), Vector3.up, 1600, Path.Combine(dir, "putt_head_frombehind.png"), log);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(marker); }
+            log.AppendLine("putt head renderer: " + (headRend == null ? "<none>" : headRend.name + " enabled=" + headRend.enabled + " active=" + headRend.gameObject.activeInHierarchy + " bounds " + V(headRend.bounds.size)) + "; hands mid " + V(handsMid) + "; golfer root " + V(golfer.transform.position));
             log.AppendLine("putt address: PutterSlot local " + V(pslot.localPosition) + " " + Q(pslot.localRotation) + "; head mesh " + V(headPos) + "; slot.up·aim " + F(Vector3.Dot(pslot.up, aimDir)) + "; head.forward·aim " + F(Vector3.Dot(head.forward, aimDir)) + " head.right·aim " + F(Vector3.Dot(head.right, aimDir)));
             return log.ToString();
         }

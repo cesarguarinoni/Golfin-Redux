@@ -1227,7 +1227,13 @@ namespace Golfin.EditorTools
         // Direction only, so it is transformed through the head transform rather than assumed to
         // be identity under the slot.
         static readonly Vector3 DriverFaceLocal = new Vector3(-0.9120f, -0.3607f, -0.1951f);
-        static readonly Vector3 PutterFaceLocal = new Vector3(0f, 0f, -1f);
+        // CORRECTED 2026-09-15 (Cesar: "putter blade points the wrong way"): the face is the +Z side.
+        // Rendered from +Z the head shows the milled face insert with the G logo; from -Z it shows the
+        // back with the GOLFIN wordmark (Docs/Diagnostics/_capture/clubviews/PfGOLFIN_Putter_side_*.png).
+        // The old (0,0,-1) read the back as the face, so the solved PutterSlot roll squared the BACK to the
+        // target and every putt-address frame showed the blade turned away; the 2.1° azimuth PASS was real,
+        // it just measured the wrong side. Olivia's PutterSlot was rolled 180° about the shaft to match.
+        static readonly Vector3 PutterFaceLocal = new Vector3(0f, 0f, 1f);
 
         static Type FindType(string n) => AppDomain.CurrentDomain.GetAssemblies()
             .Select(a => { try { return a.GetType(n); } catch { return null; } }).FirstOrDefault(t => t != null);
@@ -2342,6 +2348,25 @@ namespace Golfin.EditorTools
                 float off = Vector3.Angle(swing, aim);
                 Assert("stance." + tag + ".swingsDownTheAim", off < 15f,
                        "angle(swing direction, aim) = " + F(off) + " deg");
+            }
+
+            // The head must sit ON the lie, not under it: on Hole 06's rough the root was grounded
+            // under the feet, 0.92 m downhill, and the head ended 111 mm below the ball (2026-09-15,
+            // Cesar: "the head of the club is under the terrain"). Top physical surface at the head's
+            // xz, the ball's own collider excluded.
+            if (headProp != null && pres2 != null)
+            {
+                Vector3 head = (Vector3)headProp.GetValue(pres2);
+                float groundAtHead = float.NaN; string hitName = "NONE";
+                foreach (var hh in UnityEngine.Physics.RaycastAll(head + Vector3.up * 2f, Vector3.down, 6f, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    if (hh.collider.transform.IsChildOf(ball)) continue;
+                    if (float.IsNaN(groundAtHead) || hh.point.y > groundAtHead) { groundAtHead = hh.point.y; hitName = hh.collider.name; }
+                }
+                float above = head.y - groundAtHead;
+                Assert("stance." + tag + ".headOnLie", !float.IsNaN(above) && above > -0.02f && above < 0.12f,
+                       "club head Y minus the top surface under it = " + F(above) + " m (want -0.02..0.12; ray hit " + hitName +
+                       "); head Y " + F(head.y) + ", ball Y " + F(b.y) + ", golfer root Y " + F(g.y));
             }
 
             var smr = golfer.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(s => s.sharedMesh != null && s.sharedMesh.vertexCount > 5000);
