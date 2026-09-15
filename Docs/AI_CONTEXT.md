@@ -62,7 +62,10 @@ keeps 7.18). Steps 1–2 green (26/26 tests, wrap tips within 1.2 mm). Step 3: C
 followed and is removed). Fixed: faces the ball, palms on the correct side, hands on the shaft, fingers on her
 circle, face 0.000°, crown up, head on the ball, wrists 17.3°/13.1°, posture rows pass except knee R 27.6° (clip);
 trail IK residual 32.5° and two pre-existing §3.9.6 letters remain. Evidence `evidence/olivia/`. Lesson AZ (diff
-the reference prefab first; never edit .cs in play mode). STATUS `STAGE_2_REVIEW`.
+the reference prefab first; never edit .cs in play mode). **Cesar approved stage 2 (STATUS `STAGE_2_PASS`)**, asked
+for the swing in movement (`videos/olivia_swing_h06_*.mp4`, real Hole 06 camera; stills in `evidence/olivia/swing/`),
+retired Remy (Olivia is the default test character; Remy stays selectable), and had `Library_broken_143700` deleted
+and the Meshy screenshots tracked. Next: stage 3, or a 5 mm hips lift for her right knee if Cesar wants it after the video.
 ---
 ## 2026-09-15 (golfer_club_grip stage 1) — **grip pose in hand space: mechanism holds, the §3.12.3 one-k solve does not make a grip**
 

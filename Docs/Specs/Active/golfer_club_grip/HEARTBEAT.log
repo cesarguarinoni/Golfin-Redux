@@ -228,3 +228,5 @@ DIRTY:
 2026-09-15 16:48 olivia verify 2: face 0.000°, crown up 0.998, head 0.01 mm, wrists 17.3/13.1, hands on the correct side (palms −0.998/+0.996), fingers on the circle; frames checked at full res: faces the ball like Remy. Removing the Rig_HandTwist invention from code and both prefabs, then re-verify both
 2026-09-15 16:50 olivia: verify after twist-rig removal identical (face 0.000, crown 0.998, head 0.01, wrists 17.3/13.1); Remy re-authored (twist rig removed) + verify running; report/STATUS/AI_CONTEXT/Lesson AZ rewritten to the true cause
 2026-09-15 16:51 olivia fix: Remy verify unchanged after twist-rig removal (27.5/16.2, face 0.000, crown 0.99997); tests 26/26; committing
+2026-09-15 17:00 Cesar: stage 2 Olivia APPROVED; wants the swing in movement; Remy retired (Olivia default); findings to the Architect; Meshy screenshots tracked; Library_broken deleted. Recorder now records the selected character into golfer_club_grip/videos; compiling, then recording
+2026-09-15 17:02 video recorded (olivia_swing_h06_2026-09-15_17-00-45.mp4, 4.7 s, 9.8 MB), swing stills extracted; report/STATUS/AI_CONTEXT updated; committing

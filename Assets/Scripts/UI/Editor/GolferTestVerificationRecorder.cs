@@ -105,7 +105,7 @@ namespace Golfin.EditorTools
         // under test, which is the whole point of the comparison.
         const string VariantKey = "GolferTestVerification.Variant";
 
-        [MenuItem("GOLFIN/Golfer Test/Verify Mixamo-native on Hole 06 (§9.8)")]
+        [MenuItem("GOLFIN/Golfer Test/Verify current character on Hole 06 (§9.8 harness)")]
         public static void VerifyMixamoNative()
         {
             SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
@@ -133,9 +133,10 @@ namespace Golfin.EditorTools
             Launch(6);
         }
 
-        [MenuItem("GOLFIN/Golfer Test/Record video on Hole 06")]
+        [MenuItem("GOLFIN/Golfer Test/Record video on Hole 06 (current character)")]
         public static void RecordHole06()
         {
+            SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);   // the selected test character, as the verify runs
             SessionState.SetBool(VideoKey, true);
             Launch(6);
         }
@@ -177,11 +178,12 @@ namespace Golfin.EditorTools
             var t = BotVideoRecorderType;
             if (t == null) { Debug.LogWarning("[GolferVerify] BotVideoRecorder not found — no video."); return; }
 
-            string outDir = "Docs/Specs/Active/golfer_3d_test/videos";
+            // the grip task's videos/ folder, named by character (golfer_club_grip, 2026-09-15: "I need to see it in movement")
+            string outDir = "Docs/Specs/Active/golfer_club_grip/videos";
             Directory.CreateDirectory(outDir);
             // Path WITHOUT extension — the recorder appends .mp4.
             t.GetProperty("CustomOutputPath")?.SetValue(null,
-                outDir + "/golfer_swing_h06_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+                outDir + "/" + Golfer.GolferTestCharacter.Name.ToLowerInvariant() + "_swing_h06_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
             t.GetMethod("ArmDeferred")?.Invoke(null, null);
             Debug.Log("[GolferVerify] deferred video armed -> " + outDir);
         }

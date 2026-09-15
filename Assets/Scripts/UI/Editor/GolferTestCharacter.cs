@@ -12,7 +12,8 @@ namespace Golfin.EditorTools.Golfer
     public static class GolferTestCharacter
     {
         const string Key = "Golfin.GolferTest.Character";
-        public const string Default = "MixamoNative";
+        /// <summary>Olivia since 2026-09-15 (Cesar: "retire Remy"); "MixamoNative" (Remy) stays selectable for comparison.</summary>
+        public const string Default = "Olivia";
         public const string Folder = "Assets/Art/3D/Characters/_Test/Resources/GolferTest";
 
         /// <summary>"MixamoNative" (Remy, the stand-in) or "Olivia" (the first roster-likeness model).</summary>
@@ -26,10 +27,10 @@ namespace Golfin.EditorTools.Golfer
         public static string AssetPath    => Folder + "/HandHinge_" + Name + ".asset";
         public static string ResourcePath => "GolferTest/PfGolfer_" + Name;
         /// <summary>Remy keeps the historical evidence/stageN folders; every other character gets evidence/&lt;name&gt;/stageN.</summary>
-        public static string EvidenceRoot => "Docs/Specs/Active/golfer_club_grip/evidence" + (Name == Default ? "" : "/" + Name.ToLowerInvariant());
+        public static string EvidenceRoot => "Docs/Specs/Active/golfer_club_grip/evidence" + (Name == "MixamoNative" ? "" : "/" + Name.ToLowerInvariant());
 
         [MenuItem("GOLFIN/Golfer Test/Character/Use MixamoNative (Remy)")]
-        static void UseRemy() { Name = Default; Debug.Log("[GolferTest] character = " + Name + " → " + PrefabPath); }
+        static void UseRemy() { Name = "MixamoNative"; Debug.Log("[GolferTest] character = " + Name + " → " + PrefabPath); }
 
         [MenuItem("GOLFIN/Golfer Test/Character/Use Olivia")]
         static void UseOlivia() { Name = "Olivia"; Debug.Log("[GolferTest] character = " + Name + " → " + PrefabPath); }

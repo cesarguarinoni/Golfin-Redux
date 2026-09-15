@@ -1254,3 +1254,11 @@ inside her torso for this head/torso geometry — a tooling gap, not a pose faul
 | `Assets/Scripts/UI/Editor/GolferTestCharacterBuilder.cs` | copies Remy's model-instance pose |
 | `Assets/Scripts/UI/Editor/HandHingeStage2.cs` | hand-twist authoring/measure/bake removed (a stale rig is cleaned at author time); palm-side roll rule (opt-in, off) + `grip.palmSide_l/_r` rows; `club.crownUp` row against Remy's up-local |
 | `Docs/Specs/Active/golfer_club_grip/{IMPLEMENTER_REPORT,STATUS}.md`, `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | this section; STATUS; context; Lesson AZ rewritten |
+
+## Stage 2 verdict (Cesar, 2026-09-15) and the follow-ups
+
+1. **Approved** — Olivia's address grip on Hole 06 as committed (91dffd6d1) is the stage-2 result. STATUS → `STAGE_2_PASS`.
+2. **"I need to see it in movement."** `GolferTestVerificationRecorder.RecordHole06` now records the selected character (it spawned the default prefab before) into this task's `videos/`: `videos/olivia_swing_h06_2026-09-15_17-00-45.mp4` — the real Hole 06 gameplay camera, 1170 × 2532, 4.7 s: address, the power commit, backswing, top, downswing, follow-through, then the cut to the ball flight. Stills every 0.3 s of the swing phase in `evidence/olivia/swing/swing_t*.png` and the sheet `swing_contact_sheet.png`. The club stays in both hands through the swing (the grip anchors are prefab data and the arm IK runs live).
+3. **Remy retired.** `GolferTestCharacter.Default = "Olivia"`; the verify and video menus say "current character"; Remy's prefab, hinge asset and evidence stay in the repo and he remains selectable from the Character menu for comparison. Nothing of his was deleted.
+4. The model findings (`FINDINGS_FOR_NEXT_CHARACTER.md`) go to the Architect with Cesar.
+5. The six Meshy screenshots in `Claude outputs/` are tracked; `Library_broken_143700/` is deleted.
