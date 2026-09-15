@@ -1547,3 +1547,34 @@ way: the video windows now mark progress each second of golfer time so the stall
 `Swing_Putt` and she settles to idle (stills in `evidence/olivia/putt60/`). Rendered at 1.6 frames per wall second
 (344 frames in 213 s); the window's progress marks kept the stall watchdog quiet. Awaiting Cesar's read on the
 motion and on the recording.
+
+### Stage 2 on the putt — the same pipeline that fixed the driver (Cesar 21:40: "DO THE SAME THING YOU DID TO FIX THE DRIVER. DO NOT COME TO ME AGAIN until you compare images with the driver grip and they are the same way")
+
+What I had shipped before was not a grip: the club was fitted to the wrists and the hands were left 93 / 67 mm off
+their targets; Cesar caught it from the frames. Retracted. The fix is `HandHingeStage2` in **putt mode**:
+
+- `GOLFIN_Putter` is mounted under `ClubSlot` for the solve (the anchors, `ClubStart/ClubEnd` and the IK targets live
+  there), with its head axes mapped onto the driver's convention (child rotation −90° about the shaft: toe −X → −Z,
+  face +Z → −X) and `ClubEnd` at its own tip (0.7316 m); the driver is hidden; the animator always animating.
+- The harness hooks the run at the GREEN putt address (`PuttGripOnGreen`, after the restage into `Address_Putt`),
+  with the golfer placed at the ball on the green; menus `Stage 2 PUTT solve (pitch scan)` / `Stage 2 PUTT verify`.
+- The full solve ran (roll mode pitchscan: axes, stations, the IK-in-the-loop pitch scan): lead station 20 mm, trail
+  gap 18 mm, axes 0.8/0.6, yaw −2°, pitch +2°. The bake goes to the presenter's putt fields (`puttSlotLocal*`,
+  `puttAnchor*`, `puttWrist*`, `puttClubEndY`), applied to BOTH slots and the anchors in putt mode with a
+  `RigBuilder.Build()` after the switch, drive values restored otherwise; the recorder's solved face roll (−157.35°)
+  was folded into the bake the way `ApplyFaceRollFix` does it (slot rolled, anchors counter-rotated); the placement
+  offset for the putt comes from the bake's `addressHeadLocal` (54 cm closer).
+- **Verify on the baked prefab** (`evidence/olivia/stage2_putt/verify_*`): face square 89.98°, ClubEnd 0.00 mm from
+  the ball, palms 0.997 / 0.961 (lead away from the target, trail toward it), hands on the shaft 0.01 / 0.14 mm,
+  fingers on the contact circle (every finger 21.4–21.9 mm off the axis, bones outside the mesh), wrists 14.0° / 32.0°
+  from the clip (stop line 40), IK on the anchors to 0.01 / 0.72 mm, hands 197 mm above the knees, torso 30.2°,
+  hands 155 mm off the thigh surface. Open rows: `grip.hands.overlap` Δ 17.3 mm (±8; the driver's is 3.9),
+  `grip.heelPad.onTop` and `grip.trailPalm.onThumb` (both open on the driver too, by the letter), `stance.kneeFlex`
+  (the clip's).
+- **Side by side with the driver's approved verify frames** (`compare_driver_verify_vs_putt_verify.png`): downshaft,
+  target side, golfer's eye, away side — the hands sit on the grip the same way: stacked, palms the right way,
+  fingers wrapped, the putter head at the ball in the golfer's-eye view. Game view at the tee-side moment
+  (`golfer_h06_putter_2026-09-15_22-35-29.png`, `compare_gameview_driver_vs_putt.png`): hands on the grip, head on
+  the ground behind the ball.
+- The earlier "wrist fit" solver (`PuttGripSolve`) and its bake are superseded; the putt stance scan's pick was reset
+  to zero so the solve started from the clip like the driver's did.
