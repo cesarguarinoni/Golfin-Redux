@@ -147,8 +147,8 @@ namespace Golfin.EditorTools
         {
             SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
             SessionState.SetBool(RigOffKey, false);
-            SessionState.SetBool("GolferTestVerification.Stage2", true); SessionState.SetBool("Golfin.GolferTest.Stage2Verify", false);
-            SessionState.SetString("Golfin.GolferTest.Stage2RollMode", "pitchscan");
+            SessionState.SetBool("GolferTestVerification.Stage2", true); SessionState.SetBool("GolferTestVerification.Stage2Verify", false);
+            SessionState.SetString("GolferTestVerification.Stage2Roll", "pitchscan");
             SessionState.SetBool("Golfin.GolferTest.Stage2Putt", true);
             Launch(6);
         }
@@ -158,7 +158,7 @@ namespace Golfin.EditorTools
         {
             SessionState.SetString(VariantKey, Golfer.GolferTestCharacter.ResourcePath);
             SessionState.SetBool(RigOffKey, false);
-            SessionState.SetBool("GolferTestVerification.Stage2", true); SessionState.SetBool("Golfin.GolferTest.Stage2Verify", true);
+            SessionState.SetBool("GolferTestVerification.Stage2", true); SessionState.SetBool("GolferTestVerification.Stage2Verify", true);
             SessionState.SetBool("Golfin.GolferTest.Stage2Putt", true);
             Launch(6);
         }

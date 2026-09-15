@@ -1,13 +1,13 @@
 {
-  "clubSlotLocalPos": [0.01798, 0.02707, 0.03868],
-  "clubSlotLocalRot": [-0.01322, 0.96267, -0.20750, 0.17331],
-  "leadAnchorLocalPos": [0.00001, -0.02110, 0.00000],
-  "leadAnchorLocalRot": [0.38010, -0.75818, 0.24671, -0.46886],
+  "clubSlotLocalPos": [0.00765, 0.03111, 0.04368],
+  "clubSlotLocalRot": [-0.21405, -0.08164, -0.02873, 0.97298],
+  "leadAnchorLocalPos": [0.00000, -0.02510, 0.00000],
+  "leadAnchorLocalRot": [-0.28343, 0.54221, 0.35357, -0.70758],
   "leadWristLocalPos": [-0.03883, -0.05253, 0.02289],
-  "trailAnchorLocalPos": [0.00000, 0.04536, 0.00000],
-  "trailAnchorLocalRot": [-0.31813, -0.58022, 0.38468, 0.64355],
+  "trailAnchorLocalPos": [0.00000, 0.04537, 0.00000],
+  "trailAnchorLocalRot": [-0.34825, -0.57745, -0.35763, -0.64604],
   "trailWristLocalPos": [0.03442, -0.05765, 0.02247],
-  "leadStationM": 0.02000, "trailGapOffsetM": 0.01800, "leadAxisUFrac": 0.80000, "trailAxisUFrac": 0.60000, "rollMode": "pitchscan",
-  "scanPitchDeg": 2.00000, "scanYawDeg": -2.00000, "standCloserM": 0.00000,
-  "addressHeadLocal": [0.37654, 0.07094, -0.03007]
+  "leadStationM": 0.01600, "trailGapOffsetM": 0.02200, "leadAxisUFrac": 0.80000, "trailAxisUFrac": 0.60000, "rollMode": "pitchscan",
+  "scanPitchDeg": 1.50000, "scanYawDeg": 2.00000, "standCloserM": 0.00000,
+  "addressHeadLocal": [0.37654, 0.07094, -0.05226]
 }
