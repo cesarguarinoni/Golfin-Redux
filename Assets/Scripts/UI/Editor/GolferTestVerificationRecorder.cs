@@ -184,8 +184,14 @@ namespace Golfin.EditorTools
             // Path WITHOUT extension — the recorder appends .mp4.
             t.GetProperty("CustomOutputPath")?.SetValue(null,
                 outDir + "/" + Golfer.GolferTestCharacter.Name.ToLowerInvariant() + "_swing_h06_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+            // constant playback at 60 fps: the harness steps the simulation at 1/60, and a variable-rate recording
+            // discarded 3 of 4 rendered frames (2026-09-15, measured); the watchdog is wall-clock, and 10 s of
+            // simulation at an editor 12 fps is ~50 s of wall — 90 s is the recorder's documented ceiling
+            t.GetProperty("ConstantPlayback")?.SetValue(null, true);
+            t.GetProperty("ConstantFps")?.SetValue(null, 60);
+            t.GetProperty("MaxRecordSecondsSessionOverride")?.SetValue(null, 90);
             t.GetMethod("ArmDeferred")?.Invoke(null, null);
-            Debug.Log("[GolferVerify] deferred video armed -> " + outDir);
+            Debug.Log("[GolferVerify] deferred video armed (constant 60 fps, watchdog 90 s) -> " + outDir);
         }
 
         static int _vidFrame0; static float _vidReal0, _vidSim0;
@@ -199,6 +205,7 @@ namespace Golfin.EditorTools
         internal static void VideoEnd()
         {
             BotVideoRecorderType?.GetMethod("End")?.Invoke(null, null);
+            Time.captureDeltaTime = 1f / 60f;   // the Recorder's constant mode restores captureFramerate = 0 on End; keep the harness's fixed step
             // frame accounting (2026-09-15, "the videos drop frames at the swing"): rendered frames = simulation
             // steps under the fixed capture step; the recorder's frame count tells whether it kept them all
             Debug.Log("[GolferVerify] video END: rendered " + (Time.frameCount - _vidFrame0) + " frames over " + (Time.realtimeSinceStartup - _vidReal0).ToString("F2") + " s wall / " + (Time.time - _vidSim0).ToString("F2") + " s sim");

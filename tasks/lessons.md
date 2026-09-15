@@ -3867,3 +3867,19 @@ run is in progress, ever — queue them. What survived from the detour and is ri
 character (`HandHingeData.fingerHalfThicknessM`, `HandHingeModel.UseData`), the re-aim-to-ball pre-step with the
 head on the ground, the pass-1 `addressHeadLocal` bake, the `grip.palmSide_*` and `club.crownUp` rows (the
 face-square row cannot tell a club rolled 180° about the shaft from a square one), and the character switch.
+
+## Lesson BA — a "sanctioned capture path" can still be the wrong instrument; measure written-vs-rendered before blaming the pipeline (2026-09-15, `golfer_club_grip`, swing video)
+
+Cesar: "Frame rate makes video unwatchable. Are you stitching pngs or using the approved capture methods?" — I was
+using the approved one (`BotVideoRecorder`, Unity Recorder), and it was still dropping 3 of 4 frames: it runs
+`FrameRatePlayback.Variable` (wall-clock stamping, chosen so bot captions sync) while the golfer harness steps the
+simulation at a fixed `Time.captureDeltaTime = 1/60` with the editor at 12–20 fps. Two retimed containers later
+("still drops frames at the crucial swing time") I finally counted: 334 rendered, 95 written. The fix took one
+opt-in flag (`ConstantPlayback` → `FrameRatePlayback.Constant`, every rendered frame written) — under the
+`Assets/Scripts/Physics/` ban, so it needed Cesar's explicit exception, which he gave ("do what you have to do").
+Rules: (1) a video complaint gets a **frame-accounting number first** (rendered vs written, pts-gap histogram via
+ffprobe) — not a retime, not a re-record; (2) a sanctioned tool has a **mode**, and the mode is part of the
+instrument — fixed-step harness ⇒ constant playback, real-time bot ⇒ variable; (3) when the fix lives in a banned
+tree, say so in one line and ask, don't work around it with post-processing; (4) after changing the capture mode,
+re-check the **window** too — constant mode hands `Time.captureFramerate` to the Recorder, and the harness's own
+start/stop budget meant something else afterwards (the clip came back drop-free and 2.43 s long).

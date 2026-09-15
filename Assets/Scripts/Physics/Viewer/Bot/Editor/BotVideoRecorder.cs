@@ -173,6 +173,21 @@ namespace Golfin.Physics.Viewer.Editor
         // may occur between setting the value and Begin() firing.
         public static int MaxRecordSecondsOverride = 0;
 
+        // CONSTANT PLAYBACK (2026-09-15, golfer_club_grip; Cesar: "we need a reliable video at 60 fps (or 30),
+        // not cutting — do what you have to do"; the only edit ever made under Assets/Scripts/Physics/ since the
+        // zero-edit rule, on that authorization). The golfer verification harness runs the simulation at a fixed
+        // Time.captureDeltaTime = 1/60 for determinism. Under FrameRatePlayback.Variable the Recorder samples the
+        // wall clock and, with the editor at 12–20 fps, wrote 95 of 334 rendered simulation frames — the swing
+        // frames were the ones discarded. Constant playback lets the Recorder drive Time.captureFramerate and
+        // write EVERY rendered frame at the target rate: video time == simulation time, no gaps, however slow
+        // the editor is. Opt-in per run (SessionState, read and cleared by Begin()); the bots keep Variable so
+        // their realtime-stamped captions stay in sync.
+        const string ConstantPlaybackKey = "LoopV2SmokeBot.ConstantPlayback";
+        const string ConstantFpsKey      = "LoopV2SmokeBot.ConstantFps";
+        public static bool ConstantPlayback { get => SessionState.GetBool(ConstantPlaybackKey, false); set => SessionState.SetBool(ConstantPlaybackKey, value); }
+        /// <summary>Target rate for constant playback; 60 or 30. Default 60.</summary>
+        public static int ConstantFps { get => SessionState.GetInt(ConstantFpsKey, 60); set => SessionState.SetInt(ConstantFpsKey, value); }
+
         // Deferred-start arm (2026-06-16, Order 350 audio v2 pass).
         // When a scenario needs to START recording mid-run (AFTER the hole/scene is fully
         // loaded and several frames have rendered), use ArmDeferred()+BeginDeferred() instead
@@ -274,6 +289,9 @@ namespace Golfin.Physics.Viewer.Editor
             string customOutputPath = CustomOutputPath;
             CustomOutputPath = "";  // clear immediately
 
+            bool constantPlayback = ConstantPlayback; int constantFps = ConstantFps;
+            ConstantPlayback = false;   // clear so it never leaks into a bot clip
+
             // Camera input mode — read and clear immediately.
             bool useCameraInput = UseCameraInput;
             string cameraTag    = CameraTag;
@@ -342,7 +360,7 @@ namespace Golfin.Physics.Viewer.Editor
                 _savedTargetFps = Application.targetFrameRate;
                 _savedVSync     = QualitySettings.vSyncCount;
                 QualitySettings.vSyncCount   = 0;     // vSync would clamp targetFrameRate to display Hz
-                Application.targetFrameRate  = Fps;
+                Application.targetFrameRate  = constantPlayback ? constantFps : Fps;
                 _loadOverridden = true;
 
                 var movie = ScriptableObject.CreateInstance<MovieRecorderSettings>();
@@ -380,12 +398,23 @@ namespace Golfin.Physics.Viewer.Editor
                 var settings = ScriptableObject.CreateInstance<RecorderControllerSettings>();
                 settings.AddRecorderSettings(movie);
                 settings.SetRecordModeToManual();
-                settings.FrameRate = Fps;
-                // Variable playback = real-time recording: video time == the bot's
-                // real-time clock, so history.log captions sync with one offset.
-                // (Constant playback drives Time.captureFramerate and stretches the
-                // video to game-time, which desyncs realtime-stamped captions.)
-                settings.FrameRatePlayback = FrameRatePlayback.Variable;
+                if (constantPlayback)
+                {
+                    // fixed-step harness runs (see ConstantPlayback): every rendered frame is written, at constantFps
+                    settings.FrameRate = constantFps;
+                    settings.FrameRatePlayback = FrameRatePlayback.Constant;
+                    settings.CapFrameRate = true;
+                    Debug.Log($"[BotVideoRecorder] CONSTANT playback at {constantFps} fps (video time == simulation time; every rendered frame written).");
+                }
+                else
+                {
+                    settings.FrameRate = Fps;
+                    // Variable playback = real-time recording: video time == the bot's
+                    // real-time clock, so history.log captions sync with one offset.
+                    // (Constant playback drives Time.captureFramerate and stretches the
+                    // video to game-time, which desyncs realtime-stamped captions.)
+                    settings.FrameRatePlayback = FrameRatePlayback.Variable;
+                }
 
                 _controller = new RecorderController(settings);
                 _controller.PrepareRecording();

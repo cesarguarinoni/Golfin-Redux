@@ -1304,3 +1304,29 @@ recorder hard-codes `DriverFaceLocal` for `ClubHead` and `PutterFaceLocal` for `
 wedges / woods) and the lie, and the golfer's `ClubStart/ClubEnd/addressHeadLocal` are the driver's, so a shorter club
 under the same slot floats or digs. The task: one head convention (face normal along one local axis, sole at the
 shaft end, lie authored) applied to every club prefab, plus per-club-type markers on the golfer. Not started.
+
+### Video, constant playback — shipped (Cesar 2026-09-15: "reliable video at 60 (or 30) fps, not cutting — do what you have to do")
+
+The one authorized edit under `Assets/Scripts/Physics/` since the zero-edit ban:
+`Assets/Scripts/Physics/Viewer/Bot/Editor/BotVideoRecorder.cs` gains an opt-in `ConstantPlayback` (SessionState
+`LoopV2SmokeBot.ConstantPlayback`, read and cleared by `Begin()` so it never leaks into a bot clip) with
+`ConstantFps` (60 default, 30 allowed). When set, the Recorder runs `FrameRatePlayback.Constant` + `CapFrameRate` at
+that rate, so it drives `Time.captureFramerate` and writes EVERY rendered frame; the bots keep Variable (their
+realtime-stamped captions). `GolferTestVerificationRecorder.VideoArm` opts in at 60 fps with the 90 s watchdog and
+re-pins `Time.captureDeltaTime = 1/60` after `End`. Guard reset (`GOLFIN > Capture > Reset Video Session Guard`)
+before each run.
+
+Result, `videos/olivia_swing_h06_2026-09-15_17-40-42.mp4` (local — `Docs/Specs/**/videos/` is gitignored; sent to
+Cesar in chat): 60/1, 146 frames, every pts gap 16.7 ms (min = median = max), zero gaps > 20 ms, written frames ==
+rendered frames (log: "video END: rendered 147 frames … 2.43 s sim"). The frame drops are gone. Stills at 0 / 0.5 /
+1.0 / 1.5 / 2.0 / 2.4 s in `evidence/olivia/swing60/`.
+
+**Open, deferred by Cesar ("good enough, not perfect, we fix it another day"):** the clip is 2.43 s — the harness's
+own END fired after 147 rendered frames in this run, where the previous (variable) run's window spanned 546 frames /
+9.22 s. The recorder wrote everything it was given; the cut is in the harness window under constant playback (the
+Recorder's constant mode owns `Time.captureFramerate`, so the harness's sim-time budget and its wall-clock watchdog
+no longer mean what they did). Also open: the putt head close-up (`evidence/olivia/putt/putt_head.png`) still frames
+grass beside the head; the putter orientation verdict stays on the recorder's `club.faceSquare.putt` row (leading edge
+92.1° vs aim) and Cesar's eye ("blade points the wrong way"), scoped with the club-orientation task above.
+
+Cesar's verdict on this clip: "I saw the capture, good enough (but not perfect). We fix it another day. Give me this one."

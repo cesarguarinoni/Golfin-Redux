@@ -6,6 +6,13 @@
 ---
 ## 2026-09-15 (golfer_club_grip stage 2) — **two hands on one club at address: hands on the shaft, wrists bent 14° / 36°**
 
+**Evening 2026-09-15, video:** the Hole 06 swing clip dropped 3 of 4 rendered frames (Recorder `Variable` playback
+under the harness's fixed 1/60 step, measured). Cesar authorized the ONE edit under `Assets/Scripts/Physics/`:
+`BotVideoRecorder.ConstantPlayback` (opt-in, SessionState, 60 or 30 fps); the golfer harness opts in. The new clip
+is drop-free (146 frames, uniform 16.7 ms) but 2.43 s long — the harness window closes early under constant
+playback; Cesar: "good enough, fix another day". Still open: that window length, the putt head close-up framing, the
+club head-orientation conform task (every club to copy the driver — scoped in `IMPLEMENTER_REPORT.md`).
+
 STATUS `STAGE_2_REVIEW`, stage 3 NOT started. Cesar passed stage 1 on the inscribed wrap the same day. Built:
 `HandHingeModel` on the prefab as data (inscribed poses, thumb aims), `GripAnchor_*` + `WristTarget` under `ClubSlot`,
 `Rig_Hands` with both `TwoBoneIKConstraint`s back, `ClubSlot` re-solved (§3.12.5) and re-squared; `HandHingeStage2.cs`
