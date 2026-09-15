@@ -2619,9 +2619,10 @@ namespace Golfin.EditorTools
             }
             // positive bend about the target line STRAIGHTENED her on the first sweep (torso 30 -> 10 deg, hands up
             // 140 mm), so the forward bend is negative here; the hips drop is a squat and costs more than a bend
-            foreach (float lie in new[] { 0f, 8f, 16f, 24f, -8f })
-            foreach (float drop in new[] { 0f, 0.03f, 0.06f, 0.09f })
-            foreach (float bend in new[] { 0f, -5f, -10f, -15f, -20f })
+            bool dropOnly = SessionState.GetBool("GolferTestVerification.PuttScanDropOnly", false);   // keep the stage-2 grip: hips only
+            foreach (float lie in dropOnly ? new[] { 0f } : new[] { 0f, 8f, 16f, 24f, -8f })
+            foreach (float drop in dropOnly ? new[] { 0f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.08f } : new[] { 0f, 0.03f, 0.06f, 0.09f })
+            foreach (float bend in dropOnly ? new[] { 0f } : new[] { 0f, -5f, -10f, -15f, -20f })
             {
                 { var hd = oh.data; hd.position = hips0 - upHipsLocal * drop; oh.data = hd; }
                 { var d = ot.data; d.rotation = bend == 0f ? rot0 : Quaternion.AngleAxis(bend, spine.InverseTransformDirection(aim)).eulerAngles; ot.data = d; }
@@ -3117,13 +3118,17 @@ namespace Golfin.EditorTools
                 SessionState.SetBool(GolferTestVerificationRecorder.PuttVideoKey, false);
                 GolferTestVerificationRecorder.VideoBeginDeferred();
                 yield return HoldSimMarked(1.2f, "putt video (address)");
-                anim.ResetTrigger("Cancel"); anim.ResetTrigger("Reset"); anim.SetTrigger("Swing");
-                Mark("putt video: Swing trigger fired at the putt address (state before: " + CurrentState(anim) + ")");
+                // a REAL putt through BotSwing (bot_scheme_parity §3.5): the shot commits, the swing plays, the ball
+                // rolls, and the presenter re-places her on OnShotComplete — the in-game sequence. The raw animator
+                // trigger used before ran Swing_Putt out into Idle, whose root faces the flag (the "turn").
+                var ctxP = Golfin.Gameplay.UI.Controls.Bot.BotExecutionContext.Resolve();
+                Mark("putt video: real putt through BotSwing.PlayPerfect at the putt address (state before: " + CurrentState(anim) + ")");
                 float tSw = Time.time; string seen = "";
+                StartCoroutine(Golfin.Gameplay.UI.Controls.Bot.BotSwing.PlayPerfect(power01: 0.35f, aimYawRad: Heading(shot), isPutt: true, ctx: ctxP));
                 int nextMark = 1;
-                while (Time.time - tSw < 4.5f) { string cs = CurrentState(anim); if (!seen.EndsWith(cs + ";")) seen += cs + ";"; if (Time.time - tSw >= nextMark) { Mark("putt video (swing): " + nextMark + " s of golfer time, state " + cs); nextMark++; } yield return null; }
+                while (Time.time - tSw < 6.0f) { string cs = CurrentState(anim); if (!seen.EndsWith(cs + ";")) seen += cs + ";"; if (Time.time - tSw >= nextMark) { Mark("putt video (swing): " + nextMark + " s of golfer time, state " + cs); nextMark++; } yield return null; }
                 GolferTestVerificationRecorder.VideoEnd();
-                Mark("putt video: clip closed 4.5 s of golfer time after the trigger; states seen: " + seen);
+                Mark("putt video: clip closed 6.0 s of golfer time after the putt; states seen: " + seen);
             }
             if (anim != null) anim.cullingMode = cullRows;
             if (!(pslot != null && st == "Address_Putt"))
