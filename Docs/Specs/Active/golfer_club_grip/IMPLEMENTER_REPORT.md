@@ -1262,3 +1262,45 @@ inside her torso for this head/torso geometry — a tooling gap, not a pose faul
 3. **Remy retired.** `GolferTestCharacter.Default = "Olivia"`; the verify and video menus say "current character"; Remy's prefab, hinge asset and evidence stay in the repo and he remains selectable from the Character menu for comparison. Nothing of his was deleted.
 4. The model findings (`FINDINGS_FOR_NEXT_CHARACTER.md`) go to the Architect with Cesar.
 5. The six Meshy screenshots in `Claude outputs/` are tracked; `Library_broken_143700/` is deleted.
+
+## Video frame rate and the putter — Cesar, 2026-09-15 evening
+
+### Frame rate: measured, and the fix is outside my remit
+
+The clip is recorded by `BotVideoRecorder` over the Unity Recorder (the sanctioned path), not stitched from PNGs.
+Frame accounting added to the harness around the video window (`GolferTestVerificationRecorder.VideoBeginDeferred/End`):
+
+| run | rendered frames in the window (each a fixed 1/60 s simulation step) | frames the Recorder wrote | video |
+|---|---|---|---|
+| 17:24 (`videos/olivia_swing_h06_2026-09-15_17-24-09.mp4`) | **334** over 28.1 s wall / 9.7 s sim | **95** over 5.27 s, gaps 13–333 ms | three frames in four discarded, the discards cluster in the swing |
+
+The harness fixes `Time.captureDeltaTime = 1/60` for determinism (SPEC §3.9.5); the recorder runs
+`FrameRatePlayback.Variable` (real-time stamping, chosen so the bot videos' captions sync). Under a fixed step with
+the editor at 12–20 fps, variable playback samples the wall clock and drops the simulation frames in between. A
+container retime (`videos/olivia_swing_h06_realtime_60fps.mp4`, `_halfspeed_30fps.mp4`) fixes the pacing of the
+frames that exist and cannot invent the missing ones — Cesar: "still drops frames at the crucial swing time".
+**Fix:** `FrameRatePlayback.Constant` (the Recorder then drives `Time.captureFramerate` and writes every frame) as an
+opt-in flag for fixed-step harness runs, in `Assets/Scripts/Physics/Viewer/Bot/Editor/BotVideoRecorder.cs` — the
+`Assets/Scripts/Physics/` tree is under the standing zero-edit ban, so this needs Cesar's explicit exception (or the
+Architect to move the recorder out of that tree). The bots keep Variable. Also found: the recorder's
+one-clip-per-Unity-session guard silently blocked the second recording (reset via `GOLFIN > Capture > Reset Video
+Session Guard`, its own menu).
+
+### Putter
+
+The drive video never shows the putter (inactive). At the putt address the recorder's own row passes:
+`club.faceSquare.putt` — leading edge 92.1° vs aim, azimuth error 2.1°, solved roll −2.5°; the head's putt-address
+orientation reads head.forward·aim 0.90. I added putt-address scene frames (`evidence/olivia/putt/`), but the first two
+sets framed the grip end (the `Clubhead` transform's pivot sits at the club origin; the mesh is 0.78 m down the shaft)
+and the third run went down the stage-2 verify path, which finishes at the drive address before the putt block runs (the putt block only executes in the full Hole 06 sequence, i.e. the video run); no head close-up exists yet. Cesar's own view stands: the putter, irons, wedges
+and woods do not share the driver's orientation.
+
+### Club orientation, scoped (Cesar: "they should all copy the driver's")
+
+All 31 club prefabs under `Assets/Art/3D/Clubs/` share the pivot: butt at y −0.11, +Y down the shaft, `Grip` /
+`Shaft_Head` → `ClubHead|Clubhead` / `Shaft` / `ClubTipPosition`; lengths driver 1.19, wood 1.18, iron 1.06–1.07,
+wedge 0.96–0.97, putter 0.89–0.90. What differs is the HEAD: the face direction is a per-model mesh fact (the
+recorder hard-codes `DriverFaceLocal` for `ClubHead` and `PutterFaceLocal` for `Clubhead`; nothing for irons /
+wedges / woods) and the lie, and the golfer's `ClubStart/ClubEnd/addressHeadLocal` are the driver's, so a shorter club
+under the same slot floats or digs. The task: one head convention (face normal along one local axis, sole at the
+shaft end, lie authored) applied to every club prefab, plus per-club-type markers on the golfer. Not started.

@@ -1207,6 +1207,44 @@ namespace Golfin.EditorTools.Golfer
         static string J(Vector3 v) => "[" + F(v.x) + ", " + F(v.y) + ", " + F(v.z) + "]";
         static string J(Quaternion q) => "[" + F(q.x) + ", " + F(q.y) + ", " + F(q.z) + ", " + F(q.w) + "]";
 
+        /// <summary>
+        /// Scene-camera frames at the PUTT address (Cesar, 2026-09-15: "putter blade points the wrong way"): the
+        /// gameplay camera never shows the putter head at address, and the drive-address frames show the driver.
+        /// Called by the verification recorder's putt block (reflection) once the animator is in Address_Putt.
+        /// Writes &lt;EvidenceRoot&gt;/putt/putt_{targetside,faceon,downshaft,head}.png.
+        /// </summary>
+        public static string ShootPuttFrames(GameObject golfer, Component shot)
+        {
+            var log = new StringBuilder();
+            var all = golfer.GetComponentsInChildren<Transform>(true);
+            Transform Tf(string n) => all.FirstOrDefault(t => t.name == n);
+            var anim = golfer.GetComponentInChildren<Animator>(true);
+            Transform putter = Tf("GOLFIN_Putter"), pslot = Tf("PutterSlot");
+            // the head transform is "Clubhead" on the putters and "ClubHead" on the drivers (the recorder keys its
+            // face conventions on exactly those names); "Shaft_Head" is the shaft+head group at the grip end — not it
+            Transform head = putter != null ? putter.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Clubhead" || t.name == "ClubHead") : null;
+            if (anim == null || putter == null || pslot == null || head == null) return "putt frames: missing putter/slot/head";
+            // the Clubhead TRANSFORM's pivot sits at the club origin (the grip end) on these prefabs; the head MESH is
+            // 0.78 m down the shaft — frame the renderer, not the pivot
+            var headRend = head.GetComponentInChildren<Renderer>(true);
+            Vector3 headPos = headRend != null ? headRend.bounds.center : head.position;
+            foreach (var smr in golfer.GetComponentsInChildren<SkinnedMeshRenderer>(true)) smr.forceMatrixRecalculationPerRender = true;
+            Transform handL = anim.GetBoneTransform(HumanBodyBones.LeftHand), handR = anim.GetBoneTransform(HumanBodyBones.RightHand);
+            float hAim = Heading(shot);
+            Vector3 aimDir = new Vector3(Mathf.Cos(hAim), 0f, Mathf.Sin(hAim));
+            Vector3 handsMid = 0.5f * (handL.position + handR.position);
+            Vector3 fwd = Vector3.ProjectOnPlane(headPos - golfer.transform.position, Vector3.up).normalized;
+            string dir = GolferTestCharacter.EvidenceRoot + "/putt"; Directory.CreateDirectory(dir);
+            Vector3 mid = golfer.transform.position + Vector3.up * 0.90f;
+            Shoot(mid, mid + aimDir * 4.0f + Vector3.up * 0.2f, Vector3.up, 1600, Path.Combine(dir, "putt_targetside.png"), log);
+            Shoot(mid, mid + fwd * 4.0f + Vector3.up * 0.2f, Vector3.up, 1600, Path.Combine(dir, "putt_faceon.png"), log);
+            Shoot(handsMid, handsMid - aimDir * 0.85f, Vector3.up, 1600, Path.Combine(dir, "putt_awayside.png"), log);
+            Shoot(headPos, headPos + (aimDir * 0.35f + Vector3.up * 0.45f - fwd * 0.15f), Vector3.up, 1600, Path.Combine(dir, "putt_head.png"), log);
+            Shoot(headPos, headPos + Vector3.up * 0.6f, aimDir, 1600, Path.Combine(dir, "putt_head_top.png"), log);   // straight down, target line = image up
+            log.AppendLine("putt address: PutterSlot local " + V(pslot.localPosition) + " " + Q(pslot.localRotation) + "; head mesh " + V(headPos) + "; slot.up·aim " + F(Vector3.Dot(pslot.up, aimDir)) + "; head.forward·aim " + F(Vector3.Dot(head.forward, aimDir)) + " head.right·aim " + F(Vector3.Dot(head.right, aimDir)));
+            return log.ToString();
+        }
+
         static void Shoot(Vector3 aimAt, Vector3 camPos, Vector3 up, int res, string path, StringBuilder log)
         {
             RenderTexture rt = null; GameObject camGo = null; Texture2D tex = null; RenderTexture prev = RenderTexture.active;

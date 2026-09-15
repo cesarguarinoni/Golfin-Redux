@@ -59,4 +59,4 @@ frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia/stage2\verify_golferse
 frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia/stage2\verify_awayside.png
 frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia/stage2\verify_stance_faceon.png
 frame: Docs/Specs/Active/golfer_club_grip/evidence/olivia/stage2\verify_stance_targetside.png
-gameplay frame: C:\Users\cesar\GolfinRedux\Docs\Diagnostics\_capture\hinge_stage2_verify_gameplay_2026-09-15_16-49-18.png
+gameplay frame: C:\Users\cesar\GolfinRedux\Docs\Diagnostics\_capture\hinge_stage2_verify_gameplay_2026-09-15_17-28-00.png

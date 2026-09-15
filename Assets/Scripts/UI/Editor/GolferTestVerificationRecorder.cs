@@ -188,15 +188,20 @@ namespace Golfin.EditorTools
             Debug.Log("[GolferVerify] deferred video armed -> " + outDir);
         }
 
+        static int _vidFrame0; static float _vidReal0, _vidSim0;
         internal static void VideoBeginDeferred()
         {
             BotVideoRecorderType?.GetMethod("BeginDeferred")?.Invoke(null, null);
-            Debug.Log("[GolferVerify] deferred video START");
+            _vidFrame0 = Time.frameCount; _vidReal0 = Time.realtimeSinceStartup; _vidSim0 = Time.time;
+            Debug.Log("[GolferVerify] deferred video START frame " + _vidFrame0 + " captureDeltaTime " + Time.captureDeltaTime.ToString("F4") + " targetFps " + Application.targetFrameRate + " vSync " + QualitySettings.vSyncCount);
         }
 
         internal static void VideoEnd()
         {
             BotVideoRecorderType?.GetMethod("End")?.Invoke(null, null);
+            // frame accounting (2026-09-15, "the videos drop frames at the swing"): rendered frames = simulation
+            // steps under the fixed capture step; the recorder's frame count tells whether it kept them all
+            Debug.Log("[GolferVerify] video END: rendered " + (Time.frameCount - _vidFrame0) + " frames over " + (Time.realtimeSinceStartup - _vidReal0).ToString("F2") + " s wall / " + (Time.time - _vidSim0).ToString("F2") + " s sim");
         }
 
         internal static bool VideoArmed => SessionState.GetBool(VideoKey, false);
@@ -2638,7 +2643,18 @@ namespace Golfin.EditorTools
             // could not be reached would be failing it for an unrelated reason.
             var pslot = Fb("PutterSlot");
             if (pslot != null && st == "Address_Putt")
+            {
                 MeasureFaceSquare("club.faceSquare.putt", pslot, shot, "putt address");
+                // scene-camera frames of the putter at the putt address (golfer_club_grip; HandHingeStage2 is gated,
+                // reached by reflection like the stage-2 hook) — the gameplay camera never shows the head here
+                try
+                {
+                    var st2 = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("Golfin.EditorTools.Golfer.HandHingeStage2")).FirstOrDefault(t => t != null);
+                    var m = st2?.GetMethod("ShootPuttFrames", BindingFlags.Static | BindingFlags.Public);
+                    if (m != null) Mark("putt frames: " + (string)m.Invoke(null, new object[] { golfer, shot }));
+                }
+                catch (Exception e) { Mark("putt frames FAILED: " + e.Message); }
+            }
             else
                 Skip("club.faceSquare.putt", "putt address not reached (animator='" + st +
                      "', PutterSlot=" + (pslot != null) + ") -- PutterSlot's roll is not measured " +

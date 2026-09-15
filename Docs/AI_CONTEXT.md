@@ -65,7 +65,10 @@ trail IK residual 32.5° and two pre-existing §3.9.6 letters remain. Evidence `
 the reference prefab first; never edit .cs in play mode). **Cesar approved stage 2 (STATUS `STAGE_2_PASS`)**, asked
 for the swing in movement (`videos/olivia_swing_h06_*.mp4`, real Hole 06 camera; stills in `evidence/olivia/swing/`),
 retired Remy (Olivia is the default test character; Remy stays selectable), and had `Library_broken_143700` deleted
-and the Meshy screenshots tracked. Next: stage 3, or a 5 mm hips lift for her right knee if Cesar wants it after the video.
+and the Meshy screenshots tracked. Video frame drops measured: the Recorder's Variable playback under the harness's fixed 1/60 step wrote 95 of 334 rendered
+frames — fix is Constant playback in `BotVideoRecorder` (banned `Assets/Scripts/Physics/` tree → Cesar's exception). Clubs: only
+the driver's head orientation is right; putter/irons/wedges/woods need one head convention (scoped in the report). Next: those two
+decisions, then stage 3.
 ---
 ## 2026-09-15 (golfer_club_grip stage 1) — **grip pose in hand space: mechanism holds, the §3.12.3 one-k solve does not make a grip**
 
