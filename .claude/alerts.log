@@ -22,3 +22,33 @@
     Review Docs/Specs/Active/publish_blocked_catalogs/ARCHITECT_REVIEW.md
     Red-team verdict: Docs/Specs/Active/publish_blocked_catalogs/REDTEAM_REVIEW.md
     Latest screenshot: Docs/Specs/Active/publish_blocked_catalogs/screenshots/
+[2026-09-15 10:01:11] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-15 10:01:17] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-15 10:32:51] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-15 10:53:12] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-15 10:53:12] [iap_plumbing] ARCHITECT_REVIEW_PASS - Ready for your final approval (passed reviewer + red-team)
+    Review Docs/Specs/Active/iap_plumbing/ARCHITECT_REVIEW.md
+    Red-team verdict: Docs/Specs/Active/iap_plumbing/REDTEAM_REVIEW.md
+    Latest screenshot: Docs/Specs/Active/iap_plumbing/screenshots/
+[2026-09-15 10:53:54] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-15 10:53:54] [iap_plumbing] ARCHITECT_REVIEW_PASS - Ready for your final approval (passed reviewer + red-team)
+    Review Docs/Specs/Active/iap_plumbing/ARCHITECT_REVIEW.md
+    Red-team verdict: Docs/Specs/Active/iap_plumbing/REDTEAM_REVIEW.md
+    Latest screenshot: Docs/Specs/Active/iap_plumbing/screenshots/
+[2026-09-15 10:54:00] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-15 10:54:00] [iap_plumbing] ARCHITECT_REVIEW_PASS - Ready for your final approval (passed reviewer + red-team)
+    Review Docs/Specs/Active/iap_plumbing/ARCHITECT_REVIEW.md
+    Red-team verdict: Docs/Specs/Active/iap_plumbing/REDTEAM_REVIEW.md
+    Latest screenshot: Docs/Specs/Active/iap_plumbing/screenshots/
+[2026-09-15 10:57:32] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-15 10:57:32] [iap_plumbing] ARCHITECT_REVIEW_PASS - Ready for your final approval (passed reviewer + red-team)
+    Review Docs/Specs/Active/iap_plumbing/ARCHITECT_REVIEW.md
+    Red-team verdict: Docs/Specs/Active/iap_plumbing/REDTEAM_REVIEW.md
+    Latest screenshot: Docs/Specs/Active/iap_plumbing/screenshots/

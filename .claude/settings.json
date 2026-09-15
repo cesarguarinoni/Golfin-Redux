@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -c \"print('REMINDER: End your response with the file-summary table or next-step line. Do NOT append any sign-off, farewell, or catchphrase (no See you space cowboy, no goodbyes). The work output is the last line. See CLAUDE.md top-of-file rule.')\""
+            "command": "python3 -c \"print('REMINDER: End your response with the file-summary table or next-step line. Do NOT append any sign-off, farewell, or catchphrase (no See you space cowboy, no goodbyes). The work output is the last line. See CLAUDE.md top-of-file rule.')\""
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/enforce_implementer_done.py"
+            "command": "python3 .claude/hooks/enforce_implementer_done.py"
           }
         ]
       },
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/enforce_capture_tool.py"
+            "command": "python3 .claude/hooks/enforce_capture_tool.py"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/route_subagent.py"
+            "command": "python3 .claude/hooks/route_subagent.py"
           }
         ]
       }
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/route_subagent.py"
+            "command": "python3 .claude/hooks/route_subagent.py"
           }
         ]
       }

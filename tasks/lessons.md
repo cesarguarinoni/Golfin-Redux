@@ -4657,3 +4657,34 @@ clean, removes that failure mode entirely. **Rule:** at arm time, if the scene i
 the Editor and say so; if it is dirty, say WHAT is dirty and ask whether to save or discard —
 never hand the quit itself to Cesar. Sister rules: `feedback_minimize_cesar_intervention`,
 `feedback_ask_the_decision_do_the_work`.
+
+## Lesson CM — a hook whose command does not exist on the machine is a gate that never fires; run it by hand when its verdict matters (2026-09-15, `iap_plumbing`)
+
+`.claude/settings.json` invokes every hook as `python …`. This Mac has `python3` only
+(`which python` → not found), so `enforce_implementer_done.py` exited 127 on the
+`STATUS.md → READY_FOR_ARCHITECT_REVIEW` write and the Write went through with **13 real
+findings** unaddressed (uncovered `.meta` paths, two prose-only Clone-provenance rows, no
+machine-shaped test count). I only saw them because I re-ran the hook manually
+(`python3 .claude/hooks/enforce_implementer_done.py <<< '<PreToolUse payload>'`) — exit 2 — and
+fixed each before calling the report done. The same silence covers `enforce_capture_tool.py`
+and `route_subagent.py` (no "next step" line after Stop). **Rule:** before trusting a hook's
+silence on a gated write, run it by hand with the same payload and read its exit code; a
+missing interpreter looks exactly like a pass. The `python`→`python3` change was Cesar's call
+(Windows parity) — surfaced as a decision, applied the moment he said "go for python3", and
+the hooks fired for real on the next STATUS write. Sister rules: Lesson AA (Rule 13 coverage),
+`feedback_derive_dont_confirm_evidence`.
+
+## Lesson CN — `quit-unity.sh` said "no Unity Editor process" while pid 88994 held the lock: a Hub launch spells the flag `-projectpath` (2026-09-15, `iap_plumbing` punch)
+
+Both `Tools/quit-unity.sh` and `Tools/assert-unity-closed.sh` found the Editor with
+`pgrep -f "… -projectPath ${PROJECT}"`. Unity Hub launches the Editor with **`-projectpath`**
+(lower-case p); only a terminal/runbook launch uses `-projectPath`. So on Cesar's Hub-launched
+Editor the quit script exited 0 with "no Unity Editor process" and the lock stayed — the same
+shape as 2026-09-11's name-addressed quit (the tool reports the precondition met while the
+Editor is still open), one layer down. The stale-lock branch of `assert-unity-closed.sh`
+already tried BOTH spellings, which is how the mismatch was diagnosed in one read. Fixed in
+the tools (`pgrep -fi`), not with a note. **Rule:** after any "quit" or "closed" verdict,
+confirm with the primary source — `pgrep -fil 'MacOS/Unity -projectpath'` AND the lockfile —
+never the script's exit code alone; and when a process-matching pattern is hand-typed, match
+case-insensitively unless case is the point. Sister rules: Lesson CL,
+`feedback_quit_unity_by_pid_not_app_name`, `feedback_derive_dont_confirm_evidence`.

@@ -30,8 +30,9 @@ LOCK="$PROJECT/Temp/UnityLockfile"
 
 # The interactive Editor: `Unity -projectPath <this repo>` with no batchmode flag. Import workers
 # (`-adb2 -batchMode`) die with the Editor and are not a lock holder in their own right.
+# pgrep -i: Unity Hub spells the flag `-projectpath`, a terminal launch `-projectPath`.
 editor_pids() {
-  pgrep -f "Unity.app/Contents/MacOS/Unity .*-projectPath ${PROJECT}" 2>/dev/null \
+  pgrep -fi "Unity.app/Contents/MacOS/Unity .*-projectpath ${PROJECT}" 2>/dev/null \
     | while read -r pid; do
         cmd="$(ps -o command= -p "$pid" 2>/dev/null || true)"
         case "$cmd" in *-batchMode*|*-batchmode*|*-adb2*) ;; *) echo "$pid" ;; esac

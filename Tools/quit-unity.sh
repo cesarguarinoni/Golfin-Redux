@@ -38,7 +38,10 @@ TIMEOUT="${2:-120}"
 
 editor_pid() {
   # Workers carry -adb2/-batchMode; the Editor carries -projectPath <this repo> and neither.
-  pgrep -f "Unity.app/Contents/MacOS/Unity .*-projectPath ${PROJECT}" 2>/dev/null \
+  # -i: Unity Hub launches the Editor with `-projectpath` (lower-case p), a terminal or the
+  # runbook with `-projectPath`. A case-sensitive match missed every Hub-launched Editor
+  # (2026-09-15: "no Unity Editor process" while pid 88994 held the lock).
+  pgrep -fi "Unity.app/Contents/MacOS/Unity .*-projectpath ${PROJECT}" 2>/dev/null \
     | while read -r pid; do
         cmd="$(ps -o command= -p "$pid" 2>/dev/null || true)"
         case "$cmd" in *-batchMode*|*-batchmode*|*-adb2*) ;; *) echo "$pid"; return 0 ;; esac
