@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-09-14 12:31. Do not edit manually.
+> Auto-generated 2026-09-15 11:03. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -98,6 +98,7 @@ Assets/Scripts/Diagnostics/Runtime/CaptureCore.cs
 Assets/Scripts/Economy/Editor/PointsBackendMenu.cs
 Assets/Scripts/Economy/GachaPullOutcome.cs
 Assets/Scripts/Economy/GachaPullService.cs
+Assets/Scripts/Economy/IapFlow.cs
 Assets/Scripts/Economy/MissionsClient.cs
 Assets/Scripts/Economy/PendingOpsQueue.cs
 Assets/Scripts/Economy/PendingOpsStore.cs
@@ -644,6 +645,7 @@ Assets/Scripts/Save/Tests/GachaTicketTests.cs
 Assets/Scripts/Save/Tests/PlayMode/SaveLayerPlayModeTests.cs
 Assets/Scripts/Save/Tests/SaveLayerTests.cs
 Assets/Scripts/SceneSnapshot/ManualPropId.cs
+Assets/Scripts/Services/IapService.cs
 Assets/Scripts/Social/GiftDtos.cs
 Assets/Scripts/Social/GiftItemName.cs
 Assets/Scripts/Social/GiftService.cs
@@ -707,12 +709,14 @@ Assets/Scripts/TournamentsRuntime/RewardPointsServiceAdapter.cs
 Assets/Scripts/TournamentsRuntime/Tests/BannerPolicyTests.cs
 Assets/Scripts/TournamentsRuntime/Tests/CatalogArtPolicyTests.cs
 Assets/Scripts/TournamentsRuntime/Tests/NoticeResolutionTests.cs
+Assets/Scripts/TournamentsRuntime/Tests/RemoteBackendAdoptTests.cs
 Assets/Scripts/TournamentsRuntime/Tests/RemoteScheduleTests.cs
 Assets/Scripts/TournamentsRuntime/Tests/ScheduleRefreshTests.cs
 Assets/Scripts/TournamentsRuntime/Tests/TournamentAsyncBoardTests.cs
 Assets/Scripts/TournamentsRuntime/Tests/TournamentDescriptionTests.cs
 Assets/Scripts/TournamentsRuntime/Tests/TournamentRestrictionsClientTests.cs
 Assets/Scripts/TournamentsRuntime/Tests/TournamentServiceWireupTests.cs
+Assets/Scripts/TournamentsRuntime/Tests/TournamentVenueClubNameTests.cs
 Assets/Scripts/TournamentsRuntime/TournamentArtPolicy.cs
 Assets/Scripts/TournamentsRuntime/TournamentArtService.cs
 Assets/Scripts/TournamentsRuntime/TournamentBackendPolicy.cs
@@ -753,6 +757,7 @@ Assets/Scripts/UI/Editor/FlickPullReflect.cs
 Assets/Scripts/UI/Editor/FlickShotViewVerify.cs
 Assets/Scripts/UI/Editor/GachaDemoRecorder.cs
 Assets/Scripts/UI/Editor/GachaRevealDemoRecorder.cs
+Assets/Scripts/UI/Editor/GachaTaglineDemoRecorder.cs
 Assets/Scripts/UI/Editor/GameplayLocalizationDemoRecorder.cs
 Assets/Scripts/UI/Editor/GeneralShopDemoRecorder.cs
 Assets/Scripts/UI/Editor/GolferTestDemoRecorder.cs
@@ -789,6 +794,7 @@ Assets/Scripts/UI/Editor/TicketIconDerive.cs
 Assets/Scripts/UI/Editor/TournamentBannerDemoRecorder.cs
 Assets/Scripts/UI/Editor/TournamentDemoRecorder.cs
 Assets/Scripts/UI/Editor/TournamentDeniedDemoRecorder.cs
+Assets/Scripts/UI/Editor/TournamentRouteVerify.cs
 Assets/Scripts/UI/Editor/TournamentsModeCardDemoRecorder.cs
 Assets/Scripts/UI/Editor/TreeOccludeFadeCaptureBot.cs
 Assets/Scripts/UI/FadeController.cs
@@ -1090,9 +1096,12 @@ Assets/Scripts/UI/ScreenDeactivator.cs
 Assets/Scripts/UI/ScreenManager.cs
 Assets/Scripts/UI/SettingsController.cs
 Assets/Scripts/UI/SettingsMenuItem.cs
+Assets/Scripts/UI/Shop/Editor/IapEditorForceMenu.cs
+Assets/Scripts/UI/Shop/Editor/IapStoreFramesRun.cs
 Assets/Scripts/UI/Shop/Editor/StoreFilterFramesRun.cs
 Assets/Scripts/UI/Shop/Editor/StoreHistoryAcceptanceRun.cs
 Assets/Scripts/UI/Shop/Editor/StoreHistoryInstaller.cs
+Assets/Scripts/UI/Shop/Editor/StorePaymentModalBuilder.cs
 Assets/Scripts/UI/Shop/GeneralShopCard.cs
 Assets/Scripts/UI/Shop/GeneralShopModel.cs
 Assets/Scripts/UI/Shop/GeneralShopScreenController.cs
@@ -1107,6 +1116,7 @@ Assets/Scripts/UI/Shop/StoreHistoryRecord.cs
 Assets/Scripts/UI/Shop/StoreHistoryRow.cs
 Assets/Scripts/UI/Shop/StoreHistoryScreenController.cs
 Assets/Scripts/UI/Shop/StoreHistoryStore.cs
+Assets/Scripts/UI/Shop/StorePaymentModalController.cs
 Assets/Scripts/UI/Shop/Tests/GeneralShopAdmitResolutionTests.cs
 Assets/Scripts/UI/Shop/Tests/GeneralShopCategoryTests.cs
 Assets/Scripts/UI/Shop/Tests/StaminaShopAddEnergyTests.cs
@@ -1123,6 +1133,7 @@ Assets/Scripts/UI/Tests/GameplaySceneLoaderTests.cs
 Assets/Scripts/UI/Toast/ToastController.cs
 Assets/Scripts/UI/Tournaments/TournamentCountdown.cs
 Assets/Scripts/UI/Tournaments/TournamentDevEntryButton.cs
+Assets/Scripts/UI/Tournaments/TournamentHeaderPills.cs
 Assets/Scripts/UI/Tournaments/TournamentHoleSelectionScreenController.cs
 Assets/Scripts/UI/Tournaments/TournamentLeaderboardScreenController.cs
 Assets/Scripts/UI/Tournaments/TournamentResultModalController.cs
@@ -1298,6 +1309,7 @@ Assets/Data/README_HOLES.md.meta
 | WaterSplashController | Assets/Scripts/Physics/Viewer/WaterSplashController.cs | Yes |  |
 | SaveDataHost | Assets/Scripts/Save/SaveDataHost.cs | Yes |  |
 | ManualPropId | Assets/Scripts/SceneSnapshot/ManualPropId.cs |  |  |
+| IapService | Assets/Scripts/Services/IapService.cs | Yes |  |
 | TelemetryBehaviour | Assets/Scripts/Telemetry/TelemetryBehaviour.cs | Yes |  |
 | TournamentService | Assets/Scripts/TournamentsRuntime/TournamentService.cs | Yes |  |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs |  |  |
@@ -1320,6 +1332,7 @@ Assets/Data/README_HOLES.md.meta
 | FlickShotViewRunner | Assets/Scripts/UI/Editor/FlickShotViewVerify.cs | Yes |  |
 | GachaDemoRunner | Assets/Scripts/UI/Editor/GachaDemoRecorder.cs | Yes |  |
 | GachaRevealDemoRunner | Assets/Scripts/UI/Editor/GachaRevealDemoRecorder.cs | Yes |  |
+| GachaTaglineDemoRunner | Assets/Scripts/UI/Editor/GachaTaglineDemoRecorder.cs | Yes |  |
 | GameplayLocalizationDemoRunner | Assets/Scripts/UI/Editor/GameplayLocalizationDemoRecorder.cs | Yes |  |
 | GeneralShopDemoRunner | Assets/Scripts/UI/Editor/GeneralShopDemoRecorder.cs | Yes |  |
 | GolferTestDemoRunner | Assets/Scripts/UI/Editor/GolferTestDemoRecorder.cs | Yes |  |
@@ -1354,6 +1367,7 @@ Assets/Data/README_HOLES.md.meta
 | TournamentBannerDemoRunner | Assets/Scripts/UI/Editor/TournamentBannerDemoRecorder.cs | Yes |  |
 | TournamentDemoRunner | Assets/Scripts/UI/Editor/TournamentDemoRecorder.cs | Yes |  |
 | TournamentDeniedDemoRunner | Assets/Scripts/UI/Editor/TournamentDeniedDemoRecorder.cs | Yes |  |
+| TournamentRouteVerifyRunner | Assets/Scripts/UI/Editor/TournamentRouteVerify.cs | Yes |  |
 | TournamentsModeCardDemoRunner | Assets/Scripts/UI/Editor/TournamentsModeCardDemoRecorder.cs | Yes |  |
 | TreeOccludeFadeCaptureRunner | Assets/Scripts/UI/Editor/TreeOccludeFadeCaptureBot.cs | Yes |  |
 | FadeController | Assets/Scripts/UI/FadeController.cs | Yes |  |
@@ -1492,6 +1506,7 @@ Assets/Data/README_HOLES.md.meta
 | ScreenManager | Assets/Scripts/UI/ScreenManager.cs | Yes |  |
 | SettingsController | Assets/Scripts/UI/SettingsController.cs | Yes |  |
 | SettingsMenuItem | Assets/Scripts/UI/SettingsMenuItem.cs |  |  |
+| Runner | Assets/Scripts/UI/Shop/Editor/IapStoreFramesRun.cs | Yes |  |
 | Runner | Assets/Scripts/UI/Shop/Editor/StoreFilterFramesRun.cs | Yes |  |
 | Runner | Assets/Scripts/UI/Shop/Editor/StoreHistoryAcceptanceRun.cs | Yes |  |
 | GeneralShopCard | Assets/Scripts/UI/Shop/GeneralShopCard.cs | Yes |  |
@@ -1591,6 +1606,15 @@ Assets/Data/README_HOLES.md.meta
 | has | `public event System.Action? OnInventoryChanged;` |
 | has | `public event System.Action<string>? OnClubRepaired;` |
 | ContentService | `public static event Action? OnCacheRefreshed;` |
+| IapProductInfo | `event Action? Connected;` |
+| IapProductInfo | `event Action<string>? Disconnected;` |
+| IapProductInfo | `event Action<IReadOnlyList<IapProductInfo>>? ProductsFetched;` |
+| IapProductInfo | `event Action<string>? ProductsFetchFailed;` |
+| IapProductInfo | `event Action<IapPendingOrder>? PurchasePending;` |
+| IapProductInfo | `event Action<IapFailedOrder>? PurchaseFailed;` |
+| IapProductInfo | `event Action<string>? PurchaseDeferred;` |
+| IapProductInfo | `public event Action? AvailabilityChanged;` |
+| IapProductInfo | `public event Action? Granted;` |
 | PendingOpsQueue | `public event Action OnChanged;` |
 | PointsService | `public event Action<int> OnBalanceChanged;` |
 | PointsService | `public event Action<int> OnDisplayBalanceChanged;` |
@@ -1652,6 +1676,14 @@ Assets/Data/README_HOLES.md.meta
 | PhysicsLabController | `public event System.Action<int> OnClubChanged;` |
 | VersusMatchController | `public static event System.Action OnMatchReadyToBegin;` |
 | SaveDataHost | `public event Action? OnSaved;` |
+| IapService | `public static event Action? AvailabilityChanged;` |
+| IapService | `public event Action? Connected;` |
+| IapService | `public event Action<string>? Disconnected;` |
+| IapService | `public event Action<IReadOnlyList<IapProductInfo>>? ProductsFetched;` |
+| IapService | `public event Action<string>? ProductsFetchFailed;` |
+| IapService | `public event Action<IapPendingOrder>? PurchasePending;` |
+| IapService | `public event Action<IapFailedOrder>? PurchaseFailed;` |
+| IapService | `public event Action<string>? PurchaseDeferred;` |
 | GiftService | `public event Action OnItemsChanged;` |
 | GiftService | `public event Action OnSupportersChanged;` |
 | LoanService | `public event Action OnLoansChanged;` |
@@ -1811,7 +1843,7 @@ Assets/Data/README_HOLES.md.meta
 | GameplayLocalizationDemoRecorder | Assets/Scripts/UI/Editor/GameplayLocalizationDemoRecorder.cs | 1 |
 | LocalizationEditorHelper | Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs | 1 |
 | FadeController | Assets/Scripts/UI/FadeController.cs | 1 |
-| GachaBannerCard | Assets/Scripts/UI/Gacha/GachaBannerCard.cs | 17 |
+| GachaBannerCard | Assets/Scripts/UI/Gacha/GachaBannerCard.cs | 21 |
 | GachaCarouselController | Assets/Scripts/UI/Gacha/GachaCarouselController.cs | 12 |
 | GachaHistoryRow | Assets/Scripts/UI/Gacha/GachaHistoryRow.cs | 4 |
 | GachaHistoryRowBall | Assets/Scripts/UI/Gacha/GachaHistoryRowBall.cs | 9 |
@@ -1932,6 +1964,7 @@ Assets/Data/README_HOLES.md.meta
 | StaminaShopSelectionScreenController | Assets/Scripts/UI/Shop/StaminaShopSelectionScreenController.cs | 8 |
 | StoreHistoryRow | Assets/Scripts/UI/Shop/StoreHistoryRow.cs | 3 |
 | StoreHistoryScreenController | Assets/Scripts/UI/Shop/StoreHistoryScreenController.cs | 4 |
+| StorePaymentModalController | Assets/Scripts/UI/Shop/StorePaymentModalController.cs | 10 |
 | SoundSettingsSubmenu | Assets/Scripts/UI/SoundSettingsSubmenu.cs | 4 |
 | SwipeDetector | Assets/Scripts/UI/SwipeDetector.cs | 1 |
 | TapFeedbackConfig | Assets/Scripts/UI/TapFeedbackConfig.cs | 1 |

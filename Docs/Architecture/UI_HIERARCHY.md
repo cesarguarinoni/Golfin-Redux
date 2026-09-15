@@ -961,6 +961,33 @@ GachaBannerCard
 - Font sizes are the node's px ÷ 1.1224: the `Rubik-SemiBold SDF` asset has `faceInfo.scale 1.1`, so a TMP unit renders a cap 1.1224× the same Figma px (the built title 46.2 = the node's 52 px title). Match the reference render's cap height, not the arithmetic.
 - Both plates are baked by `Docs/Scripts/make_gacha_tagline_sprites.py` (the source of truth; the PNGs are build products).
 
+## Store payment modal + price plates (iap_plumbing — 2026-09-15, `Golfin.UI.Shop` / `Golfin.Economy`)
+
+`Assets/Resources/Prefabs/Shop/StorePaymentModal.prefab` (guid `b3fff0ba7bf474bfba9e94c191f7a79a`) — `StorePaymentModalController : ModalController`, instantiated by `GeneralShopScreenController.OpenPaymentModal` when a row carries BOTH an RP price and a store product. Built by `GOLFIN/Store/Build Store Payment Modal prefab` (`StorePaymentModalBuilder`) from palette atoms: the `Next Hole Panel` Pop-up body (ppum 1.28, drawn-body insets), `ButtonConfirm` / `ButtonCancel` 450×120, Rubik-SemiBold SDF, `TextGradients.Silver` title. Figma `14289:33223` / `33227`.
+
+```
+StorePaymentModal                 (root stays active — ModalController toggles ModalPanel)
+├── Backdrop                      scrim, authored INACTIVE
+└── ModalPanel                    authored INACTIVE
+    └── Body                      Pop-up atom
+        ├── Title                 silver gradient, item DisplayName
+        ├── ItemArt               TileSprite of the row
+        ├── Description           auto-size 30–46
+        ├── Separator1
+        ├── ChooseText            STORE_CHOOSE_PAYMENT
+        ├── RpButton              gold ButtonConfirm + ButtonPressFeedback
+        │   └── PriceRow / RpIcon + Amount     coin 36 px + number (never the word "RP")
+        ├── MoneyButton           gold ButtonConfirm + ButtonPressFeedback
+        │   └── Label             StoreKit localized price (¥100 on device, $0.01 in the Editor FakeStore)
+        ├── Separator2
+        └── CancelButton          silver ButtonCancel + ButtonPressFeedback
+            └── Label             MODAL_CANCEL (existing key)
+```
+
+- Both card templates (`GeneralShopCard_Club` / `_Ball`) gained `PriceBox/DiscountBadge` (`S_DiscountBadge`, baked by `Docs/Scripts/make_discount_badge.py`, corner `-N%` only). `GeneralShopCard.BindPrice` has three modes on the node geometry: RP-only (coin `PriceIconPx` 36 / gap 8, digits fs 28 = node cap 21 px, struck original 26/6), ¥-only (navy plate `MoneyOnlyPlateHeight` 78 re-centred with BUY), dual (stacked white/navy plates + badge).
+- Listing is decided by `GeneralShopCatalog.ListedNow`: a `test.` (sandbox) row or a ¥-only row is listed only while `IapService` reports the product buyable; a real dual row falls back to RP-only.
+- BUY routing: `HandleBuy` → RP-only `BuyWithRp` (the old body) / ¥-only `BuyWithMoney` / dual → this modal. `BuyWithMoney` runs under `PendingSpend`, confirms the StoreKit order ONLY after `POST /iap/golfin/verify` answers 200 (`IapFlow`).
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`

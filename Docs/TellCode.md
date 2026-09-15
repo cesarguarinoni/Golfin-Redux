@@ -7,7 +7,11 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **`asset_loans_offers`: DONE 2026-09-10 (`5bbe6e7b6`, playlife `fb5e9a8` v72, texts v53; Architect verified against HEAD, Cesar approved).** A loan starts as an OFFER (asset locked lender-side at once, nobody's roster until accept); anyone by display-name search + the followed list (`for_loans=1` filter); recipient Home pill + accept/decline modal; Settings › User Profile LOAN OFFERS toggle; rescind + 24 h pair cooldown, 3 pending per recipient, 48 h TTL, clock starts at accept. Live two-account E2E was RUN BY CODE against prod (both of Cesar's accounts, rows cleaned). 35 strings (one added: `LOAN_TIME_TO_ANSWER_HOURS_FMT`), `LOAN_TOAST_LENT` + `LOAN_ERR_NOT_FOLLOWING` retired. EditMode 3018 / 0 fail. Deviations D-1…D-7 in the report (notably: the Settings row shipped at 40/25 pt vs the node's 48/30 — check on device). **Next: `loans_ops` (Active, kickoff below).** Notion 2233 Done.
+- **`iap_plumbing`: DONE 2026-09-15 (`38cb84188` + `ced9439c6`, playlife `44e82f9` v75, `shop_catalog` v12, texts v57, golfin-admin `e881adf4`; reviewer PASS → red-team PASS → Cesar "Done and punch it game").** Sandbox IAP pipe end-to-end: `test.tickets.x10` (10 Gold Tickets, ¥100) through Unity IAP 5.4.3 → `POST /iap/golfin/verify` (fail-closed `iap_enabled`, legacy `/verifyReceipt` + bundle-id/in_app cross-check, `golfin_iap_grant()` = purchase row + `golfin_ticket_credit` + Store History row in ONE transaction, replay by txn id, 402 audited never granted; partner pts arm untouched). STORE dual pricing (coin+number / localized ¥ / stacked plates + `-N%` badge) + payment modal from the palette atoms; `ListedNow` hides a `test.` row unless the store can sell it. Migration applied 9/9, API v75, `iap_enabled=true` since 09:49 JST, ASC product complete (not added to a review). EditMode 3149 / 0 fail, backend 343/343. **Open (Cesar):** the sandbox purchase on the TestFlight build punched at close-out; then close the window (`iap_enabled=false` + SKU off sale). Folder in `Docs/Specs/Completed/`.
+
+- **`loans_ops`: DONE 2026-09-10 (`a491404a8`, playlife `6cd9239` v74, Cloudflare `21888241-b1b3-4589-a3e4-9fd280cee1b8`, `/api/version` = `cfab3a9cf`; Architect verified against HEAD 2026-09-15, Cesar approved).** Loan telemetry + admin ops: trigger-fed `golfin_loan_events` (actor inferred from the transition; admin's forced return carried by a transaction-local flag), `golfin_loan_admin` force_return / cancel_offer / clear_cooldown with a required note (all six refusals proven on prod), `GET /loans/rules` live; dashboard Loans panel + Users drawer Loans tab (four sections — BORROWED stays accepted-only, **Offers that went nowhere** carries declined/rescinded/lapsed) + Telemetry Loans section; 141 en+ja keys; every status-and-clock judgement lives in `lib/loanStatus.ts` (four defects of one shape — a status classified by an incomplete list — fixed by construction; tests iterate `ALL_LOAN_STATUSES`). Dashboard tests 293 → 324, backend 315 → 319. Migration applied 11/11, trigger proven on synthetic-party loans, both tables 0 rows. Deviations 1–6 in the report. Open: `cancel_offer` starts the pair's 24 h cooldown by design (two-step, Cesar's call); prod holds no real loans yet. ⚠️ Sidebar footer is a cached page — `/api/version` is the authoritative §23 stamp. Folder in `Docs/Specs/Completed/`. Notion 2242 Done.
+
+- **`asset_loans_offers`: DONE 2026-09-10 (`5bbe6e7b6`, playlife `fb5e9a8` v72, texts v53; Architect verified against HEAD, Cesar approved).** A loan starts as an OFFER (asset locked lender-side at once, nobody's roster until accept); anyone by display-name search + the followed list (`for_loans=1` filter); recipient Home pill + accept/decline modal; Settings › User Profile LOAN OFFERS toggle; rescind + 24 h pair cooldown, 3 pending per recipient, 48 h TTL, clock starts at accept. Live two-account E2E was RUN BY CODE against prod (both of Cesar's accounts, rows cleaned). 35 strings (one added: `LOAN_TIME_TO_ANSWER_HOURS_FMT`), `LOAN_TOAST_LENT` + `LOAN_ERR_NOT_FOLLOWING` retired. EditMode 3018 / 0 fail. Deviations D-1…D-7 in the report (notably: the Settings row shipped at 40/25 pt vs the node's 48/30 — check on device). Notion 2233 Done.
 
 - **`asset_loans_polish`: DONE 2026-09-09 (`bddd1f974`; Architect verified against HEAD).** Loan UI on the polish atoms: `PendingSpend` on LEND/RETURN, `UiSelection.Bump` on the picked row, ribbon `Rise` + dim `Fade` (tick repaint proven flat), badge `UiSelection.Indicator` (0 px rest parity on all three cards), `StaggerRise` + `FadeInPanel` on the recipient list — no shimmer site (the ~200 ms rule). Two defects fixed inside: (1) first recipient row pinned off-viewport because `Destroy`ed placeholders still occupied the layout in the spawn frame — one-frame wait in `LoadRecipients` (a `StaggerRise`-under-a-LayoutGroup trap worth remembering); (2) club ribbon/dim 27.05 px left of the artwork (pre-existing from `asset_loans`, Cesar caught it on the build) — `MatchArtworkX` anchors them to the left-flush 537 px artwork. Scene diff 68 lines, no `m_IsActive` change; 2975 / 0 fail; 26-assertion invariant JSON + red-team review PASS. Scene-save trap recorded in the report: `rt.rect.width` in a builder evaluates layout canvas-wide and bakes anchor churn on ~157 objects — read serialized values instead. Notion 2228 Done.
 
@@ -91,6 +95,44 @@ Context:
   Read the prefab's SERIALIZED rects, not the C# defaults; §4 lists them.
 - Out of scope: hand-editing the 52 in the admin, the no-text-in-artwork rule, regenerating the
   other 51 artworks, the pre-existing unpublished gacha_banners change.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`iap_plumbing` — DONE 2026-09-15 (see CURRENT STATE); was SPEC_READY 07:37 JST.** `Docs/Specs/Completed/iap_plumbing/SPEC.md`.
+  Sandbox-only IAP pipeline test (Cesar 2026-09-14): consumable `test.tickets.x10` (10 Gold Tickets)
+  via Unity IAP / StoreKit 2 → NEW playlife endpoint `POST /api/v1/iap/golfin/verify` (entitlement/grant
+  arm — the partner `/iap/verify-purchase` pts arm is the T2 money→RP chain and must stay unreachable)
+  → existing ticket-grant path → ledger. STORE tab dual pricing: RP = coin icon + number (never the word
+  "RP"), ¥ = localized price, both = stacked plates with corner -N% badge only (single-priced rows keep
+  the struck-through original treatment already in the game) + payment-choice modal (item art +
+  description, stacked gold options, silver CANCEL). Figma Store page: screen `14287:32861`, modal
+  `14289:33223`; renders in `reference/`. `iap_enabled` OFF in prod; NOTHING goes live — the
+  MONETIZATION_PLAN §0 rules stand (plan revised 2026-09-14, §1.3 + §2.5). ⚠️ shop_catalog has ~78
+  pending drafts — no publish without Cesar's review.
+
+### Kickoff · iap_plumbing
+
+```
+Read Docs/Specs/Active/iap_plumbing/SPEC.md and implement it.
+
+Context:
+- Sandbox-only IAP pipeline test: one consumable test SKU (test.tickets.x10, 10 Gold Tickets)
+  bought through Unity IAP -> playlife POST /api/v1/iap/golfin/verify (new arm in
+  backend/routers/iap.py — NEVER the partner pts arm) -> ticket grant via the existing
+  admin-grant path -> ledger. Plus STORE dual pricing: RP (coin icon + number), yen (localized),
+  or both, with the payment-choice modal. Figma nodes + fidelity table in the spec.
+- Unity: Assets/Scripts/UI/Shop/ (GeneralShopCard.BindPrice, GeneralShopScreenController,
+  GeneralShopModel), new Assets/Scripts/Services/IapService.cs, com.unity.purchasing package.
+  playlife: routers/iap.py + migration 2026_09_15_golfin_iap.sql.
+- Minimal diff. Reuse PendingSpend, ModalController, ButtonPressFeedback, the admin ticket-grant
+  function, _verify_apple_receipt. iap_enabled flag OFF by default; nothing reaches prod players.
+- Do NOT publish shop_catalog without Cesar's OK — ~78 unrelated drafts are pending.
+- Out of scope: Android/Play Billing, noads.premium, full iap_products catalog + Entitlements
+  admin tab + refund webhooks, restore-purchases UI, test-SKU retirement.
 
 When done: list changed files with a 1-line summary each, run the acceptance
 tests in the spec, flag which need manual on-device verification, update
@@ -235,7 +277,7 @@ folder, and update Docs/AI_CONTEXT.md.
 ```
 
 
-- **`loans_ops` — SPEC_READY 2026-09-10 (Architect), NOW ACTIVE (offers closed the same day).** `Docs/Specs/Active/loans_ops/SPEC.md`. Loan telemetry (Telemetry panel "Loans" section: client funnel + server lifecycle + RP split) and admin ops (`golfin_loan_events` trigger-fed timeline, `golfin_loan_admin` — force return / cancel offer / clear cooldown, note required, audited; dashboard Loans panel + Users drawer Loans tab with the offers switch; read-only rules card off a new `GET /loans/rules`). No game UI, no game strings; dashboard strings en+ja in `lib/i18n.ts`. Notion 2242 (+2243 deferral; 2213 narrowed).
+- ~~**`loans_ops`**~~ — **DONE 2026-09-10** (`a491404a8`, playlife `6cd9239` v74; Architect verified against HEAD 2026-09-15). Folder in `Docs/Specs/Completed/loans_ops/`. **Kickoff below is SPENT — do not paste.** Was: Loan telemetry (Telemetry panel "Loans" section: client funnel + server lifecycle + RP split) and admin ops (`golfin_loan_events` trigger-fed timeline, `golfin_loan_admin` — force return / cancel offer / clear cooldown, note required, audited; dashboard Loans panel + Users drawer Loans tab with the offers switch; read-only rules card off a new `GET /loans/rules`). No game UI, no game strings; dashboard strings en+ja in `lib/i18n.ts`. Notion 2242 (+2243 deferral; 2213 narrowed).
 
   ```
   Read Docs/Specs/Active/loans_ops/SPEC.md and implement it.
@@ -261,35 +303,7 @@ folder, and update Docs/AI_CONTEXT.md.
   Docs/AI_CONTEXT.md.
   ```
 
-- **`screen_hints` — SPEC_READY 2026-09-10 (Architect).** `Docs/Specs/Active/screen_hints/SPEC.md`. First entry into each screen opens that screen's Loading tips as a modal (PRO TIP title, diagram, text, `n/X` counter when >1, gold CONTINUE → CLOSE on the last/single hint, silver BACK from hint 2 onwards — absent on hint 1). 18 screens incl. the shot view (six gameplay tips at `GameplaySceneLoader` step 7) and Settings › Controls. New `ScreenHints.csv` + `Assets/Scripts/UI/Hints/` + `ScreenHintModal.prefab` (CopyAsset of `SchemeConfirmModal.prefab`, two scene instances). Per-device PlayerPrefs `screenhints.state`. Figma page `Tutorial`: kit `14263:39325`, Roster `14263:109304`, Home `14263:109672`, In-game `14263:109883`, Roster 4/4 `14266:109661`; four renders in `reference/`. Strings: `HINT_CONTINUE` / `HINT_CLOSE` / `HINT_BACK` new + **`TIP_RP` rewritten** ("THE GAME'S CURRENCY…", no "ONLY" / "NEVER FOR SALE" — Cesar 2026-09-10, applies to the loading screen too). No retired keys. Notion 2238 (+ 2239–2241 deferrals).
-
-  ```
-  Read Docs/Specs/Active/screen_hints/SPEC.md and implement it.
-
-  Context:
-  - First entry into each screen opens that screen's Loading tips as a modal (1/X counter,
-    CONTINUE → CLOSE on the last/single hint, BACK from hint 2 onwards — absent on hint 1).
-    New: ScreenHints.csv + ScreenHintCatalog/Resolver/Store/Presenter under Assets/Scripts/UI/Hints/,
-    ScreenHintModal.prefab = CopyAsset of SchemeConfirmModal.prefab
-    (two instances: ShellScene Settings canvas + LabScaffold ShotUI_Canvas, same as
-    SchemeConfirmModal), content = the ShellScene ProTipCard/TipContent subtree copied.
-  - Hooks: ScreenManager.ScreenChanged (presenter on PersistentUI), GameplaySceneLoader
-    LoadCoroutine step 7 (one static call after FinishLoadingCoroutine), ControlsSubmenu.OnEnable.
-  - Polish atoms per §3.3a: animateShow Pop/Fade from the copy, ButtonPressFeedback on both
-    buttons, ProTipCard's SwapRoutine + preferredHeight tween copied for hint→hint (both ways),
-    UiMotion.Bump on the counter, Stop in OnDisable.
-  - Strings §2.3: HINT_CONTINUE / HINT_CLOSE / HINT_BACK (new) + TIP_RP rewrite, EN+JA,
-    through the importer → admin publish → --check clean. No retired keys.
-  - Minimal diff. Reuse LoadingTipCatalog / LoadingTipStore patterns; ScreenManager and
-    ProTipCard are not modified (TipSprite is already public).
-  - Out of scope: content catalog + admin panel, Settings "replay tutorial", per-scheme
-    gameplay hints, pausing the 1v1 clock, sharing seen-state with the loading pools.
-
-  When done: list changed files with a 1-line summary each, run the acceptance
-  tests in the spec, flag which need manual on-device verification, update
-  STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
-  Docs/AI_CONTEXT.md.
-  ```
+- ~~`screen_hints` — DONE 2026-09-10~~ (`807c6d1f3`, close `664d12aa4`; texts v54; Cesar approved; folder in `Docs/Specs/Completed/`). Deferral 2241's per-scheme half shipped as `scheme_aware_gameplay_hints` `7a88aafbf` (2026-09-14); Notion 2238 + 2241 → Done 2026-09-15. Architect close-out notes: (1) the report's `seenScreens` growth (every screen entered is recorded, rows or not) is accepted as-is — one string per screen, bounded by the enum; (2) HoleSelection's two hints opening on the way to the first hole is the §2.2 table as approved, not a bug; (3) `TIP_RP` copy is live on the loading screen AND the Home hint (v54).
 
 - ~~`asset_loans_offers` — SPEC_READY 2026-09-10~~ **DONE 2026-09-10** (`5bbe6e7b6` + `9df47f9aa`, playlife `fb5e9a8` v72, texts v53, full chain + red-team PASS, live two-account E2E run by Code, Cesar approved). Folder in `Docs/Specs/Completed/`. Do NOT re-dispatch.
 

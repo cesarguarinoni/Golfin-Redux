@@ -4,6 +4,66 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-15 — iap_plumbing: **DONE (Cesar: "Done and punch it game") — real-money pipeline LIVE in sandbox; TestFlight build punched with the commit; only the on-device sandbox purchase + the window close remain**
+
+**Close-out (11:xx JST).** Review chain: golfin-reviewer PASS → golfin-redteam-reviewer PASS
+(`ARCHITECT_REVIEW_PASS`, four break-attempts failed, the only FAIL rows = the on-device pass) →
+Cesar approved. Commits: **GolfinRedux `38cb84188`** (client + prefabs + content + admin dashboard,
+43 files), `ced9439c6` (hooks → `python3` on Cesar's word; `quit-unity.sh` / `assert-unity-closed.sh`
+now match Hub's lower-case `-projectpath` — the case-sensitive grep had reported "no Unity Editor
+process" while pid 88994 held the lock, Lesson CN), `691559a29` (build-2942 guard + catalog-art
+residue); **playlife `44e82f9`** pushed (API arm + migration + 24 tests). Spec folder →
+`Docs/Specs/Completed/iap_plumbing/` (STATUS `DONE`). Then the GAME lane (`./Tools/testflight.sh`,
+iOS-Full) for the build that carries this commit — result in the section below this one.
+**Still open, gated on Cesar:** (1) the sandbox purchase on that TestFlight build with a sandbox
+Apple ID (STORE → GOLD TICKET ×10 → ¥ → StoreKit ¥100 → +10 Gold Tickets → Store History row;
+granted-path proof = the `iap_purchases status='granted'` row + `ticket_ledger` +10 + a replay that
+returns `already_processed`); (2) closing the window on his word — `iap_enabled` back to `false`
+and `test.tickets.x10` off sale (`iap_products.active=false` + ASC "Remove from sale"). Until (2),
+anyone on that TestFlight build with a sandbox account can buy the test SKU; production Apple IDs
+pay real ¥100 for 10 Gold Tickets, which the grant honours.
+
+---- kickoff-day record (what was built, kept for the follow-on) ----
+
+Cesar's kickoff, implemented by the main thread (the session's `ai-game-developer` MCP tools failed to
+connect at start; Unity was driven through `Tools/unity-mcp-call.py`'s handshake after I launched the
+Editor myself — the 22:22 punch had quit it). **playlife (uncommitted, main):**
+`backend/migrations/2026_09_15_golfin_iap.sql` — additive (`iap_products.app/grant_ref/grant_qty` +
+`kind='ticket'`, `iap_purchases.app/granted_*` + `status='granted'`, `golfin_shop_purchases.paid_amount/
+paid_currency` + `charged_rp >= 0`, `content_settings.iap_enabled=false`, the `test.tickets.x10` seed)
+and `golfin_iap_grant()` = purchase row + `golfin_ticket_credit` (the admin grant's function) + the
+Store History row in ONE transaction, replay by `(transaction_id, platform)`. `routers/iap.py` gains
+`GET /iap/golfin/config` (fail-closed switch + the product list) and `POST /iap/golfin/verify` (409
+switch off, 400 for any non-golfin / pts product BEFORE Apple, legacy `/verifyReceipt` via the shared
+`_verify_apple_receipt` + bundle-id/in_app cross-check, 402 refusals audited, one rpc, no pts write);
+the partner arm's body is untouched; `/catalog` filters `app='partner'`; `/shop/history` selects the
+two `paid_*` columns. `tests/test_iap_golfin.py` 24/24, suite 343/343. **⚠️ DEPLOY ORDER:** the
+`/shop/history` select and the `/catalog` filter read the NEW columns — `fly deploy` only AFTER the
+migration is applied, or the live Store History 500s. **Unity:** `com.unity.purchasing 5.4.3`
+(StoreKit 2; `BillingMode.json` generated), `Golfin.Economy.IapFlow` (confirm the StoreKit order ONLY
+on a 200 — 402/409/offline leave it pending for the relaunch replay; one purchase in flight; fail-closed
+switch) + `Assets/Scripts/Services/IapService.cs` host and `UnityIapStoreDriver`;
+`shop_catalog.storeProductId` (blank everywhere; sandbox row `shop_ticket_gold_10_iap` = gold ×10,
+600→450 RP, `test.tickets.x10`); `GeneralShopCatalog.ListedNow` — a **`test.` row is listed only while
+the store can sell it** (it is bundled; without this every live player would have seen an RP card the
+server refuses), ¥-only rows likewise, real dual rows fall back to RP-only; `GeneralShopCard.BindPrice`
+three modes on the node's geometry (coin 36/gap 8, digits fs 28 = node cap 21 px, navy ¥-only plate
+180×76 re-centred with BUY, dual white/navy 80/80 + `S_DiscountBadge` `-N%` badge baked from
+`14287:33138`); `StorePaymentModal.prefab` (Pop-up + Main Buttons atoms, node geometry, all three
+`ButtonPressFeedback`); BUY routing RP / ¥ / modal under `PendingSpend`; money price in Store History
+(`SHOP_HISTORY_PRICE_MONEY`). Five text keys published (`texts` **v57**, `--check` clean; the
+`shop_catalog` drift is the deliberate unpublished draft — 79 pending adds now, NOT published).
+EditMode **3148/3152 pass, 0 fail, 4 skip** (29 new `IapPlumbingTests`). Frames through the real
+widgets with Unity IAP's FakeStore (`$0.01` — StoreKit's `¥160` is device-only; verify → 404 until
+deployed): `Docs/Specs/Completed/iap_plumbing/screenshots/` (gitignored, local). Editor-only seam
+`IapService.EditorForceFakeStorePref` (menu `GOLFIN ▸ Store ▸ IAP: force FakeStore (Editor)`) is OFF.
+**10:30 update.** Cesar applied the migration (VERIFICATION 9/9) and re-authed flyctl (the CLI macaroon had expired at 811 h) → `flyctl deploy` → both machines VERSION 75; smoke: verify no-auth 403, config `enabled:true` + `test.tickets.x10` ¥100, partner `/iap/catalog` still its 3 pts packs, `/shop/history` 200 with `paid_*`. `iap_enabled` flipped TRUE 09:49 JST (his "ASAP"). ASC: the product already existed as a draft (base Japan ¥100, EN/JA) — added review screenshot + notes, Saved ("Add for Review" enabled = sandbox-purchasable; NOT added to a review); `iap_products.price_jpy` 160→100 to match. `shop_catalog` published from the admin drawer → **v12** (79 added incl. the sandbox row + weeks 40-45; 3 advisory warnings), export → CSV 117 rows, `--check` clean. Live Editor run with the real config: FakeStore connected off the deployed config, BUY → modal → ¥ → verify **402 empty_receipt** → audited (1 failed `iap_purchases` row, 0 pts, 0 ticket tx, 0 history rows) — frames `*_LIVECONFIG.png`. Hooks are `python3` now (his call). Remaining: the device pass on a TestFlight build ≥ 2943 with this commit.
+
+**Found on the way:** `.claude/settings.json` hooks invoked `python`, which does not exist on this Mac —
+`enforce_implementer_done.py` never fired on the STATUS write (ran by hand with `python3`, 13 findings
+fixed); switched to `python3` on Cesar's word (`ced9439c6`, Lesson CM).
+
+---
 ## 2026-09-14 19:50 — **"punch it" ARMED for 22:22 JST tonight** (`world.golfin.testflight-2222`, one-shot launchd agent, the GAME lane)
 
 Cesar: *"Punch it at 10.22 pm"*. Smoke-fired through launchd at 19:47 (`runs = 1, exit 0`, chain

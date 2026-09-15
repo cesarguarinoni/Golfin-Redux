@@ -1,0 +1,23 @@
+=== iter-1 kickoff baseline (main thread as implementer, 2026-09-15 07:47 JST) ===
+HEAD: 5c23b74e5
+DIRTY:
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/iap_plumbing/
+=== END baseline ===
+2026-09-15T07:47+09:00 kickoff — read SPEC, playlife iap.py / migrations, Unity shop stack; Unity Editor was CLOSED (22:22 punch quit it) → launched it myself (PID 81506) after pinning com.unity.purchasing 5.4.3 in manifest.json
+2026-09-15T08:00+09:00 Figma: get_design_context + get_metadata on 14287:32861 and 14289:33223/33227; node truth reconciled (¥-only plate is NAVY not white; RP row coin 36/gap 8; badge 109×47 #F0566A→#A8172B)
+2026-09-15T08:15+09:00 playlife: migration 2026_09_15_golfin_iap.sql (pglast-parsed), iap.py golfin arm (/golfin/config, /golfin/verify), config keys, tests/test_iap_golfin.py — 24 new tests, suite 343/343 green
+2026-09-15T08:30+09:00 client: Endpoints, Golfin.Economy.IapFlow + Services/IapService (UnityIapStoreDriver), GeneralShopModel storeProductId + ListedNow gate, GeneralShopCard BindPrice 3 modes + DiscountBadge, StorePaymentModalController + builder, controller routing, store-history money price; CSV rows; MCP transport = Tools/unity-mcp-call.py idiom (session MCP tools failed to connect at start)
+2026-09-15T08:44+09:00 EditMode: IapPlumbingTests 29/29, shop fixtures 14+5, GolfinRedux.Tests.EditMode 409/409, FULL EditMode 3148 pass / 0 fail / 4 skip (3152)
+2026-09-15T08:52+09:00 captures via IapStoreFramesRun (real navigation, FakeStore forced ON for the run, restored OFF after) — 01..06 + 99 HARNESS ¥-only; modal geometry dumped; surfaced side-by-side in chat
+2026-09-15T09:00+09:00 texts: importer PLAN 5 add / 0 change / 0 conflict → --apply → content_publish(texts) → v57 → export; --check clean for texts (shop_catalog drift = the unpublished sandbox draft, by design); LocalizationTextTable.asset rebuilt
+2026-09-15T09:10+09:00 fidelity tune: modal drawn body re-centred (measured 15.6 px high), RP amount 63, description auto-size; price digits 34→28 (node cap 21 px matched); dual-plate coin full alpha; IAP-off real-config run captured (State=Disabled, 0 money plates, sandbox row withheld)
+2026-09-15T09:20+09:00 lint: GeneralShopCard_Club/Ball/StorePaymentModal 0 FAIL; writing report
+2026-09-15T09:48+09:00 Cesar applied 2026_09_15_golfin_iap.sql (VERIFICATION 9/9 expect); answers: ASC=me, window=ASAP, hooks=python3, shop_catalog=publish, review=go
+2026-09-15T09:50+09:00 hooks → python3 (4 commands); iap_enabled → TRUE (PostgREST); flyctl token EXPIRED (811h>720h) — auth login needs a TTY → Cesar's 20 s; deploy queued behind it
+2026-09-15T09:58+09:00 admin Review & publish shop_catalog → v12 (79 added, 3 advisory warnings); export → CSV 117 rows, --check clean
+2026-09-15T10:05+09:00 ASC: test.tickets.x10 pre-existed (¥100 base JP, EN/JA); added review screenshot + notes, Saved; iap_products.price_jpy 160→100 to match
+2026-09-15T10:18+09:00 Cesar re-authed flyctl → flyctl deploy playlife-api → VERSION 75 both machines; smoke: verify no-auth 403 ×4, config enabled=true + test SKU ¥100, partner catalog 3 pts rows only, /shop/history 200 with paid_* columns
+2026-09-15T10:21+09:00 live full-flow Editor run (no force): real config → FakeStore Ready → BUY → modal → ¥ → verify 402 empty_receipt (audited: 1 failed iap_purchases row, 0 pts, 0 ticket tx, 0 history rows); frames *_LIVECONFIG.png
