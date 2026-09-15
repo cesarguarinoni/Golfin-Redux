@@ -106,11 +106,18 @@ Tools/_dash*.tgz
 # Third-party asset packs (re-downloadable from Asset Store)
 Assets/Packs/
 
-# Generated course scenes (regenerated from terrain data)
-# Use /* (not trailing /) so negation rules for Experimental/ are still evaluated
-Assets/Golf/Courses/*/Generated/*
-!Assets/Golf/Courses/*/Generated/Experimental/
-!Assets/Golf/Courses/*/Generated/Experimental/**
+# Generated course scenes — NOW TRACKED (2026-09-15).
+# Tree placement is NOT deterministic, so regenerating on a second machine
+# produces a different game from the same commit. The scenes are Force Text
+# YAML (543 MB raw -> ~37 MB zlib in the pack), so tracking them is cheap.
+# Previous rule, kept for reference:
+#   Assets/Golf/Courses/*/Generated/*
+#   !Assets/Golf/Courses/*/Generated/Experimental/
+#   !Assets/Golf/Courses/*/Generated/Experimental/**
+Assets/Golf/Courses/*/Generated/**/.DS_Store
+# Video capture variants stay ignored (Cesar, 2026-09-15) — regenerable, not shipped.
+Assets/Golf/Courses/*/Generated/Video/
+Assets/Golf/Courses/*/Generated/Video.meta
 
 # Original imported scene lightmaps & reflection probes
 Assets/Scenes/Original/
