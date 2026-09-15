@@ -1,0 +1,41 @@
+stage 2 VERIFY (prefab as committed) at address, captureDeltaTime=0.0167
+clip hands (rig OFF, verify mode — restored to 1 after this capture): L pos=(80.0347, 14.1959, -25.0083) rot=(0.68677, -0.01396, -0.72482, -0.05281) | R pos=(80.1350, 14.1643, -24.9713) rot=(0.60147, -0.17849, 0.77627, 0.06153)
+lead axis 0.2·L_prox wrappable=True: index ok(tip 20.41) middle ok(tip 20.40) ring ok(tip 20.40) little ok(tip 20.40) 
+lead axis 0.4·L_prox wrappable=True: index ok(tip 20.81) middle ok(tip 20.41) ring ok(tip 20.40) little ok(tip 20.41) 
+lead axis 0.6·L_prox wrappable=True: index ok(tip 23.71) middle ok(tip 20.41) ring ok(tip 20.40) little ok(tip 20.41) 
+lead axis 0.8·L_prox wrappable=False: index NO(tip 43.79) middle ok(tip 20.99) ring ok(tip 20.40) little ok(tip 20.41) 
+trail axis 0.0·L_prox wrappable=True: index ok(tip 20.40) middle ok(tip 24.50) ring ok(tip 20.40) 
+trail axis 0.2·L_prox wrappable=True: index ok(tip 20.40) middle ok(tip 23.01) ring ok(tip 20.41) 
+trail axis 0.4·L_prox wrappable=False: index NO(tip 20.40) middle ok(tip 22.13) ring ok(tip 20.40) 
+trail axis 0.6·L_prox wrappable=True: index ok(tip 23.32) middle ok(tip 22.41) ring ok(tip 20.40) 
+reach: lead arm 463.89 mm from mixamorig:LeftArm, trail 456.39 mm
+CLIP wrist angles (forearm→hand): lead 46.2° (flex 28.3, dev -33.0) | trail 41.8° (flex -8.0, dev 40.7)
+hand-local lead: o=(0.0376, 0.0938, -0.0223) d=(-0.7898, 0.6134, -0.0049) fHand=(0.0597, 0.0767, -0.0222) gap=(-0.0111, 0.1209, -0.0010) thumbInter=(-0.0308, 0.0952, -0.0224)
+hand-local trail: o=(-0.0366, 0.0898, -0.0225) d=(0.9248, 0.3804, -0.0032) fHand=(-0.0370, 0.0897, -0.0225) fLittle=(-0.0366, 0.0898, -0.0225)
+CLIP lead: little→index vs shaft dot=1.00000 | palm n·toHead=0.02915 n·aim=-0.99829 n·up=0.03706 | length u·shaft=0.61348 u·up=-0.96839 | tunnel station 39.38 mm, 0.00 mm off the axis
+CLIP trail: little→index vs shaft dot=0.97232 | palm n·toHead=0.05624 n·aim=0.99814 n·up=-0.03190 | length u·shaft=0.58604 u·up=-0.95960 | tunnel station 114.16 mm, 0.08 mm off the axis
+club at address: ClubStart=(80.0768, 14.1774, -25.1074) ClubEnd=(80.1864, 13.4485, -24.5503) shaft=(0.1186, -0.7889, 0.6030) aim=(-0.9949, 0.0000, 0.1011) Head=(80.0733, 14.6967, -24.9575) GripTarget=(80.0849, 14.1801, -24.9898) ClubSlot.local pos=(0.0079, 0.0518, -0.0864) rot=(-0.11602, 0.89048, 0.42577, 0.11096)
+prefab anchors: lead local pos=(0.0000, 0.0037, 0.0000) rot=(-0.30999, 0.62926, 0.31179, -0.64088) | trail local pos=(0.0000, 0.0557, 0.0000) rot=(-0.33162, -0.64270, -0.31157, -0.61635) | geometry now: lead pos=(80.0777, 14.1714, -25.1028) trail pos=(80.0874, 14.1063, -25.0531)
+PASS grip.wrist.residual_l — IK rotated the lead wrist 13.9° from the clip (stop line 40); IK reached the anchor to 0.0° / 0.00 mm
+PASS grip.wrist.residual_r — IK rotated the trail wrist 31.9° from the clip (stop line 40); IK reached the anchor to 0.0° / 0.00 mm
+INFO grip.wrist.angle_l — lead forearm→hand 55.0° (flex 23.8, dev -45.5) vs clip 46.2° (flex 28.3, dev -33.0)
+INFO grip.wrist.angle_r — trail forearm→hand 47.7° (flex 24.8, dev 37.6) vs clip 41.8° (flex -8.0, dev 40.7)
+INFO grip.wrist.displacement — hand origin moved L 37.03 mm, R 20.28 mm from the clip
+PASS grip.hand.onShaft_l — lead tunnel point 0.01 mm off the shaft axis (< 3)
+PASS grip.hand.onShaft_r — trail tunnel point 0.00 mm off the shaft axis (< 3)
+PASS grip.hands.overlap — trail little MCP station 114.52 mm vs lead index/middle gap 122.28 mm (Δ -7.76, ±8)
+FAIL grip.heelPad.onTop — lead dot(−n, toHead) = 0.01066 (> 0.5)
+FAIL grip.trailPalm.onThumb — lead thumb 21.40 mm palm-side of the trail MCP plane (0 … 18.97), shaft 21.60 mm (must be further); dot(n, toThumb) = -0.00385
+FAIL grip.hands.noInterpenetration — closest lead joint to a trail index/middle/ring joint: 5.43 mm (≥ 8)
+INFO grip.hands.trailLittleOnLead — closest lead joint to the trail little finger: 6.14 mm (the intended contact)
+FAIL grip.buttCap.pastHeel — LeftHand origin 39.38 mm down-shaft of ClubStart (6.07 … 15.18); lead little MCP at 67.34 mm
+PASS grip.fingers.onShaft_l — bone segments ≥ mesh radius 13.58: min 14.52 mm | index pip/dip/tip 20.41/20.40/23.70 segMin 15.35; middle pip/dip/tip 20.41/20.40/20.40 segMin 14.52; ring pip/dip/tip 20.41/20.40/20.40 segMin 15.41; little pip/dip/tip 20.41/20.40/20.40 segMin 16.60; 
+PASS grip.fingers.onShaft_r — bone segments ≥ mesh radius 13.58: min 13.21 mm | index pip/dip/tip 20.40/20.40/23.32 segMin 13.21; middle pip/dip/tip 20.40/20.40/22.42 segMin 13.26; ring pip/dip/tip 20.40/20.40/20.41 segMin 14.77; little pip/dip/tip 16.72/18.27/32.94 segMin 14.49; 
+INFO grip.thumb.downShaft_l — lead thumb proximal 47.5° off the shaft, Thumb3 21.52 mm / tip 29.88 mm from the axis
+PASS club.headAtBall — ClubEnd 24.65 mm from the ball in plan (< 50)
+club.faceSquare measured into the recorder JSON
+frame: Docs/Specs/Active/golfer_club_grip/evidence/stage2\verify_downshaft.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/stage2\verify_targetside.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/stage2\verify_golferseye.png
+frame: Docs/Specs/Active/golfer_club_grip/evidence/stage2\verify_awayside.png
+gameplay frame: C:\Users\cesar\GolfinRedux\Docs\Diagnostics\_capture\hinge_stage2_verify_gameplay_2026-09-15_08-06-15.png

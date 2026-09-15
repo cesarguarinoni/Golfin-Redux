@@ -850,3 +850,126 @@ different clip or a shorter club before stage 3. Tests 13/13; nothing above the 
 ### Real-golfer reference (2026-09-15, Cesar asked)
 
 See `reference/WRIST_ANGLES_AT_ADDRESS.md`. Published address values: lead wrist ulnar deviation ~17–20°, extension 0–20° (15–20 typical), total ≈ 20–30°; trail wrist a slight cup. Ours: clip 46.2 / 41.8, committed bake 55.0 / 47.7 — the excess is deviation (45° vs 17–20°), set by hand height over the ball and club length, not by the anchors.
+
+## Stage 2, real size — Cesar: "scale things to real world sizes" and "a target for whoever changes the club or stance: that is you" (2026-09-15)
+
+**Iteration shape:** `hinge-model:stage2-real-size-wrists`. Same harness path (Hole 06 through
+`GolferTestVerificationRecorder.VerifyMixamoNative`, reflection hook at the address sample), same gate: §3.12.6 row 2.
+
+### Rejection follow-up
+
+| Defect (CESAR_REJECTION.md) | Verdict | Same-angle evidence |
+|---|---|---|
+| "The wrists seem to bend too much compared to real golfers" | **RESOLVED** — lead 27.5° (extension 26.4, deviation 6.9), trail 16.2° (extension 10.2, deviation 12.4). Published address values (`reference/WRIST_ANGLES_AT_ADDRESS.md`): lead total ≈ 20–30°, trail a slight cup. The committed bake was 55.0° / 47.7°, the clip itself is 46.2° / 41.8°. | `evidence/stage2/verify_awayside.png` (the angle Cesar judged), `verify_targetside.png`, `verify_stance_targetside.png` (full body) |
+
+Canonical screenshot: `evidence/stage2/verify_stance_targetside.png`
+
+### 3.1 Real-world size (done first, Cesar's note)
+
+- Prefab root scale 1.05156 → the body is **1.75 m** (was 1.664 m at the 0.759 stand-in scale, 1.33 m as Cesar saw it).
+  Clubs at **native** scale (lossy 1.0; driver 1.0635 m butt to head, grip radius 13.58 mm) — driver/putter
+  `localScale` 0.95097 under the scaled root, `ClubStart` y −0.03908, `ClubEnd` y 0.97227.
+- `GolferPresenter.PlaceAtBall` now scales `addressHeadLocal` by the root scale (`Vector3.Scale(addressHeadLocal, transform.localScale)`);
+  the verify run lands the head **0.00 mm** from the ball.
+- `HandHingeModel`: `CharScale = 1.0` (mm·s = mm), `FingerHalfThicknessM = 0.00718`, `ContactM = ShaftRadiusM (0.013575) + FingerHalfThicknessM`;
+  `HandHinge_MixamoNative.asset` re-captured at the new scale; finger poses re-solved at the real-size contact circle.
+  Tests **13/13** (`Golfin.Gameplay.Golfer.Tests`, EditMode, 0.65 s).
+
+### 3.2 What moved the wrists — the club pivot with the IK in the loop
+
+The §3.12.5 predictor uses the clip's forearm, so it cannot see where the IK puts the elbow once the anchors move; the
+committed solve had run to the edge of what the predictor could see (55° / 48°). Replaced the predictor step with a scan
+that applies each candidate, rebuilds the rig (Lesson AU), and reads the post-IK wrists:
+
+1. **Coarse grid**: lead station {44 (the solved), 30, 20, 12 mm} × yaw about the head {0, −4, −8, −12, +4, +8°} ×
+   pitch about the head {0 … −7°} × trail-gap offset down the shaft {0, 4, 8, 12 mm} — 672 configurations, ~6 frames each.
+2. **Local refinement** around the coarse best: ±4 mm station, ±2° yaw, ±1° pitch, ±2 mm gap — 225 more.
+3. **Pick rule = the rows this report grades**, as hard constraints, with the wrist sum as the only objective: both
+   tunnel points on the shaft ≤ 3 mm (the post-IK truth of reach), lead-to-trail joint clearance ≥ 8 mm, every finger
+   bone segment outside the shaft mesh, trail little MCP within ±8 mm of the lead gap, hands ≥ 140 mm above the knees
+   (§3.3 below — unmet by every configuration, so the scan reports it and keeps the least wrist bend among the
+   grip-feasible ones).
+
+Why the rule set grew one row at a time (each caught by the next run, all in `evidence/stage2/stage2_solve_pitchscan_console_*_prev.txt`):
+a coordinate-descent gap sweep after the best pitch cleared the joints at 12 mm but pushed the trail hand 5.9 mm off the
+shaft — the trail arm is the reach limit, so the gap had to be a scan dimension, not a fix-up; the coarse best then left
+the trail hand 1.9 mm short and its middle-finger chord 1 mm inside the mesh (→ refinement + finger constraint); the
+refined best sat 0.03 mm outside the overlap band (→ overlap constraint). Lesson: grade by the same rules you pick by.
+
+**Result**: station **16 mm**, yaw **−6°**, pitch **−5°**, trail gap **10 mm**, axes 0.6 / 0.6 (unchanged, both wrappable).
+Face roll: the recorder solved −9.15° after the bake (azimuth 6.47°, over ±5); `ApplyFaceRollFix(−9.15)` → **0.000°**.
+
+### 3.3 The numbers — verify run on the prefab as committed (world mm, s = 1.0)
+
+| Row | Value | Verdict |
+|---|---|---|
+| grip.wrist.angle_l — lead forearm→hand | **27.5°** (ext 26.4, dev −6.9) — clip 46.2, committed bake 55.0; real 20–30 | INFO (in the envelope; extension at the top of the 0–20 band, deviation under the 17–20 reference) |
+| grip.wrist.angle_r — trail | **16.2°** (ext 10.2, dev 12.4) — clip 41.8, committed 47.7; real "slight cup" | INFO |
+| grip.wrist.residual_l / _r | 7.9° / 28.8° from the clip; IK reached both anchors to 0.0° / 0.01 mm | PASS / PASS |
+| grip.hand.onShaft_l / _r | 0.00 / 0.01 mm off the axis (< 3) | PASS / PASS |
+| grip.hands.overlap | Δ 6.93 mm (±8) | PASS |
+| grip.hands.noInterpenetration | 8.50 mm (≥ 8) — committed bake had 5.4 | PASS |
+| grip.buttCap.pastHeel | 16.0 mm (8 … 20) — committed bake had 39 mm | PASS |
+| grip.fingers.onShaft_l / _r | segments ≥ 15.65 / 14.43 mm vs mesh 13.58; joints on the 21.8 mm contact circle | PASS / PASS |
+| club.faceSquare | 0.000° azimuth after the roll fix (was 6.47°) | PASS |
+| club.headAtBall | 0.00 mm | PASS |
+| grip.heelPad.onTop | dot 0.138 (> 0.5) — the §3.9.6 rule this solver never targets; failed in every stage-2 bake | FAIL |
+| grip.trailPalm.onThumb | thumb 23.31 vs shaft 23.05 mm — 0.26 mm the wrong side; failed in every stage-2 bake (2.4 mm at the committed one) | FAIL |
+| grip.hands.aboveKnees (new) | lowest hand joint **70.7 mm** above the knee joint (floor 140; the clip's own value is 80.9) | FAIL — see 3.4 |
+| stance.handsHeight (new) | hand origins 755 mm over the ground; real golfers ≈ 0.75–0.90 m with a driver | INFO |
+| club.shaftElevation (new) | 47.1° above horizontal; a driver at address ≈ 50°, static lie 55–60° | INFO |
+| grip.arms.clearLegs (new) | nearest arm bone to a leg bone 166.5 mm centreline (L forearm ↔ R thigh) | INFO — Cesar withdrew the elbow note |
+
+### 3.4 Cesar's note during the run: "as you straighten the grip, move the arms higher so they don't collide with the knees when swinging"
+
+Measured before deciding. The straightening lowered the hands **10 mm** relative to the clip (71 vs 81 mm above the knee
+joint); the low hands are the actor's stance, not the solve. The club pivot cannot buy height without giving the wrists
+back — from the 897 scanned configurations, best wrist sum at each hands-above-knees floor:
+
+| floor (mm) | best wrist sum | lead (ext, dev) | trail | configuration |
+|---|---|---|---|---|
+| ≤ 70 | **43.6°** | 27.4 (26.4, −6.9) | 16.2 | st 16, yaw −6, pitch −5, gap 10 (baked) |
+| 80 | 59.8° | 30.7 (29.6, −7.5) | 29.1 | st 16, yaw −8, pitch −4, gap 10 |
+| 90 | 72.2° | 35.3 (33.8, −9.1) | 36.9 | st 16, yaw −10, pitch −3, gap 8 |
+| 100 | 83.2° | 39.4 (37.5, −10.4) | 43.8 | st 12, yaw −12, pitch −2, gap 8 |
+| ≥ 110 | none | | | (the clip's own wrists sum to 88°) |
+
+≈ 16° of wrist per 10 mm of hand height. What the geometry says: hand height is set by the arm hang from the shoulders
+(the actor bends over a lot — `verify_stance_targetside.png`), and with the hands at 0.755 m and a 1.01 m shaft the
+elevation is forced to 47° by Pythagoras. A longer club does not raise the hands (the golfer just stands further from the
+ball); a steeper club does, at the wrist cost above. Raising the hands **without** the wrist cost needs the shoulders
+higher — less torso bend or less knee flex in the address pose — which is a stance edit on the clip, one level up from
+the club pivot. The floor (140 mm, derived from a real 1.75 m golfer: wrists 0.75–0.90 m, trail fingertips ≈ 0.16 m
+down the shaft line, knee 0.50 m) stays in the scan as a stance-level target so the next person sees it in the log.
+
+### 3.5 Frames (verify run, prefab as committed; scene-cam 1600 × 1600, gameplay 1170 × 2532; greyscale variance 771–4198, floor 5.0; all opened and looked at)
+
+`verify_stance_targetside.png` (canonical — full body down the target line: arms hanging straight, hands at knee height,
+shaft 47°, head on the ball), `verify_stance_faceon.png`, `verify_awayside.png` (the grip from the trail side — the angle
+of the rejection), `verify_targetside.png`, `verify_golferseye.png`, `verify_downshaft.png`, `verify_gameplay.png`
+(the real Hole 06 camera; the roster stand-in's head is the same asset as before). The scan's own frames are
+`solve_pitchscan_*.png`; the pre-roll-fix verify is `stage2_verify_console_prefaceroll.txt`; the committed
+wrist-angle bake's verify is kept as `stage2_verify_console_wristangle_prev.txt`.
+
+### 3.6 Stage-2 gate (§3.12.6 row 2), by the letter — unchanged in structure from 2.5; what changed
+
+Hands on the shaft, no interpenetration, butt cap in band, fingers outside the mesh, face square, head on the ball: all
+PASS at real size (the committed bake failed clearance and butt cap). Wrists in the real-golfer envelope. Open by the
+letter: heel-pad dot and trail-palm-on-thumb (both pre-existing, both untargeted by this solver), and the new
+hands-above-knees floor, which is Cesar's call: accept the hands where the actor holds them (10 mm under the clip), or
+authorise a stance edit before stage 3.
+
+### Files modified or created (stage 2, real size)
+
+| File | Change |
+|---|---|
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/PfGolfer_MixamoNative.prefab` | root scale 1.05156, clubs native, ClubSlot/anchors/wrist targets from the pitch-scan bake, face roll −9.15°, `addressHeadLocal`, finger poses re-solved (saved define ON) |
+| `Assets/Art/3D/Characters/_Test/Resources/GolferTest/HandHinge_MixamoNative.asset` | re-captured at real size |
+| `Assets/Scripts/Gameplay/Golfer/GolferPresenter.cs` | `PlaceAtBall` scales `addressHeadLocal` by the root scale |
+| `Assets/Scripts/Gameplay/Golfer/HandHingeModel.cs` | `CharScale` 1.0, `FingerHalfThicknessM`, `ContactM` from the shaft radius |
+| `Assets/Scripts/UI/Editor/HandHingeStage2.cs` | pitch scan with the IK in the loop (coarse + refinement, rule-set pick), `FingerSegMin`, `KneeClear`, `ArmLegClear`, stance rows, full-body frames, bake fields `trailGapOffsetM` / `scanYawDeg` |
+| `Docs/Specs/Active/golfer_club_grip/evidence/stage2/*` | pitch-scan consoles (final + the four `_prev` steps), `stage2_bake.json` / `stage2_bake_pitchscan.json` (+ `_noknee` = identical, kept for the record), `solve_pitchscan_*.png`, `verify_*.png` (7), `stage2_verify_*` |
+| `Docs/Specs/Active/golfer_club_grip/{IMPLEMENTER_REPORT,STATUS}.md`, `HEARTBEAT.log` | this section; STATUS → `STAGE_2_REVIEW` (real size) |
+| `Docs/AI_CONTEXT.md`, `tasks/lessons.md` | session entry; Lessons AW, AX |
+
+Not mine, left alone: `Assets/Art/3D/Characters/_Test/Olivia/*` (+ `.meta`), `Library_broken_143700/`.

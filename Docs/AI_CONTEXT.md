@@ -28,6 +28,19 @@ constraint: **55.0° / 47.7°** baked (lead axis 0.6, trail 0.6, lead station 39
 angle within reach; the rest is the actor's posture plus a driver at 0.87 scale on a 1.33 m character. Both bakes kept
 in `evidence/stage2/`; decision (accept / keep min-wrist / shorter club or clip before stage 3) is Cesar's.
 
+**Stage 2, real size (same day) — Cesar: "scale things to real world sizes"; the wrist target "is you".** Prefab root
+1.05156 → 1.75 m body, clubs native (driver 1.0635 m, grip r 13.58 mm), `PlaceAtBall` scales `addressHeadLocal` by the
+root scale, hinge asset re-captured, `CharScale` 1.0. The §3.12.5 predictor is blind to the IK (it uses the clip's
+forearm), so the club pivot is now scanned with the IK in the loop — station × yaw × pitch × trail gap (672) plus a
+local refinement (225), picking the least wrist bend subject to the graded rows (hands on the shaft, ≥ 8 mm clearance,
+fingers outside the mesh, overlap band, hands-above-knees floor). Baked st 16 mm / yaw −6° / pitch −5° / gap 10 mm,
+face roll −9.15°: **wrists 27.5° / 16.2°** (real golfers 20–30°), every grip row PASS except the two pre-existing
+§3.9.6 letters (heel-pad dot, trail palm on thumb by 0.26 mm). Cesar mid-run: hands must clear the knees in the swing —
+measured 71 mm above the knee joint (the clip: 81; real ≈ 140); the club pivot costs ≈ 16° of wrist per 10 mm of
+height, so raising the hands without the cost is a **stance edit** (less torso bend), one level up — his call at the
+gate. Full-body frames added (`verify_stance_*.png`). Tests 13/13. Lessons AW (Bash heredoc un-escapes `\\n`) and
+AX (IK in the loop; pick by the graded rules).
+
 ---
 ## 2026-09-15 (golfer_club_grip stage 1) — **grip pose in hand space: mechanism holds, the §3.12.3 one-k solve does not make a grip**
 

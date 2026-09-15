@@ -102,7 +102,7 @@ namespace Golfin.Gameplay.Golfer
     public sealed class HandHingeModel : MonoBehaviour
     {
         /// <summary>Bumped by hand on every edit; read back by reflection to prove the build loaded.</summary>
-        public const string Version = "stage2-b";
+        public const string Version = "stage2-c";
 
         [SerializeField] Animator anim;
         [SerializeField] HandHingeData data;
@@ -423,7 +423,7 @@ namespace Golfin.Gameplay.Golfer
         // thumb), so one convention serves both.
 
         public const float ShaftRadiusM          = 0.013575f;                 // Grip mesh radius (iter-9b)
-        public const float FingerHalfThicknessM  = 0.00683f;                  // iter-9b
+        public const float FingerHalfThicknessM  = 0.00718f;                  // iter-9b 6.83 mm × the 1.0516 real-size rescale (2026-09-15)
         public const float ContactM              = ShaftRadiusM + FingerHalfThicknessM;   // 0.020405
         public const float ContactToleranceM     = 0.0015f;
 

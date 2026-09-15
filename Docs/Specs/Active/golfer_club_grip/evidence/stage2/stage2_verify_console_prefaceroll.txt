@@ -16,8 +16,8 @@ hand-local lead: o=(0.0376, 0.0938, -0.0226) d=(-0.7838, 0.6210, -0.0051) fHand=
 hand-local trail: o=(-0.0366, 0.0898, -0.0229) d=(0.9248, 0.3804, -0.0033) fHand=(-0.0370, 0.0896, -0.0229) fLittle=(-0.0366, 0.0898, -0.0229)
 CLIP lead: little→index vs shaft dot=1.00000 | palm n·toHead=-0.12149 n·aim=-0.99973 n·up=-0.00467 | length u·shaft=0.62109 u·up=-0.98852 | tunnel station 16.00 mm, 0.01 mm off the axis
 CLIP trail: little→index vs shaft dot=0.96982 | palm n·toHead=0.19632 n·aim=0.99933 n·up=0.01467 | length u·shaft=0.59447 u·up=-0.98279 | tunnel station 110.62 mm, 0.10 mm off the axis
-club at address: ClubStart=(80.1243, 14.1584, -25.2633) ClubEnd=(80.2103, 13.3795, -24.5443) shaft=(0.0808, -0.7323, 0.6761) aim=(-0.9949, 0.0000, 0.1011) Head=(80.0654, 14.7618, -25.0241) GripTarget=(80.0775, 14.2186, -25.0581) ClubSlot.local pos=(-0.0447, 0.1140, -0.1521) rot=(-0.07490, 0.86765, 0.47116, 0.13990)
-prefab anchors: lead local pos=(0.0000, -0.0239, 0.0000) rot=(-0.29240, 0.60032, 0.32250, -0.67091) | trail local pos=(0.0000, 0.0424, 0.0000) rot=(-0.34130, -0.67038, -0.29385, -0.58971) | geometry now: lead pos=(80.1251, 14.1510, -25.2566) trail pos=(80.1318, 14.0900, -25.2002)
+club at address: ClubStart=(80.1243, 14.1584, -25.2633) ClubEnd=(80.2103, 13.3795, -24.5443) shaft=(0.0808, -0.7323, 0.6761) aim=(-0.9949, 0.0000, 0.1011) Head=(80.0654, 14.7618, -25.0241) GripTarget=(80.0775, 14.2186, -25.0581) ClubSlot.local pos=(-0.0447, 0.1140, -0.1521) rot=(-0.11224, 0.87605, 0.46369, 0.07025)
+prefab anchors: lead local pos=(0.0000, -0.0239, 0.0000) rot=(-0.31719, 0.65192, 0.29815, -0.62089) | trail local pos=(0.0000, 0.0424, 0.0000) rot=(-0.31677, -0.62121, -0.32014, -0.64130) | geometry now: lead pos=(80.1251, 14.1510, -25.2566) trail pos=(80.1318, 14.0900, -25.2002)
 PASS grip.wrist.residual_l — IK rotated the lead wrist 7.9° from the clip (stop line 40); IK reached the anchor to 0.0° / 0.01 mm
 PASS grip.wrist.residual_r — IK rotated the trail wrist 28.8° from the clip (stop line 40); IK reached the anchor to 0.0° / 0.01 mm
 INFO grip.wrist.angle_l — lead forearm→hand 27.5° (flex 26.4, dev -6.9) vs clip 46.2° (flex 28.3, dev -33.0)
@@ -47,4 +47,4 @@ frame: Docs/Specs/Active/golfer_club_grip/evidence/stage2\verify_golferseye.png
 frame: Docs/Specs/Active/golfer_club_grip/evidence/stage2\verify_awayside.png
 frame: Docs/Specs/Active/golfer_club_grip/evidence/stage2\verify_stance_faceon.png
 frame: Docs/Specs/Active/golfer_club_grip/evidence/stage2\verify_stance_targetside.png
-gameplay frame: C:\Users\cesar\GolfinRedux\Docs\Diagnostics\_capture\hinge_stage2_verify_gameplay_2026-09-15_11-10-07.png
+gameplay frame: C:\Users\cesar\GolfinRedux\Docs\Diagnostics\_capture\hinge_stage2_verify_gameplay_2026-09-15_11-09-18.png

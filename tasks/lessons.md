@@ -3815,3 +3815,22 @@ Second, same stage: a **rotation-only objective on a 0.9 m lever runs to its bou
 alone pivoted the club ±15° about its head and moved the anchors 0.3–0.47 m from the hands (16 mm per degree at the
 butt). Any solve that moves an attachment must price the displacement it asks the IK to cover, or bound the pivot
 where the arms can reach.
+
+## Lesson AW — the Bash tool un-escapes `\\n` inside a heredoc; write patch scripts with the Write tool and run them with `py -3` (2026-09-15, `golfer_club_grip` stage 2)
+
+A Python patch pasted through a Bash heredoc that contained C# string literals with `\\n` arrived with real newlines
+and the `assert s.count(old) == 1` failed (or, worse, matched nothing and silently wrote nothing). `python` is not on
+PATH on this PC (`py -3` is), and a very long single Bash command hits `ENAMETOOLONG`. The idiom that worked every time:
+Write the patch to the scratchpad, run `PYTHONIOENCODING=utf-8 py -3 patch.py` with every replacement asserted to match
+exactly once, and write back with `newline="\n"`.
+
+## Lesson AX — a predictor that cannot see the IK is not a solver; put the IK in the loop and pick by the same rules you grade (2026-09-15, `golfer_club_grip` stage 2, real size)
+
+The §3.12.5 wrist predictor uses the clip's forearm, so once the anchors move it is blind to where the IK puts the
+elbow; it ran to 55° / 48° and stopped. Applying each candidate, calling `RigBuilder.Build()`, and reading the post-IK
+wrists found 27° / 16° in the same space. Two follow-on traps cost a run each: (1) a coordinate-descent sweep on one
+DOF after the best of the others (the trail gap) pushed the trail hand out of the trail arm's reach — every DOF that
+trades against reach belongs in the grid; (2) the pick rule started with two of the graded rows and the next three runs
+each failed a different ungraded row by under 1 mm (finger chord 1 mm inside the mesh, overlap 0.03 mm out of band).
+Encode the graded rows as the pick constraints from the start, wrist sum as the only objective, and log a per-config
+table so the trade-off (here ≈ 16° of wrist per 10 mm of hand height) can be read off without another run.

@@ -922,7 +922,10 @@ namespace Golfin.Gameplay.Golfer
             // and the impact velocity runs to his LEFT, which agrees.
             Quaternion rot = Quaternion.LookRotation(rightHanded ? d : -d, Vector3.up);
 
-            Vector3 head = addressHeadLocal;
+            // addressHeadLocal is a golfer-LOCAL offset (AddressClubHeadWorld reads it through
+            // TransformPoint), so it must carry the root scale here too — the prefab root is scaled
+            // to real size since 2026-09-15 (golfer_club_grip stage 2).
+            Vector3 head = Vector3.Scale(addressHeadLocal, transform.localScale);
             if (!rightHanded) head.x = -head.x;
 
             Vector3 p = ball - rot * head + d * stanceForwardOffset;

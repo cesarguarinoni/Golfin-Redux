@@ -47,8 +47,8 @@ namespace Golfin.EditorTools.Golfer
         public const string Stage2Key       = "GolferTestVerification.Stage2";
         public const string Stage2VerifyKey = "GolferTestVerification.Stage2Verify";
 
-        /// <summary>Character scale s = 1.328 / 1.75 (the "mm·s" of the spec).</summary>
-        public const float CharScale = 1.328f / 1.75f;
+        /// <summary>Character scale s (the "mm·s" of the spec) — 1.0 since the 2026-09-15 rescale to real size (prefab root 1.0516, body 1.75 m, club 1.06 m).</summary>
+        public const float CharScale = 1.0f;
         const float LeadStationM  = 0.010f * CharScale;    // LeftHand origin down-shaft of ClubStart
         const float ThumbClockDeg = HandHingeStage1Tool.ThumbClockDeg;
         const float ThumbStationM = HandHingeStage1Tool.ThumbStationM;
@@ -67,6 +67,9 @@ namespace Golfin.EditorTools.Golfer
 
         [MenuItem("GOLFIN/Golfer Test/Hinge/Stage 2 — solve (min-wrist roll, wrist-angle cost, free station) + measure (Hole 06)")]
         public static void RunSolveWristAngle() => RunSolve("wristangle");
+
+        [MenuItem("GOLFIN/Golfer Test/Hinge/Stage 2 — pitch scan with the IK in the loop (Hole 06)")]
+        public static void RunPitchScan() => RunSolve("pitchscan");
 
         public static void RunSolve(string rollMode = "palm")
         {
@@ -315,7 +318,7 @@ namespace Golfin.EditorTools.Golfer
             Vector3 clipPosL = handL.position, clipPosR = handR.position;
             L("clip hands (rig OFF" + (verify ? ", verify mode — restored to 1 after this capture" : "") + "): L pos=" + V(clipPosL) + " rot=" + Q(clipRotL) + " | R pos=" + V(clipPosR) + " rot=" + Q(clipRotR));
 
-            float[] leadFracs = rollMode == "wristangle" ? new[] { 0.2f, 0.4f, 0.6f, 0.8f } : new[] { 0.6f };
+            float[] leadFracs = (rollMode == "wristangle" || rollMode == "pitchscan") ? new[] { 0.2f, 0.4f, 0.6f, 0.8f } : new[] { 0.6f };
             var gLs = new HandGeom[leadFracs.Length];
             Transform foreL = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm), foreR = anim.GetBoneTransform(HumanBodyBones.RightLowerArm);
             Transform shL = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm), shR = anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
@@ -324,7 +327,7 @@ namespace Golfin.EditorTools.Golfer
             for (int i = 0; i < leadFracs.Length; i++) { gLs[i] = Geom(anim, hm.Data.left, leadFracs[i]); gLs[i].forearmClip = (handL.position - foreL.position).normalized; }
             var gL = gLs[leadFracs.Length == 1 ? 0 : 2];   // 0.6 = the §3.12.4 lead
             // trail axis offset candidates (§3.12.4 says 0; the clip's trail knuckle row sits ~40° off the shaft, so it is a solve DOF in wristangle mode)
-            float[] trailFracs = rollMode == "wristangle" ? new[] { 0f, 0.2f, 0.4f, 0.6f } : new[] { 0f };
+            float[] trailFracs = (rollMode == "wristangle" || rollMode == "pitchscan") ? new[] { 0f, 0.2f, 0.4f, 0.6f } : new[] { 0f };
             var gRs = new HandGeom[trailFracs.Length];
             for (int i = 0; i < trailFracs.Length; i++) { gRs[i] = Geom(anim, hm.Data.right, trailFracs[i]); gRs[i].forearmClip = (handR.position - foreR.position).normalized; }
             var gR = gRs[0];
@@ -340,6 +343,8 @@ namespace Golfin.EditorTools.Golfer
             WristSplit(gL.forearmClip, handL, gL, out float clipWL, out float clipFL, out float clipDL);
             WristSplit(gR.forearmClip, handR, gR, out float clipWR, out float clipFR, out float clipDR);
             L("CLIP wrist angles (forearm→hand): lead " + F1(clipWL) + "° (flex " + F1(clipFL) + ", dev " + F1(clipDL) + ") | trail " + F1(clipWR) + "° (flex " + F1(clipFR) + ", dev " + F1(clipDR) + ")");
+            { float kc0 = KneeClear(anim, out float kd0, out float hy0, out float ky0); L("CLIP hands above knees: lowest hand joint " + Mm(kc0) + " mm above the higher knee (hand " + Mm(hy0) + " / knee " + Mm(ky0) + " mm over the root), nearest hand joint to a knee " + Mm(kd0) + " mm; floor " + Mm(KneeClearM) + " mm");
+              float al0 = ArmLegClear(anim, out string alp0); L("CLIP arms vs legs: nearest arm bone to a leg bone " + Mm(al0) + " mm centreline (" + alp0 + "); floor " + Mm(ArmLegClearM) + " mm"); }
             if (verify) { rigHands.weight = rigRestore; yield return null; yield return null; }
             L("hand-local lead: o=" + V(gL.o) + " d=" + V(gL.d) + " fHand=" + V(gL.fHand) + " gap=" + V(gL.gapLocal) + " thumbInter=" + V(gL.thumbInterLocal));
             L("hand-local trail: o=" + V(gR.o) + " d=" + V(gR.d) + " fHand=" + V(gR.fHand) + " fLittle=" + V(gR.fLittle));
@@ -362,8 +367,8 @@ namespace Golfin.EditorTools.Golfer
                 Vector3 up = Vector3.up;
                 Vector3 pitchAxis = Vector3.Cross(up, sdir).normalized;
                 float bestCost = float.MaxValue; float bYaw = 0, bPitch = 0, bSlide = 0, bStL = LeadStationM, bGapOff = 0f; best = default;
-                bool anatomy = rollMode == "anatomy" || rollMode == "wristangle";   // wrist-angle cost + free station
-                bool wide = rollMode == "wristangle";                                 // wider pivot, cheaper displacement
+                bool anatomy = rollMode == "anatomy" || rollMode == "wristangle" || rollMode == "pitchscan";   // wrist-angle cost + free station
+                bool wide = rollMode == "wristangle" || rollMode == "pitchscan";      // wider pivot, cheaper displacement
                 float dispPrice = wide ? 0.2f : 0.5f;                                // ° per mm
                 int bTrail = 0, bLead = leadFracs.Length == 1 ? 0 : 2;
                 AnchorSolve Eval(float yaw, float pitch, float slide, out float cost, float stL = LeadStationM, float gapOff = 0f, int trailIdx = 0, int leadIdx = -1)
@@ -459,6 +464,119 @@ namespace Golfin.EditorTools.Golfer
             for (int i = 0; i < 3; i++) yield return null;
             yield return new WaitForEndOfFrame();
 
+            if (!verify && rollMode == "pitchscan")
+            {
+                // ── the IK in the loop: pitch the club about the head (hands lower / further out with
+                //    the arms extending), keep the solved axes, stations and roll mode, rebuild the rig,
+                //    and read the POST-IK wrist angles. The predictor cannot see this because it uses
+                //    the clip's forearm; only the IK knows where the elbow goes.
+                Vector3 up = Vector3.up;
+                var rb2 = golfer.GetComponentInChildren<RigBuilder>(true);
+                Vector3 slot0Pos = clubSlot.localPosition; Quaternion slot0Rot = clubSlot.localRotation;
+                Vector3 S0b = clubStart.position, Eb = clubEnd.position, sdirb = (Eb - S0b).normalized;
+                Vector3 pitchAxisB = Vector3.Cross(up, sdirb).normalized;
+                var scan = new StringBuilder();
+                scan.Append("station yaw pitch gap | wristL (flex,dev) | wristR (flex,dev) | dispL dispR mm | reachL reachR | elbowL elbowR | headAtBall mm | onShaft L/R mm | joint clearance mm\n");
+                // station × yaw × pitch: the trail arm is the reach limit (elbow straight at −2° pitch), so the
+                // butt-ward station (hands nearer the body) and a yaw toward the trail shoulder buy reach.
+                float[] pitches = { 0f, -2f, -3f, -4f, -5f, -6f, -7f };
+                float[] yaws = { 0f, -4f, -8f, -12f, 4f, 8f };
+                float[] stations = { best.stationL, 0.030f, 0.020f, 0.012f };
+                // trail-hand offset down the shaft is a scan dimension too: the trail arm is the reach limit, so
+                // a coordinate-descent sweep after the best station/yaw/pitch pushes the trail hand out of reach
+                // (12 mm cleared the joints but left the trail hand 5.9 mm off the shaft); the constraint set is
+                // both hands on the shaft (≤ 3 mm) AND lead-to-trail joint clearance ≥ 8 mm, objective = wrist sum
+                float[] gaps = { 0f, 0.004f, 0.008f, 0.012f };
+                var leadJ = HandHingeModel.LeftJoints.Skip(3).Select(b => anim.GetBoneTransform(b)).ToArray();
+                var trailJ = HandHingeModel.RightJoints.Skip(3).Take(9).Select(b => anim.GetBoneTransform(b)).ToArray();
+                float bestScanCost = float.MaxValue, bestPitch = 0f, bestYaw = 0f, bestSt = best.stationL, bestGap = 0f;
+                var configs = new List<(float st, float yw, float pd, float gp)>();
+                foreach (float stS in stations) foreach (float yw in yaws) foreach (float pd in pitches) foreach (float gp in gaps) configs.Add((stS, yw, pd, gp));
+                for (int pass = 0; pass < 2; pass++)
+                {
+                if (pass == 1)
+                {
+                    // local refinement around the coarse best (the coarse best left the trail hand 1.9 mm short of the
+                    // shaft and its finger chords 1 mm inside the mesh): ±4 mm station, ±2° yaw, ±1° pitch, ±2 mm gap
+                    configs.Clear();
+                    foreach (float dSt in new[] { -0.004f, 0f, 0.004f }) foreach (float dYw in new[] { -2f, -1f, 0f, 1f, 2f }) foreach (float dPd in new[] { -1f, -0.5f, 0f, 0.5f, 1f }) foreach (float dGp in new[] { -0.002f, 0f, 0.002f })
+                    { float stR = bestSt + dSt; if (stR < 0.008f) continue; configs.Add((stR, bestYaw + dYw, bestPitch + dPd, Mathf.Max(0f, bestGap + dGp))); }
+                    scan.Append("--- refinement around the coarse best ---\n");
+                }
+                foreach (var cfg in configs)
+                {
+                    float stS = cfg.st, yw = cfg.yw, pd = cfg.pd, gp = cfg.gp;
+                    Quaternion Rp = Quaternion.AngleAxis(yw, up) * Quaternion.AngleAxis(pd, pitchAxisB);
+                    clubSlot.localPosition = slot0Pos; clubSlot.localRotation = slot0Rot;
+                    yield return null;
+                    Vector3 newPos = Eb + Rp * (clubSlot.position - Eb);
+                    Quaternion newRot = Rp * clubSlot.rotation;
+                    clubSlot.localPosition = gripTarget.InverseTransformPoint(newPos);
+                    clubSlot.localRotation = Quaternion.Inverse(gripTarget.rotation) * newRot;
+                    yield return null; yield return new WaitForEndOfFrame();
+                    Vector3 s0p = clubStart.position, ep = clubEnd.position, dirp = (ep - s0p).normalized;
+                    var ap = Anchors(gL, gR, s0p, dirp, head.position, clipRotL, clipRotR, rollMode, stS, gp, out _);
+                    aL.SetPositionAndRotation(ap.posL, ap.rotL); aR.SetPositionAndRotation(ap.posR, ap.rotR);
+                    if (rb2 != null) rb2.Build();
+                    for (int i = 0; i < 3; i++) yield return null;
+                    yield return new WaitForEndOfFrame();
+                    float clr = float.MaxValue; foreach (var a in leadJ) foreach (var b in trailJ) clr = Mathf.Min(clr, Vector3.Distance(a.position, b.position));
+                    float segL = FingerSegMin(anim, gL, s0p, dirp), segR = FingerSegMin(anim, gR, s0p, dirp);
+                    float knee = KneeClear(anim, out _, out _, out _);
+                    float armLeg = ArmLegClear(anim, out _);
+                    float ovl = Vector3.Dot(anim.GetBoneTransform(HumanBodyBones.RightLittleProximal).position - s0p, dirp)
+                              - Vector3.Dot(0.5f * (anim.GetBoneTransform(HumanBodyBones.LeftIndexProximal).position + anim.GetBoneTransform(HumanBodyBones.LeftMiddleProximal).position) - s0p, dirp);
+                    Vector3 fLp = (handL.position - foreL.position).normalized, fRp = (handR.position - foreR.position).normalized;
+                    WristSplit(fLp, handL, gL, out float wLp, out float flLp, out float dvLp);
+                    WristSplit(fRp, handR, gR, out float wRp, out float flRp, out float dvRp);
+                    float dL = Vector3.Distance(handL.position, clipPosL), dR = Vector3.Distance(handR.position, clipPosR);
+                    float rL = Vector3.Distance(handL.position, shL.position) / reachL, rR = Vector3.Distance(handR.position, shR.position) / reachR;
+                    float elL = Vector3.Angle(shL.position - foreL.position, handL.position - foreL.position), elR = Vector3.Angle(shR.position - foreR.position, handR.position - foreR.position);
+                    float hb = ball != null ? Vector3.Distance(new Vector3(ep.x, 0, ep.z), new Vector3(ball.position.x, 0, ball.position.z)) : -1f;
+                    float onLp = AxisDist(handL.TransformPoint(-wL.localPosition), s0p, dirp), onRp = AxisDist(handR.TransformPoint(-wR.localPosition), s0p, dirp);
+                    scan.Append("st").Append(Mm(stS)).Append(" yaw").Append(yw.ToString("F1")).Append(" pitch").Append(pd.ToString("F1")).Append(" gap").Append(Mm(gp)).Append(" | ").Append(F1(wLp)).Append(" (").Append(F1(flLp)).Append(",").Append(F1(dvLp)).Append(") | ")
+                        .Append(F1(wRp)).Append(" (").Append(F1(flRp)).Append(",").Append(F1(dvRp)).Append(") | ").Append(Mm(dL)).Append(" ").Append(Mm(dR))
+                        .Append(" | ").Append(rL.ToString("F2")).Append(" ").Append(rR.ToString("F2")).Append(" | ").Append(F1(elL)).Append(" ").Append(F1(elR))
+                        .Append(" | ").Append(Mm(hb)).Append(" | ").Append(Mm(onLp)).Append(" ").Append(Mm(onRp)).Append(" | clr ").Append(Mm(clr)).Append(" | seg ").Append(Mm(segL)).Append(" ").Append(Mm(segR)).Append(" | ovl ").Append(Mm(ovl)).Append(" | knee ").Append(Mm(knee)).Append(" | armleg ").Append(Mm(armLeg)).Append("\n");
+                    // pick: least wrist bend among the configurations where BOTH hands land on the shaft (the post-IK
+                    // truth of reach), the lead joints clear the trail index/middle/ring joints by ≥ 8 mm, and every
+                    // finger bone segment stays outside the shaft mesh, and the trail little MCP sits within ±8 mm of
+                    // the lead index/middle gap, and the hands stay clear above the knees for the swing (Cesar,
+                    // 2026-09-15: "as you straighten the grip, move the arms higher so they don't collide with the
+                    // knees when swinging") — the same rules the rows below grade
+                    float segFloor = HandHingeModel.ShaftRadiusM - 0.0005f;
+                    float c = wLp + wRp + (onLp > 0.003f || onRp > 0.003f ? 1000f : 0f) + (clr < 0.008f ? 1000f : 0f) + (segL < segFloor || segR < segFloor ? 1000f : 0f) + (Mathf.Abs(ovl) > 0.008f ? 1000f : 0f) + (knee < KneeClearM ? 1000f : 0f);
+                    if (c < bestScanCost) { bestScanCost = c; bestPitch = pd; bestYaw = yw; bestSt = stS; bestGap = gp; }
+                }
+                }
+                L("PITCH SCAN (about the head, IK in the loop; elbow = interior angle, 180 = straight):\n" + scan);
+                L("scan best (min wrist sum with both hands on the shaft, ≥ 8 mm joint clearance, fingers outside the mesh, overlap in band, hands ≥ " + Mm(KneeClearM) + " mm above the knees): station " + Mm(bestSt) + " mm, yaw " + bestYaw.ToString("F1") + "°, pitch " + bestPitch.ToString("F1") + "°, trail gap offset " + Mm(bestGap) + " mm" + (bestScanCost >= 1000f ? "  — NO configuration met every constraint (the knee floor is stance-level); this is the least wrist bend among the grip-feasible ones" : ""));
+                // leave the best applied for the rows and frames below
+                {
+                    Quaternion Rp = Quaternion.AngleAxis(bestYaw, up) * Quaternion.AngleAxis(bestPitch, pitchAxisB);
+                    clubSlot.localPosition = slot0Pos; clubSlot.localRotation = slot0Rot;
+                    yield return null;
+                    Vector3 newPos = Eb + Rp * (clubSlot.position - Eb);
+                    Quaternion newRot = Rp * clubSlot.rotation;
+                    clubSlot.localPosition = gripTarget.InverseTransformPoint(newPos);
+                    clubSlot.localRotation = Quaternion.Inverse(gripTarget.rotation) * newRot;
+                    yield return null; yield return new WaitForEndOfFrame();
+                    Vector3 s0p = clubStart.position, ep = clubEnd.position, dirp = (ep - s0p).normalized;
+                    best = Anchors(gL, gR, s0p, dirp, head.position, clipRotL, clipRotR, rollMode, bestSt, bestGap, out _);
+                    aL.SetPositionAndRotation(best.posL, best.rotL); aR.SetPositionAndRotation(best.posR, best.rotR);
+                    if (rb2 != null) rb2.Build();
+                    for (int i = 0; i < 3; i++) yield return null;
+                    yield return new WaitForEndOfFrame();
+                    var bake2 = new StringBuilder();
+                    bake2.Append("{\n  \"clubSlotLocalPos\": ").Append(J(clubSlot.localPosition)).Append(",\n  \"clubSlotLocalRot\": ").Append(J(clubSlot.localRotation))
+                        .Append(",\n  \"leadAnchorLocalPos\": ").Append(J(aL.localPosition)).Append(",\n  \"leadAnchorLocalRot\": ").Append(J(aL.localRotation)).Append(",\n  \"leadWristLocalPos\": ").Append(J(wL.localPosition))
+                        .Append(",\n  \"trailAnchorLocalPos\": ").Append(J(aR.localPosition)).Append(",\n  \"trailAnchorLocalRot\": ").Append(J(aR.localRotation)).Append(",\n  \"trailWristLocalPos\": ").Append(J(wR.localPosition))
+                        .Append(",\n  \"leadStationM\": ").Append(F(best.stationL)).Append(", \"trailGapOffsetM\": ").Append(F(bestGap)).Append(", \"leadAxisUFrac\": ").Append(F(gL.uFrac)).Append(", \"trailAxisUFrac\": ").Append(F(gR.uFrac)).Append(", \"rollMode\": \"pitchscan\"")
+                        .Append(",\n  \"scanPitchDeg\": ").Append(F(bestPitch)).Append(", \"scanYawDeg\": ").Append(F(bestYaw)).Append("\n}\n");
+                    File.WriteAllText(BakePath, bake2.ToString()); File.WriteAllText(Path.Combine(OutDir, "stage2_bake_pitchscan.json"), bake2.ToString());
+                }
+            }
+
             // ── measurements ──
             var rows = new List<string>();
             void Row(string id, bool? pass, string detail) { rows.Add("    {\"id\": \"" + id + "\", \"verdict\": \"" + (pass == null ? "INFO" : pass.Value ? "PASS" : "FAIL") + "\", \"detail\": \"" + detail.Replace("\\", "/").Replace("\"", "'") + "\"}"); L((pass == null ? "INFO " : pass.Value ? "PASS " : "FAIL ") + id + " — " + detail); }
@@ -478,6 +596,15 @@ namespace Golfin.EditorTools.Golfer
                 Row("grip.wrist.angle_l", null, "lead forearm→hand " + F1(angL) + "° (flex " + F1(flL) + ", dev " + F1(dvL) + ") vs clip " + F1(clipWL) + "° (flex " + F1(clipFL) + ", dev " + F1(clipDL) + ")");
                 Row("grip.wrist.angle_r", null, "trail forearm→hand " + F1(angR) + "° (flex " + F1(flR) + ", dev " + F1(dvR) + ") vs clip " + F1(clipWR) + "° (flex " + F1(clipFR) + ", dev " + F1(clipDR) + ")");
             }
+            { float kc = KneeClear(anim, out float kd, out float hy, out float ky); Row("grip.hands.aboveKnees", kc >= KneeClearM, "lowest hand joint " + Mm(kc) + " mm above the higher knee (≥ " + Mm(KneeClearM) + "; hand " + Mm(hy) + " / knee " + Mm(ky) + " mm over the root), nearest hand joint to a knee " + Mm(kd) + " mm"); }
+            {
+                float rootY = golfer.transform.position.y, headTopY = anim.GetBoneTransform(HumanBodyBones.Head).position.y + 0.11f * s;   // crown ≈ head joint + 0.11 m·s
+                float bodyH = headTopY - rootY, handsY = 0.5f * (handL.position.y + handR.position.y) - rootY;
+                Row("stance.handsHeight", null, "hand origins " + Mm(handsY) + " mm over the ground = " + (handsY / bodyH).ToString("F2") + "·H (body " + Mm(bodyH) + " mm; real golfers ≈ 0.46·H with a driver, hands under the shoulders)");
+                float elev = Mathf.Asin(Mathf.Clamp(Vector3.Dot((S0 - clubEnd.position).normalized, Vector3.up), -1f, 1f)) * Mathf.Rad2Deg;
+                Row("club.shaftElevation", null, "shaft " + F1(elev) + "° above horizontal, head→butt (driver lie at address ≈ 55–60°)");
+            }
+            { float al = ArmLegClear(anim, out string alp); Row("grip.arms.clearLegs", null, "nearest arm bone (shoulder→elbow→hand) to a leg bone (hip→knee→ankle): " + Mm(al) + " mm centreline (" + alp + "; information — Cesar withdrew the elbow concern 2026-09-15)"); }
             Row("grip.wrist.displacement", null, "hand origin moved L " + Mm(Vector3.Distance(clipPosL, handL.position)) + " mm, R " + Mm(Vector3.Distance(clipPosR, handR.position)) + " mm from the clip");
 
             // hands on the shaft: the hand-local foot must sit on the world axis
@@ -553,16 +680,37 @@ namespace Golfin.EditorTools.Golfer
             try { runner.GetType().GetMethod("MeasureFaceSquare", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(runner, new object[] { "club.faceSquare", clubSlot, shot, "stage 2 address" }); L("club.faceSquare measured into the recorder JSON"); }
             catch (Exception e) { L("faceSquare reflection failed: " + e.Message); }
 
+            // where the club head actually sits at address, golfer-local (what GolferPresenter.addressHeadLocal
+            // should be so PlaceAtBall lands it on the ball with THIS club) — the club follows the clip's hand
+            // average (layer 1), so this is stable across anchor changes
+            Vector3 headLocalNow = golfer.transform.InverseTransformPoint(clubEnd.position);
+            Row("club.addressHeadLocal", null, "ClubEnd in golfer-local = " + V(headLocalNow) + " (presenter field addressHeadLocal; PlaceAtBall scales it by the root scale)");
+            if (!verify)
+            {
+                try
+                {
+                    string bk = File.ReadAllText(BakePath);
+                    bk = bk.TrimEnd().TrimEnd('}').TrimEnd() + ",\n  \"addressHeadLocal\": " + J(headLocalNow) + "\n}\n";
+                    File.WriteAllText(BakePath, bk);
+                    File.WriteAllText(Path.Combine(OutDir, "stage2_bake_" + rollMode + ".json"), bk);
+                }
+                catch (Exception e) { L("could not append addressHeadLocal to the bake: " + e.Message); }
+            }
+
             // ── frames ──
             Vector3 handsMid = 0.5f * (handL.position + handR.position);
             Vector3 side = Vector3.Cross(sdir, Vector3.up); if (side.sqrMagnitude < 1e-6f) side = Vector3.right;
             // down the shaft from the butt end, from IN FRONT of the golfer (toward the ball) so the
             // forearms and torso do not fill the frame — the coach's view of the knuckles
             Vector3 fwd = ball != null ? Vector3.ProjectOnPlane(ball.position - golfer.transform.position, Vector3.up).normalized : Vector3.Cross(aimDir, Vector3.up);
-            Shoot(handsMid, handsMid - sdir * 0.30f + fwd * 0.42f + Vector3.up * 0.05f, Vector3.up, 1600, Path.Combine(OutDir, tag + "_downshaft.png"), log);
+            Shoot(handsMid, handsMid - sdir * 0.32f + fwd * 0.45f + Vector3.up * 0.05f, Vector3.up, 1600, Path.Combine(OutDir, tag + "_downshaft.png"), log);
             Shoot(handsMid, handsMid + aimDir * 0.85f, Vector3.up, 1600, Path.Combine(OutDir, tag + "_targetside.png"), log);
             Shoot(handsMid, head.position + (handsMid - head.position).normalized * 0.10f, Vector3.up, 1600, Path.Combine(OutDir, tag + "_golferseye.png"), log);
             Shoot(handsMid, handsMid - aimDir * 0.85f, Vector3.up, 1600, Path.Combine(OutDir, tag + "_awayside.png"), log);
+            // full body (30° FOV → 4 m frames ~2.1 m): hands vs knees, arm hang, shaft elevation
+            Vector3 mid = golfer.transform.position + Vector3.up * 0.90f * s;
+            Shoot(mid, mid + fwd * 4.0f + Vector3.up * 0.2f, Vector3.up, 1600, Path.Combine(OutDir, tag + "_stance_faceon.png"), log);
+            Shoot(mid, mid + aimDir * 4.0f + Vector3.up * 0.2f, Vector3.up, 1600, Path.Combine(OutDir, tag + "_stance_targetside.png"), log);
             try { string p = CaptureCore.SnapPlayModeSafe("hinge_stage2_" + tag + "_gameplay"); L("gameplay frame: " + p); } catch (Exception e) { L("gameplay frame failed: " + e.Message); }
 
             var json = new StringBuilder();
@@ -606,6 +754,12 @@ namespace Golfin.EditorTools.Golfer
         }
 
         /// <summary>§3.12.4 closed form: both anchors for a given world shaft.</summary>
+        static AnchorSolve Anchors(HandGeom gL, HandGeom gR, Vector3 s0, Vector3 dir, Vector3 headW, Quaternion clipRotL, Quaternion clipRotR, string rollMode, float leadStation, float trailGapOffset, out float gapUsed)
+        {
+            gapUsed = trailGapOffset;
+            return Anchors(gL, gR, s0, dir, headW, clipRotL, clipRotR, rollMode, leadStation, trailGapOffset);
+        }
+
         static AnchorSolve Anchors(HandGeom gL, HandGeom gR, Vector3 s0, Vector3 dir, Vector3 headW, Quaternion clipRotL, Quaternion clipRotR, string rollMode, float leadStation, float trailGapOffset)
         {
             bool minWrist = rollMode == "minwrist";
@@ -646,7 +800,7 @@ namespace Golfin.EditorTools.Golfer
                 Quaternion r = Quaternion.AngleAxis(th, dir) * r0;
                 Vector3 n = r * g.n;
                 float dot = Vector3.Dot(backOfHand ? -n : n, to);
-                float score = (rollMode == "minwrist" || rollMode == "wristangle") ? -Quaternion.Angle(clipRot, r)
+                float score = (rollMode == "minwrist" || rollMode == "wristangle" || rollMode == "pitchscan") ? -Quaternion.Angle(clipRot, r)
                             : rollMode == "anatomy"  ? -WristAngle(g.forearmClip, r, g.u)
                             : dot;
                 if (score > bestScore) { bestScore = score; bestRoll = th; best = r; ruleDot = dot; }
@@ -678,8 +832,15 @@ namespace Golfin.EditorTools.Golfer
                 clubSlot.localPosition = kv["clubSlotLocalPos"].v; clubSlot.localRotation = kv["clubSlotLocalRot"].q;
                 aL.localPosition = kv["leadAnchorLocalPos"].v; aL.localRotation = kv["leadAnchorLocalRot"].q; aL.Find("WristTarget").localPosition = kv["leadWristLocalPos"].v;
                 aR.localPosition = kv["trailAnchorLocalPos"].v; aR.localRotation = kv["trailAnchorLocalRot"].q; aR.Find("WristTarget").localPosition = kv["trailWristLocalPos"].v;
+                string headNote = "";
+                if (kv.ContainsKey("addressHeadLocal"))
+                {
+                    var pres = root.GetComponent<GolferPresenter>();
+                    var so = new SerializedObject(pres); var prop = so.FindProperty("addressHeadLocal");
+                    if (prop != null) { prop.vector3Value = kv["addressHeadLocal"].v; so.ApplyModifiedPropertiesWithoutUndo(); headNote = "; addressHeadLocal " + V(kv["addressHeadLocal"].v); }
+                }
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-                return axesLog + "baked into " + PrefabPath + ": ClubSlot " + V(clubSlot.localPosition) + " " + Q(clubSlot.localRotation) + "; lead " + V(aL.localPosition) + " " + Q(aL.localRotation) + "; trail " + V(aR.localPosition) + " " + Q(aR.localRotation);
+                return axesLog + "baked into " + PrefabPath + ": ClubSlot " + V(clubSlot.localPosition) + " " + Q(clubSlot.localRotation) + "; lead " + V(aL.localPosition) + " " + Q(aL.localRotation) + "; trail " + V(aR.localPosition) + " " + Q(aR.localRotation) + headNote;
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
         }
@@ -722,6 +883,70 @@ namespace Golfin.EditorTools.Golfer
         }
 
         // ── helpers ────────────────────────────────────────────────────────────────────
+        /// <summary>
+        /// Hands-above-knees floor for the swing (Cesar, 2026-09-15). Measured as the lowest hand/finger joint over
+        /// the higher knee joint. A real 1.75 m golfer at address: wrists ≈ 0.75–0.90 m over the ground with a
+        /// driver, the trail fingertips ≈ 0.16 m further down the shaft line, knee joint ≈ 0.50 m → ≈ 0.14 m.
+        /// The clip's own value is 81 mm and the club-pivot space spans 71–110 mm (each 10 mm costs ≈ 16° of wrist
+        /// sum), so this floor is a stance-level target: when nothing meets it the scan keeps the least wrist bend
+        /// among the grip-feasible configurations and says so.
+        /// </summary>
+        const float KneeClearM = 0.14f;
+
+        /// <summary>
+        /// Arm-bone to leg-bone centreline floor for the swing: an upper arm is ≈ 45 mm in radius and a thigh ≈ 80 mm,
+        /// so 125 mm is skin contact; 160 mm leaves ≈ 35 mm of surface gap at address for the elbows to pass the thighs.
+        /// </summary>
+        const float ArmLegClearM = 0.16f;
+
+        /// <summary>Smallest centreline distance between the arm bones (upper arm, forearm, both sides) and the leg bones (thigh, shin, both sides); names the closest pair.</summary>
+        static float ArmLegClear(Animator anim, out string pair)
+        {
+            Vector3 P(HumanBodyBones b) => anim.GetBoneTransform(b).position;
+            var arms = new[] {
+                ("L upper arm", P(HumanBodyBones.LeftUpperArm), P(HumanBodyBones.LeftLowerArm)), ("L forearm", P(HumanBodyBones.LeftLowerArm), P(HumanBodyBones.LeftHand)),
+                ("R upper arm", P(HumanBodyBones.RightUpperArm), P(HumanBodyBones.RightLowerArm)), ("R forearm", P(HumanBodyBones.RightLowerArm), P(HumanBodyBones.RightHand)) };
+            var legs = new[] {
+                ("L thigh", P(HumanBodyBones.LeftUpperLeg), P(HumanBodyBones.LeftLowerLeg)), ("L shin", P(HumanBodyBones.LeftLowerLeg), P(HumanBodyBones.LeftFoot)),
+                ("R thigh", P(HumanBodyBones.RightUpperLeg), P(HumanBodyBones.RightLowerLeg)), ("R shin", P(HumanBodyBones.RightLowerLeg), P(HumanBodyBones.RightFoot)) };
+            float best = float.MaxValue; pair = "";
+            foreach (var a in arms) foreach (var l in legs)
+            {
+                float d = HandHingeModel.SegmentDistance(a.Item2, a.Item3, l.Item2, l.Item3);
+                if (d < best) { best = d; pair = a.Item1 + " ↔ " + l.Item1; }
+            }
+            return best;
+        }
+
+        /// <summary>Vertical clearance of the lowest hand/finger joint over the higher knee joint (world up), plus the nearest hand-joint-to-knee distance.</summary>
+        static float KneeClear(Animator anim, out float nearest, out float handYOverRoot, out float kneeYOverRoot)
+        {
+            Transform kL = anim.GetBoneTransform(HumanBodyBones.LeftLowerLeg), kR = anim.GetBoneTransform(HumanBodyBones.RightLowerLeg);
+            float kneeY = Mathf.Max(kL.position.y, kR.position.y), handY = float.MaxValue; nearest = float.MaxValue;
+            foreach (var bones in new[] { HandHingeModel.LeftJoints, HandHingeModel.RightJoints })
+                foreach (var b in bones)
+                {
+                    var t = anim.GetBoneTransform(b); if (t == null) continue;
+                    foreach (var pnt in new[] { t.position, t.childCount > 0 ? t.GetChild(0).position : t.position })
+                    { handY = Mathf.Min(handY, pnt.y); nearest = Mathf.Min(nearest, Mathf.Min(Vector3.Distance(pnt, kL.position), Vector3.Distance(pnt, kR.position))); }
+                }
+            float rootY = anim.transform.position.y;
+            handYOverRoot = handY - rootY; kneeYOverRoot = kneeY - rootY;
+            return handY - kneeY;
+        }
+
+        /// <summary>Smallest distance from any finger bone segment (MCP→PIP→DIP→tip, four fingers) to the shaft axis.</summary>
+        static float FingerSegMin(Animator anim, HandGeom g, Vector3 s0, Vector3 dir)
+        {
+            float worst = float.MaxValue;
+            for (int f = 1; f <= 4; f++)
+            {
+                var t0 = anim.GetBoneTransform(g.data.joints[HandHingeModel.JointIndex(f, 0)].bone); var t1 = anim.GetBoneTransform(g.data.joints[HandHingeModel.JointIndex(f, 1)].bone); var t2 = anim.GetBoneTransform(g.data.joints[HandHingeModel.JointIndex(f, 2)].bone);
+                worst = Mathf.Min(worst, Mathf.Min(HandHingeModel.SegmentToLineDistance(t0.position, t1.position, s0, dir, out _), Mathf.Min(HandHingeModel.SegmentToLineDistance(t1.position, t2.position, s0, dir, out _), HandHingeModel.SegmentToLineDistance(t2.position, t2.GetChild(0).position, s0, dir, out _))));
+            }
+            return worst;
+        }
+
         static float AxisDist(Vector3 p, Vector3 o, Vector3 d) => Vector3.Cross(d, p - o).magnitude;
         static Vector3 ClosestOnAxis(Vector3 p, Vector3 o, Vector3 d) => o + Vector3.Dot(p - o, d) * d;
         static string F(float v) => v.ToString("F5", CultureInfo.InvariantCulture);
