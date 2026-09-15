@@ -255,3 +255,5 @@ DIRTY:
 20:25 under AlwaysAnimate the putt clip's real pose read 439 mm up / 1.29 m short (the 'unusable' pose); the approved putter moment is the DRIVE address frame frozen by CullUpdateTransforms → Address_Putt now plays the drive address frame deterministically; scan bends negated (positive straightened her)
 20:28 putt stance scan on the drive-address base: pick drop 30 mm + bend -15 deg (sole -2 mm, torso 42.5 deg); baked puttHipsOffset/puttSpineBendEuler and addressFaceOffsetLocalPutt (-0.446, 0, 0.0495); club switch re-places the golfer; confirmation run next
 20:30 confirmation frame sent (20-29-32); report/STATUS/Lesson BD; committing
+20:43 Cesar: fingers through the leg, shaft into the skirt → scan gets hands-thigh (>=100 mm) and shaft-thigh (>=50 mm) clearance constraints + a third lever, the putter's lie (PutterSlot rolled about the aim line); then a putt-motion video
+20:48 clearance scan pick baked: hips -58.6 mm, bend -5 deg, lie -8 deg, stand 380 mm closer; Game view 20-46-59 sent (hands 108 / shaft 109 mm off the thighs, sole +6 mm). Cesar asked: ANIM_Golf_Putt? — swing yes, address no (drive address frame; offered the switch)

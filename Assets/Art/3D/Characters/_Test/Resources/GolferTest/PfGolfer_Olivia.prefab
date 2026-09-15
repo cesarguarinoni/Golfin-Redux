@@ -1181,11 +1181,11 @@ MonoBehaviour:
   shaftRadius: 0.0135751
   fingerRadius: 0.0068297
   maxJointBend: 80
-  puttHipsOffset: {x: -0.0007, y: -0.0293, z: -0.0065}
-  puttSpineBendEuler: {x: 345.2278, y: 359.5174, z: 2.6298}
+  puttHipsOffset: {x: -0.0014, y: -0.0586, z: -0.013}
+  puttSpineBendEuler: {x: 355.0737, y: 359.9162, z: 0.8551}
   addressHeadLocal: {x: 0.91972, y: 0, z: -0.08107}
   addressFaceOffsetLocal: {x: 0.0344, y: 0, z: 0.0464}
-  addressFaceOffsetLocalPutt: {x: -0.446, y: 0, z: 0.0495}
+  addressFaceOffsetLocalPutt: {x: -0.38, y: 0, z: 0.0495}
 --- !u!114 &6970612969742791015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1767,7 +1767,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8653594895632453998}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.30561814, y: 0.49150756, z: 0.43153587, w: 0.69194996}
+  m_LocalRotation: {x: 0.26368022, y: 0.5108504, z: 0.3877003, w: 0.72055054}
   m_LocalPosition: {x: -0.025, y: 0.12512, z: -0.11036}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

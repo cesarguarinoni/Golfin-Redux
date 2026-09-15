@@ -2471,15 +2471,33 @@ namespace Golfin.EditorTools
             Vector3 hips0 = oh.data.position, rot0 = ot.data.rotation;
             Vector3 upHipsLocal = hipsB.InverseTransformDirection(Vector3.up);
             var verts = mf.sharedMesh.vertices;
-            var tbl = new StringBuilder("drop mm bend deg | sole above ground mm | face ahead mm | face lateral mm | torso tilt deg | hands height mm" + "\n");
-            float bestScore = float.MaxValue; float bestDrop = 0f, bestBend = 0f; Vector3 bestEuler = rot0, bestHips = hips0; string bestRow = "";
+            var tbl = new StringBuilder("drop mm bend deg lie deg | sole mm | ahead mm | lateral mm | torso deg | hands mm | hands-thigh mm | shaft-thigh mm" + "\n");
+            float bestScore = float.MaxValue; float bestDrop = 0f, bestBend = 0f, bestLie = 0f; Vector3 bestEuler = rot0, bestHips = hips0; Quaternion bestSlot = Quaternion.identity; string bestRow = "";
+            // the putter's lie: a putter stands more upright than a driver; rolling PutterSlot about the aim line
+            // keeps the face square and brings the head down and in without moving the hands (Cesar 20:40: the
+            // deep bend put the fingers through the leg and the shaft into the skirt)
+            var pslotT = golfer.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "PutterSlot");
+            Quaternion slotLocal0 = pslotT != null ? pslotT.localRotation : Quaternion.identity;
+            const float ThighR = 0.08f, HandHalf = 0.02f, ShaftR = 0.012f;
+            float SegDist(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
+            {   // shortest distance between segments ab and cd (sampled — exact enough at 1 mm)
+                float best = float.MaxValue;
+                for (int i = 0; i <= 24; i++) { Vector3 pnt = Vector3.Lerp(a, b, i / 24f); Vector3 cd = d - c; float t = Mathf.Clamp01(Vector3.Dot(pnt - c, cd) / Mathf.Max(1e-6f, cd.sqrMagnitude)); best = Mathf.Min(best, Vector3.Distance(pnt, c + cd * t)); }
+                return best;
+            }
             // positive bend about the target line STRAIGHTENED her on the first sweep (torso 30 -> 10 deg, hands up
             // 140 mm), so the forward bend is negative here; the hips drop is a squat and costs more than a bend
-            foreach (float drop in new[] { 0f, 0.03f, 0.06f, 0.09f, 0.12f })
-            foreach (float bend in new[] { 0f, -5f, -10f, -15f, -20f, -25f, -30f, 5f })
+            foreach (float lie in new[] { 0f, 8f, 16f, 24f, -8f })
+            foreach (float drop in new[] { 0f, 0.03f, 0.06f, 0.09f })
+            foreach (float bend in new[] { 0f, -5f, -10f, -15f, -20f })
             {
                 { var hd = oh.data; hd.position = hips0 - upHipsLocal * drop; oh.data = hd; }
                 { var d = ot.data; d.rotation = bend == 0f ? rot0 : Quaternion.AngleAxis(bend, spine.InverseTransformDirection(aim)).eulerAngles; ot.data = d; }
+                if (pslotT != null)
+                {   // roll the slot about the WORLD aim line through its origin: world = R(lie, aim) * parent * local0
+                    Quaternion parentRot = pslotT.parent.rotation;
+                    pslotT.localRotation = lie == 0f ? slotLocal0 : Quaternion.Inverse(parentRot) * Quaternion.AngleAxis(lie, aim) * parentRot * slotLocal0;
+                }
                 yield return null; yield return null; yield return new WaitForEndOfFrame();
                 Vector3 ap = (Vector3)apProp.GetValue(presC);
                 var l2w = mf.transform.localToWorldMatrix;
@@ -2491,23 +2509,36 @@ namespace Golfin.EditorTools
                 Vector3 toBall = Vector3.ProjectOnPlane(ap - golfer.transform.position, Vector3.up).normalized;
                 float sole = minY - ap.y, lateral = Vector3.Dot(faceC - ap, toBall);
                 float tilt = Vector3.Angle(Vector3.up, (neck.position - hipsB.position).normalized);
-                float handsY = 0.5f * (anim.GetBoneTransform(HumanBodyBones.LeftHand).position.y + anim.GetBoneTransform(HumanBodyBones.RightHand).position.y) - golfer.transform.position.y;
-                string row = (drop * 1000f).ToString("F0").PadLeft(6) + " " + bend.ToString("F0").PadLeft(4) + " | " + (sole * 1000f).ToString("F0").PadLeft(6) + " | " + (maxAhead * 1000f).ToString("F0").PadLeft(6) + " | " + (lateral * 1000f).ToString("F0").PadLeft(6) + " | " + tilt.ToString("F1").PadLeft(6) + " | " + (handsY * 1000f).ToString("F0").PadLeft(6);
+                Vector3 hLp = anim.GetBoneTransform(HumanBodyBones.LeftHand).position, hRp = anim.GetBoneTransform(HumanBodyBones.RightHand).position;
+                float handsY = 0.5f * (hLp.y + hRp.y) - golfer.transform.position.y;
+                // clearances to the thigh SURFACE (centreline distance minus the mesh allowances the drive rows use)
+                Vector3 ulL = anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg).position, llL = anim.GetBoneTransform(HumanBodyBones.LeftLowerLeg).position;
+                Vector3 ulR = anim.GetBoneTransform(HumanBodyBones.RightUpperLeg).position, llR = anim.GetBoneTransform(HumanBodyBones.RightLowerLeg).position;
+                float handsThigh = Mathf.Min(SegDist(hLp, hRp, ulL, llL), SegDist(hLp, hRp, ulR, llR)) - ThighR - HandHalf;
+                Vector3 tip = 0.5f * (hLp + hRp); Vector3 headC = mf.transform.TransformPoint(mf.sharedMesh.bounds.center);
+                float shaftThigh = Mathf.Min(SegDist(tip, headC, ulL, llL), SegDist(tip, headC, ulR, llR)) - ThighR - ShaftR;
+                string row = (drop * 1000f).ToString("F0").PadLeft(6) + " " + bend.ToString("F0").PadLeft(4) + " " + lie.ToString("F0").PadLeft(4) + " | " + (sole * 1000f).ToString("F0").PadLeft(6) + " | " + (maxAhead * 1000f).ToString("F0").PadLeft(6) + " | " + (lateral * 1000f).ToString("F0").PadLeft(6) + " | " + tilt.ToString("F1").PadLeft(6) + " | " + (handsY * 1000f).ToString("F0").PadLeft(6) + " | " + (handsThigh * 1000f).ToString("F0").PadLeft(6) + " | " + (shaftThigh * 1000f).ToString("F0").PadLeft(6);
                 tbl.Append(row).Append("\n");
-                // objective: sole within -5..+15 mm of the ground; then a bend is cheaper than a squat (3 deg ~ 1 cm of drop)
-                float score = (sole < -0.005f || sole > 0.015f ? 1000f + Mathf.Abs(sole - 0.005f) * 1000f : 0f) + drop * 300f + Mathf.Abs(bend);
-                if (score < bestScore) { bestScore = score; bestDrop = drop; bestBend = bend; bestEuler = ot.data.rotation; bestHips = oh.data.position; bestRow = row; }
+                // objective: sole within -5..+15 mm of the ground AND hands >= 100 mm off the thigh surface AND the shaft
+                // >= 50 mm off it (Cesar: fingers through the leg, shaft into the skirt); then the smallest edit —
+                // a lie change is free (it is what a putter does), a bend costs 1/deg, a squat 3/cm
+                bool onGround = sole >= -0.005f && sole <= 0.015f, clear = handsThigh >= 0.10f && shaftThigh >= 0.05f;
+                float score = (onGround ? 0f : 1000f + Mathf.Abs(sole - 0.005f) * 1000f) + (clear ? 0f : 500f + Mathf.Max(0f, 0.10f - handsThigh) * 1000f + Mathf.Max(0f, 0.05f - shaftThigh) * 1000f)
+                            + drop * 300f + Mathf.Abs(bend) + Mathf.Abs(lie) * 0.2f;
+                if (score < bestScore) { bestScore = score; bestDrop = drop; bestBend = bend; bestLie = lie; bestEuler = ot.data.rotation; bestHips = oh.data.position; bestSlot = pslotT != null ? pslotT.localRotation : Quaternion.identity; bestRow = row; }
             }
-            { var d = ot.data; d.rotation = rot0; ot.data = d; var hd = oh.data; hd.position = hips0; oh.data = hd; }
+            { var d = ot.data; d.rotation = rot0; ot.data = d; var hd = oh.data; hd.position = hips0; oh.data = hd; if (pslotT != null) pslotT.localRotation = slotLocal0; }
             anim.cullingMode = cull0;
             Mark("PUTT STANCE SCAN (Stance_Hips drop x Stance_SpineBend about the target line; sole = lowest head vertex over the address-point ground):" + "\n" + tbl);
-            Mark("putt stance pick: drop " + (bestDrop * 1000f).ToString("F0") + " mm, bend " + bestBend.ToString("F0") + " deg -> " + bestRow + " | Euler " + V(bestEuler) + " hips " + V(bestHips) + (bestScore >= 1000f ? "  (NO sample put the sole on the ground)" : ""));
+            Mark("putt stance pick: drop " + (bestDrop * 1000f).ToString("F0") + " mm, bend " + bestBend.ToString("F0") + " deg, lie " + bestLie.ToString("F0") + " deg -> " + bestRow + " | Euler " + V(bestEuler) + " hips " + V(bestHips) + " slotLocal " + bestSlot.ToString("F5") + (bestScore >= 1000f ? "  (NO sample put the sole on the ground)" : bestScore >= 500f ? "  (NO sample cleared the thighs)" : ""));
             string dir = Golfer.GolferTestCharacter.EvidenceRoot + "/putt"; System.IO.Directory.CreateDirectory(dir);
             System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "putt_stance_pick.json"),
                 "{" + "\n" + "  \"dropM\": " + F(bestDrop) + "," + "\n" + "  \"bendDeg\": " + F(bestBend) + "," + "\n" +
                 "  \"hipsOffset\": [" + F(bestHips.x) + ", " + F(bestHips.y) + ", " + F(bestHips.z) + "]," + "\n" +
                 "  \"spineEuler\": [" + F(bestEuler.x) + ", " + F(bestEuler.y) + ", " + F(bestEuler.z) + "]," + "\n" +
-                "  \"onGround\": " + (bestScore < 1000f ? "true" : "false") + "\n" + "}" + "\n");
+                "  \"lieDeg\": " + F(bestLie) + ",\n" +
+                "  \"putterSlotLocalRotation\": [" + F(bestSlot.x) + ", " + F(bestSlot.y) + ", " + F(bestSlot.z) + ", " + F(bestSlot.w) + "],\n" +
+                "  \"onGround\": " + (bestScore < 1000f ? "true" : "false") + ",\n" + "  \"clear\": " + (bestScore < 500f ? "true" : "false") + "\n" + "}" + "\n");
         }
 
         void LogStance(string tag, GameObject golfer, Transform ball, Component shot)
