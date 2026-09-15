@@ -1541,3 +1541,9 @@ The 20:49 putt clip and the approved 17:53 drive clip are encoded identically (H
 no motion jumps (frame-to-frame change never below 0.4× or above 2.5× its local median). The stutter Cesar saw is
 the broken motion, not the recorder. Re-judged on a re-take of the putt motion with the solved club. Also fixed on the
 way: the video windows now mark progress each second of golfer time so the stall watchdog stays quiet during a clip.
+
+**Putt motion re-take (21:15, after the solve):** `videos/olivia_putt_h06_2026-09-15_21-15-56.mp4` — 342 frames,
+5.70 s, every frame 16.7 ms apart, no repeated frames, no motion jumps; the club stays in her hands through
+`Swing_Putt` and she settles to idle (stills in `evidence/olivia/putt60/`). Rendered at 1.6 frames per wall second
+(344 frames in 213 s); the window's progress marks kept the stall watchdog quiet. Awaiting Cesar's read on the
+motion and on the recording.
