@@ -3930,3 +3930,16 @@ end-of-frame (then restores); a pose the user approved is the spec, even if it i
 deterministic (Address_Putt now plays the drive address frame) rather than "correcting" it; every run is watched
 by `Docs/Scripts/watch_golfer_run.sh` (exception / silence / timeout) and the harness carries its own stall watchdog;
 event handlers on presenters are fenced with try/catch so the harness never dies inside them.
+
+## Lesson BE — a new club is a stage-2 run, not a fit; the gate is the side-by-side with the driver's hands (2026-09-15, `golfer_club_grip`, putter)
+
+Two "solved" putters shipped on numbers: one on a face constant read off a culling-frozen pose, one on a wrist fit
+that left the hands 93 / 67 mm off the club. Cesar: "Pick one image, any image and look at the hands." then "DO THE
+SAME THING YOU DID TO FIX THE DRIVER." The stage-2 solver in per-club mode (club under ClubSlot in the driver's head
+convention, its own tip, its own address clip, the pitch scan, the bake into per-club presenter fields, the face
+roll folded in, verify) matched the driver's rows and frames in one pass. Rules: (1) every club goes through the
+same pipeline as the driver — solve, bake, verify — with its own clip and its own bake; (2) the gate before any
+message is the four verify cameras side by side with the driver's approved frames, looked at for the hands at full
+resolution; (3) a number that says the hands are off the club (IK residual, wrist split) is a FAIL, not a footnote;
+(4) "Better" from Cesar means the pipeline, not the instance — write it down for the next club (memory
+`feedback_new_club_stage2_pipeline`).
