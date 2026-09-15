@@ -1384,3 +1384,59 @@ DRIVER template as the camera reference (W2 with `S_Controls_Driver_GOLFIN` as t
 portrait as the second), QA the wordmark, then re-run W2 for the 18 other brands per type from the corrected
 template (72 images, 60–120 s each plus the wordmark check — roughly two hours of Gemini in Cesar's Chrome).
 That runs in Cesar's Gemini account; not started without his go.
+
+### Club head under the terrain at the rough lie — FIXED (Cesar: "fix that the head of the club is under the terrain in the image with the iron head")
+
+Cause, measured on the at-rest row of the 17:24 run: `stance.atRest.clubReachesBall` head=(17.00, **8.5405**, −17.60)
+vs ball=(17.00, **8.6516**, −17.60) — the head 111 mm below the ball centre. `PlaceAtBall` grounded the golfer's
+ROOT under his own feet (`stance.atRest.onGround` "ray hit TerrainRoot", 0.0000 m) while the ball rests on the top
+surface at ITS xz, 0.92 m uphill; `addressHeadLocal.y` is 0, so the head sits at root height, under the lie.
+**Fix** (`GolferPresenter.PlaceAtBall`): the root's Y is the top physical surface at the BALL's xz (`GroundYAt`,
+RaycastAll, the ball's own colliders excluded, fallback ball.y − radius). New harness row
+`stance.<tag>.headOnLie` (club head Y minus the top surface under it, want −0.02..0.12): **0.0000 m at the tee
+(Tee_1) and 0.0000 m at the rough (TerrainRoot)**; the ball rests 21 mm above the same surface. The feet now follow
+the slope instead (`stance.atRest.onGround` root minus ground under the root = 0.188 m on that 12° rough — foot
+ground-IK is not in this task). Verified twice on the full Hole 06 sequence (18:32, 18:38).
+
+### The ball inside the club head at address — FIXED at the tee, verification of the bake pending (Cesar: "at rest in tee off it seems the ball comes before the club")
+
+`PlaceAtBall` put the shaft TIP (`addressHeadLocal` = ClubEnd, the heel) on the ball in plan; the driver's face
+plane lies past the tip on the face side. New row `club.faceBehindBall.<tag>` off the active head mesh (readable
+now: Read/Write enabled on GOLFIN_Driver.fbx and GOLFIN_Putter.fbx, the two heads the golfer carries): at the tee
+address **the face plane was +20.9 mm PAST the ball centre along the aim and the face centre +34.4 mm beyond the
+ball across the line** — the ball inside the head, toward the heel. Fix: `addressFaceOffsetLocal` /
+`addressFaceOffsetLocalPutt` on `GolferPresenter` (golfer-local offsets from ClubEnd to the point that must land on
+the ball: the face centre pushed back a ball radius + 4 mm; zero = the old tip behaviour, PfGolfer_Test unchanged;
+the stage-2 bake keeps writing `addressHeadLocal` as the tip), baked (0.0344, 0, 0.0464) on Olivia. The row's
+reference is the presenter's address point + ball radius (identical to the ball when placed; meaningful at the
+tee-putt block where the ball is on the green). `club.headAtBall` widened 0.05 → 0.12 m (the tip is now ~58 mm from
+the ball by design; the face row is the gate). Same row runs at rest (the rough) and at the putt address.
+
+### Putter head (Cesar: "Now you just need to fix the Putter head"; then: "there is no character whatsoever during the putting camera")
+
+Two different putters, and only one of them is ever on screen:
+
+1. **The 3D putter in her hands** exists only at the harness's tee-side putt block and at a putt address the
+   player never sees (the putting camera is top-down with no character —
+   `evidence/clubs/putting_camera_putter_sprite.png`). Its face was RIGHT all along: with the original PutterSlot
+   roll, live markers on the head (`evidence/clubs/putter_3d_face_markers_original_roll.png`: red = head +Z,
+   blue = −Z, yellow = toward the aim) show the milled insert and the red marker toward the target-side camera and
+   the GOLFIN wordmark toward the camera behind. What was wrong was the harness: `PutterFaceLocal` said the face was
+   −Z (the wordmark side; prefab renders with markers: `evidence/clubs/putter_driver_face_side_markers_prefab.png`),
+   and `club.faceSquare.putt` still passed because it read the Clubhead transform in Update, BEFORE this frame's
+   animation/rig evaluation — the same transform read `head.forward` (0.974, 0.217, −0.063) in the row and (−0.859,
+   0.261, 0.439) a few calls later in the same frame after a scene camera had rendered. Fixed: `PutterFaceLocal =
+   +Z`, the putt-block rows measured after `WaitForEndOfFrame`. I had rolled the PutterSlot 180° on the wrong
+   constant at 18:20 and reverted it at 19:00 once the live markers showed the face turned away; the prefab's
+   PutterSlot is back at its original rotation (0.43829, −0.66156, −0.16776, 0.58489). Also measured there and NOT
+   fixed (never on screen): the putter hangs from the driver-address hands 28 cm short of the address point and
+   19 cm above it (`club.faceBehindBall.putt`) — the putt pose was never built for a 0.89 m club.
+
+2. **The putter the player sees is the on-course handle SPRITE in the putting camera** (top-down, hole at the top,
+   `S_Controls_Putter_<BRAND>` drawn under the ball). Every putter sprite is a top-down product view with the shaft
+   pointing UP — into the ball and toward the hole; the face edge (hosel side) is toward the ball. A correct top-down
+   putter at address has the face toward the ball and the shaft leaving the heel toward the player (down / down-left).
+   No rotation or flip of the current sprite gives that (180° puts the face away from the ball; a vertical flip mirrors
+   the wordmark), so this is the same art question as the other types: the 19 putter sprites need re-authoring
+   (Gemini W2 from a corrected GOLFIN putter template, about 30 minutes) — the pipeline Cesar said to leave alone.
+   Open, awaiting his call.

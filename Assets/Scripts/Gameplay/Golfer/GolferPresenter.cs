@@ -906,6 +906,22 @@ namespace Golfin.Gameplay.Golfer
         /// </summary>
         [SerializeField] Vector3 addressHeadLocal = new Vector3(0.735f, 0f, -0.069f);
 
+        /// <summary>
+        /// THE FACE ON THE BALL, NOT THE SHAFT TIP (Cesar 2026-09-15: "at rest in tee off it seems the ball
+        /// comes before the club"). addressHeadLocal is ClubEnd — the shaft tip at the heel — and the stage-2
+        /// bake keeps writing that. Standing the golfer so the TIP is on the ball puts the driver's face plane
+        /// 26 mm past the ball centre and the face centre 40 mm beyond it across the line: the ball sits inside
+        /// the head. These are the golfer-local offsets from ClubEnd to the point that must coincide with the
+        /// ball centre — the face centre pushed back by a ball radius plus a few millimetres — measured at the
+        /// drive and putt addresses by the verification harness (club.faceBehindBall.*) and baked per prefab.
+        /// Zero = the tip, the pre-2026-09-15 behaviour (PfGolfer_Test is byte-identical).
+        /// </summary>
+        [SerializeField] Vector3 addressFaceOffsetLocal     = Vector3.zero;
+        [SerializeField] Vector3 addressFaceOffsetLocalPutt = Vector3.zero;
+
+        bool PuttMode => putterSocketRoot != null && putterSocketRoot.gameObject.activeInHierarchy;
+        Vector3 AddressPointLocal(bool putt) => addressHeadLocal + (putt ? addressFaceOffsetLocalPutt : addressFaceOffsetLocal);
+
         public void PlaceAtBall(Vector3 ball, float headingRad)
         {
             if (float.IsNaN(headingRad)) headingRad = 0f;
@@ -925,7 +941,7 @@ namespace Golfin.Gameplay.Golfer
             // addressHeadLocal is a golfer-LOCAL offset (AddressClubHeadWorld reads it through
             // TransformPoint), so it must carry the root scale here too — the prefab root is scaled
             // to real size since 2026-09-15 (golfer_club_grip stage 2).
-            Vector3 head = Vector3.Scale(addressHeadLocal, transform.localScale);
+            Vector3 head = Vector3.Scale(AddressPointLocal(PuttMode), transform.localScale);
             if (!rightHanded) head.x = -head.x;
 
             Vector3 p = ball - rot * head + d * stanceForwardOffset;
@@ -959,8 +975,14 @@ namespace Golfin.Gameplay.Golfer
         }
 
         /// <summary>Where the club head lands at address, for the harness to assert against.</summary>
-        public Vector3 AddressClubHeadWorld => transform.TransformPoint(
-            rightHanded ? addressHeadLocal : new Vector3(-addressHeadLocal.x, addressHeadLocal.y, addressHeadLocal.z));
+        public Vector3 AddressClubHeadWorld
+        {
+            get
+            {
+                var a = AddressPointLocal(PuttMode);
+                return transform.TransformPoint(rightHanded ? a : new Vector3(-a.x, a.y, a.z));
+            }
+        }
 
         /// <summary>Ground height under <paramref name="p"/>, or <paramref name="fallback"/>.</summary>
         float GroundY(Vector3 p, float fallback)

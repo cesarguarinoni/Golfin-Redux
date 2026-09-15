@@ -824,6 +824,7 @@ namespace Golfin.EditorTools
             Vector3 aimDir = new Vector3(Mathf.Cos(hAim), 0f, Mathf.Sin(hAim));
             Vector3 fN = head.TransformDirection(faceLocal).normalized;
             float loft = 90f - Vector3.Angle(fN, slot.up);     // slot +Y is butt -> head
+            Mark("faceSquare probe [" + id + "]: head '" + head.name + "' id " + head.GetInstanceID() + " path " + Path(head) + " | head.forward " + V(head.forward) + " fN " + V(fN) + " aim " + V(aimDir) + " fN·aim " + F(Vector3.Dot(fN, aimDir)) + " head.forward·aim " + F(Vector3.Dot(head.forward, aimDir)) + " | frame " + Time.frameCount);
 
             Vector3 fPlan = Vector3.ProjectOnPlane(fN, Vector3.up);
             if (fPlan.sqrMagnitude < 1e-8f)
@@ -1758,8 +1759,10 @@ namespace Golfin.EditorTools
                     {
                         Vector3 ep = clubEnd.position, bp = ballT.position;
                         _headAtBallM = Vector3.Distance(new Vector3(ep.x, 0f, ep.z), new Vector3(bp.x, 0f, bp.z));
-                        Assert("club.headAtBall", _headAtBallM < 0.05f,
-                               "ClubEnd is " + F(_headAtBallM) + " m from the ball in plan at address (want < 0.05 m). " +
+                        // 0.05 -> 0.12 on 2026-09-15: the placement now stands the golfer so the FACE CENTRE is
+                        // just behind the ball (club.faceBehindBall.*), which leaves the shaft tip ~60 mm from it.
+                        Assert("club.headAtBall", _headAtBallM < 0.12f,
+                               "ClubEnd is " + F(_headAtBallM) + " m from the ball in plan at address (want < 0.12 m; the face row is the gate). " +
                                "Note: stance.address.clubReachesBall reads AddressClubHeadWorld (a placement constant); " +
                                "this assertion uses the real ClubEnd transform.");
                     }
@@ -2310,6 +2313,93 @@ namespace Golfin.EditorTools
         /// under him. All four are what "stands beside the ball, facing perpendicular to the aim,
         /// feet on the ground" means (SPEC §6), and none of them is a judgement about a picture.
         /// </summary>
+        /// <summary>
+        /// Where the FACE is relative to the ball (Cesar 2026-09-15: "at rest in tee off it seems the ball comes
+        /// before the club"). The placement puts the shaft tip (ClubEnd) on the ball in plan, and the driver's face
+        /// plane lies 26 mm past the tip on the face side, so the ball sits INSIDE the head. Measured off the active
+        /// head mesh: 'ahead' = how far the face plane is past the ball centre along the aim (a resting address has
+        /// the face just behind the ball: about -(ball radius) = -21 mm, want -60..-15 mm); 'lateral' = the face
+        /// centre's offset across the line, positive away from the golfer (want |x| < 30 mm); 'up' = face centre
+        /// height over the ball centre.
+        /// </summary>
+        void FaceVsBall(string tag, GameObject golfer, Transform ball, Component shot)
+        {
+            if (ball == null || shot == null) { Skip("club.faceBehindBall." + tag, "no ball/shot"); return; }
+            // reference = the presenter's address point (what PlaceAtBall puts on the ball centre in plan, at ground
+            // height) lifted by a ball radius — identical to the ball when the golfer is placed at it, and still
+            // meaningful at the tee-putt block where the ball sits on the green 152 m away
+            var presT = FindType("Golfin.Gameplay.Golfer.GolferPresenter");
+            var presC = presT != null ? golfer.GetComponent(presT) : null;
+            var apProp = presT?.GetProperty("AddressClubHeadWorld");
+            Vector3 reference = ball.position; string refName = "ball";
+            if (apProp != null && presC != null) { reference = (Vector3)apProp.GetValue(presC) + Vector3.up * 0.0215f; refName = "address point + ball radius"; }
+            var heads = golfer.GetComponentsInChildren<MeshFilter>(true)
+                .Where(m => (m.name == "ClubHead" || m.name == "Clubhead") && m.gameObject.activeInHierarchy && m.sharedMesh != null).ToArray();
+            if (heads.Length != 1) { Skip("club.faceBehindBall." + tag, "active club heads = " + heads.Length); return; }
+            var mf = heads[0];
+            float h = Heading(shot);
+            Vector3 aim = new Vector3(Mathf.Cos(h), 0f, Mathf.Sin(h));
+            Vector3 b = reference;
+            Vector3 toBall = Vector3.ProjectOnPlane(b - golfer.transform.position, Vector3.up).normalized;   // lateral +, away from the golfer
+            var l2w = mf.transform.localToWorldMatrix;
+            // the Low tier swaps in non-readable head meshes (Mesh.vertices logs an error and returns nothing):
+            // fall back to the 8 corners of the mesh bounds — exact for the boxy putter, a few mm generous for a
+            // rounded driver face
+            Vector3[] verts; string src;
+            if (mf.sharedMesh.isReadable) { verts = mf.sharedMesh.vertices; src = "vertices"; }
+            else
+            {
+                var bb = mf.sharedMesh.bounds; verts = new Vector3[8]; int k = 0;
+                for (int ix = -1; ix <= 1; ix += 2) for (int iy = -1; iy <= 1; iy += 2) for (int iz = -1; iz <= 1; iz += 2)
+                    verts[k++] = bb.center + Vector3.Scale(bb.extents, new Vector3(ix, iy, iz));
+                src = "bounds corners (mesh not readable)";
+            }
+            float maxAhead = float.MinValue; var world = new Vector3[verts.Length];
+            for (int i = 0; i < verts.Length; i++) { world[i] = l2w.MultiplyPoint3x4(verts[i]); maxAhead = Mathf.Max(maxAhead, Vector3.Dot(world[i] - b, aim)); }
+            // the face = the vertices within 8 mm of the most-ahead plane
+            Vector3 sum = Vector3.zero; int n = 0;
+            for (int i = 0; i < verts.Length; i++) if (Vector3.Dot(world[i] - b, aim) > maxAhead - 0.008f) { sum += world[i]; n++; }
+            Vector3 faceC = n > 0 ? sum / n : b;
+            float ahead = maxAhead, lateral = Vector3.Dot(faceC - b, toBall), up = faceC.y - b.y;
+            Assert("club.faceBehindBall." + tag, ahead > -0.06f && ahead < -0.015f && Mathf.Abs(lateral) < 0.03f,
+                   "face plane " + F(ahead) + " m past the ball centre along the aim (want -0.06..-0.015: just behind the ball), " +
+                   "face centre " + F(lateral) + " m across the line (+ away from the golfer; want |x| < 0.03), " + F(up) + " m above the ball centre; " +
+                   "head=" + mf.name + " (" + n + " face points of " + verts.Length + " " + src + "), faceCentre=" + V(faceC) + " ref(" + refName + ")=" + V(b) + " ball=" + V(ball.position));
+        }
+
+        /// <summary>Two scene-camera frames of the putter at the ball: from behind the ball low on the line (the
+        /// BACK of the head should face us) and from the target side (the FACE should). Written next to the
+        /// stage-2 putt frames. Reached by reflection into HandHingeStage2.Shoot would gate this file; a small
+        /// local camera does the same job.</summary>
+        void PuttBallFrames(GameObject golfer, Transform ball, Component shot)
+        {
+            if (ball == null || shot == null) return;
+            float h = Heading(shot); Vector3 aim = new Vector3(Mathf.Cos(h), 0f, Mathf.Sin(h));
+            string dir = Golfer.GolferTestCharacter.EvidenceRoot + "/putt"; System.IO.Directory.CreateDirectory(dir);
+            var presT = FindType("Golfin.Gameplay.Golfer.GolferPresenter");
+            var presC = presT != null ? golfer.GetComponent(presT) : null;
+            var apProp = presT?.GetProperty("AddressClubHeadWorld");
+            Vector3 b = (apProp != null && presC != null) ? (Vector3)apProp.GetValue(presC) + Vector3.up * 0.0215f : ball.position;   // the address point (see FaceVsBall)
+            ShootLocal(b, b - aim * 0.55f + Vector3.up * 0.28f, System.IO.Path.Combine(dir, "putt_ball_frombehind.png"));
+            ShootLocal(b, b + aim * 0.55f + Vector3.up * 0.28f, System.IO.Path.Combine(dir, "putt_ball_fromtarget.png"));
+            ShootLocal(b, b + Vector3.up * 0.9f + aim * 0.01f, System.IO.Path.Combine(dir, "putt_ball_top.png"));
+        }
+
+        static void ShootLocal(Vector3 aimAt, Vector3 camPos, string path)
+        {
+            var go = new GameObject("[PuttBallCam]"); RenderTexture rt = null; Texture2D tex = null; var prev = RenderTexture.active;
+            try
+            {
+                var cam = go.AddComponent<Camera>(); cam.fieldOfView = 35f; cam.nearClipPlane = 0.02f; cam.farClipPlane = 300f;
+                go.transform.position = camPos; go.transform.rotation = Quaternion.LookRotation(aimAt - camPos, Vector3.up);
+                rt = new RenderTexture(1400, 1400, 24) { antiAliasing = 4 }; cam.targetTexture = rt; cam.Render();
+                RenderTexture.active = rt; tex = new Texture2D(1400, 1400, TextureFormat.RGB24, false); tex.ReadPixels(new Rect(0, 0, 1400, 1400), 0, 0); tex.Apply();
+                System.IO.File.WriteAllBytes(path, tex.EncodeToPNG());
+            }
+            catch (Exception e) { Debug.LogWarning("[GolferVerify] putt ball frame failed: " + e.Message); }
+            finally { RenderTexture.active = prev; UnityEngine.Object.DestroyImmediate(go); if (rt != null) { rt.Release(); UnityEngine.Object.DestroyImmediate(rt); } if (tex != null) UnityEngine.Object.DestroyImmediate(tex); }
+        }
+
         void LogStance(string tag, GameObject golfer, Transform ball, Component shot)
         {
             if (ball == null) { Assert("stance." + tag + ".ball", false, "no ball transform"); return; }
@@ -2376,6 +2466,7 @@ namespace Golfin.EditorTools
             Assert("stance." + tag + ".onGround", !float.IsNaN(soleGap) && Mathf.Abs(soleGap) < 0.20f,
                    "golfer root Y minus ground hit Y = " + F(soleGap) + " m (ray hit " + (float.IsNaN(soleGap) ? "NONE" : hit.collider.name) + ")");
             Mark("stance." + tag + " golfer=" + V(g) + " ball=" + V(b) + " fwd=" + V(golfer.transform.forward));
+            FaceVsBall(tag, golfer, ball, shot);
         }
 
         /// <summary>
@@ -2691,9 +2782,17 @@ namespace Golfin.EditorTools
             // driver pose is not the number 3.11.3 asked for, and failing the run because a green
             // could not be reached would be failing it for an unrelated reason.
             var pslot = Fb("PutterSlot");
+            // MEASURE THE RENDERED POSE. Resuming from a realtime hold lands in Update, before this frame's
+            // animation/rig evaluation: on 2026-09-15 the same Clubhead transform read head.forward
+            // (0.974, 0.217, -0.063) here and (-0.859, 0.261, 0.439) a few calls later in the same frame, after a
+            // scene camera had rendered — a 100°+ difference, and the row had been passing on the stale one.
+            // End-of-frame is the state the player sees.
+            yield return new WaitForEndOfFrame();
             if (pslot != null && st == "Address_Putt")
             {
                 MeasureFaceSquare("club.faceSquare.putt", pslot, shot, "putt address");
+                FaceVsBall("putt", golfer, BallTransform(), shot);
+                PuttBallFrames(golfer, BallTransform(), shot);
                 // scene-camera frames of the putter at the putt address (golfer_club_grip; HandHingeStage2 is gated,
                 // reached by reflection like the stage-2 hook) — the gameplay camera never shows the head here
                 try
@@ -2760,6 +2859,8 @@ namespace Golfin.EditorTools
             if (t == null) return null;
             return UnityEngine.Object.FindFirstObjectByType(t) as Component;
         }
+
+        static string Path(Transform t) { var sb = new StringBuilder(t.name); while (t.parent != null) { t = t.parent; sb.Insert(0, t.name + "/"); } return sb.ToString(); }
 
         static float Heading(Component shot)
         {

@@ -84,3 +84,11 @@ Code: swap the prefab's mesh FBX for `Olivia_TPose_v2.fbx` (same import settings
 avatar), material URP Lit with the four maps (Smoothness = 1 − roughness via the importer's "Metallic Alpha"/roughness-as-smoothness
 path, or leave smoothness 0.4 for the test), re-run `AuthorPrefabStructure` + `HandHingeStage0Tool` capture, then the same §3
 acceptance. Expect: skirt clean at gameplay distance, smooth arm shading through the sleeve, fingers stay whole through the fist test.
+
+**v2.1 (same day) — chin dot.** Cesar spotted a black dot on the chin. Isolation renders (full / no normal map / flat material)
+put it in the **normal map**: 12 texels at the chin-bottom chart (atlas ~681,157) where the bake ray reached the collar instead
+of the chin, plus one green base-colour speck at the same spot. Both patched in place from neighbouring skin texels (median), then a
+global sweep replaced 770 isolated normal outliers inside skin areas (9×9 median). The chin geometry also got a light local
+Laplacian smooth (29 verts within 2.2 cm, weights untouched). Files overwritten in `v2/`: `Olivia_TPose_v2.fbx`,
+`T_Olivia_BaseColor.png`, `T_Olivia_Normal.png`. Lesson for the pipeline: bake with a **per-region ray distance** or exclude the
+collar from the source when baking the neck/chin — tracked in `Tools/character_pipeline/README.md`.

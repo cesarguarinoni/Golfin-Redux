@@ -1227,7 +1227,10 @@ namespace Golfin.EditorTools.Golfer
             // the Clubhead TRANSFORM's pivot sits at the club origin (the grip end) on these prefabs; the head MESH is
             // 0.78 m down the shaft — frame the renderer, not the pivot
             var headRend = head.GetComponentInChildren<Renderer>(true);
-            Vector3 headPos = headRend != null ? headRend.bounds.center : head.position;
+            // NOT the renderer bounds: on 2026-09-15 a marker placed at headRend.bounds.center landed a metre from
+            // the rendered head (the bounds read stale under the rig chain). The tip is a fixed point on the slot:
+            // the putter prefab's ClubTipPosition sits 0.755 m down the shaft from the slot origin (+Y).
+            Vector3 headPos = pslot.TransformPoint(new Vector3(0f, 0.755f, 0f));
             foreach (var smr in golfer.GetComponentsInChildren<SkinnedMeshRenderer>(true)) smr.forceMatrixRecalculationPerRender = true;
             Transform handL = anim.GetBoneTransform(HumanBodyBones.LeftHand), handR = anim.GetBoneTransform(HumanBodyBones.RightHand);
             float hAim = Heading(shot);
@@ -1236,7 +1239,23 @@ namespace Golfin.EditorTools.Golfer
             Vector3 fwd = Vector3.ProjectOnPlane(headPos - golfer.transform.position, Vector3.up).normalized;
             string dir = GolferTestCharacter.EvidenceRoot + "/putt"; Directory.CreateDirectory(dir);
             Vector3 mid = golfer.transform.position + Vector3.up * 0.90f;
+            // LIVE face markers on the head transform (2026-09-15): red = head +Z (the face insert side on the prefab
+            // render), blue = head -Z (the wordmark). If the render shows the wordmark under the RED marker, the
+            // rendered mesh is not the prefab's mesh (tier swap); if the BLUE marker is toward the target-side camera,
+            // the transform itself has the back toward the target and the face-square row's aim sign is wrong for putts.
+            var mkShader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color");
+            var mkRed = new Material(mkShader) { color = Color.red }; var mkBlue = new Material(mkShader) { color = Color.blue }; var mkYellow = new Material(mkShader) { color = Color.yellow };
+            var headRendMk = head.GetComponent<Renderer>();
+            Vector3 faceC = headRendMk != null ? headRendMk.bounds.center : head.position;
+            var mR = GameObject.CreatePrimitive(PrimitiveType.Sphere); mR.transform.position = faceC + head.forward * 0.07f; mR.transform.localScale = Vector3.one * 0.035f; mR.GetComponent<Renderer>().sharedMaterial = mkRed;
+            var mB = GameObject.CreatePrimitive(PrimitiveType.Sphere); mB.transform.position = faceC - head.forward * 0.07f; mB.transform.localScale = Vector3.one * 0.035f; mB.GetComponent<Renderer>().sharedMaterial = mkBlue;
+            var mY = GameObject.CreatePrimitive(PrimitiveType.Sphere); mY.transform.position = faceC + aimDir * 0.12f; mY.transform.localScale = Vector3.one * 0.035f; mY.GetComponent<Renderer>().sharedMaterial = mkYellow;   // yellow = toward the aim
+            log.AppendLine("live markers: head '" + head.name + "' id " + head.GetInstanceID() + " frame " + Time.frameCount + "; face centre (renderer bounds) " + V(faceC) + " red(+Z) " + V(mR.transform.position) + " blue(-Z) " + V(mB.transform.position) + " yellow(aim) " + V(mY.transform.position) + " | head.forward·aim " + F(Vector3.Dot(head.forward, aimDir)));
+            try
+            {
             Shoot(mid, mid + aimDir * 4.0f + Vector3.up * 0.2f, Vector3.up, 1600, Path.Combine(dir, "putt_targetside.png"), log);
+            Shoot(faceC, faceC + aimDir * 0.9f + Vector3.up * 0.5f, Vector3.up, 1600, Path.Combine(dir, "putt_markers_fromtarget.png"), log);
+            Shoot(faceC, faceC - aimDir * 0.9f + Vector3.up * 0.5f, Vector3.up, 1600, Path.Combine(dir, "putt_markers_frombehind.png"), log);
             Shoot(mid, mid + fwd * 4.0f + Vector3.up * 0.2f, Vector3.up, 1600, Path.Combine(dir, "putt_faceon.png"), log);
             Shoot(handsMid, handsMid - aimDir * 0.85f, Vector3.up, 1600, Path.Combine(dir, "putt_awayside.png"), log);
             // wider than the first cut (0.35/0.45 m framed grass): a metre off, from the target side and above, and
@@ -1247,11 +1266,7 @@ namespace Golfin.EditorTools.Golfer
             // ground truth for the face side, independent of the heading convention: the face must point from the
             // head toward the CUP. Any transform whose name says cup/hole-flag is a candidate; all are logged.
             var ballTf = golfer.scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "Ball" || t.name.StartsWith("Ball_") || t.name == "GolfBall");
-            foreach (var cand in golfer.scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Where(t => t.name.IndexOf("cup", StringComparison.OrdinalIgnoreCase) >= 0 || t.name.IndexOf("flag", StringComparison.OrdinalIgnoreCase) >= 0 || t.name.IndexOf("pin", StringComparison.OrdinalIgnoreCase) >= 0).Take(8))
-            {
-                Vector3 toCup = Vector3.ProjectOnPlane(cand.position - headPos, Vector3.up).normalized;
-                log.AppendLine("cup candidate '" + cand.name + "' at " + V(cand.position) + " dist " + F(Vector3.Distance(cand.position, headPos)) + " m; head.forward(+Z)·toCup " + F(Vector3.Dot(head.forward, toCup)) + "; aimDir·toCup " + F(Vector3.Dot(aimDir, toCup)));
-            }
+            log.AppendLine("putt head positions: slot tip " + V(headPos) + "; head.position " + V(head.position) + "; head.TransformPoint(meshCenter) " + V(headRend != null && headRend is MeshRenderer && head.GetComponent<MeshFilter>()?.sharedMesh != null ? head.TransformPoint(head.GetComponent<MeshFilter>().sharedMesh.bounds.center) : Vector3.zero) + "; renderer.bounds.center " + (headRend != null ? V(headRend.bounds.center) : "n/a") + "; slot " + V(pslot.position) + " slot.up " + V(pslot.up));
             // a marker at where this code believes the head is, so the close-ups can be read even when they miss
             var marker = GameObject.CreatePrimitive(PrimitiveType.Sphere); marker.name = "[PuttHeadMarker]"; marker.transform.position = headPos; marker.transform.localScale = Vector3.one * 0.03f;
             var mrend = marker.GetComponent<Renderer>(); mrend.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color")); mrend.sharedMaterial.color = Color.red;
@@ -1262,6 +1277,8 @@ namespace Golfin.EditorTools.Golfer
                 Shoot(headPos, headPos + (-aimDir * 1.4f + Vector3.up * 1.0f), Vector3.up, 1600, Path.Combine(dir, "putt_head_frombehind.png"), log);
             }
             finally { UnityEngine.Object.DestroyImmediate(marker); }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(mR); UnityEngine.Object.DestroyImmediate(mB); UnityEngine.Object.DestroyImmediate(mY); UnityEngine.Object.DestroyImmediate(mkRed); UnityEngine.Object.DestroyImmediate(mkBlue); UnityEngine.Object.DestroyImmediate(mkYellow); }
             log.AppendLine("putt head renderer: " + (headRend == null ? "<none>" : headRend.name + " enabled=" + headRend.enabled + " active=" + headRend.gameObject.activeInHierarchy + " bounds " + V(headRend.bounds.size)) + "; hands mid " + V(handsMid) + "; golfer root " + V(golfer.transform.position));
             log.AppendLine("putt address: PutterSlot local " + V(pslot.localPosition) + " " + Q(pslot.localRotation) + "; head mesh " + V(headPos) + "; slot.up·aim " + F(Vector3.Dot(pslot.up, aimDir)) + "; head.forward·aim " + F(Vector3.Dot(head.forward, aimDir)) + " head.right·aim " + F(Vector3.Dot(head.right, aimDir)));
             return log.ToString();

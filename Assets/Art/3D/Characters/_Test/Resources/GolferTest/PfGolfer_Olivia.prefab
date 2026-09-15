@@ -1182,6 +1182,8 @@ MonoBehaviour:
   fingerRadius: 0.0068297
   maxJointBend: 80
   addressHeadLocal: {x: 0.91972, y: 0, z: -0.08107}
+  addressFaceOffsetLocal: {x: 0.0344, y: 0, z: 0.0464}
+  addressFaceOffsetLocalPutt: {x: 0, y: 0, z: 0}
 --- !u!114 &6970612969742791015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1763,7 +1765,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8653594895632453998}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.16775593, y: 0.5848887, z: 0.43829283, w: 0.6615607}
+  m_LocalRotation: {x: 0.43829012, y: -0.6615602, z: -0.16776004, w: 0.5848901}
   m_LocalPosition: {x: 0.044470318, y: 0.05956015, z: -0.07440812}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
