@@ -13,6 +13,7 @@ is drop-free. The first take was cut at the top of the backswing because the har
 while the sim steps 1/60 per rendered frame at 1.5–2.4 fps under the encoder; the window is now golfer time
 (`HoldSim`) with the recorder's watchdog override at 420 s. Take 3 (`videos/olivia_swing_h06_2026-09-15_17-53-56.mp4`,
 6.15 s, 369 frames, uniform 16.7 ms) is the full swing through the ball at rest — delivered.
+**Next session starts here:** read `Docs/Architecture/GOLFER_CLUB_GRIP_PLAYBOOK.md` and `Docs/Specs/Active/golfer_club_grip/STATUS.md`; the next club or character runs the playbook end to end before the first message to Cesar.
 **2026-09-16 morning — putter APPROVED.** The putter went through the same stage-2 pipeline as the driver
 (`HandHingeStage2` putt mode: putter under ClubSlot in the driver's head convention, own tip, solve on
 `ANIM_Golf_Putt`'s address at the green, bake into the presenter's putt fields applied in putt mode with a rig

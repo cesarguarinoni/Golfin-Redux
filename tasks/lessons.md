@@ -3943,3 +3943,18 @@ message is the four verify cameras side by side with the driver's approved frame
 resolution; (3) a number that says the hands are off the club (IK residual, wrist split) is a FAIL, not a footnote;
 (4) "Better" from Cesar means the pipeline, not the instance — write it down for the next club (memory
 `feedback_new_club_stage2_pipeline`).
+
+## Lesson BF — the shape of a session that needed micromanagement, and the playbook that replaces it (2026-09-15/16, `golfer_club_grip`, driver video + putter)
+
+Cesar had to intervene fourteen times in one evening: the video cut the swing (wall-clock window), the sprites were
+mistaken for the 3D club, scene-camera frames with broken hands were posted as evidence, the animator's culling
+froze the pose that got approved, a wrist fit was called solved with the hands 9 cm off the club, the video was
+fired without a shot and she "turned", a dead run sat 40 minutes behind a success-only watcher, the face row read
+the wrong side. Every one of those has a rule now, and they are collected in
+`Docs/Architecture/GOLFER_CLUB_GRIP_PLAYBOOK.md`: what Cesar judges (Game view, the hands beside the driver's,
+the club behind the ball, a real shot on video), the per-club stage-2 pipeline, the per-character pipeline, and
+the traps. Rules: (1) before the first message on a new club, run the playbook end to end and send ONE message
+with the side-by-side, the Game view, the video and the paths; (2) measure before touching, and never touch the
+thing Cesar approved to fix the thing he did not; (3) a number never overrides a picture, and a picture is looked at
+before it is sent; (4) safeguards stay on — the run watcher, the stall watchdog, the fenced hooks; (5) when Cesar
+says "use X as the example", diff against X mechanically (transforms, rows, frames) before theorising.
